@@ -27,7 +27,10 @@ notepad docker-compose.override.yml
 # In PowerShell, navigate to your project directory
 cd C:\Users\commstech\Github\Gitea_AI_Bugbot
 
-# Run the deployment script
+# Option 1: Use the build-and-deploy script (recommended for compatibility issues)
+.\build-and-deploy.ps1
+
+# Option 2: Use the original deployment script
 .\deploy.ps1
 ```
 
@@ -42,8 +45,15 @@ The script will automatically:
 If you prefer to deploy manually:
 
 ```powershell
-# Build and start the services
+# Option 1: Use the minimal configuration (recommended for compatibility issues)
+docker-compose -f docker-compose.minimal.yml up -d
+
+# Option 2: Use the simplified configuration
+docker-compose -f docker-compose.simple.yml up -d --build
+
+# Option 3: Use the full configuration
 docker-compose up -d --build
+```
 
 # Check the logs
 docker-compose logs -f gitea-bugbot
