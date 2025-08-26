@@ -8,31 +8,74 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - BUGBOT_PORT=8080
-      - BUGBOT_LOG_LEVEL=info
-      - BUGBOT_GITEA_URL=http://your-gitea-server:3000
-      - BUGBOT_GITEA_TOKEN=your-gitea-access-token
-      - BUGBOT_WEBHOOK_SECRET=your-webhook-secret
-      - BUGBOT_OPENWEBUI_URL=http://your-openwebui-server:8080
-      - BUGBOT_OPENWEBUI_TOKEN=your-openwebui-api-token
-      - BUGBOT_ANALYSIS_DEPTH=3
-      - BUGBOT_MAX_FILE_SIZE=1048576
-      - BUGBOT_ENABLE_SECURITY=true
-      - BUGBOT_ENABLE_QUALITY=true
-      - BUGBOT_AUTO_CREATE_ISSUES=true
-      - BUGBOT_MAX_ISSUES_PER_RUN=50
-      - BUGBOT_SKIP_LOW_SEVERITY=false
-      - BUGBOT_GROUP_SIMILAR_ISSUES=true
-      - BUGBOT_MAX_CONCURRENT_ANALYSES=5
-      - BUGBOT_ANALYSIS_TIMEOUT=300
-      - BUGBOT_RATE_LIMIT_PER_MINUTE=60
+      # Server Configuration
+      - BUGBOT_SERVER_HOST=0.0.0.0
+      - BUGBOT_SERVER_PORT=8080
+      - BUGBOT_SERVER_READ_TIMEOUT=30s
+      - BUGBOT_SERVER_WRITE_TIMEOUT=30s
+      
+      # Gitea Configuration
+      - BUGBOT_GITEA_URL=https://git.commsnet.org
+      - BUGBOT_GITEA_TOKEN=3018659e00c0952cb78099d132c205762c05542f
+      - BUGBOT_GITEA_API_TIMEOUT=30s
+      
+      # OpenWebUI Configuration
+      - BUGBOT_OPENWEBUI_URL=https://ai.commsnet.org/api
+      - BUGBOT_OPENWEBUI_API_KEY=sk-82fae28a7a214114b7606206de232371
+      - BUGBOT_OPENWEBUI_MODEL=luna-tic-coder
+      - BUGBOT_OPENWEBUI_TIMEOUT=60s
+      - BUGBOT_OPENWEBUI_MAX_TOKENS=4000
+      
+      # Analysis Configuration
+      - BUGBOT_ANALYSIS_MAX_DEPTH=3
+      - BUGBOT_ANALYSIS_MAX_FILE_SIZE=1048576
+      - BUGBOT_ANALYSIS_ENABLE_SECURITY_SCAN=true
+      - BUGBOT_ANALYSIS_ENABLE_QUALITY_CHECK=true
+      - BUGBOT_ANALYSIS_ENABLE_PERFORMANCE_ANALYSIS=true
+      - BUGBOT_ANALYSIS_ENABLE_BEST_PRACTICES=true
+      - BUGBOT_ANALYSIS_ENABLE_DOCUMENTATION_REVIEW=true
+      
+      # Issue Management Configuration
+      - BUGBOT_ISSUES_AUTO_CREATE=true
+      - BUGBOT_ISSUES_MAX_PER_RUN=50
+      - BUGBOT_ISSUES_SKIP_LOW_SEVERITY=false
+      - BUGBOT_ISSUES_GROUP_SIMILAR=true
+      - BUGBOT_ISSUES_TITLE_TEMPLATE="[Bugbot] {{.Type}}: {{.Summary}}"
+      - BUGBOT_ISSUES_BODY_TEMPLATE="Issue detected: {{.Type}} - {{.Description}} | File: {{.File}}:{{.Line}} | Fix: {{.Suggestion}}"
+      
+      # File Filtering Configuration
+      - BUGBOT_FILTERS_SKIP_PATTERNS=.git/,.svn/,.hg/,.bzr/,node_modules/,vendor/,dist/,build/,*.min.js,*.min.css,*.map
+      - BUGBOT_FILTERS_SKIP_EXTENSIONS=.exe,.dll,.so,.dylib,.bin,.obj,.o,.a,.lib,.dll,.so,.dylib,.jar,.war,.ear,.zip,.tar,.gz,.rar,.7z
+      
+      # Webhook Configuration
+      - BUGBOT_WEBHOOKS_ENABLE_PUSH_EVENTS=true
+      - BUGBOT_WEBHOOKS_ENABLE_PULL_REQUEST_EVENTS=true
+      - BUGBOT_WEBHOOKS_ENABLE_ISSUE_EVENTS=false
+      - BUGBOT_WEBHOOKS_SECRET=your-webhook-secret-here
+      
+      # Repository Filtering
+      - BUGBOT_REPOSITORIES_INCLUDE_PATTERNS=*
+      - BUGBOT_REPOSITORIES_EXCLUDE_PATTERNS=
+      - BUGBOT_REPOSITORIES_MAX_SIZE=1000000000
+      
+      # Performance Configuration
+      - BUGBOT_PERFORMANCE_MAX_CONCURRENT_ANALYSES=5
+      - BUGBOT_PERFORMANCE_ANALYSIS_TIMEOUT=300s
+      - BUGBOT_PERFORMANCE_RATE_LIMIT=100
+      - BUGBOT_PERFORMANCE_RATE_LIMIT_WINDOW=1m
+      
+      # Logging Configuration
+      - BUGBOT_LOGGING_LEVEL=info
+      - BUGBOT_LOGGING_FORMAT=json
+      - BUGBOT_LOGGING_OUTPUT=stdout
+      
     volumes:
       - ./config:/app/config:ro
       - ./logs:/app/logs
     networks:
       - bugbot-network
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -41,4 +84,3 @@ services:
 networks:
   bugbot-network:
     driver: bridge
-    external: false
