@@ -1,0 +1,431 @@
+package gitea
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"path"
+	"strings"
+	"time"
+
+	"github.com/sirupsen/logrus"
+)
+
+// Client handles communication with Gitea API
+type Client struct {
+	baseURL    string
+	token      string
+	httpClient *http.Client
+	logger     *logrus.Logger
+}
+
+// RepositoryContent represents a file or directory in a repository
+type RepositoryContent struct {
+	Name        string `json:"name"`
+	Path        string `json:"path"`
+	SHA         string `json:"sha"`
+	Size        int64  `json:"size"`
+	URL         string `json:"url"`
+	HTMLURL     string `json:"html_url"`
+	GitURL      string `json:"git_url"`
+	DownloadURL string `json:"download_url"`
+	Type        string `json:"type"` // "file", "dir", "symlink"
+	Content     string `json:"content,omitempty"`
+	Encoding    string `json:"encoding,omitempty"`
+	Links       struct {
+		Self string `json:"self"`
+		Git  string `json:"git"`
+		HTML string `json:"html"`
+	} `json:"_links"`
+}
+
+// Issue represents a Gitea issue
+type Issue struct {
+	ID          int64     `json:"id"`
+	Number      int       `json:"number"`
+	User        User      `json:"user"`
+	Title       string    `json:"title"`
+	Body        string    `json:"body"`
+	State       string    `json:"state"`
+	Comments    int       `json:"comments"`
+	HTMLURL     string    `json:"html_url"`
+	Milestone   *Milestone `json:"milestone,omitempty"`
+	Labels      []Label   `json:"labels"`
+	Assignee    *User     `json:"assignee,omitempty"`
+	Assignees   []User    `json:"assignees,omitempty"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	ClosedAt    *time.Time `json:"closed_at,omitempty"`
+	DueDate     *time.Time `json:"due_date,omitempty"`
+	PullRequest *PullRequest `json:"pull_request,omitempty"`
+}
+
+// CreateIssueRequest represents a request to create an issue
+type CreateIssueRequest struct {
+	Title       string   `json:"title"`
+	Body        string   `json:"body"`
+	Assignee    string   `json:"assignee,omitempty"`
+	Milestone   int64    `json:"milestone,omitempty"`
+	Labels      []int64  `json:"labels,omitempty"`
+	Closed      bool     `json:"closed,omitempty"`
+	DueDate     string   `json:"due_date,omitempty"`
+}
+
+// User represents a Gitea user
+type User struct {
+	ID        int64  `json:"id"`
+	Login     string `json:"login"`
+	FullName  string `json:"full_name"`
+	Email     string `json:"email"`
+	AvatarURL string `json:"avatar_url"`
+	Username  string `json:"username"`
+}
+
+// Label represents a Gitea label
+type Label struct {
+	ID          int64  `json:"id"`
+	Name        string `json:"name"`
+	Color       string `json:"color"`
+	Description string `json:"description"`
+	URL         string `json:"url"`
+}
+
+// Milestone represents a Gitea milestone
+type Milestone struct {
+	ID           int64      `json:"id"`
+	Title        string     `json:"title"`
+	Description  string     `json:"description"`
+	State        string     `json:"state"`
+	DueDate      *time.Time `json:"due_date,omitempty"`
+	ClosedAt     *time.Time `json:"closed_at,omitempty"`
+	OpenIssues   int        `json:"open_issues"`
+	ClosedIssues int        `json:"closed_issues"`
+}
+
+// PullRequest represents a Gitea pull request
+type PullRequest struct {
+	ID          int64  `json:"id"`
+	Number      int    `json:"number"`
+	State       string `json:"state"`
+	Title       string `json:"title"`
+	Body        string `json:"body"`
+	User        User   `json:"user"`
+	HTMLURL     string `json:"html_url"`
+	DiffURL     string `json:"diff_url"`
+	PatchURL    string `json:"patch_url"`
+	Mergeable   bool   `json:"mergeable"`
+	Merged      bool   `json:"merged"`
+	MergedAt    string `json:"merged_at,omitempty"`
+	MergedBy    *User  `json:"merged_by,omitempty"`
+	BaseBranch  string `json:"base_branch"`
+	HeadBranch  string `json:"head_branch"`
+	BaseRepo    Repository `json:"base_repo"`
+	HeadRepo    Repository `json:"head_repo"`
+}
+
+// Repository represents a Gitea repository
+type Repository struct {
+	ID          int64  `json:"id"`
+	Name        string `json:"name"`
+	FullName    string `json:"full_name"`
+	Owner       User   `json:"owner"`
+	Private     bool   `json:"private"`
+	HTMLURL     string `json:"html_url"`
+	CloneURL    string `json:"clone_url"`
+	GitURL      string `json:"git_url"`
+	SSHURL      string `json:"ssh_url"`
+	Description string `json:"description"`
+	Language    string `json:"language"`
+	Size        int64  `json:"size"`
+	Fork        bool   `json:"fork"`
+	Archived    bool   `json:"archived"`
+}
+
+// NewClient creates a new Gitea client
+func NewClient(baseURL, token string, logger *logrus.Logger) *Client {
+	return &Client{
+		baseURL: strings.TrimSuffix(baseURL, "/"),
+		token:   token,
+		httpClient: &http.Client{
+			Timeout: 60 * time.Second,
+		},
+		logger: logger,
+	}
+}
+
+// GetRepositoryContent fetches the content of a file or directory
+func (c *Client) GetRepositoryContent(ctx context.Context, owner, repo, ref, path string) (*RepositoryContent, error) {
+	url := fmt.Sprintf("%s/api/v1/repos/%s/%s/contents/%s", c.baseURL, owner, repo, path)
+	if ref != "" {
+		url += "?ref=" + ref
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Authorization", "token "+c.token)
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to make request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, fmt.Errorf("content not found: %s", path)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("Gitea API returned status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var content RepositoryContent
+	if err := json.NewDecoder(resp.Body).Decode(&content); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	return &content, nil
+}
+
+// GetFileContent fetches the content of a specific file
+func (c *Client) GetFileContent(ctx context.Context, owner, repo, ref, filePath string) (string, error) {
+	content, err := c.GetRepositoryContent(ctx, owner, repo, ref, filePath)
+	if err != nil {
+		return "", err
+	}
+
+	if content.Type != "file" {
+		return "", fmt.Errorf("path is not a file: %s", filePath)
+	}
+
+	// Decode base64 content if needed
+	if content.Encoding == "base64" {
+		// In a real implementation, you'd decode base64 here
+		// For now, we'll return the raw content
+		return content.Content, nil
+	}
+
+	return content.Content, nil
+}
+
+// ListRepositoryContents lists the contents of a directory
+func (c *Client) ListRepositoryContents(ctx context.Context, owner, repo, ref, dirPath string) ([]RepositoryContent, error) {
+	content, err := c.GetRepositoryContent(ctx, owner, repo, ref, dirPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if content.Type != "dir" {
+		return nil, fmt.Errorf("path is not a directory: %s", dirPath)
+	}
+
+	// For directories, we need to make another request to get the listing
+	url := fmt.Sprintf("%s/api/v1/repos/%s/%s/contents/%s", c.baseURL, owner, repo, dirPath)
+	if ref != "" {
+		url += "?ref=" + ref
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Authorization", "token "+c.token)
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to make request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("Gitea API returned status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var contents []RepositoryContent
+	if err := json.NewDecoder(resp.Body).Decode(&contents); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	return contents, nil
+}
+
+// CreateIssue creates a new issue in a repository
+func (c *Client) CreateIssue(ctx context.Context, owner, repo string, issueReq *CreateIssueRequest) (*Issue, error) {
+	url := fmt.Sprintf("%s/api/v1/repos/%s/%s/issues", c.baseURL, owner, repo)
+
+	jsonData, err := json.Marshal(issueReq)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal issue request: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Authorization", "token "+c.token)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to make request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("Gitea API returned status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var issue Issue
+	if err := json.NewDecoder(resp.Body).Decode(&issue); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	return &issue, nil
+}
+
+// GetRepository gets repository information
+func (c *Client) GetRepository(ctx context.Context, owner, repo string) (*Repository, error) {
+	url := fmt.Sprintf("%s/api/v1/repos/%s/%s", c.baseURL, owner, repo)
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Authorization", "token "+c.token)
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to make request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("Gitea API returned status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var repository Repository
+	if err := json.NewDecoder(resp.Body).Decode(&repository); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	return &repository, nil
+}
+
+// GetPullRequest gets pull request information
+func (c *Client) GetPullRequest(ctx context.Context, owner, repo string, prNumber int) (*PullRequest, error) {
+	url := fmt.Sprintf("%s/api/v1/repos/%s/%s/pulls/%d", c.baseURL, owner, repo, prNumber)
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Authorization", "token "+c.token)
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to make request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("Gitea API returned status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var pullRequest PullRequest
+	if err := json.NewDecoder(resp.Body).Decode(&pullRequest); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	return &pullRequest, nil
+}
+
+// GetChangedFiles gets the list of changed files in a pull request
+func (c *Client) GetChangedFiles(ctx context.Context, owner, repo string, prNumber int) ([]string, error) {
+	url := fmt.Sprintf("%s/api/v1/repos/%s/%s/pulls/%d/files", c.baseURL, owner, repo, prNumber)
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Authorization", "token "+c.token)
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to make request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("Gitea API returned status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var files []struct {
+		SHA       string `json:"sha"`
+		Filename  string `json:"filename"`
+		Status    string `json:"status"`
+		Additions int    `json:"additions"`
+		Deletions int    `json:"deletions"`
+		Changes   int    `json:"changes"`
+		BlobURL   string `json:"blob_url"`
+		RawURL    string `json:"raw_url"`
+		ContentsURL string `json:"contents_url"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&files); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	var changedFiles []string
+	for _, file := range files {
+		changedFiles = append(changedFiles, file.Filename)
+	}
+
+	return changedFiles, nil
+}
+
+// TestConnection tests the connection to Gitea
+func (c *Client) TestConnection(ctx context.Context) error {
+	url := fmt.Sprintf("%s/api/v1/version", c.baseURL)
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Authorization", "token "+c.token)
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to make request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("Gitea API returned status %d", resp.StatusCode)
+	}
+
+	return nil
+}

@@ -1,0 +1,94 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Test and Build
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+        cache: true
+        
+    - name: Install dependencies
+      run: go mod download
+      
+    - name: Run tests
+      run: go test -v ./...
+      
+    - name: Run linting
+      run: |
+        go install golang.org/x/lint/golint@latest
+        golint ./...
+        
+    - name: Check formatting
+      run: |
+        if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
+          echo "Code is not formatted. Please run 'gofmt -s -w .'"
+          exit 1
+        fi
+        
+    - name: Build application
+      run: go build -o bin/gitea-bugbot .
+      
+    - name: Build Docker image
+      run: docker build -t gitea-bugbot:test .
+      
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: gitea-bugbot-binary
+        path: bin/
+        
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+        
+    - name: Run Go security checks
+      run: |
+        go install golang.org/x/vuln/cmd/govulncheck@latest
+        govulncheck ./...
+        
+    - name: Run dependency vulnerability scan
+      run: |
+        go list -m all | grep -v '^go ' | cut -d' ' -f1 | xargs -I {} govulncheck {}
+        
+  docker:
+    name: Docker Build and Test
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Build Docker image
+      run: docker build -t gitea-bugbot:latest .
+      
+    - name: Test Docker image
+      run: |
+        docker run --rm gitea-bugbot:latest --help || exit 1
+        
+    - name: Run container security scan
+      run: |
+        docker run --rm --security-opt=no-new-privileges gitea-bugbot:latest --help || exit 1

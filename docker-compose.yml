@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  gitea-bugbot:
+    build: .
+    container_name: gitea-bugbot
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - BUGBOT_PORT=8080
+      - BUGBOT_LOG_LEVEL=info
+      - BUGBOT_GITEA_URL=http://your-gitea-server:3000
+      - BUGBOT_GITEA_TOKEN=your-gitea-access-token
+      - BUGBOT_WEBHOOK_SECRET=your-webhook-secret
+      - BUGBOT_OPENWEBUI_URL=http://your-openwebui-server:8080
+      - BUGBOT_OPENWEBUI_TOKEN=your-openwebui-api-token
+      - BUGBOT_ANALYSIS_DEPTH=3
+      - BUGBOT_MAX_FILE_SIZE=1048576
+      - BUGBOT_ENABLE_SECURITY=true
+      - BUGBOT_ENABLE_QUALITY=true
+      - BUGBOT_AUTO_CREATE_ISSUES=true
+      - BUGBOT_MAX_ISSUES_PER_RUN=50
+      - BUGBOT_SKIP_LOW_SEVERITY=false
+      - BUGBOT_GROUP_SIMILAR_ISSUES=true
+      - BUGBOT_MAX_CONCURRENT_ANALYSES=5
+      - BUGBOT_ANALYSIS_TIMEOUT=300
+      - BUGBOT_RATE_LIMIT_PER_MINUTE=60
+    volumes:
+      - ./config:/app/config:ro
+      - ./logs:/app/logs
+    networks:
+      - bugbot-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  bugbot-network:
+    driver: bridge
+    external: false
