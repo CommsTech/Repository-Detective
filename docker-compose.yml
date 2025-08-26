@@ -15,14 +15,14 @@ services:
       - BUGBOT_SERVER_WRITE_TIMEOUT=30s
       
       # Gitea Configuration
-      - BUGBOT_GITEA_URL=https://git.commsnet.org
-      - BUGBOT_GITEA_TOKEN=3018659e00c0952cb78099d132c205762c05542f
+      - BUGBOT_GITEA_URL=https://your-gitea-server.com
+      - BUGBOT_GITEA_TOKEN=your-gitea-access-token-here
       - BUGBOT_GITEA_API_TIMEOUT=30s
       
       # OpenWebUI Configuration
-      - BUGBOT_OPENWEBUI_URL=https://ai.commsnet.org/api
-      - BUGBOT_OPENWEBUI_API_KEY=sk-82fae28a7a214114b7606206de232371
-      - BUGBOT_OPENWEBUI_MODEL=luna-tic-coder
+      - BUGBOT_OPENWEBUI_URL=https://your-openwebui-server.com/api
+      - BUGBOT_OPENWEBUI_API_KEY=your-openwebui-api-key-here
+      - BUGBOT_OPENWEBUI_MODEL=your-preferred-model
       - BUGBOT_OPENWEBUI_TIMEOUT=60s
       - BUGBOT_OPENWEBUI_MAX_TOKENS=4000
       

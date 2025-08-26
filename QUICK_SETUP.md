@@ -2,7 +2,7 @@
 
 ## Your Configuration is Ready! ✅
 
-Your Docker Compose file has been pre-configured with your specific settings:
+Your Docker Compose file is configured with placeholder values. You need to add your specific configuration:
 
 - **Gitea Server**: `https://git.commsnet.org`
 - **OpenWebUI Server**: `https://ai.commsnet.org/api`
@@ -13,7 +13,16 @@ Your Docker Compose file has been pre-configured with your specific settings:
 ### Step 1: Start Docker
 Make sure Docker Desktop is running on your Windows machine.
 
-### Step 2: Run the Deployment Script
+### Step 2: Configure Your Settings
+```powershell
+# Copy the production configuration template
+Copy-Item "docker-compose.prod.yml" "docker-compose.override.yml"
+
+# Edit the override file with your actual values
+notepad docker-compose.override.yml
+```
+
+### Step 3: Run the Deployment Script
 ```powershell
 # In PowerShell, navigate to your project directory
 cd C:\Users\commstech\Github\Gitea_AI_Bugbot

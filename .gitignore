@@ -71,3 +71,8 @@ tmp/
 
 # Local development
 .local/
+
+# Production configuration files (contain secrets)
+docker-compose.prod.yml
+docker-compose.override.yml
+.env
