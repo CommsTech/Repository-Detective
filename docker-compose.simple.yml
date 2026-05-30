@@ -1,5 +1,3 @@
-# DEPRECATED — use docker-compose.minimal.yml or docker-compose.clustermgr.yml
-
-This file contains outdated environment variable names that Bugbot does not read.
+# DEPRECATED — use docker-compose.minimal.yml or docker-compose.public.yml
 
 See [docs/SETUP.md](docs/SETUP.md).

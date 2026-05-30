@@ -1,10 +1,5 @@
-# DEPRECATED — use docker-compose.minimal.yml or docker-compose.clustermgr.yml
+# DEPRECATED — use docker-compose.minimal.yml or docker-compose.public.yml
 
-This file contains outdated environment variable names (`BUGBOT_SERVER_PORT`, `BUGBOT_ANALYSIS_*`, etc.) that Bugbot does not read.
-
-Use instead:
-
-- **Local dev:** `docker compose -f docker-compose.minimal.yml up -d --build`
-- **Clustermgr:** `docker compose -f docker-compose.clustermgr.yml up -d --build`
+This file contains outdated environment variable names that Bugbot does not read.
 
 See [docs/SETUP.md](docs/SETUP.md).

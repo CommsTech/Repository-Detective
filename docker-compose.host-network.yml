@@ -4,7 +4,7 @@ version: '3.8'
 # Listens on host BUGBOT_PORT (default 8081).
 #
 # Usage:
-#   cp .env.clustermgr.example .env && edit .env
+#   cp .env.example .env && edit .env
 #   docker compose -f docker-compose.host-network.yml up -d --build
 #
 # Set in .env:

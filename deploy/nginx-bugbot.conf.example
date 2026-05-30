@@ -3,7 +3,7 @@
 # Replace bugbot.commsnet.org and upstream IP with your values.
 
 upstream bugbot {
-    server 192.168.255.11:8081;
+    server 10.0.0.50:8081;
     keepalive 8;
 }
 

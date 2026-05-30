@@ -8,7 +8,7 @@ version: '3.8'
 #   2. DNS A record for BUGBOT_DOMAIN → your public IP
 #
 # Usage:
-#   cp .env.clustermgr.example .env
+#   cp .env.example .env
 #   # Set BUGBOT_PUBLIC_URL=https://bugbot.commsnet.org in .env
 #   # Edit labels below with your domain
 #   docker network create traefik-public   # skip if exists
