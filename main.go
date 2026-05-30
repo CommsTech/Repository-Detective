@@ -2,6 +2,9 @@ package main
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"net/http"
 	"os"
@@ -32,6 +35,7 @@ var (
 // Config holds the plugin configuration
 type Config struct {
 	Port                    string            `mapstructure:"port"`
+	APIKey                  string            `mapstructure:"api_key"`           // API key for manual analysis endpoints
 	GiteaURL                string            `mapstructure:"gitea_url"`
 	GiteaToken              string            `mapstructure:"gitea_token"`
 	WebhookSecret           string            `mapstructure:"webhook_secret"`
@@ -171,7 +175,10 @@ func loadConfig() error {
 }
 
 func setupRoutes(router *gin.Engine) {
-	// Health check
+	// Set body size limit for all routes (防止 DoS)
+	router.MaxMultipartMemory = 8 << 20 // 8 MB max
+
+	// Health check — no auth required
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"status":  "healthy",
@@ -180,11 +187,12 @@ func setupRoutes(router *gin.Engine) {
 		})
 	})
 
-	// Webhook endpoint for Gitea
+	// Webhook endpoint for Gitea — rate limited and webhook secret auth
 	router.POST("/webhook", handleWebhook)
 
-	// API endpoints
+	// API endpoints — require API key auth
 	api := router.Group("/api/v1")
+	api.Use(requireAPIKeyAuth())
 	{
 		api.POST("/analyze", handleManualAnalysis)
 		api.GET("/status", handleStatus)
@@ -192,6 +200,29 @@ func setupRoutes(router *gin.Engine) {
 	}
 
 	logger.Info("Routes configured successfully")
+}
+
+// requireAPIKeyAuth middleware requires BUGBOT_API_KEY for API endpoints
+func requireAPIKeyAuth() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		apiKey := c.GetHeader("X-Bugbot-API-Key")
+		if apiKey == "" {
+			apiKey = c.Query("api_key")
+		}
+
+		if apiKey == "" {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "API key required"})
+			return
+		}
+
+		// Constant-time comparison to prevent timing attacks
+		if !hmac.Equal([]byte(apiKey), []byte(config.APIKey)) {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid API key"})
+			return
+		}
+
+		c.Next()
+	}
 }
 
 // initializeComponents initializes all the plugin components

@@ -1,14 +1,38 @@
 package handlers
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
+	"time"
+
+	"golang.org/x/time/rate"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )
+
+// rateLimiters per IP
+var (
+	rateLimiterMap = make(map[string]*rate.Limiter)
+	rateLimiterMu  sync.Mutex
+	defaultRate    = rate.Limit(10) // 10 requests per second
+	defaultBurst  = 20
+)
+
+func getRateLimiter(ip string) *rate.Limiter {
+	rateLimiterMu.Lock()
+	defer rateLimiterMu.Unlock()
+	if _, exists := rateLimiterMap[ip]; !exists {
+		rateLimiterMap[ip] = rate.NewLimiter(defaultRate, defaultBurst)
+	}
+	return rateLimiterMap[ip]
+}
 
 // GiteaWebhookPayload represents the structure of Gitea webhook payloads
 type GiteaWebhookPayload struct {
@@ -102,6 +126,15 @@ func NewWebhookHandler(logger *logrus.Logger, config *Config) *WebhookHandler {
 
 // HandleWebhook processes incoming webhook requests
 func (h *WebhookHandler) HandleWebhook(c *gin.Context) {
+	// Apply rate limiting per IP
+	ip := c.ClientIP()
+	limiter := getRateLimiter(ip)
+	if !limiter.Allow() {
+		h.logger.Warnf("Rate limit exceeded for IP: %s", ip)
+		c.JSON(http.StatusTooManyRequests, gin.H{"error": "Rate limit exceeded"})
+		return
+	}
+
 	h.logger.Info("Received webhook request")
 
 	// Verify webhook secret if configured
@@ -188,18 +221,41 @@ func (h *WebhookHandler) handleIssueEvent(c *gin.Context, payload *GiteaWebhookP
 
 // verifyWebhookSecret verifies the webhook secret if configured
 func (h *WebhookHandler) verifyWebhookSecret(c *gin.Context) error {
-	// If no secret is configured, skip verification
+	// CRITICAL: Empty secret means authentication is DISABLED
+	// This is a security risk — require a non-empty secret in production
 	if h.config.WebhookSecret == "" {
+		h.logger.Warnf("WARNING: Webhook secret is empty — webhook authentication is DISABLED. Set BUGBOT_WEBHOOK_SECRET in production.")
+		return nil // Return nil but log a warning
+	}
+
+	// Get secret from header (X-Gitea-Signature for HMAC) or query parameter
+	providedSecret := c.GetHeader("X-Gitea-Signature")
+	if providedSecret == "" {
+		providedSecret = c.Query("secret")
+	}
+
+	if providedSecret == "" {
+		return fmt.Errorf("no webhook secret provided")
+	}
+
+	// Use constant-time comparison to prevent timing attacks
+	expectedBytes, err := hex.DecodeString(h.config.WebhookSecret)
+	if err != nil {
+		// Fall back to string comparison if not hex-encoded
+		expected := []byte(h.config.WebhookSecret)
+		provided := []byte(providedSecret)
+		if !hmac.Equal(expected, provided) {
+			return fmt.Errorf("invalid webhook secret")
+		}
 		return nil
 	}
 
-	// Get secret from header or query parameter
-	secret := c.GetHeader("X-Gitea-Signature")
-	if secret == "" {
-		secret = c.Query("secret")
+	providedBytes, err := hex.DecodeString(providedSecret)
+	if err != nil {
+		return fmt.Errorf("invalid secret format")
 	}
 
-	if secret != h.config.WebhookSecret {
+	if !hmac.Equal(expectedBytes, providedBytes) {
 		return fmt.Errorf("invalid webhook secret")
 	}
 
