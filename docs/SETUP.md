@@ -146,6 +146,8 @@ The wizard creates hooks at `{BUGBOT_PUBLIC_URL}/webhook` for push and pull requ
 
 Do **not** use `docker-compose.yml` or `docker-compose.simple.yml` — they contain outdated environment variable names.
 
+**Clustermgr cannot build images** (no outbound Go proxy): build on the ai host, transfer the tar — see [OFFLINE_DEPLOY.md](OFFLINE_DEPLOY.md).
+
 ---
 
 ## Further reading
