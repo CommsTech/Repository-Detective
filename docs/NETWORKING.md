@@ -29,6 +29,7 @@ Default homelab approach — publish a host port, then forward WAN → host in p
 ### 1. Run Bugbot with public port binding
 
 ```bash
+cp .env.clustermgr.example .env   # edit with your tokens first
 docker compose -f docker-compose.public.yml up -d --build
 ```
 

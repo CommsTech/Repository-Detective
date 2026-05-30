@@ -91,7 +91,7 @@ If you prefer not to use the wizard, configure Gitea webhooks manually:
 
 - **URL**: `{BUGBOT_PUBLIC_URL}/webhook`
 - **Content type**: `application/json`
-- **Secret**: same as `webhook_secret`
+- **Secret**: same string as `BUGBOT_WEBHOOK_SECRET` (configured in the Gitea webhook settings)
 - **Events**: Push, Pull request
 
 See also [AI_PROVIDERS.md](AI_PROVIDERS.md) for AI backend configuration.

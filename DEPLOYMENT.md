@@ -1,89 +1,53 @@
-# Deployment Guide
+# Deployment
 
-**Repository:** https://git.commsnet.org/commstech/Bugbot.git
+Use **[docs/SETUP.md](docs/SETUP.md)** for the full step-by-step guide.
 
 ## Prerequisites
 
-- Gitea server with API access token
-- AI provider (OpenAI, Anthropic, Ollama, OpenWebUI, etc.) — see [docs/AI_PROVIDERS.md](docs/AI_PROVIDERS.md)
-- Docker (recommended) or Go 1.21+
+- Gitea instance with a personal access token (repo read, hook write, issue write)
+- An AI backend — see [docs/AI_PROVIDERS.md](docs/AI_PROVIDERS.md)
+- Docker on the host, or Go 1.21+ to build from source
+- A public URL Gitea can reach (port forward, reverse proxy, or tunnel) — see [docs/NETWORKING.md](docs/NETWORKING.md)
 
-## Deploy with Docker Compose
+## Production on clustermgr
 
 ```bash
 git clone https://git.commsnet.org/commstech/Bugbot.git
 cd Bugbot
-
-# Minimal stack (recommended)
-docker compose -f docker-compose.minimal.yml up -d --build
+cp .env.clustermgr.example .env
+# edit .env
+docker compose -f docker-compose.clustermgr.yml up -d --build
 ```
 
-Configure via environment variables in `docker-compose.minimal.yml` or mount `config/config.yaml`.
+Expose port 8081, set `BUGBOT_PUBLIC_URL`, register webhooks at `/onboard`.
 
-## Post-deploy: onboard repositories
+## Compose files
 
-### Using the Web UI (recommended)
+| File | Port | Purpose |
+|------|------|---------|
+| `docker-compose.clustermgr.yml` | 8081 | Production default |
+| `docker-compose.public.yml` | 8081 | Explicit LAN bind for pfSense NAT |
+| `docker-compose.minimal.yml` | 8080 | Local dev |
 
-1. Set `BUGBOT_PUBLIC_URL` to the URL Gitea can reach (e.g. `https://bugbot.example.com`)
-2. Open `https://bugbot.example.com/onboard`
-3. Enter API key, test connections, select repos, register webhooks
+Avoid `docker-compose.yml` and `docker-compose.simple.yml` — outdated env var names.
 
-### Manual webhooks
+## Health checks
 
-Point each repository webhook to:
-
+```bash
+curl -m 5 http://127.0.0.1:8081/health
+curl -H "X-Bugbot-API-Key: $BUGBOT_API_KEY" http://127.0.0.1:8081/api/v1/status
+docker logs gitea-bugbot --tail 50
 ```
-https://bugbot.example.com/webhook
-```
-
-## Configuration reference
-
-| Setting | Purpose |
-|---------|---------|
-| `BUGBOT_PUBLIC_URL` | Public URL for webhook registration |
-| `BUGBOT_API_KEY` | Secures API and onboarding endpoints |
-| `BUGBOT_WEBHOOK_SECRET` | Validates incoming Gitea webhooks |
-| `BUGBOT_GITEA_URL` / `BUGBOT_GITEA_TOKEN` | Gitea API access |
-| `BUGBOT_AI_PROVIDER` / `BUGBOT_AI_API_KEY` / `BUGBOT_AI_MODEL` | AI backend |
-| `BUGBOT_ENABLE_SECURITY` | Static + LLM security scanning |
-| `BUGBOT_ENABLE_QUALITY` | Static quality rules |
-| `BUGBOT_SKIP_STARTUP_CHECKS` | Set `true` when AI/Gitea unavailable at boot |
-
-## Repository filtering
-
-In `config/config.yaml`:
-
-```yaml
-repository_include_patterns:
-  - "myorg/*"
-repository_exclude_patterns:
-  - "archived-*"
-  - "test-*"
-```
-
-Empty include list = all repositories allowed (minus excludes).
 
 ## CI/CD
 
-Gitea Actions run on push to `main`:
+Gitea Actions in `.gitea/workflows/` run tests on push to `main`. Tag `v*` to build release binaries.
 
-- Lint, vet, staticcheck
-- Unit tests
-- Docker build smoke test
+Requires `GITEA_TOKEN` secret for automated release upload.
 
-Tag releases with `v*` to trigger binary builds and Gitea release upload.
+## Docs index
 
-## Health monitoring
-
-```bash
-curl http://localhost:8080/health
-curl -H "X-Bugbot-API-Key: your-key" http://localhost:8080/api/v1/status
-```
-
-## Documentation
-
-- [README.md](README.md) — overview and API
-- [docs/ONBOARDING.md](docs/ONBOARDING.md) — Web UI setup
-- [docs/AI_PROVIDERS.md](docs/AI_PROVIDERS.md) — AI configuration
-- [architecture.md](architecture.md) — system design
-- [status.md](status.md) — implementation status
+- [SETUP.md](docs/SETUP.md) — start here
+- [NETWORKING.md](docs/NETWORKING.md) — public exposure
+- [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) — when something breaks
+- [ONBOARDING.md](docs/ONBOARDING.md) — wizard details

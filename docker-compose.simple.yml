@@ -1,50 +1,5 @@
-version: '3.8'
+# DEPRECATED — use docker-compose.minimal.yml or docker-compose.clustermgr.yml
 
-services:
-  gitea-bugbot:
-    build: .
-    ports:
-      - "8080:8080"
-    environment:
-      # Server Configuration
-      - BUGBOT_SERVER_HOST=0.0.0.0
-      - BUGBOT_SERVER_PORT=8080
-      
-      # Gitea Configuration
-      - BUGBOT_GITEA_URL=https://your-gitea-server.com
-      - BUGBOT_GITEA_TOKEN=your-gitea-access-token-here
-      
-      # OpenWebUI Configuration
-      - BUGBOT_OPENWEBUI_URL=https://your-openwebui-server.com/api
-      - BUGBOT_OPENWEBUI_API_KEY=your-openwebui-api-key-here
-      - BUGBOT_OPENWEBUI_MODEL=your-preferred-model
-      
-      # Analysis Configuration
-      - BUGBOT_ANALYSIS_MAX_DEPTH=3
-      - BUGBOT_ANALYSIS_MAX_FILE_SIZE=1048576
-      - BUGBOT_ANALYSIS_ENABLE_SECURITY_SCAN=true
-      - BUGBOT_ANALYSIS_ENABLE_QUALITY_CHECK=true
-      
-      # Issue Management Configuration
-      - BUGBOT_ISSUES_AUTO_CREATE=true
-      - BUGBOT_ISSUES_MAX_PER_RUN=50
-      - BUGBOT_ISSUES_SKIP_LOW_SEVERITY=false
-      - BUGBOT_ISSUES_GROUP_SIMILAR=true
-      - BUGBOT_ISSUES_TITLE_TEMPLATE="[Bugbot] Issue detected"
-      - BUGBOT_ISSUES_BODY_TEMPLATE="Issue detected in code with suggested fix"
-      
-      # Webhook Configuration
-      - BUGBOT_WEBHOOKS_ENABLE_PUSH_EVENTS=true
-      - BUGBOT_WEBHOOKS_ENABLE_PULL_REQUEST_EVENTS=true
-      - BUGBOT_WEBHOOKS_ENABLE_ISSUE_EVENTS=false
-      - BUGBOT_WEBHOOKS_SECRET=your-webhook-secret-here
-      
-      # Logging Configuration
-      - BUGBOT_LOGGING_LEVEL=info
-      - BUGBOT_LOGGING_FORMAT=json
-      - BUGBOT_LOGGING_OUTPUT=stdout
-      
-    volumes:
-      - ./config:/app/config:ro
-      - ./logs:/app/logs
-    restart: unless-stopped
+This file contains outdated environment variable names that Bugbot does not read.
+
+See [docs/SETUP.md](docs/SETUP.md).

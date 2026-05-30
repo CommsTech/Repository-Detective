@@ -1,75 +1,59 @@
-# Troubleshooting Clustermgr Deployment
+# Troubleshooting
 
-## Symptom: `curl localhost:8081/health` hangs or times out
+## Health check hangs or connection refused
 
-### Cause A: Server not listening yet (startup checks blocking)
-
-**Before fix:** Bugbot only opened the HTTP port *after* Gitea + AI connection tests (up to 60s). During that window nothing listened on the port.
-
-**Now:** The server binds immediately. `/health` returns `503 {"status":"starting"}` during init, then `200 {"status":"healthy"}` when ready.
-
-**Quick fix for slow/unreachable AI at boot:**
+**Check the port.** Docker on clustermgr maps host 8081 → container 8080:
 
 ```bash
-export BUGBOT_SKIP_STARTUP_CHECKS=true
+ss -tlnp | grep 8081
+curl -m 5 http://127.0.0.1:8081/health
 ```
 
-### Cause B: Wrong port
-
-| Deployment | Bugbot listens | You should curl |
-|------------|----------------|-----------------|
-| Docker `8081:8080` | container :8080 | host `:8081` |
-| Native `BUGBOT_PORT=8081` | host :8081 | host `:8081` |
-| Default config | :8080 | `:8080` |
-
-Check what's listening:
+**Check the container is up:**
 
 ```bash
-ss -tlnp | grep -E '8080|8081'
+docker ps | grep bugbot
+docker logs gitea-bugbot --tail 50
 ```
 
-### Cause C: Process exited on config error
+**Common startup failures** (visible in `docker logs`):
 
-Common failures:
+| Message | Fix |
+|---------|-----|
+| `gitea_url is required` | Set `BUGBOT_GITEA_URL` in `.env` |
+| `gitea_token is required` | Set `BUGBOT_GITEA_TOKEN` |
+| `configure ai_provider` | Set `BUGBOT_AI_PROVIDER` and `BUGBOT_AI_BASE_URL` |
+| Gitea/AI connection timeout | Add `BUGBOT_SKIP_STARTUP_CHECKS=true` to `.env`, rebuild |
 
-- `gitea_url is required`
-- `gitea_token is required`
-- `configure ai_provider + ai_base_url`
-
-Run in foreground to see errors:
-
-```bash
-BUGBOT_SKIP_STARTUP_CHECKS=true ./scripts/run-clustermgr.sh
-```
-
-Or with Docker:
+Run in foreground to watch startup:
 
 ```bash
 docker compose -f docker-compose.clustermgr.yml up --build
-# Ctrl+C to stop; logs print to terminal
 ```
 
-### Cause D: Empty bugbot.log
+**Empty bugbot.log:** Bugbot logs to stdout. Use `docker logs`, or `./scripts/run-clustermgr.sh 2>&1 | tee bugbot.log`.
 
-Bugbot logs to **stdout**, not `bugbot.log`, unless you redirect:
-
-```bash
-./scripts/run-clustermgr.sh 2>&1 | tee bugbot.log
-```
-
-Docker logs:
-
-```bash
-docker logs gitea-bugbot --tail 100
-```
+**503 on /health:** Normal for a few seconds while components initialize. Wait and retry.
 
 ---
 
-## Symptom: `cannot unmarshal array into RepositoryContent`
+## Gitea webhooks fail
 
-Gitea returns a JSON **array** for directory listings; the client expected a single object.
+Gitea cannot reach private IPs. Bugbot needs a public URL.
 
-**Fixed** in `gitea/decodeRepositoryContents` (commit `c0580f6+`). Pull latest and rebuild:
+1. Expose port 8081 — [NETWORKING.md](NETWORKING.md) (pfSense NAT, nginx, or Traefik)
+2. Or use a Cloudflare tunnel — [TUNNEL.md](TUNNEL.md)
+3. Set `BUGBOT_PUBLIC_URL=https://your-public-url` in `.env` and restart
+4. Test from outside your network: `curl https://your-public-url/health`
+5. In Gitea, test webhook delivery (repo → Settings → Webhooks → Test)
+
+Webhook URL must be `{BUGBOT_PUBLIC_URL}/webhook`. The secret in Gitea must match `BUGBOT_WEBHOOK_SECRET`.
+
+---
+
+## `cannot unmarshal array into RepositoryContent`
+
+Fixed in commit `c0580f6`. Pull and rebuild:
 
 ```bash
 git pull
@@ -78,66 +62,30 @@ docker compose -f docker-compose.clustermgr.yml up -d --build
 
 ---
 
-## Symptom: Gitea webhooks fail — can't reach Bugbot
+## No issues created after push
 
-Gitea at `git.commsnet.org` cannot reach internal `192.168.255.11:8081`.
-
-**Option 2 — pfSense port forward (no tunnel):**
-
-WAN TCP `8081` (or `443` via reverse proxy) → `192.168.255.11:8081`.  
-Use `docker-compose.public.yml` and set `BUGBOT_PUBLIC_URL=https://bugbot.yourdomain.com`.  
-Full steps: [NETWORKING.md](NETWORKING.md).
-
-**Option 3 — Cloudflare quick tunnel:**
-
-```bash
-./scripts/install-cloudflared.sh
-export PATH="$HOME/bin:$PATH"
-cloudflared tunnel --url http://127.0.0.1:8081
-```
-
-Set `BUGBOT_PUBLIC_URL` to the `https://*.trycloudflare.com` URL. Webhook URL: `{PUBLIC_URL}/webhook`.
-
-**Option 2 — pfSense port forward** from WAN to `192.168.255.11:8081`.
-
-**Option 4 — pfSense / reverse proxy:** See [NETWORKING.md](NETWORKING.md) — no cloudflared required.
-
-See [TUNNEL.md](TUNNEL.md) for persistent Cloudflare tunnel setup.
+- `auto_create_issues` must be true (default)
+- Gitea token needs issue write permission
+- Check logs for analysis errors: `docker logs gitea-bugbot --tail 100`
+- Repo may be filtered out — check `repository_exclude_patterns` in `config/config.yaml`
 
 ---
 
-## Symptom: SSH sessions die after 15–30s
+## SSH sessions timing out
 
 Use short commands:
 
 ```bash
-# Good
 curl -m 5 http://127.0.0.1:8081/health
 docker logs gitea-bugbot --tail 50
-ss -tlnp | grep 8081
-
-# Avoid on flaky SSH
-tail -f bugbot.log
-docker compose logs -f
 ```
 
-Run Bugbot in Docker with `restart: unless-stopped` so it survives SSH drops.
+Run Bugbot in Docker with `restart: unless-stopped` so it keeps running after SSH drops.
 
 ---
 
-## Recommended clustermgr stack
+## Wizard API calls fail
 
-```bash
-git pull
-cp .env.clustermgr.example .env
-# edit .env
+The onboarding API requires the same key as `BUGBOT_API_KEY`. Enter it in the wizard's first step.
 
-docker compose -f docker-compose.clustermgr.yml up -d --build
-curl -m 5 http://127.0.0.1:8081/health
-
-# In another session — tunnel
-./scripts/install-cloudflared.sh
-cloudflared tunnel --url http://127.0.0.1:8081
-```
-
-Update `.env` with the tunnel URL as `BUGBOT_PUBLIC_URL`, restart Bugbot, then register webhooks at `/onboard`.
+If `/onboard` loads but API calls return 401, the API key in the UI does not match the server config.

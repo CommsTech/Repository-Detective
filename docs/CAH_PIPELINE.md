@@ -1,11 +1,26 @@
-# Bugbot CAH Pipeline Architecture
+# Bugbot CAH Pipeline
 
-**Based on:** Microsoft's MDASH (Multi-Model Agentic Scanning Harness)  
-**Adapted for:** Gitea-hosted code review
+**Spec and implementation notes.** For day-to-day setup, see [SETUP.md](SETUP.md).
 
 ---
 
-## Overview
+## What is implemented today
+
+| Stage | Status | Notes |
+|-------|--------|-------|
+| PREPARE | Partial | File tree + LLM attack surface mapping. No call graph or git history yet. |
+| SCAN | Done | Static regex pre-scan, then LLM auditors with file content. LLM targets flagged files when possible. |
+| VALIDATE | Done | Advocate/counsel debate. High-confidence static hits skip debate. |
+| DEDUP | Partial | Groups by file + line block, not semantic root cause. |
+| PROVE | Partial | LLM-generated PoC (curl/scripts). No ASan/UBSan execution. |
+
+Auditors running today: SQL, XSS, auth, injection, crypto, config (+ static rules for secrets, eval, XSS, etc.).
+
+Not implemented: call graph builder, git history analyzer, memory/race auditors as separate agents, web dashboard.
+
+---
+
+## Overview (target design)
 
 Bugbot's goal is to implement a CAH-style multi-agent security pipeline for Gitea repositories. Unlike simple AI code analysis tools that do a single-pass "analyze this code" prompt, Bugbot should orchestrate multiple specialized agents through a structured discovery → validation → proof pipeline.
 
@@ -165,26 +180,29 @@ Bugbot's goal is to implement a CAH-style multi-agent security pipeline for Gite
 
 ---
 
-## Implementation Plan
+## Original implementation plan (historical)
 
-### Phase 1: Infrastructure (this week)
-- [ ] Refactor `analyzers/engine.go` to support multi-stage pipeline
-- [ ] Add `PrepareStage` — repo structure, attack surface mapping
-- [ ] Add stage result structs (PrepareReport, CandidateFinding, etc.)
-- [ ] Update `main.go` to wire up new pipeline
+The checklist below was the initial roadmap. Most of Phase 1–3 is done; Phase 4 dashboard is not.
 
-### Phase 2: Scanner Agents (week 2)
-- [ ] Implement 3-4 auditor agents (SQL, Auth, Injection, Config)
-- [ ] Add OpenWebUI prompt templates for each auditor
-- [ ] Run auditors in parallel, collect candidates
+### Phase 1: Infrastructure
+- [x] Refactor `analyzers/engine.go` to support multi-stage pipeline
+- [x] Add `PrepareStage` — repo structure, attack surface mapping
+- [x] Add stage result structs (PrepareReport, CandidateFinding, etc.)
+- [x] Update `main.go` to wire up new pipeline
 
-### Phase 3: Validator + Dedup (week 3)
-- [ ] Implement debater agents
-- [ ] Add deduplication logic
-- [ ] Add prove stage with PoC generation
+### Phase 2: Scanner Agents
+- [x] Implement auditor agents (SQL, Auth, Injection, Config, XSS, Crypto)
+- [x] LLM prompt templates for each auditor
+- [x] Run auditors in parallel, collect candidates
+- [x] Static pre-scan layer (`analyzers/static.go`)
 
-### Phase 4: Integration + Polish (week 4)
-- [ ] Integrate with Gitea issue creation
+### Phase 3: Validator + Dedup
+- [x] Implement debater agents
+- [x] Add deduplication logic (basic)
+- [x] Add prove stage with PoC generation
+
+### Phase 4: Integration + Polish
+- [x] Integrate with Gitea issue creation
 - [ ] Add configurable severity thresholds
 - [ ] Build web dashboard for viewing reports
 - [ ] Performance: add caching, incremental scan support
