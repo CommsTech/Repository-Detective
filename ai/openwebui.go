@@ -10,7 +10,329 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+	"yourusername/gitea-bugbot/analyzers"
 )
+
+// ============================================================================
+// NEW CAH PIPELINE METHODS
+// ============================================================================
+
+// AttackSurfaceRequest is the input for attack surface analysis
+type AttackSurfaceRequest struct {
+	RepositoryName string
+	Files         string // file tree summary
+}
+
+// AttackSurfaceResponse is the output of attack surface analysis
+type AttackSurfaceResponse struct {
+	EntryPoints     []analyzers.EntryPoint
+	AttackSurface   []analyzers.AttackSurfaceEntry
+	TrustBoundaries []analyzers.TrustBoundary
+}
+
+// AnalyzeAttackSurface identifies entry points, attack surface, and trust boundaries
+func (c *OpenWebUIClient) AnalyzeAttackSurface(ctx context.Context, req *AttackSurfaceRequest) (*AttackSurfaceResponse, error) {
+	prompt := fmt.Sprintf(`You are a security architecture analyst. Analyze the following repository structure and identify the attack surface.
+
+Repository: %s
+
+File Structure:
+%s
+
+TASK:
+1. Identify all ENTRY POINTS — public-facing functions, HTTP handlers, API endpoints, CLI commands, service interfaces
+2. Identify ATTACK SURFACE — data entry points (user input, file reads, network, env vars)
+3. Identify TRUST BOUNDARIES — transitions between external/internal/privileged zones
+
+Respond with JSON:
+{
+  "entry_points": [
+    {"file": "src/handler.go", "line": 42, "function_name": "handleLogin", "type": "http_handler", "auth_required": false}
+  ],
+  "attack_surface": [
+    {"file": "src/handler.go", "line": 42, "type": "user_input", "data_flow": "request → handler → db"}
+  ],
+  "trust_boundaries": [
+    {"file": "src/auth.go", "line": 10, "from_zone": "external", "to_zone": "internal", "operation": "auth_check"}
+  ]
+}`, req.RepositoryName, req.Files)
+
+	openReq := &OpenWebUIRequest{
+		Model:       "default",
+		Messages:    []OpenWebUIMessage{{Role: "system", Content: getSystemPrompt()}, {Role: "user", Content: prompt}},
+		Stream:      false,
+		Temperature: 0.1,
+		MaxTokens:  4000,
+	}
+
+	resp, err := c.makeRequest(ctx, openReq)
+	if err != nil {
+		return nil, fmt.Errorf("attack surface analysis failed: %w", err)
+	}
+
+	if len(resp.Choices) == 0 {
+		return nil, fmt.Errorf("no response from OpenWebUI")
+	}
+
+	// Parse JSON response
+	var result AttackSurfaceResponse
+	if err := json.Unmarshal([]byte(resp.Choices[0].Message.Content), &result); err != nil {
+		c.logger.Warnf("Failed to parse attack surface response as JSON: %v", err)
+		// Return empty result rather than failing
+		return &AttackSurfaceResponse{}, nil
+	}
+
+	return &result, nil
+}
+
+// AuditorRequest is the input for an auditor agent
+type AuditorRequest struct {
+	RepositoryName     string
+	VulnerabilityClass string
+	Files             []interface{} // gitea.RepositoryContent
+	AttackSurface    []analyzers.AttackSurfaceEntry
+	AuditorType     string
+}
+
+// AuditorFinding is a candidate finding from an auditor
+type AuditorFinding struct {
+	File        string
+	Line        int
+	Hypothesis  string
+	CodeSnippet string
+	CallChain   []string
+	Severity    string
+	Confidence  float64
+}
+
+// AuditorResponse is the output of an auditor agent
+type AuditorResponse struct {
+	Findings []AuditorFinding
+}
+
+// RunAuditor runs a specialized auditor agent
+func (c *OpenWebUIClient) RunAuditor(ctx context.Context, req *AuditorRequest) (*AuditorResponse, error) {
+	prompt := c.buildAuditorPrompt(req)
+
+	openReq := &OpenWebUIRequest{
+		Model:       "default",
+		Messages:    []OpenWebUIMessage{{Role: "system", Content: getAuditorSystemPrompt(req.AuditorType)}, {Role: "user", Content: prompt}},
+		Stream:      false,
+		Temperature: 0.1,
+		MaxTokens:  4000,
+	}
+
+	resp, err := c.makeRequest(ctx, openReq)
+	if err != nil {
+		return nil, fmt.Errorf("auditor request failed: %w", err)
+	}
+
+	if len(resp.Choices) == 0 {
+		return &AuditorResponse{}, nil
+	}
+
+	var result AuditorResponse
+	if err := json.Unmarshal([]byte(resp.Choices[0].Message.Content), &result); err != nil {
+		c.logger.Warnf("Failed to parse auditor response: %v", err)
+		return &AuditorResponse{}, nil
+	}
+
+	return &result, nil
+}
+
+func (c *OpenWebUIClient) buildAuditorPrompt(req *AuditorRequest) string {
+	return fmt.Sprintf(`You are a %s security auditor. Analyze the following code for %s vulnerabilities.
+
+Repository: %s
+
+Files to analyze: %d files
+
+TASK:
+For each file, identify %s vulnerabilities and provide:
+- File and line number
+- The vulnerable code snippet
+- Call chain from entry point (if available)
+- Severity (critical/high/medium/low)
+- Confidence (0.0-1.0)
+
+Respond with JSON array of findings:
+{
+  "findings": [
+    {
+      "file": "src/db.go",
+      "line": 42,
+      "hypothesis": "SQL injection via string concatenation in user query",
+      "code_snippet": "query := \"SELECT * FROM users WHERE id = \" + userID",
+      "call_chain": ["handleRequest() → getUser() → db.Query()"],
+      "severity": "critical",
+      "confidence": 0.92
+    }
+  ]
+}
+
+If no vulnerabilities found, respond with: {"findings": []}`, req.AuditorType, req.VulnerabilityClass, req.RepositoryName, len(req.Files), req.VulnerabilityClass)
+}
+
+func getAuditorSystemPrompt(auditorType string) string {
+	prompts := map[string]string{
+		"sql":          `You are a SQL injection security auditor. You specialize in finding SQL injection vulnerabilities including string concatenation, improper escaping, and dynamic SQL construction.`,
+		"xss":          `You are an XSS security auditor. You specialize in finding cross-site scripting vulnerabilities including improper input sanitization, missing output encoding, and DOM manipulation risks.`,
+		"auth":         `You are an authentication security auditor. You specialize in finding authentication bypasses, session management flaws, and authorization vulnerabilities.`,
+		"injection":    `You are a command injection auditor. You specialize in finding command injection, SSRF, and LDAP injection vulnerabilities.`,
+		"crypto":       `You are a cryptography security auditor. You specialize in finding hardcoded secrets, weak cryptographic algorithms, IV reuse, and improper key management.`,
+		"race":        `You are a race condition auditor. You specialize in finding time-of-check-time-of-use (TOCTOU) vulnerabilities and concurrent access bugs.`,
+		"memory":      `You are a memory safety auditor. You specialize in finding buffer overflows, use-after-free, and unsafe memory operations in C/C++ code.`,
+		"config":      `You are a configuration security auditor. You specialize in finding insecure defaults, debug mode in production, missing security headers, and environment-based misconfigurations.`,
+	}
+	if p, ok := prompts[auditorType]; ok {
+		return p
+	}
+	return `You are a security auditor. Analyze code for security vulnerabilities and provide specific, actionable findings with code references.`
+}
+
+// DebaterRequest is the input for a debater agent
+type DebaterRequest struct {
+	Finding analyzers.CandidateFinding
+	Role   string // "advocate" or "counsel"
+}
+
+// DebaterResponse is the output of a debater agent
+type DebaterResponse struct {
+	Confidence float64
+	Arguments string
+}
+
+// RunDebater runs a debater agent (advocate or counsel)
+func (c *OpenWebUIClient) RunDebater(ctx context.Context, req *DebaterRequest) (*DebaterResponse, error) {
+	var rolePrompt, task string
+	if req.Role == "advocate" {
+		rolePrompt = "VULNERABILITY ADVOCATE"
+		task = "Argue WHY this is exploitable. Find the attack path. Show how an attacker would trigger this."
+	} else {
+		rolePrompt = "DEFENSE COUNSEL"
+		task = "Argue why this is NOT exploitable. Identify mitigating factors. Show why an attacker cannot reach or trigger this."
+	}
+
+	prompt := fmt.Sprintf(`You are a security expert acting as %s.
+
+VULNERABILITY CLAIM:
+- Type: %s
+- File: %s, Line: %d
+- Claim: %s
+- Evidence: %s
+- Severity: %s
+- Confidence: %.2f
+
+YOUR TASK:
+%s
+
+Analyze the code path, the attack surface, and any mitigating controls.
+Provide your confidence (0.0-1.0) and specific arguments.
+
+Respond with JSON:
+{
+  "confidence": 0.85,
+  "arguments": "This is exploitable because..."
+}`, rolePrompt, req.Finding.AuditorType, req.Finding.File, req.Finding.Line,
+		req.Finding.Hypothesis, req.Finding.Evidence.Code, req.Finding.Severity,
+		req.Finding.Confidence, task)
+
+	openReq := &OpenWebUIRequest{
+		Model:       "default",
+		Messages:    []OpenWebUIMessage{{Role: "system", Content: getDebaterSystemPrompt()}, {Role: "user", Content: prompt}},
+		Stream:      false,
+		Temperature: 0.2,
+		MaxTokens:  2000,
+	}
+
+	resp, err := c.makeRequest(ctx, openReq)
+	if err != nil {
+		return nil, fmt.Errorf("debater request failed: %w", err)
+	}
+
+	if len(resp.Choices) == 0 {
+		return &DebaterResponse{Confidence: 0.5, Arguments: "No response"}, nil
+	}
+
+	var result DebaterResponse
+	if err := json.Unmarshal([]byte(resp.Choices[0].Message.Content), &result); err != nil {
+		return &DebaterResponse{Confidence: 0.5, Arguments: resp.Choices[0].Message.Content[:min(200, len(resp.Choices[0].Message.Content))]}, nil
+	}
+
+	return &result, nil
+}
+
+func getDebaterSystemPrompt() string {
+	return `You are a security expert analyzing vulnerability claims. You must be technically rigorous — do not accept vague claims. Either prove or disprove exploitability with concrete code references and attack paths.`
+}
+
+// PoCRequest is the input for PoC generation
+type PoCRequest struct {
+	Finding analyzers.DedupedFinding
+}
+
+// PoCResponse is the output of PoC generation
+type PoCResponse struct {
+	Type        string
+	Command     string
+	Language    string
+	Explanation string
+}
+
+// GeneratePoC generates a proof-of-concept for a finding
+func (c *OpenWebUIClient) GeneratePoC(ctx context.Context, req *PoCRequest) (*PoCResponse, error) {
+	prompt := fmt.Sprintf(`You are a security researcher. Generate a proof-of-concept (PoC) that demonstrates this vulnerability.
+
+VULNERABILITY:
+- ID: %s
+- Type: %s
+- Severity: %s
+- Description: %s
+- Affected Files: %v
+- Evidence: %s
+
+TASK:
+Generate a concrete, executable PoC that triggers this vulnerability.
+For web vulnerabilities, provide a curl command.
+For other vulnerabilities, provide an executable script or code snippet.
+
+Respond with JSON:
+{
+  "type": "curl",
+  "command": "curl 'http://target/api/endpoint?param=value' ...",
+  "language": "bash",
+  "explanation": "This curl command exploits the vulnerability by..."
+}`, req.Finding.ID, req.Finding.Category, req.Finding.Severity,
+		req.Finding.Description, req.Finding.Files, req.Finding.Evidence.Code)
+
+	openReq := &OpenWebUIRequest{
+		Model:       "default",
+		Messages:    []OpenWebUIMessage{{Role: "system", Content: getPoCSystemPrompt()}, {Role: "user", Content: prompt}},
+		Stream:      false,
+		Temperature: 0.3,
+		MaxTokens:  2000,
+	}
+
+	resp, err := c.makeRequest(ctx, openReq)
+	if err != nil {
+		return nil, fmt.Errorf("PoC generation failed: %w", err)
+	}
+
+	if len(resp.Choices) == 0 {
+		return &PoCResponse{Type: "none", Command: "", Explanation: "No PoC generated"}, nil
+	}
+
+	var result PoCResponse
+	if err := json.Unmarshal([]byte(resp.Choices[0].Message.Content), &result); err != nil {
+		return &PoCResponse{Type: "text", Command: resp.Choices[0].Message.Content[:min(500, len(resp.Choices[0].Message.Content))], Explanation: "Raw output"}, nil
+	}
+
+	return &result, nil
+}
+
+func getPoCSystemPrompt() string {
+	return `You are a security researcher. Generate realistic, executable proof-of-concept exploits. For web vulnerabilities, use curl. For other vulnerabilities, provide working code snippets. Always explain how the PoC works.`
+}
 
 // OpenWebUIClient handles communication with OpenWebUI server
 type OpenWebUIClient struct {
