@@ -405,6 +405,46 @@ func (c *Client) GetChangedFiles(ctx context.Context, owner, repo string, prNumb
 	return changedFiles, nil
 }
 
+// ListAllFiles recursively lists all files in a repository
+func (c *Client) ListAllFiles(ctx context.Context, owner, repo, ref, dirPath string) ([]RepositoryContent, error) {
+	var allFiles []RepositoryContent
+
+	// Handle root directory
+	if dirPath == "" {
+		// Get the repository to find the default branch
+		repoInfo, err := c.GetRepository(ctx, owner, repo)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get repository info: %w", err)
+		}
+		dirPath = ""
+		if ref == "" {
+			ref = repoInfo.DefaultBranch
+		}
+	}
+
+	// Fetch directory contents
+	contents, err := c.ListRepositoryContents(ctx, owner, repo, ref, dirPath)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, item := range contents {
+		if item.Type == "dir" {
+			// Recursively fetch subdirectory
+			subFiles, err := c.ListAllFiles(ctx, owner, repo, ref, item.Path)
+			if err != nil {
+				c.logger.Warnf("Failed to list directory %s: %v", item.Path, err)
+				continue
+			}
+			allFiles = append(allFiles, subFiles...)
+		} else {
+			allFiles = append(allFiles, item)
+		}
+	}
+
+	return allFiles, nil
+}
+
 // TestConnection tests the connection to Gitea
 func (c *Client) TestConnection(ctx context.Context) error {
 	url := fmt.Sprintf("%s/api/v1/version", c.baseURL)

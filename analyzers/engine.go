@@ -13,6 +13,42 @@ import (
 )
 
 // ============================================================================
+// CONFIG & RESULT TYPES (kept for compatibility)
+// ============================================================================
+
+// Config holds analyzer configuration
+type Config struct {
+	MaxFileSize           int64
+	AnalysisDepth         int
+	EnableSecurity        bool
+	EnableQuality         bool
+	SkipPatterns          []string
+	LanguageMapping       map[string]string
+}
+
+// CodeSuggestion represents a code improvement suggestion
+type CodeSuggestion struct {
+	Type        string
+	File        string
+	Line        int
+	Suggestion  string
+	Explanation string
+}
+
+// AnalysisResult represents the complete result of analyzing a repository
+type AnalysisResult struct {
+	Repository     string
+	Commit         string
+	AnalysisTime   time.Duration
+	FilesAnalyzed  int
+	IssuesFound    int
+	Issues         []ai.CodeIssue
+	Suggestions    []CodeSuggestion
+	OverallScore   float64
+	Errors         []string
+}
+
+// ============================================================================
 // STAGE RESULT TYPES
 // ============================================================================
 
