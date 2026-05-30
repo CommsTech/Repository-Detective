@@ -1,0 +1,111 @@
+package ai
+
+import (
+	"time"
+
+	"git.commsnet.org/commstech/bugbot/gitea"
+	"git.commsnet.org/commstech/bugbot/models"
+)
+
+// AttackSurfaceRequest is the input for attack surface analysis.
+type AttackSurfaceRequest struct {
+	RepositoryName string
+	Files          string
+}
+
+// AttackSurfaceResponse is the output of attack surface analysis.
+type AttackSurfaceResponse struct {
+	EntryPoints     []models.EntryPoint
+	AttackSurface   []models.AttackSurfaceEntry
+	TrustBoundaries []models.TrustBoundary
+}
+
+// AuditorRequest is the input for an auditor agent.
+type AuditorRequest struct {
+	RepositoryName     string
+	VulnerabilityClass string
+	Files              []gitea.RepositoryContent
+	AttackSurface      []models.AttackSurfaceEntry
+	AuditorType        string
+}
+
+// AuditorFinding is a candidate finding from an auditor.
+type AuditorFinding struct {
+	File        string
+	Line        int
+	Hypothesis  string
+	CodeSnippet string
+	CallChain   []string
+	Severity    string
+	Confidence  float64
+}
+
+// AuditorResponse is the output of an auditor agent.
+type AuditorResponse struct {
+	Findings []AuditorFinding
+}
+
+// DebaterRequest is the input for a debater agent.
+type DebaterRequest struct {
+	Finding models.CandidateFinding
+	Role    string
+}
+
+// DebaterResponse is the output of a debater agent.
+type DebaterResponse struct {
+	Confidence float64
+	Arguments  string
+}
+
+// PoCRequest is the input for PoC generation.
+type PoCRequest struct {
+	Finding models.DedupedFinding
+}
+
+// PoCResponse is the output of PoC generation.
+type PoCResponse struct {
+	Type        string
+	Command     string
+	Language    string
+	Explanation string
+}
+
+// CodeAnalysisRequest represents a request for code analysis.
+type CodeAnalysisRequest struct {
+	RepositoryName string
+	FilePath       string
+	CodeContent    string
+	Language       string
+	Context        string
+	AnalysisType   string
+}
+
+// CodeAnalysisResult represents the result of code analysis.
+type CodeAnalysisResult struct {
+	Issues       []CodeIssue
+	Suggestions  []CodeSuggestion
+	OverallScore float64
+	AnalysisTime time.Duration
+	ModelUsed    string
+}
+
+// CodeIssue represents a detected issue in the code.
+type CodeIssue struct {
+	Severity     string  `json:"severity"`
+	Category     string  `json:"category"`
+	Title        string  `json:"title"`
+	Description  string  `json:"description"`
+	LineNumber   int     `json:"line_number,omitempty"`
+	ColumnNumber int     `json:"column_number,omitempty"`
+	CodeSnippet  string  `json:"code_snippet,omitempty"`
+	Confidence   float64 `json:"confidence"`
+}
+
+// CodeSuggestion represents a suggested improvement.
+type CodeSuggestion struct {
+	Type        string `json:"type"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	CodeExample string `json:"code_example,omitempty"`
+	Priority    string `json:"priority"`
+}

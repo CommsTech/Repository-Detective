@@ -7,9 +7,10 @@ import (
 	"strings"
 	"time"
 
+	"git.commsnet.org/commstech/bugbot/ai"
+	"git.commsnet.org/commstech/bugbot/gitea"
+	"git.commsnet.org/commstech/bugbot/models"
 	"github.com/sirupsen/logrus"
-	"yourusername/gitea-bugbot/ai"
-	"yourusername/gitea-bugbot/gitea"
 )
 
 // ============================================================================
@@ -18,12 +19,12 @@ import (
 
 // Config holds analyzer configuration
 type Config struct {
-	MaxFileSize           int64
-	AnalysisDepth         int
-	EnableSecurity        bool
-	EnableQuality         bool
-	SkipPatterns          []string
-	LanguageMapping       map[string]string
+	MaxFileSize     int64
+	AnalysisDepth   int
+	EnableSecurity  bool
+	EnableQuality   bool
+	SkipPatterns    []string
+	LanguageMapping map[string]string
 }
 
 // CodeSuggestion represents a code improvement suggestion
@@ -37,153 +38,48 @@ type CodeSuggestion struct {
 
 // AnalysisResult represents the complete result of analyzing a repository
 type AnalysisResult struct {
-	Repository     string
-	Commit         string
-	AnalysisTime   time.Duration
-	FilesAnalyzed  int
-	IssuesFound    int
-	Issues         []ai.CodeIssue
-	Suggestions    []CodeSuggestion
-	OverallScore   float64
-	Errors         []string
-}
-
-// ============================================================================
-// STAGE RESULT TYPES
-// ============================================================================
-
-// PrepareReport is the output of the PREPARE stage
-type PrepareReport struct {
 	Repository    string
-	Commit       string
-	ScanTime     time.Duration
-	FilesFound   int
-	FilesIndexed int
-	Languages    map[string]int // language -> count
-	EntryPoints  []EntryPoint // public APIs, endpoints, handlers
-	AttackSurface []AttackSurfaceEntry
-	TrustBoundaries []TrustBoundary
-	RecentVulns  []VulnContext // past vulnerability patterns from git history
+	Commit        string
+	AnalysisTime  time.Duration
+	FilesAnalyzed int
+	IssuesFound   int
+	Issues        []ai.CodeIssue
+	Suggestions   []CodeSuggestion
+	OverallScore  float64
+	Errors        []string
 }
 
-// EntryPoint represents a public-facing function/endpoint
-type EntryPoint struct {
-	File         string
-	Line         int
-	FunctionName string
-	Type         string // "http_handler", "api", "cli", "service"
-	AuthRequired bool
-}
+// ============================================================================
+// STAGE RESULT TYPES (aliases for models package)
+// ============================================================================
 
-// AttackSurfaceEntry is an I/O boundary or data entry point
-type AttackSurfaceEntry struct {
-	File         string
-	Line         int
-	Type         string // "user_input", "file_read", "network", "env"
-	DataFlow     string // how data moves from entry to sink
-}
-
-// TrustBoundary represents a transition between trusted/untrusted zones
-type TrustBoundary struct {
-	File         string
-	Line         int
-	FromZone     string // "external", "internal", "privileged"
-	ToZone       string
-	Operation    string // "auth_check", "data_parse", "system_call"
-}
-
-// VulnContext is a vulnerability pattern from git history
-type VulnContext struct {
-	Commit     string
-	Message   string
-	Files     []string
-	Severity  string
-}
-
-// CandidateFinding is a vulnerability candidate from the SCAN stage
-type CandidateFinding struct {
-	ID            string
-	Hypothesis    string   // "This code is vulnerable to X because Y"
-	Evidence      Evidence
-	Reachability  Reachability
-	Severity      string   // "critical", "high", "medium", "low"
-	Confidence    float64  // 0.0-1.0
-	AuditorType  string   // which auditor found it
-	File          string
-	Line          int
-}
-
-// Evidence contains the proof of a finding
-type Evidence struct {
-	Code        string   // vulnerable code snippet
-	CallChain   []string // function call chain
-	ASTNode     string   // optional AST context
-}
-
-// Reachability describes how exploitable a finding is
-type Reachability struct {
-	FromEntryPoint bool     // can it be reached from an entry point?
-	EntryPointRef string   // which entry point
-	Exploitable   bool     // can it be triggered externally?
-	AttackVector  string   // HTTP, CLI, local, etc.
-}
-
-// ValidatedFinding is a finding that survived the VALIDATE stage
-type ValidatedFinding struct {
-	CandidateFinding
-	DebateResult DebateResult
-}
-
-// DebateResult is the output of the VALIDATE stage
-type DebateResult struct {
-	AdvocateConfidence float64
-	CounselConfidence  float64
-	AdvocateArgs       string
-	CounselArgs        string
-	Outcome            string // "validated", "downgraded", "dismissed"
-}
-
-// DedupedFinding is a finding after DEDUP stage
-type DedupedFinding struct {
-	ID           string
-	Severity     string
-	Category     string
-	Title        string
-	Description  string
-	Files        []string // all files with this same root cause
-	Lines        []int
-	Evidence     Evidence
-	Confidence   float64
-	DedupGroup   string // root cause identifier
-}
-
-// ProvenFinding includes a PoC for the finding
-type ProvenFinding struct {
-	DedupedFinding
-	ProofOfConcept ProofOfConcept
-}
-
-// ProofOfConcept is a triggering input that demonstrates the vulnerability
-type ProofOfConcept struct {
-	Type        string // "curl", "script", "asan"
-	Command     string // the actual PoC to run
-	Language    string
-	Explanation string
-}
+type PrepareReport = models.PrepareReport
+type EntryPoint = models.EntryPoint
+type AttackSurfaceEntry = models.AttackSurfaceEntry
+type TrustBoundary = models.TrustBoundary
+type VulnContext = models.VulnContext
+type CandidateFinding = models.CandidateFinding
+type Evidence = models.Evidence
+type Reachability = models.Reachability
+type ValidatedFinding = models.ValidatedFinding
+type DebateResult = models.DebateResult
+type DedupedFinding = models.DedupedFinding
+type ProvenFinding = models.ProvenFinding
+type ProofOfConcept = models.ProofOfConcept
 
 // FinalReport is the complete Bugbot report
 type FinalReport struct {
-	Repository      string
-	Commit         string
-	GeneratedAt    time.Time
-	TotalTimeMs   int64
-	Stages        []string // which stages completed
+	Repository  string
+	Commit      string
+	GeneratedAt time.Time
+	TotalTimeMs int64
+	Stages      []string // which stages completed
 
-	Prepare   *PrepareReport
+	Prepare    *PrepareReport
 	Candidates []CandidateFinding
 	Validated  []ValidatedFinding
-	Deduped   []DedupedFinding
-	Proven    []ProvenFinding
+	Deduped    []DedupedFinding
+	Proven     []ProvenFinding
 
 	Stats ReportStats
 }
@@ -193,12 +89,12 @@ type ReportStats struct {
 	FilesAnalyzed     int
 	CandidatesFound   int
 	ValidatedFindings int
-	DedupedFindings  int
-	ProvenFindings   int
+	DedupedFindings   int
+	ProvenFindings    int
 	CriticalCount     int
-	HighCount        int
-	MediumCount      int
-	LowCount         int
+	HighCount         int
+	MediumCount       int
+	LowCount          int
 }
 
 // ============================================================================
@@ -208,13 +104,13 @@ type ReportStats struct {
 // Engine coordinates the CAH multi-stage analysis pipeline
 type Engine struct {
 	giteaClient *gitea.Client
-	aiClient    *ai.OpenWebUIClient
+	aiClient    *ai.Client
 	logger      *logrus.Logger
 	config      *Config
 }
 
 // NewEngine creates a new CAH-pipeline analysis engine
-func NewEngine(giteaClient *gitea.Client, aiClient *ai.OpenWebUIClient, config *Config, logger *logrus.Logger) *Engine {
+func NewEngine(giteaClient *gitea.Client, aiClient *ai.Client, config *Config, logger *logrus.Logger) *Engine {
 	return &Engine{
 		giteaClient: giteaClient,
 		aiClient:    aiClient,
@@ -223,20 +119,39 @@ func NewEngine(giteaClient *gitea.Client, aiClient *ai.OpenWebUIClient, config *
 	}
 }
 
-// RunCAHPipeline runs the full 5-stage CAH pipeline
+// AnalysisOptions controls scoped vs full-repository analysis.
+type AnalysisOptions struct {
+	FilePaths []string // empty = scan entire repository
+}
+
+// RunCAHPipeline runs the full 5-stage CAH pipeline on a repository ref.
 func (e *Engine) RunCAHPipeline(ctx context.Context, owner, repo, ref string) (*FinalReport, error) {
+	return e.RunCAHPipelineWithOptions(ctx, owner, repo, ref, nil)
+}
+
+// RunCAHPipelineWithOptions runs the CAH pipeline, optionally limited to filePaths.
+func (e *Engine) RunCAHPipelineWithOptions(ctx context.Context, owner, repo, ref string, opts *AnalysisOptions) (*FinalReport, error) {
+	var filePaths []string
+	if opts != nil {
+		filePaths = opts.FilePaths
+	}
+
 	startTime := time.Now()
 	report := &FinalReport{
-		Repository:   fmt.Sprintf("%s/%s", owner, repo),
+		Repository:  fmt.Sprintf("%s/%s", owner, repo),
 		Commit:      ref,
 		GeneratedAt: time.Now(),
 		Stages:      []string{},
 	}
 
+	if len(filePaths) > 0 {
+		e.logger.Infof("[CAH:PIPELINE] Scoped analysis on %d changed file(s)", len(filePaths))
+	}
+
 	// Stage 1: PREPARE
 	e.logger.Info("[CAH:PREPARE] Starting preparation phase...")
 	pStart := time.Now()
-	prepareReport, err := e.Prepare(ctx, owner, repo, ref)
+	prepareReport, err := e.Prepare(ctx, owner, repo, ref, filePaths)
 	if err != nil {
 		e.logger.Errorf("[CAH:PREPARE] Failed: %v", err)
 		return nil, fmt.Errorf("prepare failed: %w", err)
@@ -304,35 +219,30 @@ func (e *Engine) RunCAHPipeline(ctx context.Context, owner, repo, ref string) (*
 // STAGE 1: PREPARE
 // ============================================================================
 
-// Prepare maps the repository attack surface
-func (e *Engine) Prepare(ctx context.Context, owner, repo, ref string) (*PrepareReport, error) {
+// Prepare maps the repository attack surface, optionally scoped to targetFiles.
+func (e *Engine) Prepare(ctx context.Context, owner, repo, ref string, targetFiles []string) (*PrepareReport, error) {
 	report := &PrepareReport{
-		Repository:     fmt.Sprintf("%s/%s", owner, repo),
-		Commit:         ref,
-		Languages:      make(map[string]int),
-		EntryPoints:    []EntryPoint{},
-		AttackSurface:  []AttackSurfaceEntry{},
+		Repository:      fmt.Sprintf("%s/%s", owner, repo),
+		Commit:          ref,
+		Languages:       make(map[string]int),
+		EntryPoints:     []EntryPoint{},
+		AttackSurface:   []AttackSurfaceEntry{},
 		TrustBoundaries: []TrustBoundary{},
-		RecentVulns:    []VulnContext{},
+		RecentVulns:     []VulnContext{},
+		TargetFiles:     targetFiles,
 	}
 
-	// Fetch all files
-	files, err := e.giteaClient.ListAllFiles(ctx, owner, repo, ref, "")
+	files, err := e.resolveAnalyzableFiles(ctx, owner, repo, ref, targetFiles)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list files: %w", err)
+		return nil, fmt.Errorf("failed to resolve files: %w", err)
 	}
 
 	report.FilesFound = len(files)
 
-	// Build language map and identify files to analyze
-	var analyzableFiles []string
 	for _, f := range files {
-		if e.shouldAnalyzeFile(f.Path) {
-			report.FilesIndexed++
-			analyzableFiles = append(analyzableFiles, f.Path)
-			lang := e.detectLanguage(f.Path, "")
-			report.Languages[lang]++
-		}
+		report.FilesIndexed++
+		lang := e.detectLanguage(f.Path, "")
+		report.Languages[lang]++
 	}
 
 	// Use AI to identify entry points, attack surface, and trust boundaries
@@ -345,7 +255,7 @@ func (e *Engine) Prepare(ctx context.Context, owner, repo, ref string) (*Prepare
 	// Call AI to identify entry points and attack surface
 	surfaceFindings, err := e.aiClient.AnalyzeAttackSurface(ctx, &ai.AttackSurfaceRequest{
 		RepositoryName: report.Repository,
-		Files:         contextSummary,
+		Files:          contextSummary,
 	})
 	if err != nil {
 		e.logger.Warnf("[CAH:PREPARE] Attack surface analysis failed: %v", err)
@@ -397,32 +307,23 @@ func (e *Engine) buildPrepareContext(files []gitea.RepositoryContent) string {
 type AuditorType string
 
 const (
-	AuditorSQL      AuditorType = "sql"
-	AuditorXSS     AuditorType = "xss"
-	AuditorAuth    AuditorType = "auth"
-	AuditorInject  AuditorType = "injection"
-	AuditorCrypto  AuditorType = "crypto"
-	AuditorRace    AuditorType = "race"
-	AuditorMemory  AuditorType = "memory"
-	AuditorConfig  AuditorType = "config"
+	AuditorSQL    AuditorType = "sql"
+	AuditorXSS    AuditorType = "xss"
+	AuditorAuth   AuditorType = "auth"
+	AuditorInject AuditorType = "injection"
+	AuditorCrypto AuditorType = "crypto"
+	AuditorRace   AuditorType = "race"
+	AuditorMemory AuditorType = "memory"
+	AuditorConfig AuditorType = "config"
 )
 
-// Scan runs all auditor agents in parallel and collects candidates
+// Scan runs all auditor agents in parallel and collects candidates.
 func (e *Engine) Scan(ctx context.Context, prepare *PrepareReport) ([]CandidateFinding, error) {
-	// Get files to analyze
-	files, err := e.giteaClient.ListAllFiles(ctx,
-		strings.Split(prepare.Repository, "/")[0],
-		strings.Split(prepare.Repository, "/")[1],
-		prepare.Commit, "")
-	if err != nil {
-		return nil, fmt.Errorf("failed to list files: %w", err)
-	}
+	owner, repo := splitRepository(prepare.Repository)
 
-	var analyzableFiles []gitea.RepositoryContent
-	for _, f := range files {
-		if e.shouldAnalyzeFile(f.Path) {
-			analyzableFiles = append(analyzableFiles, f)
-		}
+	analyzableFiles, err := e.resolveAnalyzableFiles(ctx, owner, repo, prepare.Commit, prepare.TargetFiles)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve files: %w", err)
 	}
 
 	// Run all auditors in parallel using goroutines
@@ -487,11 +388,11 @@ func (e *Engine) runAuditor(ctx context.Context, auditorType AuditorType, vulnCl
 
 		// Build auditor request
 		req := &ai.AuditorRequest{
-			RepositoryName: prepare.Repository,
+			RepositoryName:     prepare.Repository,
 			VulnerabilityClass: string(vulnClass),
-			Files:       batch,
-			AttackSurface: prepare.AttackSurface,
-			AuditorType: string(auditorType),
+			Files:              batch,
+			AttackSurface:      prepare.AttackSurface,
+			AuditorType:        string(auditorType),
 		}
 
 		// Call auditor
@@ -510,7 +411,7 @@ func (e *Engine) runAuditor(ctx context.Context, auditorType AuditorType, vulnCl
 				Reachability: Reachability{FromEntryPoint: true},
 				Severity:     f.Severity,
 				Confidence:   f.Confidence,
-				AuditorType: string(auditorType),
+				AuditorType:  string(auditorType),
 				File:         f.File,
 				Line:         f.Line,
 			})
@@ -551,7 +452,7 @@ func (e *Engine) Validate(ctx context.Context, candidates []CandidateFinding) ([
 
 		for _, c := range batch {
 			go func(cand CandidateFinding) {
-				v, err := e.validateOne(ctx, cand)
+				v, _ := e.validateOne(ctx, cand)
 				vResults <- vResult{candidate: cand, validated: v}
 			}(c)
 		}
@@ -582,8 +483,8 @@ func (e *Engine) validateOne(ctx context.Context, candidate CandidateFinding) (*
 	// Advocate argues FOR exploitation
 	go func() {
 		resp, err := e.aiClient.RunDebater(ctx, &ai.DebaterRequest{
-			Finding:       candidate,
-			Role:          "advocate",
+			Finding: candidate,
+			Role:    "advocate",
 		})
 		if err != nil {
 			advocateCh <- dResult{0, ""}
@@ -595,8 +496,8 @@ func (e *Engine) validateOne(ctx context.Context, candidate CandidateFinding) (*
 	// Counselor argues AGAINST exploitation
 	go func() {
 		resp, err := e.aiClient.RunDebater(ctx, &ai.DebaterRequest{
-			Finding:       candidate,
-			Role:          "counsel",
+			Finding: candidate,
+			Role:    "counsel",
 		})
 		if err != nil {
 			counselCh <- dResult{0, ""}
@@ -665,14 +566,16 @@ func (e *Engine) Dedup(candidates []ValidatedFinding) []DedupedFinding {
 		}
 
 		deduped = append(deduped, DedupedFinding{
-			ID::       best.ID,
-			Severity:  best.Severity,
-			Title:     best.Hypothesis,
-			Files:     files,
-			Lines:     lines,
-			Evidence:  best.Evidence,
-			Confidence: best.Confidence,
-			DedupGroup: fmt.Sprintf("%s:%d", best.File, best.Line/10*10),
+			ID:          best.ID,
+			Severity:    best.Severity,
+			Category:    "security",
+			Title:       best.Hypothesis,
+			Description: best.Hypothesis,
+			Files:       files,
+			Lines:       lines,
+			Evidence:    best.Evidence,
+			Confidence:  best.Confidence,
+			DedupGroup:  fmt.Sprintf("%s:%d", best.File, best.Line/10*10),
 		})
 	}
 
@@ -743,43 +646,67 @@ func (e *Engine) shouldAnalyzeFile(path string) bool {
 func (e *Engine) detectLanguage(path, content string) string {
 	ext := strings.ToLower(filepath.Ext(path))
 	switch ext {
-	case ".go": return "go"
-	case ".py": return "python"
-	case ".js", ".jsx": return "javascript"
-	case ".ts", ".tsx": return "typescript"
-	case ".java": return "java"
-	case ".cpp", ".cc", ".cxx": return "cpp"
-	case ".c": return "c"
-	case ".cs": return "csharp"
-	case ".php": return "php"
-	case ".rb": return "ruby"
-	case ".rs": return "rust"
-	case ".swift": return "swift"
-	case ".kt": return "kotlin"
-	case ".scala": return "scala"
-	case ".sh", ".bash": return "bash"
-	case ".ps1": return "powershell"
-	case ".sql": return "sql"
-	case ".html", ".htm": return "html"
-	case ".css", ".scss", ".sass": return "css"
-	default: return "unknown"
+	case ".go":
+		return "go"
+	case ".py":
+		return "python"
+	case ".js", ".jsx":
+		return "javascript"
+	case ".ts", ".tsx":
+		return "typescript"
+	case ".java":
+		return "java"
+	case ".cpp", ".cc", ".cxx":
+		return "cpp"
+	case ".c":
+		return "c"
+	case ".cs":
+		return "csharp"
+	case ".php":
+		return "php"
+	case ".rb":
+		return "ruby"
+	case ".rs":
+		return "rust"
+	case ".swift":
+		return "swift"
+	case ".kt":
+		return "kotlin"
+	case ".scala":
+		return "scala"
+	case ".sh", ".bash":
+		return "bash"
+	case ".ps1":
+		return "powershell"
+	case ".sql":
+		return "sql"
+	case ".html", ".htm":
+		return "html"
+	case ".css", ".scss", ".sass":
+		return "css"
+	default:
+		return "unknown"
 	}
 }
 
 func (e *Engine) compileStats(report *FinalReport) ReportStats {
 	stats := ReportStats{
-		FilesAnalyzed: report.Prepare.FilesIndexed,
-		CandidatesFound: len(report.Candidates),
+		FilesAnalyzed:     report.Prepare.FilesIndexed,
+		CandidatesFound:   len(report.Candidates),
 		ValidatedFindings: len(report.Validated),
-		DedupedFindings: len(report.Deduped),
-		ProvenFindings: len(report.Proven),
+		DedupedFindings:   len(report.Deduped),
+		ProvenFindings:    len(report.Proven),
 	}
 	for _, f := range report.Deduped {
 		switch strings.ToLower(f.Severity) {
-		case "critical": stats.CriticalCount++
-		case "high": stats.HighCount++
-		case "medium": stats.MediumCount++
-		case "low": stats.LowCount++
+		case "critical":
+			stats.CriticalCount++
+		case "high":
+			stats.HighCount++
+		case "medium":
+			stats.MediumCount++
+		case "low":
+			stats.LowCount++
 		}
 	}
 	return stats
@@ -789,60 +716,106 @@ func (e *Engine) compileStats(report *FinalReport) ReportStats {
 // COMPATIBILITY WRAPPERS
 // ============================================================================
 
-// AnalyzeRepository is the old single-pass entry point (kept for compatibility)
+// AnalyzeRepository runs a full-repository CAH scan (manual/API use).
 func (e *Engine) AnalyzeRepository(ctx context.Context, owner, repo, ref string) (*AnalysisResult, error) {
-	report, err := e.RunCAHPipeline(ctx, owner, repo, ref)
-	if err != nil {
-		return nil, err
-	}
-
-	// Convert to old format
-	result := &AnalysisResult{
-		Repository:   fmt.Sprintf("%s/%s", owner, repo),
-		Commit:       ref,
-		AnalysisTime: time.Duration(report.TotalTimeMs) * time.Millisecond,
-		FilesAnalyzed: report.Stats.FilesAnalyzed,
-		IssuesFound:  len(report.Deduped),
-	}
-	for _, f := range report.Deduped {
-		result.Issues = append(result.Issues, ai.CodeIssue{
-			Severity:   f.Severity,
-			Category:   "security",
-			Title:      f.Title,
-			Description: f.Description,
-			Confidence: f.Confidence,
-		})
-	}
-	return result, nil
+	return e.analysisResultFromReport(ctx, owner, repo, ref, "", nil)
 }
 
-// AnalyzePullRequest analyzes a single PR using CAH pipeline
+// AnalyzeChangedFiles runs CAH on a specific set of paths (push webhooks).
+func (e *Engine) AnalyzeChangedFiles(ctx context.Context, owner, repo, ref string, filePaths []string) (*AnalysisResult, error) {
+	if len(filePaths) == 0 {
+		e.logger.Info("No changed files to analyze")
+		return &AnalysisResult{
+			Repository: fmt.Sprintf("%s/%s", owner, repo),
+			Commit:     ref,
+		}, nil
+	}
+	return e.analysisResultFromReport(ctx, owner, repo, ref, ref, &AnalysisOptions{FilePaths: filePaths})
+}
+
+// AnalyzePullRequest analyzes only files changed in a pull request.
 func (e *Engine) AnalyzePullRequest(ctx context.Context, owner, repo string, prNumber int) (*AnalysisResult, error) {
 	pr, err := e.giteaClient.GetPullRequest(ctx, owner, repo, prNumber)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get PR: %w", err)
 	}
 
-	report, err := e.RunCAHPipeline(ctx, owner, repo, pr.HeadBranch)
+	changedFiles, err := e.giteaClient.GetChangedFiles(ctx, owner, repo, prNumber)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get changed files: %w", err)
+	}
+
+	e.logger.Infof("PR #%d: analyzing %d changed file(s) on branch %s", prNumber, len(changedFiles), pr.HeadBranch)
+
+	return e.analysisResultFromReport(ctx, owner, repo, pr.HeadBranch, fmt.Sprintf("PR #%d", prNumber), &AnalysisOptions{FilePaths: changedFiles})
+}
+
+func (e *Engine) analysisResultFromReport(ctx context.Context, owner, repo, ref, commitLabel string, opts *AnalysisOptions) (*AnalysisResult, error) {
+	report, err := e.RunCAHPipelineWithOptions(ctx, owner, repo, ref, opts)
 	if err != nil {
 		return nil, err
 	}
 
+	if commitLabel == "" {
+		commitLabel = ref
+	}
+
 	result := &AnalysisResult{
-		Repository:   fmt.Sprintf("%s/%s", owner, repo),
-		Commit:       fmt.Sprintf("PR #%d", prNumber),
-		AnalysisTime: time.Duration(report.TotalTimeMs) * time.Millisecond,
+		Repository:    fmt.Sprintf("%s/%s", owner, repo),
+		Commit:        commitLabel,
+		AnalysisTime:  time.Duration(report.TotalTimeMs) * time.Millisecond,
 		FilesAnalyzed: report.Stats.FilesAnalyzed,
-		IssuesFound:  len(report.Deduped),
+		IssuesFound:   len(report.Deduped),
 	}
 	for _, f := range report.Deduped {
+		description := f.Description
+		if description == "" {
+			description = f.Title
+		}
 		result.Issues = append(result.Issues, ai.CodeIssue{
-			Severity:   f.Severity,
-			Category:   "security",
-			Title:      f.Title,
-			Description: f.Description,
-			Confidence: f.Confidence,
+			Severity:    f.Severity,
+			Category:    "security",
+			Title:       f.Title,
+			Description: description,
+			Confidence:  f.Confidence,
 		})
 	}
 	return result, nil
+}
+
+func (e *Engine) resolveAnalyzableFiles(ctx context.Context, owner, repo, ref string, targetFiles []string) ([]gitea.RepositoryContent, error) {
+	if len(targetFiles) == 0 {
+		allFiles, err := e.giteaClient.ListAllFiles(ctx, owner, repo, ref, "")
+		if err != nil {
+			return nil, err
+		}
+		var filtered []gitea.RepositoryContent
+		for _, f := range allFiles {
+			if e.shouldAnalyzeFile(f.Path) {
+				filtered = append(filtered, f)
+			}
+		}
+		return filtered, nil
+	}
+
+	var scoped []gitea.RepositoryContent
+	for _, path := range targetFiles {
+		if !e.shouldAnalyzeFile(path) {
+			continue
+		}
+		scoped = append(scoped, gitea.RepositoryContent{
+			Name: filepath.Base(path),
+			Path: path,
+			Type: "file",
+		})
+	}
+	return scoped, nil
+}
+
+func splitRepository(fullName string) (owner, repo string) {
+	parts := strings.SplitN(fullName, "/", 2)
+	if len(parts) != 2 {
+		return fullName, ""
+	}
+	return parts[0], parts[1]
 }

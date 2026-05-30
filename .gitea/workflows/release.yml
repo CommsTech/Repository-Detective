@@ -1,0 +1,139 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    name: Validate Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.21"
+          cache: true
+
+      - name: Run tests
+        run: go test ./...
+
+      - name: Verify tag matches module version pattern
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          echo "Release tag: ${TAG}"
+          test "${TAG#v}" != "${TAG}"
+
+  build-release:
+    name: Build Release Assets
+    runs-on: ubuntu-latest
+    needs: validate
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.21"
+
+      - name: Build multi-platform binaries
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+          mkdir -p dist
+          GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -X main.version=${VERSION}" -o dist/gitea-bugbot-linux-amd64 .
+          GOOS=linux GOARCH=arm64 go build -ldflags "-s -w -X main.version=${VERSION}" -o dist/gitea-bugbot-linux-arm64 .
+          GOOS=windows GOARCH=amd64 go build -ldflags "-s -w -X main.version=${VERSION}" -o dist/gitea-bugbot-windows-amd64.exe .
+          GOOS=darwin GOARCH=amd64 go build -ldflags "-s -w -X main.version=${VERSION}" -o dist/gitea-bugbot-darwin-amd64 .
+          GOOS=darwin GOARCH=arm64 go build -ldflags "-s -w -X main.version=${VERSION}" -o dist/gitea-bugbot-darwin-arm64 .
+          (cd dist && sha256sum * > SHA256SUMS)
+
+      - name: Build Docker image
+        run: docker build -t gitea-bugbot:${GITHUB_REF_NAME} .
+
+      - name: Generate release notes
+        run: |
+          PREV=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          {
+            echo "# ${GITHUB_REF_NAME}"
+            echo
+            echo "## Changes"
+            if [ -n "$PREV" ]; then
+              git log "${PREV}..HEAD" --pretty=format:'- %s (%h)'
+            else
+              git log --pretty=format:'- %s (%h)'
+            fi
+          } > dist/RELEASE_NOTES.md
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-assets
+          path: dist/
+
+  publish:
+    name: Publish Gitea Release
+    runs-on: ubuntu-latest
+    needs: build-release
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-assets
+          path: dist
+
+      - name: Create Gitea release
+        env:
+          GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+          OWNER="${GITEA_REPOSITORY%%/*}"
+          REPO="${GITEA_REPOSITORY#*/}"
+          API="${GITEA_API_URL:-${GITEA_SERVER_URL:-https://git.commsnet.org}/api/v1}"
+
+          if [ -z "$GITEA_TOKEN" ]; then
+            echo "GITEA_TOKEN secret not set — skipping remote release upload"
+            echo "Artifacts are available in the workflow run."
+            exit 0
+          fi
+
+          jq -n \
+            --arg tag "$VERSION" \
+            --arg name "Gitea Bugbot ${VERSION}" \
+            --rawfile body dist/RELEASE_NOTES.md \
+            '{tag_name:$tag,name:$name,body:$body,draft:false,prerelease:false}' > release-body.json
+
+          curl -sS -X POST "${API}/repos/${OWNER}/${REPO}/releases" \
+            -H "Authorization: token ${GITEA_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d @release-body.json > release.json
+
+          RELEASE_ID=$(python3 -c 'import json; print(json.load(open("release.json")).get("id",""))')
+          if [ -z "$RELEASE_ID" ]; then
+            echo "Failed to create release:"
+            cat release.json
+            exit 1
+          fi
+
+          for file in dist/gitea-bugbot-* dist/SHA256SUMS dist/RELEASE_NOTES.md; do
+            [ -f "$file" ] || continue
+            curl -sS -X POST "${API}/repos/${OWNER}/${REPO}/releases/${RELEASE_ID}/assets?name=$(basename "$file")" \
+              -H "Authorization: token ${GITEA_TOKEN}" \
+              -H "Content-Type: application/octet-stream" \
+              --data-binary @"$file"
+          done
+
+          echo "Published release ${VERSION}"

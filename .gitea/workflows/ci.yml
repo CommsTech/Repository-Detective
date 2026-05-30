@@ -1,94 +1,136 @@
-name: CI/CD Pipeline
+name: CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
-  test:
-    name: Test and Build
+  lint-test-build:
+    name: Lint, Test, Build
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: '1.21'
-        cache: true
-        
-    - name: Install dependencies
-      run: go mod download
-      
-    - name: Run tests
-      run: go test -v ./...
-      
-    - name: Run linting
-      run: |
-        go install golang.org/x/lint/golint@latest
-        golint ./...
-        
-    - name: Check formatting
-      run: |
-        if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
-          echo "Code is not formatted. Please run 'gofmt -s -w .'"
-          exit 1
-        fi
-        
-    - name: Build application
-      run: go build -o bin/gitea-bugbot .
-      
-    - name: Build Docker image
-      run: docker build -t gitea-bugbot:test .
-      
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: gitea-bugbot-binary
-        path: bin/
-        
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.21"
+          cache: true
+
+      - name: Verify module integrity
+        run: |
+          go mod tidy
+          git diff --exit-code go.mod go.sum
+
+      - name: Format check
+        run: |
+          test -z "$(gofmt -s -l .)"
+
+      - name: Go vet
+        run: go vet ./...
+
+      - name: Install staticcheck
+        run: go install honnef.co/go/tools/cmd/staticcheck@latest
+
+      - name: Staticcheck
+        run: staticcheck ./...
+
+      - name: Install golangci-lint
+        run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.2
+
+      - name: Golangci-lint
+        run: golangci-lint run ./...
+
+      - name: Run tests
+        run: go test -race -coverprofile=coverage.out ./...
+
+      - name: Build binary
+        run: go build -ldflags "-s -w" -o bin/gitea-bugbot .
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage.out
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: gitea-bugbot-linux-amd64
+          path: bin/gitea-bugbot
+
   security:
     name: Security Scan
     runs-on: ubuntu-latest
-    
+    needs: lint-test-build
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: '1.21'
-        
-    - name: Run Go security checks
-      run: |
-        go install golang.org/x/vuln/cmd/govulncheck@latest
-        govulncheck ./...
-        
-    - name: Run dependency vulnerability scan
-      run: |
-        go list -m all | grep -v '^go ' | cut -d' ' -f1 | xargs -I {} govulncheck {}
-        
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.21"
+
+      - name: Govulncheck
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./...
+
   docker:
-    name: Docker Build and Test
+    name: Docker Build
     runs-on: ubuntu-latest
-    needs: test
-    
+    needs: lint-test-build
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Build Docker image
-      run: docker build -t gitea-bugbot:latest .
-      
-    - name: Test Docker image
-      run: |
-        docker run --rm gitea-bugbot:latest --help || exit 1
-        
-    - name: Run container security scan
-      run: |
-        docker run --rm --security-opt=no-new-privileges gitea-bugbot:latest --help || exit 1
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t gitea-bugbot:ci .
+
+      - name: Verify container starts
+        run: |
+          cid=$(docker run -d --rm -p 18080:8080 \
+            -e BUGBOT_SKIP_STARTUP_CHECKS=true \
+            -e BUGBOT_GITEA_URL=http://example.com \
+            -e BUGBOT_GITEA_TOKEN=test \
+            -e BUGBOT_AI_PROVIDER=ollama \
+            -e BUGBOT_AI_BASE_URL=http://127.0.0.1:11434/v1 \
+            gitea-bugbot:ci)
+          sleep 3
+          curl -sf http://127.0.0.1:18080/health
+          docker stop "$cid"
+
+  changelog:
+    name: Document Changes
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: lint-test-build
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate changelog snippet
+        run: |
+          mkdir -p docs/ci
+          {
+            echo "# CI Build $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo
+            echo "## Commits since last tag"
+            git log "$(git describe --tags --abbrev=0 2>/dev/null || echo '')..HEAD" --pretty=format:'- %s (%h)' || true
+          } > docs/ci/latest-build.md
+
+      - name: Upload changelog artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: latest-changelog
+          path: docs/ci/latest-build.md

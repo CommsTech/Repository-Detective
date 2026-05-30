@@ -3,15 +3,24 @@
 # Server Configuration
 port: "8080"
 log_level: "info"
+api_key: "change-me-to-a-secure-random-string"
 
 # Gitea Configuration
 gitea_url: "http://your-gitea-server:3000"
 gitea_token: "your-gitea-access-token"
 webhook_secret: "your-webhook-secret"
 
-# OpenWebUI Configuration
+# OpenWebUI Configuration (legacy — use ai_provider: openwebui instead)
 openwebui_url: "http://your-openwebui-server:8080"
 openwebui_token: "your-openwebui-api-token"
+openwebui_model: "default"
+
+# AI Provider Configuration (recommended)
+# Supported: openai, anthropic, openrouter, ollama, openwebui, openclaw
+ai_provider: "openai"
+ai_base_url: ""        # optional — provider default used when empty
+ai_api_key: "your-api-key"
+ai_model: "gpt-4o-mini"
 
 # Analysis Configuration
 analysis_depth: 3

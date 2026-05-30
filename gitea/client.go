@@ -3,11 +3,11 @@ package gitea
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
-	"path"
 	"strings"
 	"time"
 
@@ -44,34 +44,34 @@ type RepositoryContent struct {
 
 // Issue represents a Gitea issue
 type Issue struct {
-	ID          int64     `json:"id"`
-	Number      int       `json:"number"`
-	User        User      `json:"user"`
-	Title       string    `json:"title"`
-	Body        string    `json:"body"`
-	State       string    `json:"state"`
-	Comments    int       `json:"comments"`
-	HTMLURL     string    `json:"html_url"`
-	Milestone   *Milestone `json:"milestone,omitempty"`
-	Labels      []Label   `json:"labels"`
-	Assignee    *User     `json:"assignee,omitempty"`
-	Assignees   []User    `json:"assignees,omitempty"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
-	ClosedAt    *time.Time `json:"closed_at,omitempty"`
-	DueDate     *time.Time `json:"due_date,omitempty"`
+	ID          int64        `json:"id"`
+	Number      int          `json:"number"`
+	User        User         `json:"user"`
+	Title       string       `json:"title"`
+	Body        string       `json:"body"`
+	State       string       `json:"state"`
+	Comments    int          `json:"comments"`
+	HTMLURL     string       `json:"html_url"`
+	Milestone   *Milestone   `json:"milestone,omitempty"`
+	Labels      []Label      `json:"labels"`
+	Assignee    *User        `json:"assignee,omitempty"`
+	Assignees   []User       `json:"assignees,omitempty"`
+	CreatedAt   time.Time    `json:"created_at"`
+	UpdatedAt   time.Time    `json:"updated_at"`
+	ClosedAt    *time.Time   `json:"closed_at,omitempty"`
+	DueDate     *time.Time   `json:"due_date,omitempty"`
 	PullRequest *PullRequest `json:"pull_request,omitempty"`
 }
 
 // CreateIssueRequest represents a request to create an issue
 type CreateIssueRequest struct {
-	Title       string   `json:"title"`
-	Body        string   `json:"body"`
-	Assignee    string   `json:"assignee,omitempty"`
-	Milestone   int64    `json:"milestone,omitempty"`
-	Labels      []int64  `json:"labels,omitempty"`
-	Closed      bool     `json:"closed,omitempty"`
-	DueDate     string   `json:"due_date,omitempty"`
+	Title     string  `json:"title"`
+	Body      string  `json:"body"`
+	Assignee  string  `json:"assignee,omitempty"`
+	Milestone int64   `json:"milestone,omitempty"`
+	Labels    []int64 `json:"labels,omitempty"`
+	Closed    bool    `json:"closed,omitempty"`
+	DueDate   string  `json:"due_date,omitempty"`
 }
 
 // User represents a Gitea user
@@ -107,41 +107,42 @@ type Milestone struct {
 
 // PullRequest represents a Gitea pull request
 type PullRequest struct {
-	ID          int64  `json:"id"`
-	Number      int    `json:"number"`
-	State       string `json:"state"`
-	Title       string `json:"title"`
-	Body        string `json:"body"`
-	User        User   `json:"user"`
-	HTMLURL     string `json:"html_url"`
-	DiffURL     string `json:"diff_url"`
-	PatchURL    string `json:"patch_url"`
-	Mergeable   bool   `json:"mergeable"`
-	Merged      bool   `json:"merged"`
-	MergedAt    string `json:"merged_at,omitempty"`
-	MergedBy    *User  `json:"merged_by,omitempty"`
-	BaseBranch  string `json:"base_branch"`
-	HeadBranch  string `json:"head_branch"`
-	BaseRepo    Repository `json:"base_repo"`
-	HeadRepo    Repository `json:"head_repo"`
+	ID         int64      `json:"id"`
+	Number     int        `json:"number"`
+	State      string     `json:"state"`
+	Title      string     `json:"title"`
+	Body       string     `json:"body"`
+	User       User       `json:"user"`
+	HTMLURL    string     `json:"html_url"`
+	DiffURL    string     `json:"diff_url"`
+	PatchURL   string     `json:"patch_url"`
+	Mergeable  bool       `json:"mergeable"`
+	Merged     bool       `json:"merged"`
+	MergedAt   string     `json:"merged_at,omitempty"`
+	MergedBy   *User      `json:"merged_by,omitempty"`
+	BaseBranch string     `json:"base_branch"`
+	HeadBranch string     `json:"head_branch"`
+	BaseRepo   Repository `json:"base_repo"`
+	HeadRepo   Repository `json:"head_repo"`
 }
 
 // Repository represents a Gitea repository
 type Repository struct {
-	ID          int64  `json:"id"`
-	Name        string `json:"name"`
-	FullName    string `json:"full_name"`
-	Owner       User   `json:"owner"`
-	Private     bool   `json:"private"`
-	HTMLURL     string `json:"html_url"`
-	CloneURL    string `json:"clone_url"`
-	GitURL      string `json:"git_url"`
-	SSHURL      string `json:"ssh_url"`
-	Description string `json:"description"`
-	Language    string `json:"language"`
-	Size        int64  `json:"size"`
-	Fork        bool   `json:"fork"`
-	Archived    bool   `json:"archived"`
+	ID            int64  `json:"id"`
+	Name          string `json:"name"`
+	FullName      string `json:"full_name"`
+	Owner         User   `json:"owner"`
+	Private       bool   `json:"private"`
+	HTMLURL       string `json:"html_url"`
+	CloneURL      string `json:"clone_url"`
+	GitURL        string `json:"git_url"`
+	SSHURL        string `json:"ssh_url"`
+	Description   string `json:"description"`
+	Language      string `json:"language"`
+	DefaultBranch string `json:"default_branch"`
+	Size          int64  `json:"size"`
+	Fork          bool   `json:"fork"`
+	Archived      bool   `json:"archived"`
 }
 
 // NewClient creates a new Gitea client
@@ -205,11 +206,13 @@ func (c *Client) GetFileContent(ctx context.Context, owner, repo, ref, filePath 
 		return "", fmt.Errorf("path is not a file: %s", filePath)
 	}
 
-	// Decode base64 content if needed
+	// Decode base64 content when returned by the Gitea API
 	if content.Encoding == "base64" {
-		// In a real implementation, you'd decode base64 here
-		// For now, we'll return the raw content
-		return content.Content, nil
+		decoded, err := base64.StdEncoding.DecodeString(strings.TrimSpace(content.Content))
+		if err != nil {
+			return "", fmt.Errorf("failed to decode base64 content for %s: %w", filePath, err)
+		}
+		return string(decoded), nil
 	}
 
 	return content.Content, nil
@@ -382,14 +385,14 @@ func (c *Client) GetChangedFiles(ctx context.Context, owner, repo string, prNumb
 	}
 
 	var files []struct {
-		SHA       string `json:"sha"`
-		Filename  string `json:"filename"`
-		Status    string `json:"status"`
-		Additions int    `json:"additions"`
-		Deletions int    `json:"deletions"`
-		Changes   int    `json:"changes"`
-		BlobURL   string `json:"blob_url"`
-		RawURL    string `json:"raw_url"`
+		SHA         string `json:"sha"`
+		Filename    string `json:"filename"`
+		Status      string `json:"status"`
+		Additions   int    `json:"additions"`
+		Deletions   int    `json:"deletions"`
+		Changes     int    `json:"changes"`
+		BlobURL     string `json:"blob_url"`
+		RawURL      string `json:"raw_url"`
 		ContentsURL string `json:"contents_url"`
 	}
 

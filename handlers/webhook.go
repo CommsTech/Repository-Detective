@@ -1,15 +1,12 @@
 package handlers
 
 import (
+	"context"
 	"crypto/hmac"
-	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"net/http"
-	"strings"
 	"sync"
-	"time"
 
 	"golang.org/x/time/rate"
 
@@ -22,7 +19,7 @@ var (
 	rateLimiterMap = make(map[string]*rate.Limiter)
 	rateLimiterMu  sync.Mutex
 	defaultRate    = rate.Limit(10) // 10 requests per second
-	defaultBurst  = 20
+	defaultBurst   = 20
 )
 
 func getRateLimiter(ip string) *rate.Limiter {
@@ -36,8 +33,8 @@ func getRateLimiter(ip string) *rate.Limiter {
 
 // GiteaWebhookPayload represents the structure of Gitea webhook payloads
 type GiteaWebhookPayload struct {
-	Secret       string      `json:"secret"`
-	Ref          string      `json:"ref"`
+	Secret      string      `json:"secret"`
+	Ref         string      `json:"ref"`
 	Before      string      `json:"before"`
 	After       string      `json:"after"`
 	CompareURL  string      `json:"compare_url"`
@@ -91,36 +88,44 @@ type User struct {
 
 // PullRequest represents a Gitea pull request
 type PullRequest struct {
-	ID          int64  `json:"id"`
-	Number      int    `json:"number"`
-	State       string `json:"state"`
-	Title       string `json:"title"`
-	Body        string `json:"body"`
-	User        User   `json:"user"`
-	HTMLURL     string `json:"html_url"`
-	DiffURL     string `json:"diff_url"`
-	PatchURL    string `json:"patch_url"`
-	Mergeable   bool   `json:"mergeable"`
-	Merged      bool   `json:"merged"`
-	MergedAt    string `json:"merged_at"`
-	MergedBy    User   `json:"merged_by"`
-	BaseBranch  string `json:"base_branch"`
-	HeadBranch  string `json:"head_branch"`
-	BaseRepo    Repository `json:"base_repo"`
-	HeadRepo    Repository `json:"head_repo"`
+	ID         int64      `json:"id"`
+	Number     int        `json:"number"`
+	State      string     `json:"state"`
+	Title      string     `json:"title"`
+	Body       string     `json:"body"`
+	User       User       `json:"user"`
+	HTMLURL    string     `json:"html_url"`
+	DiffURL    string     `json:"diff_url"`
+	PatchURL   string     `json:"patch_url"`
+	Mergeable  bool       `json:"mergeable"`
+	Merged     bool       `json:"merged"`
+	MergedAt   string     `json:"merged_at"`
+	MergedBy   User       `json:"merged_by"`
+	BaseBranch string     `json:"base_branch"`
+	HeadBranch string     `json:"head_branch"`
+	BaseRepo   Repository `json:"base_repo"`
+	HeadRepo   Repository `json:"head_repo"`
+}
+
+// AnalysisProcessor runs repository analysis for webhook events.
+type AnalysisProcessor interface {
+	ProcessPush(ctx context.Context, payload *GiteaWebhookPayload)
+	ProcessPullRequest(ctx context.Context, payload *GiteaWebhookPayload)
 }
 
 // WebhookHandler handles incoming Gitea webhooks
 type WebhookHandler struct {
-	logger *logrus.Logger
-	config *Config
+	logger    *logrus.Logger
+	config    *Config
+	processor AnalysisProcessor
 }
 
 // NewWebhookHandler creates a new webhook handler
-func NewWebhookHandler(logger *logrus.Logger, config *Config) *WebhookHandler {
+func NewWebhookHandler(logger *logrus.Logger, config *Config, processor AnalysisProcessor) *WebhookHandler {
 	return &WebhookHandler{
-		logger: logger,
-		config: config,
+		logger:    logger,
+		config:    config,
+		processor: processor,
 	}
 }
 
@@ -152,7 +157,7 @@ func (h *WebhookHandler) HandleWebhook(c *gin.Context) {
 		return
 	}
 
-	h.logger.Infof("Processing webhook for repository: %s, action: %s", 
+	h.logger.Infof("Processing webhook for repository: %s, action: %s",
 		payload.Repository.FullName, payload.Action)
 
 	// Process webhook based on action type
@@ -180,19 +185,15 @@ func (h *WebhookHandler) handlePushEvent(c *gin.Context, payload *GiteaWebhookPa
 		return
 	}
 
-	// Analyze each commit
-	for _, commit := range payload.Commits {
-		if err := h.analyzeCommit(&commit, payload.Repository); err != nil {
-			h.logger.Errorf("Failed to analyze commit %s: %v", commit.ID, err)
-		}
-	}
+	// Analyze changed commits in the background
+	go h.processor.ProcessPush(c.Request.Context(), payload)
 
 	c.JSON(http.StatusOK, gin.H{"status": "processing"})
 }
 
 // handlePullRequestEvent processes pull request events
 func (h *WebhookHandler) handlePullRequestEvent(c *gin.Context, payload *GiteaWebhookPayload) {
-	h.logger.Infof("Processing pull request event: %s #%d", 
+	h.logger.Infof("Processing pull request event: %s #%d",
 		payload.Repository.FullName, payload.PullRequest.Number)
 
 	// Only process on open or synchronize
@@ -202,12 +203,7 @@ func (h *WebhookHandler) handlePullRequestEvent(c *gin.Context, payload *GiteaWe
 		return
 	}
 
-	// Analyze pull request
-	if err := h.analyzePullRequest(&payload.PullRequest, payload.Repository); err != nil {
-		h.logger.Errorf("Failed to analyze pull request: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Analysis failed"})
-		return
-	}
+	go h.processor.ProcessPullRequest(c.Request.Context(), payload)
 
 	c.JSON(http.StatusOK, gin.H{"status": "processing"})
 }
@@ -262,71 +258,7 @@ func (h *WebhookHandler) verifyWebhookSecret(c *gin.Context) error {
 	return nil
 }
 
-// analyzeCommit analyzes a single commit for potential issues
-func (h *WebhookHandler) analyzeCommit(commit *Commit, repo Repository) error {
-	h.logger.Infof("Analyzing commit %s in repository %s", commit.ID[:8], repo.FullName)
-
-	// Create analysis context
-	ctx := &AnalysisContext{
-		Repository: repo,
-		Commit:     commit,
-		Type:       "commit",
-	}
-
-	// Start analysis in background
-	go func() {
-		if err := h.performAnalysis(ctx); err != nil {
-			h.logger.Errorf("Analysis failed for commit %s: %v", commit.ID[:8], err)
-		}
-	}()
-
-	return nil
-}
-
-// analyzePullRequest analyzes a pull request for potential issues
-func (h *WebhookHandler) analyzePullRequest(pr *PullRequest, repo Repository) error {
-	h.logger.Infof("Analyzing pull request #%d in repository %s", pr.Number, repo.FullName)
-
-	// Create analysis context
-	ctx := &AnalysisContext{
-		Repository:   repo,
-		PullRequest:  pr,
-		Type:         "pull_request",
-	}
-
-	// Start analysis in background
-	go func() {
-		if err := h.performAnalysis(ctx); err != nil {
-			h.logger.Errorf("Analysis failed for PR #%d: %v", pr.Number, err)
-		}
-	}()
-
-	return nil
-}
-
-// performAnalysis performs the actual code analysis
-func (h *WebhookHandler) performAnalysis(ctx *AnalysisContext) error {
-	h.logger.Infof("Starting analysis for %s in repository %s", ctx.Type, ctx.Repository.FullName)
-
-	// TODO: Implement actual code analysis logic
-	// 1. Fetch repository content
-	// 2. Analyze code using OpenWebUI AI
-	// 3. Create issues for found problems
-	// 4. Propose fixes
-
-	return nil
-}
-
-// AnalysisContext holds context for code analysis
-type AnalysisContext struct {
-	Repository   Repository
-	Commit       *Commit
-	PullRequest  *PullRequest
-	Type         string
-}
-
 // Config holds webhook handler configuration
 type Config struct {
 	WebhookSecret string
-	// Add other configuration fields as needed
 }

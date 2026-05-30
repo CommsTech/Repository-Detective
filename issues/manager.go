@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
+	"git.commsnet.org/commstech/bugbot/ai"
+	"git.commsnet.org/commstech/bugbot/gitea"
 	"github.com/sirupsen/logrus"
-	"yourusername/gitea-bugbot/ai"
-	"yourusername/gitea-bugbot/gitea"
 )
 
 // Manager handles issue creation and management
@@ -20,25 +20,25 @@ type Manager struct {
 
 // Config holds issue manager configuration
 type Config struct {
-	AutoCreateIssues    bool
-	IssueLabels         []string
-	IssueTemplate       string
-	CommentTemplate     string
-	MaxIssuesPerRun     int
-	SkipLowSeverity     bool
-	GroupSimilarIssues  bool
-	IssueTitleTemplate  string
-	IssueBodyTemplate   string
+	AutoCreateIssues   bool
+	IssueLabels        []string
+	IssueTemplate      string
+	CommentTemplate    string
+	MaxIssuesPerRun    int
+	SkipLowSeverity    bool
+	GroupSimilarIssues bool
+	IssueTitleTemplate string
+	IssueBodyTemplate  string
 }
 
 // IssueCreationRequest represents a request to create issues
 type IssueCreationRequest struct {
-	Owner        string
-	Repository   string
+	Owner          string
+	Repository     string
 	AnalysisResult *ai.CodeAnalysisResult
-	Context      string
-	Commit       string
-	PullRequest  int
+	Context        string
+	Commit         string
+	PullRequest    int
 }
 
 // IssueCreationResult represents the result of issue creation
@@ -109,7 +109,7 @@ func (m *Manager) CreateIssuesFromAnalysis(ctx context.Context, req *IssueCreati
 		}
 	}
 
-	m.logger.Infof("Issue creation completed in %v, created %d issues, skipped %d", 
+	m.logger.Infof("Issue creation completed in %v, created %d issues, skipped %d",
 		time.Since(startTime), result.IssuesCreated, result.IssuesSkipped)
 
 	return result, nil
@@ -125,8 +125,8 @@ func (m *Manager) createIssueForProblem(ctx context.Context, req *IssueCreationR
 
 	// Prepare issue creation request
 	issueReq := &gitea.CreateIssueRequest{
-		Title: title,
-		Body:  body,
+		Title:  title,
+		Body:   body,
 		Labels: []int64{}, // Will be populated if labels exist
 	}
 
@@ -147,12 +147,12 @@ func (m *Manager) createIssueForProblem(ctx context.Context, req *IssueCreationR
 // createSummaryIssue creates a summary issue when multiple issues are found
 func (m *Manager) createSummaryIssue(ctx context.Context, req *IssueCreationRequest, result *IssueCreationResult) error {
 	title := fmt.Sprintf("Code Review Summary - %d Issues Found", len(req.AnalysisResult.Issues))
-	
+
 	body := m.createSummaryIssueBody(req)
 
 	issueReq := &gitea.CreateIssueRequest{
-		Title: title,
-		Body:  body,
+		Title:  title,
+		Body:   body,
 		Labels: []int64{},
 	}
 
@@ -225,11 +225,11 @@ func (m *Manager) createIssueBody(issue *ai.CodeIssue, req *IssueCreationRequest
 	body.WriteString("## Context\n\n")
 	body.WriteString(fmt.Sprintf("- **Repository:** %s\n", req.Repository))
 	body.WriteString(fmt.Sprintf("- **Context:** %s\n", req.Context))
-	
+
 	if req.Commit != "" {
 		body.WriteString(fmt.Sprintf("- **Commit:** %s\n", req.Commit))
 	}
-	
+
 	if req.PullRequest > 0 {
 		body.WriteString(fmt.Sprintf("- **Pull Request:** #%d\n", req.PullRequest))
 	}
@@ -274,7 +274,7 @@ func (m *Manager) createSummaryIssueBody(req *IssueCreationRequest) string {
 	}
 
 	body.WriteString("\n## Top Issues\n\n")
-	
+
 	// Show top 5 most critical issues
 	topIssues := 5
 	if len(req.AnalysisResult.Issues) < topIssues {
@@ -292,11 +292,11 @@ func (m *Manager) createSummaryIssueBody(req *IssueCreationRequest) string {
 	body.WriteString("## Context\n\n")
 	body.WriteString(fmt.Sprintf("- **Repository:** %s\n", req.Repository))
 	body.WriteString(fmt.Sprintf("- **Context:** %s\n", req.Context))
-	
+
 	if req.Commit != "" {
 		body.WriteString(fmt.Sprintf("- **Commit:** %s\n", req.Commit))
 	}
-	
+
 	if req.PullRequest > 0 {
 		body.WriteString(fmt.Sprintf("- **Pull Request:** #%d\n", req.PullRequest))
 	}

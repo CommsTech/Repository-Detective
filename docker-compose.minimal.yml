@@ -14,10 +14,15 @@ services:
       - BUGBOT_GITEA_URL=https://your-gitea-server.com
       - BUGBOT_GITEA_TOKEN=your-gitea-access-token-here
       
-      # OpenWebUI Configuration
-      - BUGBOT_OPENWEBUI_URL=https://your-openwebui-server.com/api
-      - BUGBOT_OPENWEBUI_API_KEY=your-openwebui-api-key-here
-      - BUGBOT_OPENWEBUI_MODEL=your-preferred-model
+      # AI Provider — set one provider block (examples below)
+      - BUGBOT_AI_PROVIDER=openwebui
+      - BUGBOT_AI_BASE_URL=https://your-openwebui-server.com
+      - BUGBOT_AI_API_KEY=your-openwebui-api-key-here
+      - BUGBOT_AI_MODEL=your-preferred-model
+      
+      # Legacy names still work:
+      # - BUGBOT_OPENWEBUI_URL=...
+      # - BUGBOT_OPENWEBUI_TOKEN=...
       
       # Analysis Configuration
       - BUGBOT_ANALYSIS_MAX_DEPTH=3

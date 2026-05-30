@@ -3,58 +3,66 @@ package main
 import (
 	"context"
 	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 	"time"
 
+	"git.commsnet.org/commstech/bugbot/ai"
+	"git.commsnet.org/commstech/bugbot/analyzers"
+	"git.commsnet.org/commstech/bugbot/gitea"
+	"git.commsnet.org/commstech/bugbot/handlers"
+	"git.commsnet.org/commstech/bugbot/issues"
+	"git.commsnet.org/commstech/bugbot/limiter"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
-	"yourusername/gitea-bugbot/ai"
-	"yourusername/gitea-bugbot/analyzers"
-	"yourusername/gitea-bugbot/gitea"
-	"yourusername/gitea-bugbot/handlers"
-	"yourusername/gitea-bugbot/issues"
 )
 
+var version = "dev"
+
 var (
-	logger        *logrus.Logger
-	config        *Config
-	giteaClient   *gitea.Client
-	aiClient      *ai.OpenWebUIClient
-	analysisEngine *analyzers.Engine
-	issueManager  *issues.Manager
+	logger          *logrus.Logger
+	config          *Config
+	giteaClient     *gitea.Client
+	aiClient        *ai.Client
+	analysisEngine  *analyzers.Engine
+	issueManager    *issues.Manager
+	webhookHandler  *handlers.WebhookHandler
+	analysisLimiter *limiter.ConcurrencyLimiter
 )
 
 // Config holds the plugin configuration
 type Config struct {
-	Port                    string            `mapstructure:"port"`
-	APIKey                  string            `mapstructure:"api_key"`           // API key for manual analysis endpoints
-	GiteaURL                string            `mapstructure:"gitea_url"`
-	GiteaToken              string            `mapstructure:"gitea_token"`
-	WebhookSecret           string            `mapstructure:"webhook_secret"`
-	OpenWebUIURL            string            `mapstructure:"openwebui_url"`
-	OpenWebUIToken          string            `mapstructure:"openwebui_token"`
-	LogLevel                string            `mapstructure:"log_level"`
-	AnalysisDepth           int               `mapstructure:"analysis_depth"`
-	MaxFileSize             int64             `mapstructure:"max_file_size"`
-	EnableSecurity          bool              `mapstructure:"enable_security"`
-	EnableQuality           bool              `mapstructure:"enable_quality"`
-	AutoCreateIssues        bool              `mapstructure:"auto_create_issues"`
-	MaxIssuesPerRun         int               `mapstructure:"max_issues_per_run"`
-	SkipLowSeverity         bool              `mapstructure:"skip_low_severity"`
-	GroupSimilarIssues      bool              `mapstructure:"group_similar_issues"`
-	SkipPatterns            []string          `mapstructure:"skip_patterns"`
-	LanguageMapping         map[string]string `mapstructure:"language_mapping"`
-	MaxConcurrentAnalyses   int               `mapstructure:"max_concurrent_analyses"`
-	AnalysisTimeout         int               `mapstructure:"analysis_timeout"`
-	RateLimitPerMinute      int               `mapstructure:"rate_limit_per_minute"`
+	Port                  string            `mapstructure:"port"`
+	APIKey                string            `mapstructure:"api_key"` // API key for manual analysis endpoints
+	GiteaURL              string            `mapstructure:"gitea_url"`
+	GiteaToken            string            `mapstructure:"gitea_token"`
+	WebhookSecret         string            `mapstructure:"webhook_secret"`
+	AIProvider            string            `mapstructure:"ai_provider"`
+	AIBaseURL             string            `mapstructure:"ai_base_url"`
+	AIAPIKey              string            `mapstructure:"ai_api_key"`
+	AIModel               string            `mapstructure:"ai_model"`
+	OpenWebUIURL          string            `mapstructure:"openwebui_url"`
+	OpenWebUIToken        string            `mapstructure:"openwebui_token"`
+	OpenWebUIModel        string            `mapstructure:"openwebui_model"`
+	LogLevel              string            `mapstructure:"log_level"`
+	AnalysisDepth         int               `mapstructure:"analysis_depth"`
+	MaxFileSize           int64             `mapstructure:"max_file_size"`
+	EnableSecurity        bool              `mapstructure:"enable_security"`
+	EnableQuality         bool              `mapstructure:"enable_quality"`
+	AutoCreateIssues      bool              `mapstructure:"auto_create_issues"`
+	MaxIssuesPerRun       int               `mapstructure:"max_issues_per_run"`
+	SkipLowSeverity       bool              `mapstructure:"skip_low_severity"`
+	GroupSimilarIssues    bool              `mapstructure:"group_similar_issues"`
+	SkipPatterns          []string          `mapstructure:"skip_patterns"`
+	LanguageMapping       map[string]string `mapstructure:"language_mapping"`
+	MaxConcurrentAnalyses int               `mapstructure:"max_concurrent_analyses"`
+	AnalysisTimeout       int               `mapstructure:"analysis_timeout"`
+	RateLimitPerMinute    int               `mapstructure:"rate_limit_per_minute"`
+	SkipStartupChecks     bool              `mapstructure:"skip_startup_checks"`
 }
 
 func main() {
@@ -78,8 +86,8 @@ func main() {
 	logger.SetLevel(level)
 
 	logger.Info("Starting Gitea Bugbot Plugin...")
-	logger.Infof("Configuration loaded: Port=%s, GiteaURL=%s, OpenWebUIURL=%s", 
-		config.Port, config.GiteaURL, config.OpenWebUIURL)
+	logger.Infof("Configuration loaded: Port=%s, GiteaURL=%s, AIProvider=%s",
+		config.Port, config.GiteaURL, config.effectiveAIProvider())
 
 	// Initialize components
 	if err := initializeComponents(); err != nil {
@@ -142,6 +150,15 @@ func loadConfig() error {
 	viper.SetDefault("max_file_size", 1024*1024) // 1MB
 	viper.SetDefault("enable_security", true)
 	viper.SetDefault("enable_quality", true)
+	viper.SetDefault("auto_create_issues", true)
+	viper.SetDefault("max_issues_per_run", 50)
+	viper.SetDefault("max_concurrent_analyses", 5)
+	viper.SetDefault("analysis_timeout", 300)
+	viper.SetDefault("rate_limit_per_minute", 60)
+	viper.SetDefault("openwebui_model", "default")
+	viper.SetDefault("ai_provider", "")
+	viper.SetDefault("ai_model", "")
+	viper.SetDefault("skip_startup_checks", false)
 
 	// Environment variables
 	viper.AutomaticEnv()
@@ -167,8 +184,14 @@ func loadConfig() error {
 	if config.GiteaToken == "" {
 		return fmt.Errorf("gitea_token is required")
 	}
-	if config.OpenWebUIURL == "" {
-		return fmt.Errorf("openwebui_url is required")
+	if config.effectiveAIProvider() == "" && config.OpenWebUIURL == "" && config.AIBaseURL == "" {
+		return fmt.Errorf("configure ai_provider + ai_base_url, or legacy openwebui_url")
+	}
+	if config.AnalysisTimeout <= 0 {
+		config.AnalysisTimeout = 300
+	}
+	if config.MaxConcurrentAnalyses <= 0 {
+		config.MaxConcurrentAnalyses = 5
 	}
 
 	return nil
@@ -183,12 +206,14 @@ func setupRoutes(router *gin.Engine) {
 		c.JSON(http.StatusOK, gin.H{
 			"status":  "healthy",
 			"service": "gitea-bugbot",
-			"version": "1.0.0",
+			"version": version,
 		})
 	})
 
 	// Webhook endpoint for Gitea — rate limited and webhook secret auth
-	router.POST("/webhook", handleWebhook)
+	router.POST("/webhook", func(c *gin.Context) {
+		webhookHandler.HandleWebhook(c)
+	})
 
 	// API endpoints — require API key auth
 	api := router.Group("/api/v1")
@@ -205,6 +230,11 @@ func setupRoutes(router *gin.Engine) {
 // requireAPIKeyAuth middleware requires BUGBOT_API_KEY for API endpoints
 func requireAPIKeyAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		if config.APIKey == "" {
+			c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{"error": "API key not configured"})
+			return
+		}
+
 		apiKey := c.GetHeader("X-Bugbot-API-Key")
 		if apiKey == "" {
 			apiKey = c.Query("api_key")
@@ -231,32 +261,55 @@ func initializeComponents() error {
 
 	// Initialize Gitea client
 	giteaClient = gitea.NewClient(config.GiteaURL, config.GiteaToken, logger)
-	
+
 	// Test Gitea connection
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	
-	if err := giteaClient.TestConnection(ctx); err != nil {
-		return fmt.Errorf("failed to connect to Gitea: %w", err)
-	}
-	logger.Info("Gitea connection established")
 
-	// Initialize OpenWebUI client
-	aiClient = ai.NewOpenWebUIClient(config.OpenWebUIURL, config.OpenWebUIToken, logger)
-	
-	// Test OpenWebUI connection
-	if err := aiClient.TestConnection(ctx); err != nil {
-		return fmt.Errorf("failed to connect to OpenWebUI: %w", err)
+	if err := giteaClient.TestConnection(ctx); err != nil {
+		if config.SkipStartupChecks {
+			logger.Warnf("Gitea connection check failed (skipped): %v", err)
+		} else {
+			return fmt.Errorf("failed to connect to Gitea: %w", err)
+		}
+	} else {
+		logger.Info("Gitea connection established")
 	}
-	logger.Info("OpenWebUI connection established")
+
+	// Initialize AI client (multi-provider)
+	var err error
+	aiClient, err = ai.NewClient(ai.Config{
+		Provider: ai.ProviderType(config.AIProvider),
+		BaseURL:  firstNonEmpty(config.AIBaseURL, config.OpenWebUIURL),
+		APIKey:   firstNonEmpty(config.AIAPIKey, config.OpenWebUIToken),
+		Model:    firstNonEmpty(config.AIModel, config.OpenWebUIModel),
+	}, ai.LegacyConfig{
+		OpenWebUIURL:   config.OpenWebUIURL,
+		OpenWebUIToken: config.OpenWebUIToken,
+		OpenWebUIModel: config.OpenWebUIModel,
+	}, logger)
+	if err != nil {
+		return fmt.Errorf("failed to configure AI client: %w", err)
+	}
+
+	// Test AI connection
+	if err := aiClient.TestConnection(ctx); err != nil {
+		if config.SkipStartupChecks {
+			logger.Warnf("AI provider connection check failed (skipped): %v", err)
+		} else {
+			return fmt.Errorf("failed to connect to AI provider: %w", err)
+		}
+	} else {
+		logger.Infof("AI provider connection established (%s, model=%s)", aiClient.Provider(), aiClient.Model())
+	}
 
 	// Initialize analysis engine
 	analysisConfig := &analyzers.Config{
-		MaxFileSize:    config.MaxFileSize,
-		AnalysisDepth:  config.AnalysisDepth,
-		EnableSecurity: config.EnableSecurity,
-		EnableQuality:  config.EnableQuality,
-		SkipPatterns:   config.SkipPatterns,
+		MaxFileSize:     config.MaxFileSize,
+		AnalysisDepth:   config.AnalysisDepth,
+		EnableSecurity:  config.EnableSecurity,
+		EnableQuality:   config.EnableQuality,
+		SkipPatterns:    config.SkipPatterns,
 		LanguageMapping: config.LanguageMapping,
 	}
 	analysisEngine = analyzers.NewEngine(giteaClient, aiClient, analysisConfig, logger)
@@ -273,157 +326,84 @@ func initializeComponents() error {
 	}
 	issueManager = issues.NewManager(giteaClient, issueConfig, logger)
 
+	webhookHandler = handlers.NewWebhookHandler(logger, &handlers.Config{
+		WebhookSecret: config.WebhookSecret,
+	}, &webhookProcessor{})
+
+	analysisLimiter = limiter.New(config.MaxConcurrentAnalyses)
+	logger.Infof("Analysis concurrency limit: %d", config.MaxConcurrentAnalyses)
+
 	logger.Info("All components initialized successfully")
 	return nil
 }
 
-// handleWebhook handles incoming Gitea webhooks
-func handleWebhook(c *gin.Context) {
-	logger.Info("Received webhook request")
+type webhookProcessor struct{}
 
-	// Parse webhook payload
-	var payload handlers.GiteaWebhookPayload
-	if err := c.ShouldBindJSON(&payload); err != nil {
-		logger.Errorf("Failed to parse webhook payload: %v", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid payload"})
-		return
-	}
+func (p *webhookProcessor) ProcessPush(ctx context.Context, payload *handlers.GiteaWebhookPayload) {
+	owner := payload.Repository.Owner.Username
+	repo := payload.Repository.Name
+	ref := payload.After
+	changedFiles := handlers.CollectChangedFiles(payload.Commits)
 
-	// Verify webhook secret if configured
-	if config.WebhookSecret != "" {
-		secret := c.GetHeader("X-Gitea-Signature")
-		if secret == "" {
-			secret = c.Query("secret")
-		}
-		if secret != config.WebhookSecret {
-			logger.Errorf("Invalid webhook secret")
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-			return
-		}
-	}
-
-	logger.Infof("Processing webhook for repository: %s, action: %s", 
-		payload.Repository.FullName, payload.Action)
-
-	// Process webhook based on action type
-	switch payload.Action {
-	case "push":
-		handlePushEvent(c, &payload)
-	case "pull_request":
-		handlePullRequestEvent(c, &payload)
-	default:
-		logger.Infof("Unhandled webhook action: %s", payload.Action)
-		c.JSON(http.StatusOK, gin.H{"status": "ignored"})
-	}
-}
-
-// handlePushEvent processes push events
-func handlePushEvent(c *gin.Context, payload *handlers.GiteaWebhookPayload) {
-	logger.Infof("Processing push event for repository: %s", payload.Repository.FullName)
-
-	// Skip if no commits
-	if len(payload.Commits) == 0 {
-		logger.Info("No commits in push event, skipping")
-		c.JSON(http.StatusOK, gin.H{"status": "no commits"})
-		return
-	}
-
-	// Start analysis in background
-	go func() {
-		owner := payload.Repository.Owner.Username
-		repo := payload.Repository.Name
-		ref := payload.After
-
-		// Analyze repository
-		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(config.AnalysisTimeout)*time.Second)
-		defer cancel()
-
-		result, err := analysisEngine.AnalyzeRepository(ctx, owner, repo, ref)
+	runAnalysis(ctx, func(analysisCtx context.Context) {
+		result, err := analysisEngine.AnalyzeChangedFiles(analysisCtx, owner, repo, ref, changedFiles)
 		if err != nil {
-			logger.Errorf("Repository analysis failed: %v", err)
+			logger.Errorf("Push analysis failed: %v", err)
 			return
 		}
-
-		// Create issues if analysis found problems
-		if len(result.Issues) > 0 {
-			issueReq := &issues.IssueCreationRequest{
-				Owner:          owner,
-				Repository:     repo,
-				AnalysisResult: &ai.CodeAnalysisResult{
-					Issues:       result.Issues,
-					Suggestions:  result.Suggestions,
-					OverallScore: result.OverallScore,
-					AnalysisTime: result.AnalysisTime,
-				},
-				Context: fmt.Sprintf("Push to %s", payload.Ref),
-				Commit:  ref,
-			}
-
-			issueResult, err := issueManager.CreateIssuesFromAnalysis(ctx, issueReq)
-			if err != nil {
-				logger.Errorf("Failed to create issues: %v", err)
-			} else {
-				logger.Infof("Created %d issues, skipped %d", issueResult.IssuesCreated, issueResult.IssuesSkipped)
-			}
-		}
-	}()
-
-	c.JSON(http.StatusOK, gin.H{"status": "processing"})
+		createIssuesFromResult(analysisCtx, owner, repo, result, fmt.Sprintf("Push to %s", payload.Ref), ref, 0)
+	})
 }
 
-// handlePullRequestEvent processes pull request events
-func handlePullRequestEvent(c *gin.Context, payload *handlers.GiteaWebhookPayload) {
-	logger.Infof("Processing pull request event: %s #%d", 
-		payload.Repository.FullName, payload.PullRequest.Number)
+func (p *webhookProcessor) ProcessPullRequest(ctx context.Context, payload *handlers.GiteaWebhookPayload) {
+	owner := payload.Repository.Owner.Username
+	repo := payload.Repository.Name
+	prNumber := payload.PullRequest.Number
 
-	// Only process on open or synchronize
-	if payload.PullRequest.State != "open" {
-		logger.Infof("Pull request is not open, skipping")
-		c.JSON(http.StatusOK, gin.H{"status": "ignored"})
-		return
-	}
-
-	// Start analysis in background
-	go func() {
-		owner := payload.Repository.Owner.Username
-		repo := payload.Repository.Name
-		prNumber := payload.PullRequest.Number
-
-		// Analyze pull request
-		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(config.AnalysisTimeout)*time.Second)
-		defer cancel()
-
-		result, err := analysisEngine.AnalyzePullRequest(ctx, owner, repo, prNumber)
+	runAnalysis(ctx, func(analysisCtx context.Context) {
+		result, err := analysisEngine.AnalyzePullRequest(analysisCtx, owner, repo, prNumber)
 		if err != nil {
 			logger.Errorf("Pull request analysis failed: %v", err)
 			return
 		}
+		createIssuesFromResult(analysisCtx, owner, repo, result, fmt.Sprintf("Pull Request #%d", prNumber), "", prNumber)
+	})
+}
 
-		// Create issues if analysis found problems
-		if len(result.Issues) > 0 {
-			issueReq := &issues.IssueCreationRequest{
-				Owner:          owner,
-				Repository:     repo,
-				AnalysisResult: &ai.CodeAnalysisResult{
-					Issues:       result.Issues,
-					Suggestions:  result.Suggestions,
-					OverallScore: result.OverallScore,
-					AnalysisTime: result.AnalysisTime,
-				},
-				Context:      fmt.Sprintf("Pull Request #%d", prNumber),
-				PullRequest:  prNumber,
-			}
+func runAnalysis(_ context.Context, fn func(context.Context)) {
+	analysisCtx, cancel := context.WithTimeout(context.Background(), time.Duration(config.AnalysisTimeout)*time.Second)
+	defer cancel()
 
-			issueResult, err := issueManager.CreateIssuesFromAnalysis(ctx, issueReq)
-			if err != nil {
-				logger.Errorf("Failed to create issues: %v", err)
-			} else {
-				logger.Infof("Created %d issues, skipped %d", issueResult.IssuesCreated, issueResult.IssuesSkipped)
-			}
-		}
-	}()
+	if err := analysisLimiter.Run(analysisCtx, func() { fn(analysisCtx) }); err != nil {
+		logger.Warnf("Analysis skipped — concurrency limit reached or timed out waiting for slot: %v", err)
+	}
+}
 
-	c.JSON(http.StatusOK, gin.H{"status": "processing"})
+func createIssuesFromResult(ctx context.Context, owner, repo string, result *analyzers.AnalysisResult, contextLabel, commit string, prNumber int) {
+	if len(result.Issues) == 0 {
+		return
+	}
+
+	issueReq := &issues.IssueCreationRequest{
+		Owner:      owner,
+		Repository: repo,
+		AnalysisResult: &ai.CodeAnalysisResult{
+			Issues:       result.Issues,
+			OverallScore: result.OverallScore,
+			AnalysisTime: result.AnalysisTime,
+		},
+		Context:     contextLabel,
+		Commit:      commit,
+		PullRequest: prNumber,
+	}
+
+	issueResult, err := issueManager.CreateIssuesFromAnalysis(ctx, issueReq)
+	if err != nil {
+		logger.Errorf("Failed to create issues: %v", err)
+		return
+	}
+
+	logger.Infof("Created %d issues, skipped %d", issueResult.IssuesCreated, issueResult.IssuesSkipped)
 }
 
 // handleManualAnalysis handles manual analysis requests
@@ -443,50 +423,30 @@ func handleManualAnalysis(c *gin.Context) {
 
 	// Start analysis in background
 	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(config.AnalysisTimeout)*time.Second)
-		defer cancel()
+		runAnalysis(c.Request.Context(), func(ctx context.Context) {
+			var result *analyzers.AnalysisResult
+			var err error
 
-		var result *analyzers.AnalysisResult
-		var err error
-
-		if req.Type == "pull_request" && req.PRNumber > 0 {
-			result, err = analysisEngine.AnalyzePullRequest(ctx, req.Owner, req.Repository, req.PRNumber)
-		} else {
-			ref := req.Ref
-			if ref == "" {
-				ref = "main"
-			}
-			result, err = analysisEngine.AnalyzeRepository(ctx, req.Owner, req.Repository, ref)
-		}
-
-		if err != nil {
-			logger.Errorf("Manual analysis failed: %v", err)
-			return
-		}
-
-		// Create issues if analysis found problems
-		if len(result.Issues) > 0 {
-			issueReq := &issues.IssueCreationRequest{
-				Owner:          req.Owner,
-				Repository:     req.Repository,
-				AnalysisResult: &ai.CodeAnalysisResult{
-					Issues:       result.Issues,
-					Suggestions:  result.Suggestions,
-					OverallScore: result.OverallScore,
-					AnalysisTime: result.AnalysisTime,
-				},
-				Context: fmt.Sprintf("Manual analysis - %s", req.Type),
-				Commit:  req.Ref,
-			}
-
-			issueResult, err := issueManager.CreateIssuesFromAnalysis(ctx, issueReq)
-			if err != nil {
-				logger.Errorf("Failed to create issues: %v", err)
+			if req.Type == "pull_request" && req.PRNumber > 0 {
+				result, err = analysisEngine.AnalyzePullRequest(ctx, req.Owner, req.Repository, req.PRNumber)
 			} else {
-				logger.Infof("Manual analysis completed: created %d issues, skipped %d", 
-					issueResult.IssuesCreated, issueResult.IssuesSkipped)
+				ref := req.Ref
+				if ref == "" {
+					ref = "main"
+				}
+				result, err = analysisEngine.AnalyzeRepository(ctx, req.Owner, req.Repository, ref)
 			}
-		}
+
+			if err != nil {
+				logger.Errorf("Manual analysis failed: %v", err)
+				return
+			}
+
+			if len(result.Issues) > 0 {
+				createIssuesFromResult(ctx, req.Owner, req.Repository, result,
+					fmt.Sprintf("Manual analysis - %s", req.Type), req.Ref, req.PRNumber)
+			}
+		})
 	}()
 
 	c.JSON(http.StatusOK, gin.H{"status": "analysis started"})
@@ -495,10 +455,12 @@ func handleManualAnalysis(c *gin.Context) {
 // handleStatus handles status requests
 func handleStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
-		"status":    "running",
-		"service":   "gitea-bugbot",
-		"version":   "1.0.0",
-		"timestamp": time.Now().Format(time.RFC3339),
+		"status":      "running",
+		"service":     "gitea-bugbot",
+		"version":     version,
+		"ai_provider": aiClient.Provider(),
+		"ai_model":    aiClient.Model(),
+		"timestamp":   time.Now().Format(time.RFC3339),
 	})
 }
 
@@ -516,4 +478,23 @@ func handleConfigReload(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"status": "configuration reloaded"})
+}
+
+func (c *Config) effectiveAIProvider() string {
+	if c.AIProvider != "" {
+		return c.AIProvider
+	}
+	if c.OpenWebUIURL != "" {
+		return string(ai.ProviderOpenWebUI)
+	}
+	return ""
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if value != "" {
+			return value
+		}
+	}
+	return ""
 }

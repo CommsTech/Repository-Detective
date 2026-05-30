@@ -17,12 +17,16 @@ services:
       - BUGBOT_GITEA_TOKEN=your-gitea-access-token-here
       - BUGBOT_GITEA_API_TIMEOUT=30s
       
-      # OpenWebUI Configuration
-      - BUGBOT_OPENWEBUI_URL=https://your-openwebui-server.com/api
-      - BUGBOT_OPENWEBUI_API_KEY=your-openwebui-api-key-here
+      # AI Provider Configuration (see docs/AI_PROVIDERS.md)
+      - BUGBOT_AI_PROVIDER=openwebui
+      - BUGBOT_AI_BASE_URL=https://your-openwebui-server.com
+      - BUGBOT_AI_API_KEY=your-openwebui-api-key-here
+      - BUGBOT_AI_MODEL=your-preferred-model
+      
+      # Legacy OpenWebUI env names (still supported)
+      - BUGBOT_OPENWEBUI_URL=https://your-openwebui-server.com
+      - BUGBOT_OPENWEBUI_TOKEN=your-openwebui-api-key-here
       - BUGBOT_OPENWEBUI_MODEL=your-preferred-model
-      - BUGBOT_OPENWEBUI_TIMEOUT=60s
-      - BUGBOT_OPENWEBUI_MAX_TOKENS=4000
       
       # Analysis Configuration
       - BUGBOT_ANALYSIS_MAX_DEPTH=3

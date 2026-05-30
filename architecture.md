@@ -19,9 +19,10 @@ This plugin integrates with Gitea to automatically review code, detect bugs, and
   - Code quality metrics
 
 ### 3. AI Integration Layer
-- **OpenWebUI Integration**: REST API calls to OpenWebUI server
-- **AI Models**: Leverage available AI models for code review
-- **Context Management**: Maintain conversation context for better analysis
+- **Multi-provider support**: OpenAI, Anthropic, OpenRouter, Ollama, Open WebUI, OpenClaw
+- **Transport abstraction**: OpenAI-compatible and Anthropic Messages APIs
+- **Configuration**: `ai_provider`, `ai_base_url`, `ai_api_key`, `ai_model`
+- **Legacy compatibility**: `openwebui_url` / `openwebui_token` auto-map to Open WebUI provider
 
 ### 4. Issue Management
 - **Automatic Issue Creation**: Create issues for detected bugs
@@ -43,12 +44,20 @@ gitea-bugbot/
 ```
 
 ### Data Flow
-1. Gitea webhook triggers plugin
-2. Plugin fetches repository changes
-3. Code analysis engine processes changes
-4. AI integration layer reviews code
-5. Issues are created with AI-generated content
-6. Fix proposals are attached to issues
+1. Gitea webhook triggers `handlers.WebhookHandler` (rate limited + secret verified)
+2. `AnalysisProcessor` in main.go runs CAH pipeline via `analyzers.Engine`
+3. **Prepare** — map attack surface via Gitea file tree + AI
+4. **Scan** — parallel auditor agents (SQL, XSS, auth, injection, crypto, config)
+5. **Validate** — advocate/counsel debater agents filter false positives
+6. **Dedup** — collapse findings by root cause
+7. **Prove** — generate PoC commands for validated findings
+8. Issues are created in Gitea via `issues.Manager`
+
+## Module Path
+
+```
+git.commsnet.org/commstech/bugbot
+```
 
 ## Configuration
 - Gitea server connection details
