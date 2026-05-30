@@ -2,7 +2,9 @@
 
 # Server Configuration
 port: "8080"
+listen_host: "0.0.0.0"
 log_level: "info"
+startup_check_timeout: 10
 api_key: "change-me-to-a-secure-random-string"
 public_url: "http://localhost:8080"
 

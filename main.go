@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -22,6 +23,8 @@ import (
 )
 
 var version = "dev"
+
+var componentsReady atomic.Bool
 
 var (
 	logger            *logrus.Logger
@@ -63,6 +66,8 @@ type Config struct {
 	RepositoryIncludePatterns []string          `mapstructure:"-"`
 	RepositoryExcludePatterns []string          `mapstructure:"-"`
 	PublicURL                 string            `mapstructure:"public_url"`
+	ListenHost                string            `mapstructure:"listen_host"`
+	StartupCheckTimeout       int               `mapstructure:"startup_check_timeout"`
 	MaxConcurrentAnalyses     int               `mapstructure:"max_concurrent_analyses"`
 	AnalysisTimeout       int               `mapstructure:"analysis_timeout"`
 	RateLimitPerMinute    int               `mapstructure:"rate_limit_per_minute"`
@@ -70,11 +75,14 @@ type Config struct {
 }
 
 func main() {
-	// Initialize logger
+	// Always log to stdout so Docker/systemd capture output even when file logging fails.
 	logger = logrus.New()
+	logger.SetOutput(os.Stdout)
 	logger.SetFormatter(&logrus.TextFormatter{
 		FullTimestamp: true,
 	})
+
+	logger.Info("Bugbot starting...")
 
 	// Load configuration
 	if err := loadConfig(); err != nil {
@@ -90,47 +98,51 @@ func main() {
 	logger.SetLevel(level)
 
 	logger.Info("Starting Gitea Bugbot Plugin...")
-	logger.Infof("Configuration loaded: Port=%s, GiteaURL=%s, AIProvider=%s",
-		config.Port, config.GiteaURL, config.effectiveAIProvider())
+	logger.Infof("Configuration loaded: Port=%s, ListenHost=%s, GiteaURL=%s, AIProvider=%s, SkipStartupChecks=%v",
+		config.Port, config.ListenHost, config.GiteaURL, config.effectiveAIProvider(), config.SkipStartupChecks)
 
-	// Initialize components
-	if err := initializeComponents(); err != nil {
-		logger.Fatalf("Failed to initialize components: %v", err)
-	}
-
-	// Initialize Gin router
+	// Initialize Gin router and bind HTTP before blocking startup checks.
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.New()
 	router.Use(gin.Logger(), gin.Recovery())
-
-	// Setup routes
 	setupRoutes(router)
 
-	// Create HTTP server
+	listenAddr := config.ListenHost + ":" + config.Port
 	server := &http.Server{
-		Addr:         ":" + config.Port,
+		Addr:         listenAddr,
 		Handler:      router,
 		ReadTimeout:  30 * time.Second,
 		WriteTimeout: 30 * time.Second,
 		IdleTimeout:  60 * time.Second,
 	}
 
-	// Start server in goroutine
+	serverErr := make(chan error, 1)
 	go func() {
-		logger.Infof("Starting server on port %s", config.Port)
+		logger.Infof("Listening on %s (health available immediately)", listenAddr)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Fatalf("Failed to start server: %v", err)
+			serverErr <- err
 		}
 	}()
 
-	// Wait for interrupt signal
+	// Initialize components (may block on Gitea/AI checks — health still responds).
+	if err := initializeComponents(); err != nil {
+		logger.Fatalf("Failed to initialize components: %v", err)
+	}
+	componentsReady.Store(true)
+	logger.Info("Bugbot ready — all components initialized")
+
+	// Wait for interrupt signal or unexpected server failure.
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
+
+	select {
+	case err := <-serverErr:
+		logger.Fatalf("HTTP server failed: %v", err)
+	case <-quit:
+	}
 
 	logger.Info("Shutting down server...")
 
-	// Graceful shutdown
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
@@ -149,7 +161,9 @@ func loadConfig() error {
 
 	// Set defaults
 	viper.SetDefault("port", "8080")
+	viper.SetDefault("listen_host", "0.0.0.0")
 	viper.SetDefault("log_level", "info")
+	viper.SetDefault("startup_check_timeout", 10)
 	viper.SetDefault("analysis_depth", 3)
 	viper.SetDefault("max_file_size", 1024*1024) // 1MB
 	viper.SetDefault("enable_security", true)
@@ -213,6 +227,12 @@ func loadConfig() error {
 	if config.MaxConcurrentAnalyses <= 0 {
 		config.MaxConcurrentAnalyses = 5
 	}
+	if config.ListenHost == "" {
+		config.ListenHost = "0.0.0.0"
+	}
+	if config.StartupCheckTimeout <= 0 {
+		config.StartupCheckTimeout = 10
+	}
 
 	return nil
 }
@@ -223,6 +243,14 @@ func setupRoutes(router *gin.Engine) {
 
 	// Health check — no auth required
 	router.GET("/health", func(c *gin.Context) {
+		if !componentsReady.Load() {
+			c.JSON(http.StatusServiceUnavailable, gin.H{
+				"status":  "starting",
+				"service": "gitea-bugbot",
+				"version": version,
+			})
+			return
+		}
 		c.JSON(http.StatusOK, gin.H{
 			"status":  "healthy",
 			"service": "gitea-bugbot",
@@ -235,13 +263,13 @@ func setupRoutes(router *gin.Engine) {
 	})
 
 	// Webhook endpoint for Gitea — rate limited and webhook secret auth
-	router.POST("/webhook", func(c *gin.Context) {
+	router.POST("/webhook", requireComponentsReady(), func(c *gin.Context) {
 		webhookHandler.HandleWebhook(c)
 	})
 
 	// API endpoints — require API key auth
 	api := router.Group("/api/v1")
-	api.Use(requireAPIKeyAuth())
+	api.Use(requireComponentsReady(), requireAPIKeyAuth())
 	{
 		api.POST("/analyze", handleManualAnalysis)
 		api.GET("/status", handleStatus)
@@ -261,6 +289,19 @@ func setupRoutes(router *gin.Engine) {
 	onboardingHandler.RegisterRoutes(router, api)
 
 	logger.Info("Routes configured successfully")
+}
+
+func requireComponentsReady() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if componentsReady.Load() {
+			c.Next()
+			return
+		}
+		c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{
+			"status": "starting",
+			"error":  "Bugbot is still initializing — retry in a few seconds",
+		})
+	}
 }
 
 // requireAPIKeyAuth middleware requires BUGBOT_API_KEY for API endpoints
@@ -295,13 +336,14 @@ func requireAPIKeyAuth() gin.HandlerFunc {
 func initializeComponents() error {
 	logger.Info("Initializing components...")
 
+	checkTimeout := time.Duration(config.StartupCheckTimeout) * time.Second
+	ctx, cancel := context.WithTimeout(context.Background(), checkTimeout)
+	defer cancel()
+
 	// Initialize Gitea client
 	giteaClient = gitea.NewClient(config.GiteaURL, config.GiteaToken, logger)
 
-	// Test Gitea connection
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
+	logger.Infof("Testing Gitea connection (timeout %s)...", checkTimeout)
 	if err := giteaClient.TestConnection(ctx); err != nil {
 		if config.SkipStartupChecks {
 			logger.Warnf("Gitea connection check failed (skipped): %v", err)
@@ -329,6 +371,7 @@ func initializeComponents() error {
 	}
 
 	// Test AI connection
+	logger.Infof("Testing AI provider connection (timeout %s)...", checkTimeout)
 	if err := aiClient.TestConnection(ctx); err != nil {
 		if config.SkipStartupChecks {
 			logger.Warnf("AI provider connection check failed (skipped): %v", err)
