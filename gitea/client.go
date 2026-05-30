@@ -157,42 +157,25 @@ func NewClient(baseURL, token string, logger *logrus.Logger) *Client {
 	}
 }
 
-// GetRepositoryContent fetches the content of a file or directory
+// GetRepositoryContent fetches the content of a file or directory entry.
+// Gitea returns a single object for files and a JSON array for directories.
 func (c *Client) GetRepositoryContent(ctx context.Context, owner, repo, ref, path string) (*RepositoryContent, error) {
-	url := fmt.Sprintf("%s/api/v1/repos/%s/%s/contents/%s", c.baseURL, owner, repo, path)
-	if ref != "" {
-		url += "?ref=" + ref
-	}
-
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	body, err := c.fetchContentsResponse(ctx, owner, repo, ref, path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
+		return nil, err
 	}
 
-	req.Header.Set("Authorization", "token "+c.token)
-	req.Header.Set("Accept", "application/json")
-
-	resp, err := c.httpClient.Do(req)
+	items, err := decodeRepositoryContents(body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to make request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode == http.StatusNotFound {
-		return nil, fmt.Errorf("content not found: %s", path)
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("Gitea API returned status %d: %s", resp.StatusCode, string(body))
-	}
-
-	var content RepositoryContent
-	if err := json.NewDecoder(resp.Body).Decode(&content); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
-
-	return &content, nil
+	if len(items) == 0 {
+		return nil, fmt.Errorf("content not found: %s", path)
+	}
+	if len(items) > 1 {
+		return nil, fmt.Errorf("path is a directory: %s", path)
+	}
+	return &items[0], nil
 }
 
 // GetFileContent fetches the content of a specific file
@@ -220,17 +203,25 @@ func (c *Client) GetFileContent(ctx context.Context, owner, repo, ref, filePath 
 
 // ListRepositoryContents lists the contents of a directory
 func (c *Client) ListRepositoryContents(ctx context.Context, owner, repo, ref, dirPath string) ([]RepositoryContent, error) {
-	content, err := c.GetRepositoryContent(ctx, owner, repo, ref, dirPath)
+	body, err := c.fetchContentsResponse(ctx, owner, repo, ref, dirPath)
 	if err != nil {
 		return nil, err
 	}
 
-	if content.Type != "dir" {
+	contents, err := decodeRepositoryContents(body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	if len(contents) == 1 && contents[0].Type == "file" {
 		return nil, fmt.Errorf("path is not a directory: %s", dirPath)
 	}
 
-	// For directories, we need to make another request to get the listing
-	url := fmt.Sprintf("%s/api/v1/repos/%s/%s/contents/%s", c.baseURL, owner, repo, dirPath)
+	return contents, nil
+}
+
+func (c *Client) fetchContentsResponse(ctx context.Context, owner, repo, ref, path string) ([]byte, error) {
+	url := fmt.Sprintf("%s/api/v1/repos/%s/%s/contents/%s", c.baseURL, owner, repo, path)
 	if ref != "" {
 		url += "?ref=" + ref
 	}
@@ -249,17 +240,43 @@ func (c *Client) ListRepositoryContents(ctx context.Context, owner, repo, ref, d
 	}
 	defer resp.Body.Close()
 
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response: %w", err)
+	}
+
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, fmt.Errorf("content not found: %s", path)
+	}
+
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
 		return nil, fmt.Errorf("Gitea API returned status %d: %s", resp.StatusCode, string(body))
 	}
 
-	var contents []RepositoryContent
-	if err := json.NewDecoder(resp.Body).Decode(&contents); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
+	return body, nil
+}
+
+// decodeRepositoryContents handles Gitea returning either a JSON array (directories)
+// or a single object (files).
+func decodeRepositoryContents(body []byte) ([]RepositoryContent, error) {
+	trimmed := strings.TrimSpace(string(body))
+	if trimmed == "" || trimmed == "null" {
+		return nil, nil
 	}
 
-	return contents, nil
+	if trimmed[0] == '[' {
+		var contents []RepositoryContent
+		if err := json.Unmarshal(body, &contents); err != nil {
+			return nil, err
+		}
+		return contents, nil
+	}
+
+	var content RepositoryContent
+	if err := json.Unmarshal(body, &content); err != nil {
+		return nil, err
+	}
+	return []RepositoryContent{content}, nil
 }
 
 // CreateIssue creates a new issue in a repository
