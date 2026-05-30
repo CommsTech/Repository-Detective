@@ -31,7 +31,7 @@ Set `public_url` so Gitea can reach Bugbot for webhooks:
 public_url: "https://bugbot.example.com"
 ```
 
-If Bugbot runs on an internal network and Gitea is public, use a Cloudflare tunnel or reverse proxy — see [TUNNEL.md](TUNNEL.md).
+If Bugbot runs on an internal network and Gitea is public, expose Bugbot via port forward, reverse proxy, or tunnel — see [docs/NETWORKING.md](docs/NETWORKING.md). Cloudflare tunnel is optional ([TUNNEL.md](docs/TUNNEL.md)).
 
 Or environment variable:
 

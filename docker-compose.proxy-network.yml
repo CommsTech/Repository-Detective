@@ -1,0 +1,44 @@
+version: '3.8'
+
+# Attach Bugbot to an existing Traefik (or compatible) reverse-proxy network.
+# Traefik handles public HTTPS; Bugbot stays internal on the proxy network.
+#
+# Prerequisites:
+#   1. Traefik running with network "traefik-public" (change name below if different)
+#   2. DNS A record for BUGBOT_DOMAIN → your public IP
+#
+# Usage:
+#   cp .env.clustermgr.example .env
+#   # Set BUGBOT_PUBLIC_URL=https://bugbot.commsnet.org in .env
+#   # Edit labels below with your domain
+#   docker network create traefik-public   # skip if exists
+#   docker compose -f docker-compose.proxy-network.yml up -d --build
+
+services:
+  gitea-bugbot:
+    build: .
+    image: gitea-bugbot:latest
+    env_file:
+      - .env
+    environment:
+      BUGBOT_PORT: "8080"
+      BUGBOT_LISTEN_HOST: "0.0.0.0"
+      BUGBOT_LOG_LEVEL: info
+      BUGBOT_SKIP_STARTUP_CHECKS: "true"
+      BUGBOT_STARTUP_CHECK_TIMEOUT: "10"
+    volumes:
+      - ./config:/app/config:ro
+    restart: unless-stopped
+    networks:
+      - traefik-public
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.bugbot.rule=Host(`bugbot.commsnet.org`)"
+      - "traefik.http.routers.bugbot.entrypoints=websecure"
+      - "traefik.http.routers.bugbot.tls=true"
+      - "traefik.http.routers.bugbot.tls.certresolver=letsencrypt"
+      - "traefik.http.services.bugbot.loadbalancer.server.port=8080"
+
+networks:
+  traefik-public:
+    external: true

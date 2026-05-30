@@ -1,0 +1,29 @@
+version: '3.8'
+
+# Linux only — Bugbot uses the host network stack directly (no port mapping).
+# Listens on host BUGBOT_PORT (default 8081).
+#
+# Usage:
+#   cp .env.clustermgr.example .env && edit .env
+#   docker compose -f docker-compose.host-network.yml up -d --build
+#
+# Set in .env:
+#   BUGBOT_PORT=8081
+#   BUGBOT_PUBLIC_URL=https://bugbot.yourdomain.com
+
+services:
+  gitea-bugbot:
+    build: .
+    image: gitea-bugbot:latest
+    network_mode: host
+    env_file:
+      - .env
+    environment:
+      BUGBOT_PORT: "8081"
+      BUGBOT_LISTEN_HOST: "0.0.0.0"
+      BUGBOT_LOG_LEVEL: info
+      BUGBOT_SKIP_STARTUP_CHECKS: "true"
+      BUGBOT_STARTUP_CHECK_TIMEOUT: "10"
+    volumes:
+      - ./config:/app/config:ro
+    restart: unless-stopped

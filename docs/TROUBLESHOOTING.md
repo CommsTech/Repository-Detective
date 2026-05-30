@@ -82,7 +82,13 @@ docker compose -f docker-compose.clustermgr.yml up -d --build
 
 Gitea at `git.commsnet.org` cannot reach internal `192.168.255.11:8081`.
 
-**Option 1 — Cloudflare quick tunnel (fastest):**
+**Option 2 — pfSense port forward (no tunnel):**
+
+WAN TCP `8081` (or `443` via reverse proxy) → `192.168.255.11:8081`.  
+Use `docker-compose.public.yml` and set `BUGBOT_PUBLIC_URL=https://bugbot.yourdomain.com`.  
+Full steps: [NETWORKING.md](NETWORKING.md).
+
+**Option 3 — Cloudflare quick tunnel:**
 
 ```bash
 ./scripts/install-cloudflared.sh
@@ -94,7 +100,9 @@ Set `BUGBOT_PUBLIC_URL` to the `https://*.trycloudflare.com` URL. Webhook URL: `
 
 **Option 2 — pfSense port forward** from WAN to `192.168.255.11:8081`.
 
-See [TUNNEL.md](TUNNEL.md) for persistent tunnel setup.
+**Option 4 — pfSense / reverse proxy:** See [NETWORKING.md](NETWORKING.md) — no cloudflared required.
+
+See [TUNNEL.md](TUNNEL.md) for persistent Cloudflare tunnel setup.
 
 ---
 

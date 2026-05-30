@@ -139,9 +139,12 @@ go test ./...
 
 ## Documentation
 
+- [Networking & public exposure](docs/NETWORKING.md) — pfSense NAT, Docker ports, reverse proxy, Traefik
 - [Onboarding Web UI](docs/ONBOARDING.md)
+- [Cloudflare tunnel (optional)](docs/TUNNEL.md)
 - [AI providers](docs/AI_PROVIDERS.md)
 - [CAH pipeline](docs/CAH_PIPELINE.md)
+- [Troubleshooting](docs/TROUBLESHOOTING.md)
 - [Architecture](architecture.md)
 - [Status](status.md)
 
