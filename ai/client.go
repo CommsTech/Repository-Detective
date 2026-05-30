@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -216,12 +217,41 @@ func (c *Client) AnalyzeCode(ctx context.Context, req *CodeAnalysisRequest) (*Co
 }
 
 func buildAuditorPrompt(req *AuditorRequest) string {
-	return fmt.Sprintf(`You are a %s security auditor. Analyze the following code for %s vulnerabilities.
+	var filesSection strings.Builder
+	filesSection.WriteString(fmt.Sprintf("Repository: %s\n\n", req.RepositoryName))
+	filesSection.WriteString(fmt.Sprintf("Files to analyze (%d):\n\n", len(req.FileContents)))
 
-Repository: %s
+	maxCharsPerFile := 8000
+	for _, file := range req.FileContents {
+		content := file.Content
+		if len(content) > maxCharsPerFile {
+			content = content[:maxCharsPerFile] + "\n... [truncated]"
+		}
+		lang := file.Language
+		if lang == "" {
+			lang = "text"
+		}
+		filesSection.WriteString(fmt.Sprintf("--- FILE: %s (%s) ---\n", file.Path, lang))
+		filesSection.WriteString(content)
+		filesSection.WriteString("\n\n")
+	}
 
-Files to analyze: %d files
+	if len(req.AttackSurface) > 0 {
+		filesSection.WriteString("Known attack surface entries:\n")
+		limit := len(req.AttackSurface)
+		if limit > 10 {
+			limit = 10
+		}
+		for i := 0; i < limit; i++ {
+			entry := req.AttackSurface[i]
+			filesSection.WriteString(fmt.Sprintf("- %s:%d (%s) %s\n", entry.File, entry.Line, entry.Type, entry.DataFlow))
+		}
+		filesSection.WriteString("\n")
+	}
 
+	return fmt.Sprintf(`You are a %s security auditor. Analyze the following source code for %s vulnerabilities.
+
+%s
 TASK:
 For each file, identify %s vulnerabilities and provide:
 - File and line number
@@ -245,7 +275,7 @@ Respond with JSON:
   ]
 }
 
-If no vulnerabilities found, respond with: {"findings": []}`, req.AuditorType, req.VulnerabilityClass, req.RepositoryName, len(req.Files), req.VulnerabilityClass)
+If no vulnerabilities found, respond with: {"findings": []}`, req.AuditorType, req.VulnerabilityClass, filesSection.String(), req.VulnerabilityClass)
 }
 
 func auditorSystemPrompt(auditorType string) string {

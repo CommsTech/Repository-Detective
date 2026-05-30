@@ -160,6 +160,12 @@ func (h *WebhookHandler) HandleWebhook(c *gin.Context) {
 	h.logger.Infof("Processing webhook for repository: %s, action: %s",
 		payload.Repository.FullName, payload.Action)
 
+	if !RepoAllowed(payload.Repository.FullName, h.config.IncludePatterns, h.config.ExcludePatterns) {
+		h.logger.Infof("Repository %s skipped by include/exclude filters", payload.Repository.FullName)
+		c.JSON(http.StatusOK, gin.H{"status": "filtered"})
+		return
+	}
+
 	// Process webhook based on action type
 	switch payload.Action {
 	case "push":
@@ -260,5 +266,7 @@ func (h *WebhookHandler) verifyWebhookSecret(c *gin.Context) error {
 
 // Config holds webhook handler configuration
 type Config struct {
-	WebhookSecret string
+	WebhookSecret         string
+	IncludePatterns       []string
+	ExcludePatterns       []string
 }

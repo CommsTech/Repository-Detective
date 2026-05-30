@@ -117,17 +117,18 @@ func (m *Manager) CreateIssuesFromAnalysis(ctx context.Context, req *IssueCreati
 
 // createIssueForProblem creates a Gitea issue for a specific code problem
 func (m *Manager) createIssueForProblem(ctx context.Context, req *IssueCreationRequest, issue *ai.CodeIssue, result *IssueCreationResult) error {
-	// Create issue title
 	title := m.createIssueTitle(issue, req)
-
-	// Create issue body
 	body := m.createIssueBody(issue, req)
 
-	// Prepare issue creation request
+	labelIDs, err := m.giteaClient.ResolveLabelIDs(ctx, req.Owner, req.Repository, m.config.IssueLabels)
+	if err != nil {
+		m.logger.Warnf("Failed to resolve labels: %v", err)
+	}
+
 	issueReq := &gitea.CreateIssueRequest{
 		Title:  title,
 		Body:   body,
-		Labels: []int64{}, // Will be populated if labels exist
+		Labels: labelIDs,
 	}
 
 	// Create the issue
@@ -150,10 +151,15 @@ func (m *Manager) createSummaryIssue(ctx context.Context, req *IssueCreationRequ
 
 	body := m.createSummaryIssueBody(req)
 
+	labelIDs, err := m.giteaClient.ResolveLabelIDs(ctx, req.Owner, req.Repository, m.config.IssueLabels)
+	if err != nil {
+		m.logger.Warnf("Failed to resolve labels for summary issue: %v", err)
+	}
+
 	issueReq := &gitea.CreateIssueRequest{
 		Title:  title,
 		Body:   body,
-		Labels: []int64{},
+		Labels: labelIDs,
 	}
 
 	createdIssue, err := m.giteaClient.CreateIssue(ctx, req.Owner, req.Repository, issueReq)
@@ -211,6 +217,10 @@ func (m *Manager) createIssueBody(issue *ai.CodeIssue, req *IssueCreationRequest
 	body.WriteString(fmt.Sprintf("**Category:** %s\n", issue.Category))
 	body.WriteString(fmt.Sprintf("**Confidence:** %.2f%%\n", issue.Confidence*100))
 
+	if issue.File != "" {
+		body.WriteString(fmt.Sprintf("**File:** `%s`\n", issue.File))
+	}
+
 	if issue.LineNumber > 0 {
 		body.WriteString(fmt.Sprintf("**Line:** %d\n", issue.LineNumber))
 	}
@@ -220,6 +230,11 @@ func (m *Manager) createIssueBody(issue *ai.CodeIssue, req *IssueCreationRequest
 	if issue.CodeSnippet != "" {
 		body.WriteString("## Code Snippet\n\n")
 		body.WriteString(fmt.Sprintf("```\n%s\n```\n\n", issue.CodeSnippet))
+	}
+
+	if issue.ProofOfConcept != "" {
+		body.WriteString("## Proof of Concept\n\n")
+		body.WriteString(fmt.Sprintf("```bash\n%s\n```\n\n", issue.ProofOfConcept))
 	}
 
 	body.WriteString("## Context\n\n")

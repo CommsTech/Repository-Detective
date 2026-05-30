@@ -16,6 +16,20 @@
 | MEDIUM | Raw string backticks in `createAnalysisPrompt` broke Go parser | Replaced markdown fences with plain delimiters |
 | LOW | Duplicate webhook/analysis logic between `main.go` and `handlers/` | `AnalysisProcessor` interface wires engine into secure handler |
 
+### Completed improvements (2026-05-30, session 2)
+
+| Item | Resolution |
+|------|------------|
+| SCAN stage missing file content | Fetch via `GetFileContent`, include in auditor prompts |
+| `enable_security` / `enable_quality` unused | Wired in static scan + LLM gate |
+| Repo include/exclude patterns unused | `handlers/repo_filter.go` + webhook filter |
+| Issue labels empty | `gitea.ResolveLabelIDs` |
+| PoC/file/line missing from issues | Mapped from Prove stage in `analysisResultFromReport` |
+| No deterministic pre-scan | `analyzers/static.go` before LLM |
+| Docker compose env mismatch | Fixed `docker-compose.minimal.yml` |
+| No onboarding UI | `/onboard` wizard + API |
+| Documentation outdated | README, QUICK_SETUP, DEPLOYMENT, architecture, status, docs/ONBOARDING |
+
 ### Open / follow-up
 
 | Priority | Issue | Notes |

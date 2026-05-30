@@ -1,52 +1,47 @@
-version: '2.4'
+version: '3.8'
 
 services:
   gitea-bugbot:
+    build: .
     image: gitea-bugbot:latest
     ports:
       - "8080:8080"
     environment:
-      # Server Configuration
-      - BUGBOT_SERVER_HOST=0.0.0.0
-      - BUGBOT_SERVER_PORT=8080
-      
-      # Gitea Configuration
+      # Server
+      - BUGBOT_PORT=8080
+      - BUGBOT_API_KEY=change-me-to-a-secure-random-string
+      - BUGBOT_PUBLIC_URL=http://localhost:8080
+      - BUGBOT_LOG_LEVEL=info
+      - BUGBOT_SKIP_STARTUP_CHECKS=false
+
+      # Gitea
       - BUGBOT_GITEA_URL=https://your-gitea-server.com
       - BUGBOT_GITEA_TOKEN=your-gitea-access-token-here
-      
-      # AI Provider — set one provider block (examples below)
+      - BUGBOT_WEBHOOK_SECRET=your-webhook-secret-here
+
+      # AI provider (see docs/AI_PROVIDERS.md)
       - BUGBOT_AI_PROVIDER=openwebui
       - BUGBOT_AI_BASE_URL=https://your-openwebui-server.com
       - BUGBOT_AI_API_KEY=your-openwebui-api-key-here
       - BUGBOT_AI_MODEL=your-preferred-model
-      
-      # Legacy names still work:
-      # - BUGBOT_OPENWEBUI_URL=...
-      # - BUGBOT_OPENWEBUI_TOKEN=...
-      
-      # Analysis Configuration
-      - BUGBOT_ANALYSIS_MAX_DEPTH=3
-      - BUGBOT_ANALYSIS_MAX_FILE_SIZE=1048576
-      - BUGBOT_ANALYSIS_ENABLE_SECURITY_SCAN=true
-      - BUGBOT_ANALYSIS_ENABLE_QUALITY_CHECK=true
-      
-      # Issue Management Configuration
-      - BUGBOT_ISSUES_AUTO_CREATE=true
-      - BUGBOT_ISSUES_MAX_PER_RUN=50
-      - BUGBOT_ISSUES_SKIP_LOW_SEVERITY=false
-      - BUGBOT_ISSUES_GROUP_SIMILAR=true
-      
-      # Webhook Configuration
-      - BUGBOT_WEBHOOKS_ENABLE_PUSH_EVENTS=true
-      - BUGBOT_WEBHOOKS_ENABLE_PULL_REQUEST_EVENTS=true
-      - BUGBOT_WEBHOOKS_ENABLE_ISSUE_EVENTS=false
-      - BUGBOT_WEBHOOKS_SECRET=your-webhook-secret-here
-      
-      # Logging Configuration
-      - BUGBOT_LOGGING_LEVEL=info
-      - BUGBOT_LOGGING_FORMAT=json
-      - BUGBOT_LOGGING_OUTPUT=stdout
-      
+
+      # Analysis
+      - BUGBOT_ENABLE_SECURITY=true
+      - BUGBOT_ENABLE_QUALITY=true
+      - BUGBOT_MAX_FILE_SIZE=1048576
+      - BUGBOT_ANALYSIS_DEPTH=3
+
+      # Issues
+      - BUGBOT_AUTO_CREATE_ISSUES=true
+      - BUGBOT_MAX_ISSUES_PER_RUN=50
+      - BUGBOT_SKIP_LOW_SEVERITY=false
+      - BUGBOT_GROUP_SIMILAR_ISSUES=true
+
+      # Performance
+      - BUGBOT_MAX_CONCURRENT_ANALYSES=5
+      - BUGBOT_ANALYSIS_TIMEOUT=300
+      - BUGBOT_RATE_LIMIT_PER_MINUTE=60
+
     volumes:
       - ./config:/app/config:ro
-      - ./logs:/app/logs
+    restart: unless-stopped

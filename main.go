@@ -24,14 +24,15 @@ import (
 var version = "dev"
 
 var (
-	logger          *logrus.Logger
-	config          *Config
-	giteaClient     *gitea.Client
-	aiClient        *ai.Client
-	analysisEngine  *analyzers.Engine
-	issueManager    *issues.Manager
-	webhookHandler  *handlers.WebhookHandler
-	analysisLimiter *limiter.ConcurrencyLimiter
+	logger            *logrus.Logger
+	config            *Config
+	giteaClient       *gitea.Client
+	aiClient          *ai.Client
+	analysisEngine    *analyzers.Engine
+	issueManager      *issues.Manager
+	webhookHandler    *handlers.WebhookHandler
+	onboardingHandler *handlers.OnboardingHandler
+	analysisLimiter   *limiter.ConcurrencyLimiter
 )
 
 // Config holds the plugin configuration
@@ -57,9 +58,12 @@ type Config struct {
 	MaxIssuesPerRun       int               `mapstructure:"max_issues_per_run"`
 	SkipLowSeverity       bool              `mapstructure:"skip_low_severity"`
 	GroupSimilarIssues    bool              `mapstructure:"group_similar_issues"`
-	SkipPatterns          []string          `mapstructure:"skip_patterns"`
-	LanguageMapping       map[string]string `mapstructure:"language_mapping"`
-	MaxConcurrentAnalyses int               `mapstructure:"max_concurrent_analyses"`
+	SkipPatterns              []string          `mapstructure:"-"`
+	LanguageMapping           map[string]string `mapstructure:"-"`
+	RepositoryIncludePatterns []string          `mapstructure:"-"`
+	RepositoryExcludePatterns []string          `mapstructure:"-"`
+	PublicURL                 string            `mapstructure:"public_url"`
+	MaxConcurrentAnalyses     int               `mapstructure:"max_concurrent_analyses"`
 	AnalysisTimeout       int               `mapstructure:"analysis_timeout"`
 	RateLimitPerMinute    int               `mapstructure:"rate_limit_per_minute"`
 	SkipStartupChecks     bool              `mapstructure:"skip_startup_checks"`
@@ -177,6 +181,22 @@ func loadConfig() error {
 		return fmt.Errorf("failed to unmarshal config: %w", err)
 	}
 
+	if err := viper.UnmarshalKey("skip_patterns", &config.SkipPatterns); err != nil {
+		return fmt.Errorf("failed to unmarshal skip_patterns: %w", err)
+	}
+	if raw := viper.GetStringMap("language_mapping"); len(raw) > 0 {
+		config.LanguageMapping = make(map[string]string, len(raw))
+		for key, value := range raw {
+			config.LanguageMapping[key] = fmt.Sprint(value)
+		}
+	}
+	if err := viper.UnmarshalKey("repository_include_patterns", &config.RepositoryIncludePatterns); err != nil {
+		return fmt.Errorf("failed to unmarshal repository_include_patterns: %w", err)
+	}
+	if err := viper.UnmarshalKey("repository_exclude_patterns", &config.RepositoryExcludePatterns); err != nil {
+		return fmt.Errorf("failed to unmarshal repository_exclude_patterns: %w", err)
+	}
+
 	// Validate required fields
 	if config.GiteaURL == "" {
 		return fmt.Errorf("gitea_url is required")
@@ -210,6 +230,10 @@ func setupRoutes(router *gin.Engine) {
 		})
 	})
 
+	router.GET("/", func(c *gin.Context) {
+		c.Redirect(http.StatusFound, "/onboard")
+	})
+
 	// Webhook endpoint for Gitea — rate limited and webhook secret auth
 	router.POST("/webhook", func(c *gin.Context) {
 		webhookHandler.HandleWebhook(c)
@@ -223,6 +247,18 @@ func setupRoutes(router *gin.Engine) {
 		api.GET("/status", handleStatus)
 		api.POST("/config/reload", handleConfigReload)
 	}
+
+	onboardingHandler = handlers.NewOnboardingHandler(logger, handlers.OnboardingConfig{
+		GiteaURL:  config.GiteaURL,
+		PublicURL: config.PublicURL,
+		AIConfig: ai.Config{
+			Provider: ai.ProviderType(config.AIProvider),
+			BaseURL:  firstNonEmpty(config.AIBaseURL, config.OpenWebUIURL),
+			APIKey:   firstNonEmpty(config.AIAPIKey, config.OpenWebUIToken),
+			Model:    firstNonEmpty(config.AIModel, config.OpenWebUIModel),
+		},
+	})
+	onboardingHandler.RegisterRoutes(router, api)
 
 	logger.Info("Routes configured successfully")
 }
@@ -327,7 +363,9 @@ func initializeComponents() error {
 	issueManager = issues.NewManager(giteaClient, issueConfig, logger)
 
 	webhookHandler = handlers.NewWebhookHandler(logger, &handlers.Config{
-		WebhookSecret: config.WebhookSecret,
+		WebhookSecret:   config.WebhookSecret,
+		IncludePatterns: config.RepositoryIncludePatterns,
+		ExcludePatterns: config.RepositoryExcludePatterns,
 	}, &webhookProcessor{})
 
 	analysisLimiter = limiter.New(config.MaxConcurrentAnalyses)

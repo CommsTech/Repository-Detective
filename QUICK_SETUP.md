@@ -1,108 +1,98 @@
-# 🚀 Quick Setup Guide - Gitea Bugbot Plugin
+# Quick Setup Guide
 
-## Your Configuration is Ready! ✅
+## Fastest path: Onboarding wizard
 
-Your Docker Compose file is configured with placeholder values. You need to add your specific configuration:
+1. **Start Bugbot**
 
-- **Gitea Server**: `https://git.commsnet.org`
-- **OpenWebUI Server**: `https://ai.commsnet.org/api`
-- **AI Model**: `luna-tic-coder`
-
-## 🐳 Deploy in 3 Simple Steps
-
-### Step 1: Start Docker
-Make sure Docker Desktop is running on your Windows machine.
-
-### Step 2: Configure Your Settings
 ```powershell
-# Copy the production configuration template
-Copy-Item "docker-compose.prod.yml" "docker-compose.override.yml"
-
-# Edit the override file with your actual values
-notepad docker-compose.override.yml
-```
-
-### Step 3: Run the Deployment Script
-```powershell
-# In PowerShell, navigate to your project directory
 cd C:\Users\commstech\Github\Gitea_AI_Bugbot
 
-# Option 1: Use the build-and-deploy script (recommended for compatibility issues)
-.\build-and-deploy.ps1
+# Docker (recommended)
+docker compose -f docker-compose.minimal.yml up -d --build
 
-# Option 2: Use the original deployment script
-.\deploy.ps1
+# Or local dev
+$env:BUGBOT_SKIP_STARTUP_CHECKS="true"
+$env:BUGBOT_GITEA_URL="https://git.commsnet.org"
+$env:BUGBOT_GITEA_TOKEN="your-token"
+$env:BUGBOT_API_KEY="your-api-key"
+$env:BUGBOT_PUBLIC_URL="http://localhost:8080"
+go run .
 ```
 
-### Step 3: Verify Deployment
-The script will automatically:
-- Build the Docker image
-- Start the bugbot service
-- Show you the next steps
+2. **Open the wizard**
 
-## 🔧 Manual Deployment (Alternative)
+```
+http://localhost:8080/onboard
+```
 
-If you prefer to deploy manually:
+3. **Complete the steps**
+   - Enter your Bugbot API key and Gitea token
+   - Test Gitea and AI connections
+   - Load repositories → select repos → register webhooks
+   - Copy the generated environment block for production
+
+See [docs/ONBOARDING.md](docs/ONBOARDING.md) for API details.
+
+## Docker deployment
 
 ```powershell
-# Option 1: Use the minimal configuration (recommended for compatibility issues)
-docker-compose -f docker-compose.minimal.yml up -d
+# Edit docker-compose.minimal.yml with your values, then:
+docker compose -f docker-compose.minimal.yml up -d --build
 
-# Option 2: Use the simplified configuration
-docker-compose -f docker-compose.simple.yml up -d --build
-
-# Option 3: Use the full configuration
-docker-compose up -d --build
-```
-
-# Check the logs
-docker-compose logs -f gitea-bugbot
-
-# Test the health endpoint
+# Verify
 curl http://localhost:8080/health
 ```
 
-## 🌐 Configure Webhooks
+### Key environment variables
 
-Once deployed, set up webhooks in your Gitea repositories:
-
-1. Go to your repository settings in Gitea
-2. Navigate to "Webhooks" → "Add webhook" → "Gitea"
-3. Set the webhook URL to: `http://your-server-ip:8080/webhook`
-4. Choose events: "Push" and "Pull Request"
-5. Save the webhook
-
-## 📊 Monitor Your Bugbot
-
-- **Logs**: `docker-compose logs -f gitea-bugbot`
-- **Status**: `http://localhost:8080/health`
-- **Stop**: `docker-compose down`
-- **Restart**: `docker-compose restart gitea-bugbot`
-
-## 🔒 Security Note
-
-**Important**: Change the webhook secret in `docker-compose.yml`:
 ```yaml
-BUGBOT_WEBHOOKS_SECRET=your-secure-webhook-secret-here
+BUGBOT_PORT=8080
+BUGBOT_API_KEY=your-secure-api-key
+BUGBOT_PUBLIC_URL=https://bugbot.yourdomain.com
+BUGBOT_GITEA_URL=https://git.commsnet.org
+BUGBOT_GITEA_TOKEN=your-gitea-token
+BUGBOT_WEBHOOK_SECRET=your-webhook-secret
+BUGBOT_AI_PROVIDER=openai
+BUGBOT_AI_API_KEY=your-ai-key
+BUGBOT_AI_MODEL=gpt-4o-mini
+BUGBOT_ENABLE_SECURITY=true
+BUGBOT_ENABLE_QUALITY=true
 ```
 
-Replace with a strong, random string for production use.
+## Manual webhook setup
 
-## 🎯 What Happens Next
+If not using the wizard:
 
-Once deployed and webhooks are configured:
-1. **Push code** to any repository → Bugbot automatically analyzes it
-2. **Create pull requests** → Bugbot reviews the changes
-3. **Security issues** are automatically detected and logged
-4. **AI-powered suggestions** are provided for fixes
-5. **Issues are created** in your Gitea repositories
+1. Repository → Settings → Webhooks → Add webhook
+2. URL: `{BUGBOT_PUBLIC_URL}/webhook`
+3. Content type: `application/json`
+4. Secret: same as `BUGBOT_WEBHOOK_SECRET`
+5. Events: **Push**, **Pull request**
 
-## 🆘 Need Help?
+## Verify it works
 
-- Check the logs: `docker-compose logs gitea-bugbot`
-- Verify configuration: `docker-compose config`
-- Restart the service: `docker-compose restart gitea-bugbot`
+```powershell
+# Health
+curl http://localhost:8080/health
 
----
+# Status (requires API key)
+curl -H "X-Bugbot-API-Key: your-key" http://localhost:8080/api/v1/status
 
-**Your Gitea Bugbot Plugin is ready to deploy!** 🎉
+# Logs
+docker compose -f docker-compose.minimal.yml logs -f gitea-bugbot
+```
+
+## What happens after setup
+
+1. **Push code** → Bugbot analyzes changed files only
+2. **Open/update PR** → Bugbot analyzes diff files only
+3. **Issues created** with labels, file/line references, and PoC when available
+
+## Troubleshooting
+
+| Problem | Check |
+|---------|-------|
+| Wizard API calls fail | `BUGBOT_API_KEY` set and entered in UI |
+| Webhooks not firing | `BUGBOT_PUBLIC_URL` reachable from Gitea |
+| No issues created | `auto_create_issues: true`, token has issue write access |
+| AI errors | Provider config — see [docs/AI_PROVIDERS.md](docs/AI_PROVIDERS.md) |

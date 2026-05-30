@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gitea Bugbot — Onboarding</title>
+  <link rel="stylesheet" href="/onboard/static/style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Gitea Bugbot</h1>
+      <p class="subtitle">Connect your Gitea repository and enable automated AI code review</p>
+    </header>
+
+    <section class="card">
+      <h2>1. Connection settings</h2>
+      <div class="grid">
+        <label>
+          Gitea URL
+          <input id="giteaUrl" type="url" placeholder="https://git.example.com">
+        </label>
+        <label>
+          Gitea access token
+          <input id="giteaToken" type="password" placeholder="Personal access token">
+        </label>
+        <label>
+          Bugbot public URL
+          <input id="publicUrl" type="url" placeholder="https://bugbot.example.com">
+          <small>Where Gitea can reach this Bugbot instance (for webhooks)</small>
+        </label>
+        <label>
+          Webhook secret
+          <input id="webhookSecret" type="text" placeholder="shared-secret">
+        </label>
+        <label>
+          Bugbot API key
+          <input id="apiKey" type="password" placeholder="Used to protect onboarding API">
+        </label>
+      </div>
+      <div class="actions">
+        <button id="testGiteaBtn" type="button">Test Gitea connection</button>
+        <span id="giteaStatus" class="status"></span>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>2. AI provider</h2>
+      <div class="grid">
+        <label>
+          Provider
+          <select id="aiProvider">
+            <option value="openai">OpenAI</option>
+            <option value="anthropic">Anthropic</option>
+            <option value="openrouter">OpenRouter</option>
+            <option value="ollama">Ollama</option>
+            <option value="openwebui">OpenWebUI</option>
+            <option value="openclaw">OpenClaw</option>
+          </select>
+        </label>
+        <label>
+          Base URL
+          <input id="aiBaseUrl" type="url" placeholder="Optional — provider default">
+        </label>
+        <label>
+          API key
+          <input id="aiApiKey" type="password" placeholder="Provider API key">
+        </label>
+        <label>
+          Model
+          <input id="aiModel" type="text" placeholder="gpt-4o-mini">
+        </label>
+      </div>
+      <div class="actions">
+        <button id="testAiBtn" type="button">Test AI connection</button>
+        <span id="aiStatus" class="status"></span>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>3. Select repositories</h2>
+      <div class="actions">
+        <button id="loadReposBtn" type="button">Load my repositories</button>
+      </div>
+      <div id="repoList" class="repo-list"></div>
+    </section>
+
+    <section class="card">
+      <h2>4. Register webhooks</h2>
+      <p>Select repositories above, then register push and pull request webhooks pointing at Bugbot.</p>
+      <div class="actions">
+        <button id="registerWebhooksBtn" type="button" class="primary">Register webhooks on selected repos</button>
+        <span id="webhookStatus" class="status"></span>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>5. Environment export</h2>
+      <p>Copy these variables into your <code>docker-compose.yml</code> or deployment environment.</p>
+      <pre id="envExport"></pre>
+      <button id="copyEnvBtn" type="button">Copy to clipboard</button>
+    </section>
+  </div>
+
+  <script src="/onboard/static/app.js"></script>
+</body>
+</html>

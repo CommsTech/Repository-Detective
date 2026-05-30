@@ -317,7 +317,7 @@ const (
 	AuditorConfig AuditorType = "config"
 )
 
-// Scan runs all auditor agents in parallel and collects candidates.
+// Scan runs deterministic checks first, then LLM auditors on flagged files.
 func (e *Engine) Scan(ctx context.Context, prepare *PrepareReport) ([]CandidateFinding, error) {
 	owner, repo := splitRepository(prepare.Repository)
 
@@ -326,13 +326,41 @@ func (e *Engine) Scan(ctx context.Context, prepare *PrepareReport) ([]CandidateF
 		return nil, fmt.Errorf("failed to resolve files: %w", err)
 	}
 
-	// Run all auditors in parallel using goroutines
+	fileContents, err := e.fetchFileContents(ctx, owner, repo, prepare.Commit, analyzableFiles)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch file contents: %w", err)
+	}
+
+	var allCandidates []CandidateFinding
+
+	// Stage 2a: deterministic static analysis (no LLM tokens)
+	if e.config.EnableSecurity || e.config.EnableQuality {
+		staticFindings := RunStaticAnalysis(fileContents, e.config.EnableSecurity, e.config.EnableQuality)
+		for _, f := range staticFindings {
+			allCandidates = append(allCandidates, CandidateFinding(f))
+		}
+		e.logger.Infof("[CAH:SCAN] Static analysis found %d candidate(s)", len(staticFindings))
+	}
+
+	// Stage 2b: LLM auditors — only when security scanning is enabled
+	if !e.config.EnableSecurity {
+		return allCandidates, nil
+	}
+
+	llmTargets := e.selectLLMTargetFiles(fileContents, allCandidates)
+	if len(llmTargets) == 0 {
+		e.logger.Info("[CAH:SCAN] No files selected for LLM audit")
+		return allCandidates, nil
+	}
+
+	e.logger.Infof("[CAH:SCAN] Running LLM auditors on %d file(s)", len(llmTargets))
+
 	type result struct {
 		findings []CandidateFinding
 		err      error
+		auditor  AuditorType
 	}
 
-	// Define auditors to run
 	auditors := []struct {
 		auditorType AuditorType
 		promptType  string
@@ -345,22 +373,19 @@ func (e *Engine) Scan(ctx context.Context, prepare *PrepareReport) ([]CandidateF
 		{AuditorConfig, "misconfiguration"},
 	}
 
-	// Channel to collect results
 	results := make(chan result, len(auditors))
 
 	for _, auditor := range auditors {
 		go func(a AuditorType, prompt string) {
-			findings, err := e.runAuditor(ctx, a, prompt, prepare, analyzableFiles)
-			results <- result{findings: findings, err: err}
+			findings, err := e.runAuditor(ctx, a, prompt, prepare, llmTargets)
+			results <- result{findings: findings, err: err, auditor: a}
 		}(auditor.auditorType, auditor.promptType)
 	}
 
-	// Collect all findings
-	var allCandidates []CandidateFinding
 	for i := 0; i < len(auditors); i++ {
 		r := <-results
 		if r.err != nil {
-			e.logger.Warnf("[CAH:SCAN] Auditor %s failed: %v", auditors[i].auditorType, r.err)
+			e.logger.Warnf("[CAH:SCAN] Auditor %s failed: %v", r.auditor, r.err)
 			continue
 		}
 		allCandidates = append(allCandidates, r.findings...)
@@ -369,16 +394,69 @@ func (e *Engine) Scan(ctx context.Context, prepare *PrepareReport) ([]CandidateF
 	return allCandidates, nil
 }
 
-// runAuditor runs a single auditor agent across all files
+// selectLLMTargetFiles limits LLM usage to files flagged by static analysis when possible.
+func (e *Engine) selectLLMTargetFiles(allFiles []FileContent, staticCandidates []CandidateFinding) []FileContent {
+	if len(staticCandidates) == 0 {
+		return allFiles
+	}
+
+	flagged := make(map[string]bool, len(staticCandidates))
+	for _, c := range staticCandidates {
+		if c.File != "" {
+			flagged[c.File] = true
+		}
+	}
+
+	var targets []FileContent
+	for _, file := range allFiles {
+		if flagged[file.Path] {
+			targets = append(targets, file)
+		}
+	}
+	return targets
+}
+
+func (e *Engine) fetchFileContents(ctx context.Context, owner, repo, ref string, files []gitea.RepositoryContent) ([]FileContent, error) {
+	var contents []FileContent
+
+	for _, file := range files {
+		if file.Type != "" && file.Type != "file" {
+			continue
+		}
+		if file.Size > 0 && file.Size > e.config.MaxFileSize {
+			e.logger.Debugf("Skipping oversized file %s (%d bytes)", file.Path, file.Size)
+			continue
+		}
+
+		content, err := e.giteaClient.GetFileContent(ctx, owner, repo, ref, file.Path)
+		if err != nil {
+			e.logger.Warnf("Failed to fetch %s: %v", file.Path, err)
+			continue
+		}
+		if int64(len(content)) > e.config.MaxFileSize {
+			e.logger.Debugf("Skipping oversized content for %s", file.Path)
+			continue
+		}
+
+		contents = append(contents, FileContent{
+			Path:     file.Path,
+			Content:  content,
+			Language: e.detectLanguage(file.Path, content),
+		})
+	}
+
+	return contents, nil
+}
+
+// runAuditor runs a single auditor agent across target files with content.
 func (e *Engine) runAuditor(ctx context.Context, auditorType AuditorType, vulnClass string,
-	prepare *PrepareReport, files []gitea.RepositoryContent) ([]CandidateFinding, error) {
+	prepare *PrepareReport, files []FileContent) ([]CandidateFinding, error) {
 
 	e.logger.Infof("[CAH:SCAN] Running %s auditor on %d files", auditorType, len(files))
 
 	var candidates []CandidateFinding
 
-	// Process files in batches to avoid overwhelming the AI
-	batchSize := 10
+	batchSize := 5
 	for i := 0; i < len(files); i += batchSize {
 		end := i + batchSize
 		if end > len(files) {
@@ -386,23 +464,36 @@ func (e *Engine) runAuditor(ctx context.Context, auditorType AuditorType, vulnCl
 		}
 		batch := files[i:end]
 
-		// Build auditor request
+		repoFiles := make([]gitea.RepositoryContent, len(batch))
+		aiFiles := make([]ai.FileContent, len(batch))
+		for j, f := range batch {
+			repoFiles[j] = gitea.RepositoryContent{
+				Name: filepath.Base(f.Path),
+				Path: f.Path,
+				Type: "file",
+			}
+			aiFiles[j] = ai.FileContent{
+				Path:     f.Path,
+				Content:  f.Content,
+				Language: f.Language,
+			}
+		}
+
 		req := &ai.AuditorRequest{
 			RepositoryName:     prepare.Repository,
-			VulnerabilityClass: string(vulnClass),
-			Files:              batch,
+			VulnerabilityClass: vulnClass,
+			Files:              repoFiles,
+			FileContents:       aiFiles,
 			AttackSurface:      prepare.AttackSurface,
 			AuditorType:        string(auditorType),
 		}
 
-		// Call auditor
 		resp, err := e.aiClient.RunAuditor(ctx, req)
 		if err != nil {
 			e.logger.Warnf("[CAH:SCAN] %s auditor batch failed: %v", auditorType, err)
 			continue
 		}
 
-		// Convert to CandidateFinding
 		for _, f := range resp.Findings {
 			candidates = append(candidates, CandidateFinding{
 				ID:           fmt.Sprintf("%s-%s-%d", auditorType, vulnClass, len(candidates)+1),
@@ -471,6 +562,18 @@ func (e *Engine) Validate(ctx context.Context, candidates []CandidateFinding) ([
 
 // validateOne runs a single candidate through debaters
 func (e *Engine) validateOne(ctx context.Context, candidate CandidateFinding) (*ValidatedFinding, error) {
+	// High-confidence static findings skip LLM debate (token savings)
+	if candidate.AuditorType == "static" && candidate.Confidence >= 0.9 {
+		return &ValidatedFinding{
+			CandidateFinding: candidate,
+			DebateResult: DebateResult{
+				AdvocateConfidence: candidate.Confidence,
+				CounselConfidence:  0.1,
+				Outcome:            "validated",
+			},
+		}, nil
+	}
+
 	// Run advocate and counselor in parallel
 	type dResult struct {
 		confidence float64
@@ -765,19 +868,50 @@ func (e *Engine) analysisResultFromReport(ctx context.Context, owner, repo, ref,
 		Commit:        commitLabel,
 		AnalysisTime:  time.Duration(report.TotalTimeMs) * time.Millisecond,
 		FilesAnalyzed: report.Stats.FilesAnalyzed,
-		IssuesFound:   len(report.Deduped),
+		IssuesFound:   len(report.Proven),
 	}
-	for _, f := range report.Deduped {
+
+	// Prefer proven findings (include PoC); fall back to deduped if prove stage empty
+	findings := report.Proven
+	if len(findings) == 0 {
+		for _, f := range report.Deduped {
+			findings = append(findings, ProvenFinding{DedupedFinding: f})
+		}
+	}
+
+	for _, f := range findings {
 		description := f.Description
 		if description == "" {
 			description = f.Title
 		}
+
+		poc := ""
+		if f.ProofOfConcept.Command != "" {
+			poc = f.ProofOfConcept.Command
+			if f.ProofOfConcept.Explanation != "" {
+				poc += "\n\n" + f.ProofOfConcept.Explanation
+			}
+		}
+
+		line := 0
+		if len(f.Lines) > 0 {
+			line = f.Lines[0]
+		}
+		file := ""
+		if len(f.Files) > 0 {
+			file = f.Files[0]
+		}
+
 		result.Issues = append(result.Issues, ai.CodeIssue{
-			Severity:    f.Severity,
-			Category:    "security",
-			Title:       f.Title,
-			Description: description,
-			Confidence:  f.Confidence,
+			Severity:       f.Severity,
+			Category:       f.Category,
+			Title:          f.Title,
+			Description:    description,
+			File:           file,
+			LineNumber:     line,
+			CodeSnippet:    f.Evidence.Code,
+			ProofOfConcept: poc,
+			Confidence:     f.Confidence,
 		})
 	}
 	return result, nil

@@ -1,383 +1,150 @@
 # Gitea Bugbot Plugin
 
-A powerful automated code review and bug detection plugin for Gitea that uses AI to analyze code, detect issues, and automatically create issues with fix proposals.
+Automated AI code review for Gitea — scans pushes and pull requests, detects security and quality issues, and creates labeled Gitea issues with code references and proof-of-concept details.
 
 ## Features
 
-- **Automated Code Analysis**: Automatically analyzes code on every push and pull request
-- **AI-Powered Review**: Uses OpenWebUI AI for intelligent code analysis
-- **Multi-Language Support**: Supports Go, Python, JavaScript, Java, C++, and many more
-- **Security Scanning**: Detects security vulnerabilities and best practice violations
-- **Quality Assessment**: Identifies code quality issues and performance problems
-- **Automatic Issue Creation**: Creates detailed Gitea issues with AI-generated content
-- **Fix Proposals**: Provides specific suggestions and code examples for fixes
-- **Webhook Integration**: Seamlessly integrates with Gitea webhook system
-- **Configurable Analysis**: Customizable analysis depth, file size limits, and skip patterns
+- **CAH security pipeline** — Prepare → Scan → Validate → Dedup → Prove
+- **Deterministic pre-scan** — regex-based checks run before LLM calls to save tokens
+- **Multi-provider AI** — OpenAI, Anthropic, OpenRouter, Ollama, OpenWebUI, OpenClaw
+- **Scoped analysis** — push events analyze changed files only; PRs analyze diff files only
+- **Repository filtering** — include/exclude patterns per repo
+- **Onboarding Web UI** — browser wizard to test connections, pick repos, and register webhooks
+- **Automatic issues** — labeled issues with file, line, snippet, and PoC when available
+- **Webhook security** — rate limiting and secret verification
+- **CI/CD** — Gitea Actions for lint, test, and release builds
 
-## Architecture
+## Quick start
 
-The plugin consists of several key components:
+### Option A: Onboarding wizard (recommended)
 
-- **Webhook Handler**: Processes Gitea webhook events
-- **Analysis Engine**: Coordinates code analysis and AI integration
-- **OpenWebUI Client**: Communicates with your OpenWebUI AI server
-- **Gitea Client**: Interacts with Gitea API for repository access and issue creation
-- **Issue Manager**: Creates and manages Gitea issues based on analysis results
+1. Start Bugbot (Docker or `go run .`)
+2. Open **`http://localhost:8080/onboard`**
+3. Enter your API key (`BUGBOT_API_KEY`), Gitea token, AI settings, and public URL
+4. Test connections → load repos → register webhooks
 
-## Prerequisites
+See [docs/ONBOARDING.md](docs/ONBOARDING.md) for details.
 
-- Gitea server (self-hosted)
-- OpenWebUI server with AI models
-- Go 1.21+ (for building from source)
-- Docker (for containerized deployment)
-
-## Quick Start
-
-### 1. Configuration
-
-Create a configuration file `config/config.yaml`:
-
-```yaml
-# Gitea Configuration
-gitea_url: "http://your-gitea-server:3000"
-gitea_token: "your-gitea-access-token"
-webhook_secret: "your-webhook-secret"
-
-# OpenWebUI Configuration
-openwebui_url: "http://your-openwebui-server:8080"
-openwebui_token: "your-openwebui-api-token"
-
-# Analysis Configuration
-auto_create_issues: true
-max_issues_per_run: 50
-analysis_depth: 3
-```
-
-### 2. Docker Deployment
+### Option B: Docker Compose
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/gitea-bugbot.git
-cd gitea-bugbot
+git clone https://git.commsnet.org/commstech/Bugbot.git
+cd Bugbot
 
-# Update configuration
-# Edit config/config.yaml with your settings
-
-# Build and run
-docker-compose up -d
+# Edit config/config.yaml or set env vars in docker-compose.minimal.yml
+docker compose -f docker-compose.minimal.yml up -d --build
 ```
 
-### 3. Gitea Webhook Setup
+### Option C: Manual config
 
-1. Go to your Gitea repository
-2. Navigate to Settings → Webhooks
-3. Add new webhook:
-   - **Target URL**: `http://your-bugbot-server:8080/webhook`
-   - **HTTP Method**: POST
-   - **Post Content Type**: application/json
-   - **Secret**: Your webhook secret
-   - **Trigger On**: Push events, Pull request events
-4. Save the webhook
+Edit `config/config.yaml`:
 
-### 4. Test the Integration
+```yaml
+port: "8080"
+api_key: "change-me"
+public_url: "http://localhost:8080"
 
-Make a push to your repository or create a pull request. The bugbot will automatically analyze the code and create issues for any problems found.
+gitea_url: "https://git.example.com"
+gitea_token: "your-gitea-token"
+webhook_secret: "your-webhook-secret"
+
+ai_provider: "openai"
+ai_api_key: "your-key"
+ai_model: "gpt-4o-mini"
+
+enable_security: true
+enable_quality: true
+auto_create_issues: true
+```
 
 ## Configuration
 
-### Environment Variables
+Environment variables use the `BUGBOT_` prefix (e.g. `BUGBOT_GITEA_URL`).
 
-All configuration options can be set via environment variables with the `BUGBOT_` prefix:
+| Option | Env var | Description |
+|--------|---------|-------------|
+| `port` | `BUGBOT_PORT` | HTTP port (default `8080`) |
+| `api_key` | `BUGBOT_API_KEY` | Protects `/api/v1/*` and onboarding API |
+| `public_url` | `BUGBOT_PUBLIC_URL` | Public URL Gitea uses for webhooks |
+| `gitea_url` | `BUGBOT_GITEA_URL` | Gitea server URL |
+| `gitea_token` | `BUGBOT_GITEA_TOKEN` | Gitea API token |
+| `webhook_secret` | `BUGBOT_WEBHOOK_SECRET` | Webhook HMAC secret |
+| `ai_provider` | `BUGBOT_AI_PROVIDER` | AI backend (see [docs/AI_PROVIDERS.md](docs/AI_PROVIDERS.md)) |
+| `ai_base_url` | `BUGBOT_AI_BASE_URL` | Provider base URL (optional) |
+| `ai_api_key` | `BUGBOT_AI_API_KEY` | Provider API key |
+| `ai_model` | `BUGBOT_AI_MODEL` | Model name |
+| `enable_security` | `BUGBOT_ENABLE_SECURITY` | Security scanning (static + LLM) |
+| `enable_quality` | `BUGBOT_ENABLE_QUALITY` | Quality checks (static rules) |
+| `repository_include_patterns` | — | Allow-list (empty = all) |
+| `repository_exclude_patterns` | — | Block-list (e.g. `archived-*`) |
+| `max_concurrent_analyses` | `BUGBOT_MAX_CONCURRENT_ANALYSES` | Parallel analysis limit |
+| `skip_startup_checks` | `BUGBOT_SKIP_STARTUP_CHECKS` | Skip Gitea/AI ping on startup |
+
+Legacy `openwebui_url` / `openwebui_token` still work and map to the OpenWebUI provider.
+
+## API endpoints
+
+| Endpoint | Auth | Purpose |
+|----------|------|---------|
+| `GET /health` | None | Health check |
+| `GET /onboard` | None | Onboarding wizard UI |
+| `POST /webhook` | Webhook secret | Gitea webhook receiver |
+| `POST /api/v1/analyze` | API key | Trigger manual analysis |
+| `GET /api/v1/status` | API key | Service status |
+| `POST /api/v1/config/reload` | API key | Reload config |
+| `POST /api/v1/onboard/*` | API key | Onboarding API |
+
+### Manual analysis
 
 ```bash
-BUGBOT_GITEA_URL=http://your-gitea-server:3000
-BUGBOT_GITEA_TOKEN=your-token
-BUGBOT_OPENWEBUI_URL=http://your-openwebui-server:8080
-BUGBOT_OPENWEBUI_TOKEN=your-token
+curl -X POST http://localhost:8080/api/v1/analyze \
+  -H "X-Bugbot-API-Key: your-key" \
+  -H "Content-Type: application/json" \
+  -d '{"owner":"org","repository":"repo","ref":"main","type":"repository"}'
 ```
 
-### Configuration Options
+## Analysis pipeline
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `port` | `8080` | HTTP server port |
-| `log_level` | `info` | Logging level (debug, info, warn, error) |
-| `gitea_url` | - | Gitea server URL (required) |
-| `gitea_token` | - | Gitea access token (required) |
-| `webhook_secret` | - | Webhook secret for verification |
-| `openwebui_url` | - | OpenWebUI server URL (required) |
-| `openwebui_token` | - | OpenWebUI API token |
-| `auto_create_issues` | `true` | Automatically create issues for problems |
-| `max_issues_per_run` | `50` | Maximum issues to create per analysis |
-| `analysis_depth` | `3` | Directory analysis depth |
-| `max_file_size` | `1048576` | Maximum file size to analyze (1MB) |
-| `skip_low_severity` | `false` | Skip low severity issues |
-| `group_similar_issues` | `true` | Create summary issues for multiple problems |
+1. **Prepare** — map repository structure and attack surface
+2. **Scan** — deterministic pattern rules, then LLM auditors on flagged files (full scan if static finds nothing)
+3. **Validate** — advocate/counsel debate (static high-confidence hits skip debate)
+4. **Dedup** — merge duplicate findings
+5. **Prove** — generate PoC for validated findings
 
-## API Endpoints
+See [docs/CAH_PIPELINE.md](docs/CAH_PIPELINE.md) for the full specification.
 
-### Health Check
+## Project structure
+
 ```
-GET /health
-```
-
-### Webhook Endpoint
-```
-POST /webhook
-```
-
-### Manual Analysis
-```
-POST /api/v1/analyze
-Content-Type: application/json
-
-{
-  "owner": "username",
-  "repository": "repo-name",
-  "ref": "main",
-  "type": "repository"
-}
-```
-
-### Status
-```
-GET /api/v1/status
-```
-
-### Configuration Reload
-```
-POST /api/v1/config/reload
-```
-
-## Supported Languages
-
-The plugin automatically detects and analyzes code in the following languages:
-
-- **Go** (.go)
-- **Python** (.py)
-- **JavaScript** (.js, .jsx)
-- **TypeScript** (.ts, .tsx)
-- **Java** (.java)
-- **C++** (.cpp, .cc, .cxx)
-- **C** (.c)
-- **C#** (.cs)
-- **PHP** (.php)
-- **Ruby** (.rb)
-- **Rust** (.rs)
-- **Swift** (.swift)
-- **Kotlin** (.kt)
-- **Scala** (.scala)
-- **Shell** (.sh, .bash)
-- **PowerShell** (.ps1)
-- **SQL** (.sql)
-- **HTML** (.html, .htm)
-- **CSS** (.css, .scss, .sass)
-- **Data** (.xml, .yaml, .yml, .json)
-- **Markdown** (.md, .txt)
-
-## Issue Types
-
-The plugin detects and categorizes issues into several types:
-
-### Security Issues
-- SQL injection vulnerabilities
-- XSS vulnerabilities
-- CSRF vulnerabilities
-- Insecure authentication
-- Data exposure risks
-
-### Code Quality Issues
-- Code complexity
-- Maintainability problems
-- Readability issues
-- Code style violations
-- Best practice violations
-
-### Performance Issues
-- Inefficient algorithms
-- Memory leaks
-- Resource management
-- Optimization opportunities
-
-### Bug Detection
-- Logic errors
-- Edge cases
-- Error handling
-- Input validation
-
-## Customization
-
-### Issue Templates
-
-Customize issue titles and bodies using template variables:
-
-```yaml
-issue_title_template: "[{{severity}}] {{title}} in {{file}}"
-issue_body_template: |
-  ## Problem
-  
-  {{description}}
-  
-  ## Context
-  
-  - **File:** {{file}}
-  - **Severity:** {{severity}}
-  - **Category:** {{category}}
-  
-  ## Suggested Fix
-  
-  {{suggestion}}
-```
-
-### Skip Patterns
-
-Configure which files and directories to skip:
-
-```yaml
-skip_patterns:
-  - "node_modules"
-  - "vendor"
-  - ".git"
-  - "build"
-  - "dist"
-  - "coverage"
-  - "*.min.js"
-  - "*.bundle.js"
-```
-
-### Language Mapping
-
-Customize language detection:
-
-```yaml
-language_mapping:
-  ".vue": "vue"
-  ".svelte": "svelte"
-  ".elm": "elm"
-  ".clj": "clojure"
+Bugbot/
+├── main.go
+├── ai/                 # Multi-provider AI client
+├── analyzers/          # CAH engine + static rules
+├── gitea/              # Gitea API + hooks/labels
+├── handlers/           # Webhooks, onboarding, repo filters
+├── issues/             # Issue creation with labels
+├── web/                # Embedded onboarding UI
+├── config/             # config.yaml
+├── docs/               # AI providers, CAH, onboarding
+└── .gitea/workflows/   # CI and release
 ```
 
 ## Development
 
-### Building from Source
-
 ```bash
-# Clone repository
-git clone https://github.com/yourusername/gitea-bugbot.git
-cd gitea-bugbot
-
-# Install dependencies
 go mod download
-
-# Build
 go build -o gitea-bugbot .
-
-# Run
-./gitea-bugbot
+go test ./...
 ```
 
-### Project Structure
+## Documentation
 
-```
-gitea-bugbot/
-├── main.go                 # Main application entry point
-├── config/                 # Configuration files
-├── handlers/               # Webhook and HTTP handlers
-├── analyzers/              # Code analysis engine
-├── ai/                     # OpenWebUI AI integration
-├── gitea/                  # Gitea API client
-├── issues/                 # Issue management
-├── Dockerfile              # Docker build file
-├── docker-compose.yml      # Docker deployment
-└── README.md               # This file
-```
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Connection Failed to Gitea**
-   - Verify Gitea URL and token
-   - Check network connectivity
-   - Ensure token has appropriate permissions
-
-2. **Connection Failed to OpenWebUI**
-   - Verify OpenWebUI URL and token
-   - Check if OpenWebUI is running
-   - Verify API endpoint availability
-
-3. **Webhook Not Triggering**
-   - Check webhook URL configuration
-   - Verify webhook secret
-   - Check Gitea webhook logs
-
-4. **No Issues Created**
-   - Verify `auto_create_issues` is enabled
-   - Check analysis logs for errors
-   - Verify repository permissions
-
-### Logs
-
-Enable debug logging to troubleshoot issues:
-
-```yaml
-log_level: "debug"
-```
-
-### Health Check
-
-Monitor the plugin health:
-
-```bash
-curl http://localhost:8080/health
-```
-
-## Security Considerations
-
-- Store sensitive tokens securely
-- Use HTTPS for production deployments
-- Implement proper webhook secret verification
-- Limit API access to necessary endpoints
-- Monitor and log all activities
-
-## Performance
-
-- Configure appropriate file size limits
-- Set reasonable analysis depth
-- Use concurrent analysis limits
-- Monitor memory and CPU usage
-- Implement rate limiting for large repositories
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+- [Onboarding Web UI](docs/ONBOARDING.md)
+- [AI providers](docs/AI_PROVIDERS.md)
+- [CAH pipeline](docs/CAH_PIPELINE.md)
+- [Architecture](architecture.md)
+- [Status](status.md)
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Support
-
-For support and questions:
-
-- Create an issue on GitHub
-- Check the troubleshooting section
-- Review the configuration examples
-- Consult the API documentation
-
-## Roadmap
-
-- [ ] Support for more programming languages
-- [ ] Advanced issue deduplication
-- [ ] Custom analysis rules
-- [ ] Integration with CI/CD pipelines
-- [ ] Web-based configuration interface
-- [ ] Analytics and reporting
-- [ ] Team collaboration features
-- [ ] Automated fix suggestions
-- [ ] Performance benchmarking
-- [ ] Security compliance reporting
+MIT License

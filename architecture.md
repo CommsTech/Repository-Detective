@@ -1,57 +1,62 @@
 # Gitea Bugbot Plugin Architecture
 
 ## Overview
-This plugin integrates with Gitea to automatically review code, detect bugs, and propose fixes using OpenWebUI AI assistance.
+
+Bugbot integrates with Gitea via webhooks to automatically review code on push and pull request events. It uses a CAH (Contextual Analysis Harness) pipeline with deterministic pre-scanning and multi-provider AI backends.
 
 ## Core Components
 
-### 1. Gitea Plugin Integration
-- **Plugin Type**: Gitea webhook plugin
-- **Trigger**: Repository push events, pull request creation/updates
-- **Integration Points**: Webhook system, issue tracker, comment system
+### 1. Webhook Handler (`handlers/webhook.go`)
+- Rate limiting per client IP
+- Webhook secret verification (HMAC-safe)
+- Repository include/exclude pattern filtering
+- Dispatches push and pull request events to the analysis processor
 
-### 2. Code Analysis Engine
-- **Language Support**: Multi-language support (Go, Python, JavaScript, etc.)
-- **Analysis Methods**: 
-  - Static code analysis
-  - Pattern recognition
-  - Security vulnerability detection
-  - Code quality metrics
+### 2. Onboarding UI (`web/`, `handlers/onboarding.go`)
+- Embedded static wizard at `/onboard`
+- Tests Gitea and AI connections
+- Lists repositories and registers webhooks
+- Exports environment variables for deployment
 
-### 3. AI Integration Layer
-- **Multi-provider support**: OpenAI, Anthropic, OpenRouter, Ollama, Open WebUI, OpenClaw
-- **Transport abstraction**: OpenAI-compatible and Anthropic Messages APIs
-- **Configuration**: `ai_provider`, `ai_base_url`, `ai_api_key`, `ai_model`
-- **Legacy compatibility**: `openwebui_url` / `openwebui_token` auto-map to Open WebUI provider
+### 3. Analysis Engine (`analyzers/engine.go`)
+- **Prepare** — repository structure and attack surface mapping
+- **Scan** — static pattern rules, then LLM auditors with full file content
+- **Validate** — advocate/counsel debate (high-confidence static hits skip debate)
+- **Dedup** — merge findings by location
+- **Prove** — generate proof-of-concept for validated findings
 
-### 4. Issue Management
-- **Automatic Issue Creation**: Create issues for detected bugs
-- **Fix Proposals**: Generate and attach fix suggestions
-- **Priority Classification**: Categorize issues by severity
+### 4. Static Scanner (`analyzers/static.go`)
+- Deterministic regex rules for SQL injection, secrets, XSS, command injection, debug logging
+- Runs before any LLM call
+- LLM auditors target files flagged by static analysis when possible
 
-## Technical Architecture
+### 5. AI Integration (`ai/`)
+- Provider abstraction: OpenAI-compatible and Anthropic Messages APIs
+- Supported: OpenAI, Anthropic, OpenRouter, Ollama, OpenWebUI, OpenClaw
+- Auditor prompts include fetched source code
 
-### Plugin Structure
+### 6. Gitea Client (`gitea/`)
+- Repository file listing and content fetch (base64 decode)
+- Webhook creation for onboarding
+- Label resolution and creation for issues
+
+### 7. Issue Manager (`issues/`)
+- Creates labeled Gitea issues from analysis results
+- Issue body includes severity, file, line, code snippet, and PoC
+
+## Data Flow
+
 ```
-gitea-bugbot/
-├── main.go                 # Main plugin entry point
-├── config/                 # Configuration management
-├── handlers/               # Webhook and event handlers
-├── analyzers/              # Code analysis modules
-├── ai/                     # AI integration layer
-├── issues/                 # Issue management
-└── templates/              # Issue and comment templates
+Gitea webhook
+    → handlers.WebhookHandler (auth, rate limit, repo filter)
+    → main.webhookProcessor (concurrency limiter)
+    → analyzers.Engine.RunCAHPipeline
+        → Prepare (structure + attack surface)
+        → Scan (static → LLM on flagged files)
+        → Validate → Dedup → Prove
+    → issues.Manager.CreateIssuesFromAnalysis
+    → Gitea issues with labels
 ```
-
-### Data Flow
-1. Gitea webhook triggers `handlers.WebhookHandler` (rate limited + secret verified)
-2. `AnalysisProcessor` in main.go runs CAH pipeline via `analyzers.Engine`
-3. **Prepare** — map attack surface via Gitea file tree + AI
-4. **Scan** — parallel auditor agents (SQL, XSS, auth, injection, crypto, config)
-5. **Validate** — advocate/counsel debater agents filter false positives
-6. **Dedup** — collapse findings by root cause
-7. **Prove** — generate PoC commands for validated findings
-8. Issues are created in Gitea via `issues.Manager`
 
 ## Module Path
 
@@ -60,8 +65,13 @@ git.commsnet.org/commstech/bugbot
 ```
 
 ## Configuration
-- Gitea server connection details
-- OpenWebUI server configuration
-- Repository inclusion/exclusion rules
-- Analysis depth and frequency settings
-- Issue creation policies
+
+- `gitea_url`, `gitea_token`, `webhook_secret`
+- `public_url` — required for webhook registration via onboarding UI
+- `api_key` — protects API and onboarding endpoints
+- `ai_provider`, `ai_base_url`, `ai_api_key`, `ai_model`
+- `enable_security`, `enable_quality`
+- `repository_include_patterns`, `repository_exclude_patterns`
+- `skip_patterns`, `max_file_size`, `max_concurrent_analyses`
+
+See [docs/ONBOARDING.md](docs/ONBOARDING.md) and [docs/AI_PROVIDERS.md](docs/AI_PROVIDERS.md).

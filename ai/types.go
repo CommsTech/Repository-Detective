@@ -20,11 +20,19 @@ type AttackSurfaceResponse struct {
 	TrustBoundaries []models.TrustBoundary
 }
 
+// FileContent is source code passed to auditor prompts.
+type FileContent struct {
+	Path     string
+	Content  string
+	Language string
+}
+
 // AuditorRequest is the input for an auditor agent.
 type AuditorRequest struct {
 	RepositoryName     string
 	VulnerabilityClass string
 	Files              []gitea.RepositoryContent
+	FileContents       []FileContent
 	AttackSurface      []models.AttackSurfaceEntry
 	AuditorType        string
 }
@@ -91,14 +99,16 @@ type CodeAnalysisResult struct {
 
 // CodeIssue represents a detected issue in the code.
 type CodeIssue struct {
-	Severity     string  `json:"severity"`
-	Category     string  `json:"category"`
-	Title        string  `json:"title"`
-	Description  string  `json:"description"`
-	LineNumber   int     `json:"line_number,omitempty"`
-	ColumnNumber int     `json:"column_number,omitempty"`
-	CodeSnippet  string  `json:"code_snippet,omitempty"`
-	Confidence   float64 `json:"confidence"`
+	Severity       string  `json:"severity"`
+	Category       string  `json:"category"`
+	Title          string  `json:"title"`
+	Description    string  `json:"description"`
+	File           string  `json:"file,omitempty"`
+	LineNumber     int     `json:"line_number,omitempty"`
+	ColumnNumber   int     `json:"column_number,omitempty"`
+	CodeSnippet    string  `json:"code_snippet,omitempty"`
+	ProofOfConcept string  `json:"proof_of_concept,omitempty"`
+	Confidence     float64 `json:"confidence"`
 }
 
 // CodeSuggestion represents a suggested improvement.
