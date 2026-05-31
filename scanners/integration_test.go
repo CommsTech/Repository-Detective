@@ -1,0 +1,106 @@
+package scanners_test
+
+import (
+	"context"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"testing"
+	"time"
+
+	"git.commsnet.org/commstech/bugbot/scanners"
+	"github.com/sirupsen/logrus"
+)
+
+func TestRunTrivyOnSampleWorkspace(t *testing.T) {
+	if _, err := exec.LookPath("trivy"); err != nil {
+		t.Skip("trivy not installed")
+	}
+
+	dir, cleanup, err := scanners.CreateWorkspace([]scanners.FileEntry{
+		{
+			Path:    "Dockerfile",
+			Content: "FROM alpine:3.10\nRUN apk add --no-cache curl\n",
+		},
+	})
+	if err != nil {
+		t.Fatalf("workspace: %v", err)
+	}
+	defer cleanup()
+
+	logger := logrus.New()
+	logger.SetLevel(logrus.WarnLevel)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+
+	findings, err := scanners.RunTrivy(ctx, logger, dir, scanners.DefaultConfig())
+	if err != nil {
+		t.Fatalf("RunTrivy: %v", err)
+	}
+	t.Logf("trivy findings: %d", len(findings))
+}
+
+func TestRunLintersOnGoFile(t *testing.T) {
+	if _, err := exec.LookPath("golangci-lint"); err != nil {
+		t.Skip("golangci-lint not installed")
+	}
+
+	dir, cleanup, err := scanners.CreateWorkspace([]scanners.FileEntry{
+		{
+			Path: "main.go",
+			Content: `package main
+
+import "fmt"
+
+func main() {
+	fmt.Println("unused")
+	unused := 1
+	_ = unused
+}
+`,
+		},
+	})
+	if err != nil {
+		t.Fatalf("workspace: %v", err)
+	}
+	defer cleanup()
+
+	logger := logrus.New()
+	logger.SetLevel(logrus.WarnLevel)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+
+	findings, err := scanners.RunLinters(ctx, logger, dir, []scanners.FileEntry{
+		{Path: "main.go"},
+	}, true, true, scanners.DefaultConfig())
+	if err != nil {
+		t.Fatalf("RunLinters: %v", err)
+	}
+	t.Logf("linter findings: %d", len(findings))
+}
+
+func TestRunAllReturnsCandidates(t *testing.T) {
+	dir, err := os.MkdirTemp("", "bugbot-all-*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+
+	goMod := filepath.Join(dir, "go.mod")
+	if err := os.WriteFile(goMod, []byte("module example.com/test\n\ngo 1.21\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	logger := logrus.New()
+	logger.SetLevel(logrus.WarnLevel)
+	cfg := scanners.Config{
+		EnableTrivy:   false,
+		EnableGrype:   false,
+		EnableLinters: false,
+	}
+	entries := []scanners.FileEntry{{Path: "go.mod", Content: "module example.com/test\n\ngo 1.21\n"}}
+	candidates := scanners.RunAll(context.Background(), logger, dir, entries, cfg, true, true)
+	if len(candidates) != 0 {
+		t.Fatalf("expected no candidates with scanners disabled, got %d", len(candidates))
+	}
+}

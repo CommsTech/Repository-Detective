@@ -70,6 +70,29 @@ Fixed in commit `c0580f6`. Pull latest and rebuild or reload image.
 
 ---
 
+## Scanner tools missing in logs
+
+```
+[SCANNER:trivy] binary not found
+[SCANNER:grype] binary not found
+```
+
+Rebuild using the current `Dockerfile` (installs Trivy, Grype, linters) or install binaries on `PATH` manually. See [SCANNERS.md](SCANNERS.md).
+
+Verify inside the container:
+
+```bash
+docker exec gitea-bugbot sh -c 'command -v trivy && command -v grype && command -v golangci-lint'
+```
+
+---
+
+## Scans run but no LLM output
+
+Expected when `BUGBOT_ENABLE_LLM_AUDITORS=false` or when deterministic scanners found no flagged files. Check `[CAH:SCAN] External scanners found N candidate(s)` in logs.
+
+---
+
 ## Cannot build image on target host
 
 Build elsewhere, transfer image:

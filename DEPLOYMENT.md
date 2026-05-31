@@ -54,6 +54,8 @@ docker logs gitea-bugbot --tail 50
 
 `.gitea/workflows/` runs tests on push to `main`. Tag `v*` to build release binaries.
 
+Local test guide: [docs/TESTING.md](docs/TESTING.md)
+
 ## Docs
 
 - [SETUP.md](docs/SETUP.md)

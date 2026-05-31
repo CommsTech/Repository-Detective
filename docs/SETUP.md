@@ -106,6 +106,20 @@ Manual alternative (per repo → Settings → Webhooks):
 2. Push a commit to a watched repo.
 3. `docker logs gitea-bugbot --tail 100`
 
+Look for deterministic scanner output:
+
+```bash
+docker logs gitea-bugbot 2>&1 | grep -E 'SCANNER|CAH:SCAN'
+```
+
+4. Confirm scanner binaries in the image (after rebuild):
+
+```bash
+docker exec gitea-bugbot sh -c 'trivy --version && grype version && golangci-lint version'
+```
+
+5. Run unit tests locally — see [TESTING.md](TESTING.md).
+
 ---
 
 ## Compose files
@@ -139,5 +153,7 @@ docker compose -f docker-compose.offline.yml up -d
 ## Further reading
 
 - [AI providers](AI_PROVIDERS.md)
+- [Deterministic scanners](SCANNERS.md)
+- [Testing](TESTING.md)
 - [Networking](NETWORKING.md)
 - [Troubleshooting](TROUBLESHOOTING.md)

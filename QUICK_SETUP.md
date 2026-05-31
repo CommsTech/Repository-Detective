@@ -37,3 +37,7 @@ BUGBOT_PUBLIC_URL          # after Bugbot is reachable from Gitea
 ## Problems
 
 [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
+
+## Testing
+
+[docs/TESTING.md](docs/TESTING.md)

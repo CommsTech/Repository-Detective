@@ -21,7 +21,8 @@ Then open http://localhost:8080/onboard
 ## What it does
 
 - Scans changed files on push; scans PR diff files on pull requests
-- Runs static pattern checks first, then LLM analysis on flagged files
+- Runs **deterministic checks first**: static rules, [Trivy](https://github.com/aquasecurity/trivy), [Grype](https://github.com/anchore/grype), golangci-lint, ruff, shellcheck
+- Uses LLM analysis only on flagged files (or disable entirely with `BUGBOT_ENABLE_LLM_AUDITORS=false`)
 - Creates Gitea issues with severity, file, line, code snippet, and PoC when available
 - Supports OpenAI, Anthropic, OpenRouter, Ollama, OpenWebUI, and OpenClaw
 
@@ -38,6 +39,8 @@ Environment variables use the `BUGBOT_` prefix. Examples:
 | Gitea | `BUGBOT_GITEA_URL`, `BUGBOT_GITEA_TOKEN` |
 | Webhook secret | `BUGBOT_WEBHOOK_SECRET` |
 | AI | `BUGBOT_AI_PROVIDER`, `BUGBOT_AI_BASE_URL`, `BUGBOT_AI_API_KEY`, `BUGBOT_AI_MODEL` |
+| Deterministic scanners | `BUGBOT_ENABLE_TRIVY`, `BUGBOT_ENABLE_GRYPE`, `BUGBOT_ENABLE_LINTERS` |
+| LLM auditors | `BUGBOT_ENABLE_LLM_AUDITORS` (set `false` for no AI scans) |
 | Skip Gitea/AI ping on boot | `BUGBOT_SKIP_STARTUP_CHECKS=true` |
 
 Repo include/exclude patterns and skip patterns are set in `config/config.yaml` only (not env vars).
@@ -68,6 +71,7 @@ API key header: `X-Bugbot-API-Key: your-key`
 | [docs/AI_PROVIDERS.md](docs/AI_PROVIDERS.md) | AI backend config |
 | [docs/CAH_PIPELINE.md](docs/CAH_PIPELINE.md) | Analysis pipeline spec |
 | [docs/SCANNERS.md](docs/SCANNERS.md) | Trivy, Grype, linters (deterministic) |
+| [docs/TESTING.md](docs/TESTING.md) | Unit tests, Docker smoke test, E2E |
 | [docs/TUNNEL.md](docs/TUNNEL.md) | Cloudflare tunnel (optional) |
 
 ## Development
@@ -76,6 +80,8 @@ API key header: `X-Bugbot-API-Key: your-key`
 go build -o gitea-bugbot .
 go test ./...
 ```
+
+See [docs/TESTING.md](docs/TESTING.md) for CI parity checks, Docker smoke tests, and scanner verification.
 
 ## License
 
