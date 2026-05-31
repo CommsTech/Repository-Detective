@@ -22,8 +22,12 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o gitea-bugbot .
 # Final stage
 FROM alpine:latest
 
-# Install runtime dependencies (wget required for HEALTHCHECK)
-RUN apk --no-cache add ca-certificates tzdata wget
+# Install runtime dependencies and deterministic scanner tools
+RUN apk --no-cache add ca-certificates tzdata wget curl bash shellcheck \
+    && curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin \
+    && curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin \
+    && curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b /usr/local/bin v1.55.2 \
+    && wget -qO- https://github.com/astral-sh/ruff/releases/download/v0.4.8/ruff-x86_64-unknown-linux-musl.tar.gz | tar xz -C /usr/local/bin ruff
 
 # Create non-root user
 RUN addgroup -g 1001 -S bugbot && \

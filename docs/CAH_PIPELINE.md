@@ -9,12 +9,14 @@
 | Stage | Status | Notes |
 |-------|--------|-------|
 | PREPARE | Partial | File tree + LLM attack surface mapping. No call graph or git history yet. |
-| SCAN | Done | Static regex pre-scan, then LLM auditors with file content. LLM targets flagged files when possible. |
-| VALIDATE | Done | Advocate/counsel debate. High-confidence static hits skip debate. |
+| SCAN | Done | Static regex, **Trivy, Grype, linters**, then LLM auditors on flagged files only. |
+| VALIDATE | Done | Advocate/counsel debate. Deterministic findings skip debate. |
 | DEDUP | Partial | Groups by file + line block, not semantic root cause. |
 | PROVE | Partial | LLM-generated PoC (curl/scripts). No ASan/UBSan execution. |
 
-Auditors running today: SQL, XSS, auth, injection, crypto, config (+ static rules for secrets, eval, XSS, etc.).
+Auditors running today: SQL, XSS, auth, injection, crypto, config (+ static rules; **Trivy, Grype, golangci-lint, ruff, shellcheck**).
+
+See [SCANNERS.md](SCANNERS.md) for deterministic scanner configuration.
 
 Not implemented: call graph builder, git history analyzer, memory/race auditors as separate agents, web dashboard.
 

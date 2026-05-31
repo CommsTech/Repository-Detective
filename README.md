@@ -67,6 +67,7 @@ API key header: `X-Bugbot-API-Key: your-key`
 | [docs/ONBOARDING.md](docs/ONBOARDING.md) | Wizard and API details |
 | [docs/AI_PROVIDERS.md](docs/AI_PROVIDERS.md) | AI backend config |
 | [docs/CAH_PIPELINE.md](docs/CAH_PIPELINE.md) | Analysis pipeline spec |
+| [docs/SCANNERS.md](docs/SCANNERS.md) | Trivy, Grype, linters (deterministic) |
 | [docs/TUNNEL.md](docs/TUNNEL.md) | Cloudflare tunnel (optional) |
 
 ## Development

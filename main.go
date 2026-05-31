@@ -17,6 +17,7 @@ import (
 	"git.commsnet.org/commstech/bugbot/handlers"
 	"git.commsnet.org/commstech/bugbot/issues"
 	"git.commsnet.org/commstech/bugbot/limiter"
+	"git.commsnet.org/commstech/bugbot/scanners"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -57,6 +58,11 @@ type Config struct {
 	MaxFileSize               int64             `mapstructure:"max_file_size"`
 	EnableSecurity            bool              `mapstructure:"enable_security"`
 	EnableQuality             bool              `mapstructure:"enable_quality"`
+	EnableLLMAuditors         bool              `mapstructure:"enable_llm_auditors"`
+	EnableTrivy               bool              `mapstructure:"enable_trivy"`
+	EnableGrype               bool              `mapstructure:"enable_grype"`
+	EnableLinters             bool              `mapstructure:"enable_linters"`
+	ScannerTimeoutSeconds     int               `mapstructure:"scanner_timeout_seconds"`
 	AutoCreateIssues          bool              `mapstructure:"auto_create_issues"`
 	MaxIssuesPerRun           int               `mapstructure:"max_issues_per_run"`
 	SkipLowSeverity           bool              `mapstructure:"skip_low_severity"`
@@ -168,6 +174,11 @@ func loadConfig() error {
 	viper.SetDefault("max_file_size", 1024*1024) // 1MB
 	viper.SetDefault("enable_security", true)
 	viper.SetDefault("enable_quality", true)
+	viper.SetDefault("enable_llm_auditors", true)
+	viper.SetDefault("enable_trivy", true)
+	viper.SetDefault("enable_grype", true)
+	viper.SetDefault("enable_linters", true)
+	viper.SetDefault("scanner_timeout_seconds", 120)
 	viper.SetDefault("auto_create_issues", true)
 	viper.SetDefault("max_issues_per_run", 50)
 	viper.SetDefault("max_concurrent_analyses", 5)
@@ -387,12 +398,22 @@ func initializeComponents() error {
 
 	// Initialize analysis engine
 	analysisConfig := &analyzers.Config{
-		MaxFileSize:     config.MaxFileSize,
-		AnalysisDepth:   config.AnalysisDepth,
-		EnableSecurity:  config.EnableSecurity,
-		EnableQuality:   config.EnableQuality,
-		SkipPatterns:    config.SkipPatterns,
-		LanguageMapping: config.LanguageMapping,
+		MaxFileSize:       config.MaxFileSize,
+		AnalysisDepth:     config.AnalysisDepth,
+		EnableSecurity:    config.EnableSecurity,
+		EnableQuality:     config.EnableQuality,
+		EnableLLMAuditors: config.EnableLLMAuditors,
+		SkipPatterns:      config.SkipPatterns,
+		LanguageMapping:   config.LanguageMapping,
+		Scanners: scanners.Config{
+			EnableTrivy:       config.EnableTrivy,
+			EnableGrype:       config.EnableGrype,
+			EnableLinters:     config.EnableLinters,
+			TrivySeverity:     "HIGH,CRITICAL",
+			GrypeFailOn:       "high",
+			LinterMinSeverity: "warning",
+			TimeoutSeconds:    config.ScannerTimeoutSeconds,
+		},
 	}
 	analysisEngine = analyzers.NewEngine(giteaClient, aiClient, analysisConfig, logger)
 

@@ -96,6 +96,7 @@ func RunStaticAnalysis(files []FileContent, enableSecurity, enableQuality bool) 
 					Severity:    rule.Severity,
 					Confidence:  0.92,
 					AuditorType: "static",
+					Category:    rule.Category,
 					File:        file.Path,
 					Line:        lineNum + 1,
 				})

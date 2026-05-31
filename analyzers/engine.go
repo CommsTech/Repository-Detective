@@ -10,6 +10,7 @@ import (
 	"git.commsnet.org/commstech/bugbot/ai"
 	"git.commsnet.org/commstech/bugbot/gitea"
 	"git.commsnet.org/commstech/bugbot/models"
+	"git.commsnet.org/commstech/bugbot/scanners"
 	"github.com/sirupsen/logrus"
 )
 
@@ -19,12 +20,14 @@ import (
 
 // Config holds analyzer configuration
 type Config struct {
-	MaxFileSize     int64
-	AnalysisDepth   int
-	EnableSecurity  bool
-	EnableQuality   bool
-	SkipPatterns    []string
-	LanguageMapping map[string]string
+	MaxFileSize       int64
+	AnalysisDepth     int
+	EnableSecurity    bool
+	EnableQuality     bool
+	EnableLLMAuditors bool
+	SkipPatterns      []string
+	LanguageMapping   map[string]string
+	Scanners          scanners.Config
 }
 
 // CodeSuggestion represents a code improvement suggestion
@@ -342,8 +345,27 @@ func (e *Engine) Scan(ctx context.Context, prepare *PrepareReport) ([]CandidateF
 		e.logger.Infof("[CAH:SCAN] Static analysis found %d candidate(s)", len(staticFindings))
 	}
 
-	// Stage 2b: LLM auditors — only when security scanning is enabled
-	if !e.config.EnableSecurity {
+	// Stage 2a-b: external scanners (Trivy, Grype, linters) — no LLM tokens
+	if e.config.Scanners.EnableTrivy || e.config.Scanners.EnableGrype || e.config.Scanners.EnableLinters {
+		manifestFiles, err := e.fetchManifestContents(ctx, owner, repo, prepare.Commit)
+		if err != nil {
+			e.logger.Warnf("[CAH:SCAN] Failed to fetch dependency manifests: %v", err)
+		}
+		workspaceFiles := mergeFileContents(fileContents, manifestFiles)
+		entries := toScannerEntries(workspaceFiles)
+		workspaceDir, cleanup, err := scanners.CreateWorkspace(entries)
+		if err != nil {
+			e.logger.Warnf("[CAH:SCAN] Failed to create scanner workspace: %v", err)
+		} else {
+			defer cleanup()
+			scannerFindings := scanners.RunAll(ctx, e.logger, workspaceDir, entries, e.config.Scanners, e.config.EnableSecurity, e.config.EnableQuality)
+			allCandidates = append(allCandidates, scannerFindings...)
+			e.logger.Infof("[CAH:SCAN] External scanners found %d candidate(s)", len(scannerFindings))
+		}
+	}
+
+	// Stage 2b: LLM auditors — optional; scoped to flagged files when possible
+	if !e.config.EnableSecurity || !e.config.EnableLLMAuditors {
 		return allCandidates, nil
 	}
 
@@ -394,14 +416,14 @@ func (e *Engine) Scan(ctx context.Context, prepare *PrepareReport) ([]CandidateF
 	return allCandidates, nil
 }
 
-// selectLLMTargetFiles limits LLM usage to files flagged by static analysis when possible.
-func (e *Engine) selectLLMTargetFiles(allFiles []FileContent, staticCandidates []CandidateFinding) []FileContent {
-	if len(staticCandidates) == 0 {
+// selectLLMTargetFiles limits LLM usage to files flagged by deterministic checks when possible.
+func (e *Engine) selectLLMTargetFiles(allFiles []FileContent, candidates []CandidateFinding) []FileContent {
+	if len(candidates) == 0 {
 		return allFiles
 	}
 
-	flagged := make(map[string]bool, len(staticCandidates))
-	for _, c := range staticCandidates {
+	flagged := make(map[string]bool, len(candidates))
+	for _, c := range candidates {
 		if c.File != "" {
 			flagged[c.File] = true
 		}
@@ -414,6 +436,62 @@ func (e *Engine) selectLLMTargetFiles(allFiles []FileContent, staticCandidates [
 		}
 	}
 	return targets
+}
+
+func (e *Engine) fetchManifestContents(ctx context.Context, owner, repo, ref string) ([]FileContent, error) {
+	var manifests []FileContent
+	for _, path := range scanners.ManifestPaths() {
+		content, err := e.giteaClient.GetFileContent(ctx, owner, repo, ref, path)
+		if err != nil || content == "" {
+			continue
+		}
+		manifests = append(manifests, FileContent{
+			Path:     path,
+			Content:  content,
+			Language: e.detectLanguage(path, content),
+		})
+	}
+	return manifests, nil
+}
+
+func mergeFileContents(primary, extra []FileContent) []FileContent {
+	merged := make([]FileContent, 0, len(primary)+len(extra))
+	seen := make(map[string]bool)
+	for _, file := range primary {
+		if seen[file.Path] {
+			continue
+		}
+		seen[file.Path] = true
+		merged = append(merged, file)
+	}
+	for _, file := range extra {
+		if seen[file.Path] {
+			continue
+		}
+		seen[file.Path] = true
+		merged = append(merged, file)
+	}
+	return merged
+}
+
+func toScannerEntries(files []FileContent) []scanners.FileEntry {
+	entries := make([]scanners.FileEntry, 0, len(files))
+	for _, file := range files {
+		entries = append(entries, scanners.FileEntry{
+			Path:    file.Path,
+			Content: file.Content,
+		})
+	}
+	return entries
+}
+
+func isDeterministicAuditor(auditorType string) bool {
+	switch auditorType {
+	case "static", "trivy", "grype", "golangci-lint", "ruff", "shellcheck":
+		return true
+	default:
+		return false
+	}
 }
 
 func (e *Engine) fetchFileContents(ctx context.Context, owner, repo, ref string, files []gitea.RepositoryContent) ([]FileContent, error) {
@@ -562,8 +640,8 @@ func (e *Engine) Validate(ctx context.Context, candidates []CandidateFinding) ([
 
 // validateOne runs a single candidate through debaters
 func (e *Engine) validateOne(ctx context.Context, candidate CandidateFinding) (*ValidatedFinding, error) {
-	// High-confidence static findings skip LLM debate (token savings)
-	if candidate.AuditorType == "static" && candidate.Confidence >= 0.9 {
+	// Deterministic scanner findings skip LLM debate (token savings)
+	if isDeterministicAuditor(candidate.AuditorType) && candidate.Confidence >= 0.85 {
 		return &ValidatedFinding{
 			CandidateFinding: candidate,
 			DebateResult: DebateResult{
@@ -671,9 +749,10 @@ func (e *Engine) Dedup(candidates []ValidatedFinding) []DedupedFinding {
 		deduped = append(deduped, DedupedFinding{
 			ID:          best.ID,
 			Severity:    best.Severity,
-			Category:    "security",
+			Category:    firstNonEmptyCategory(best.Category, "security"),
 			Title:       best.Hypothesis,
 			Description: best.Hypothesis,
+			AuditorType: best.AuditorType,
 			Files:       files,
 			Lines:       lines,
 			Evidence:    best.Evidence,
@@ -694,6 +773,18 @@ func (e *Engine) Prove(ctx context.Context, findings []DedupedFinding) ([]Proven
 	var proven []ProvenFinding
 
 	for _, f := range findings {
+		if isDeterministicAuditor(f.AuditorType) {
+			proven = append(proven, ProvenFinding{
+				DedupedFinding: f,
+				ProofOfConcept: ProofOfConcept{
+					Type:        "scanner",
+					Command:     f.Evidence.Code,
+					Explanation: fmt.Sprintf("Deterministic finding from %s — no LLM PoC required", f.AuditorType),
+				},
+			})
+			continue
+		}
+
 		poc, err := e.aiClient.GeneratePoC(ctx, &ai.PoCRequest{
 			Finding: f,
 		})
@@ -719,6 +810,15 @@ func (e *Engine) Prove(ctx context.Context, findings []DedupedFinding) ([]Proven
 // ============================================================================
 // HELPER METHODS
 // ============================================================================
+
+func firstNonEmptyCategory(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return value
+		}
+	}
+	return "security"
+}
 
 func (e *Engine) shouldAnalyzeFile(path string) bool {
 	ext := strings.ToLower(filepath.Ext(path))

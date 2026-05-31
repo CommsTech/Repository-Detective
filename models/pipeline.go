@@ -60,6 +60,7 @@ type CandidateFinding struct {
 	Severity     string
 	Confidence   float64
 	AuditorType  string
+	Category     string
 	File         string
 	Line         int
 }
@@ -101,6 +102,7 @@ type DedupedFinding struct {
 	Category    string
 	Title       string
 	Description string
+	AuditorType string
 	Files       []string
 	Lines       []int
 	Evidence    Evidence

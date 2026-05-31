@@ -31,6 +31,13 @@ max_file_size: 1048576 # 1MB in bytes
 enable_security: true
 enable_quality: true
 
+# Deterministic scanners (Trivy, Grype, linters) — see docs/SCANNERS.md
+enable_trivy: true
+enable_grype: true
+enable_linters: true
+enable_llm_auditors: true
+scanner_timeout_seconds: 120
+
 # Issue Management Configuration
 auto_create_issues: true
 max_issues_per_run: 50
