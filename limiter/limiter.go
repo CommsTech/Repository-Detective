@@ -32,3 +32,17 @@ func (l *ConcurrencyLimiter) Run(ctx context.Context, fn func()) error {
 		return ctx.Err()
 	}
 }
+
+// HasCapacity reports whether a slot can be acquired without blocking.
+func (l *ConcurrencyLimiter) HasCapacity() bool {
+	if l == nil || l.sem == nil {
+		return true
+	}
+	select {
+	case l.sem <- struct{}{}:
+		<-l.sem
+		return true
+	default:
+		return false
+	}
+}

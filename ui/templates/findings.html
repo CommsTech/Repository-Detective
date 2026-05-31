@@ -1,0 +1,18 @@
+{{define "findings.html"}}
+<!DOCTYPE html><html lang="en"><head>{{template "head" .}}</head><body>
+{{template "nav" .}}<main><h1>{{.Title}}</h1>
+<form method="get"><div class="card">
+<label>Severity <input name="severity" value="{{.Data.Filter.Severity}}"></label>
+<label>Category <input name="category" value="{{.Data.Filter.Category}}"></label>
+<label>Status <input name="status" value="{{.Data.Filter.Status}}"></label>
+<button type="submit">Filter</button>
+</div></form>
+<div class="card"><table>
+<tr><th>Repo</th><th>Fingerprint</th><th>Severity</th><th>Title</th><th>Status</th></tr>
+{{range .Data.Findings}}<tr>
+<td>{{.RepoFullName}}</td>
+<td><a href="{{$.BasePath}}/findings/{{.ID}}{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}">{{.Fingerprint}}</a></td>
+<td>{{.Severity}}</td><td>{{.Title}}</td><td>{{.Status}}</td></tr>
+{{else}}<tr><td colspan="5" class="muted">No findings</td></tr>{{end}}
+</table></div></main></body></html>
+{{end}}

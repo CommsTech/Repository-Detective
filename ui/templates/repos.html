@@ -1,0 +1,13 @@
+{{define "repos.html"}}
+<!DOCTYPE html><html lang="en"><head>{{template "head" .}}</head><body>
+{{template "nav" .}}<main><h1>{{.Title}}</h1>{{if .Notice}}<div class="warn">{{.Notice}}</div>{{end}}
+<div class="card"><table>
+<tr><th>Repository</th><th>Forge</th><th>Last scan</th><th>Open findings</th></tr>
+{{range .Data.Repositories}}<tr>
+<td><a href="{{$.BasePath}}/repos/{{.ID}}{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}">{{.FullName}}</a></td>
+<td>{{.ForgeType}}</td>
+<td>{{if .LastScanAt}}{{.LastScanStatus}}{{else}}—{{end}}</td>
+<td>{{.OpenFindingsCount}}</td></tr>
+{{else}}<tr><td colspan="4" class="muted">No repositories yet</td></tr>{{end}}
+</table></div></main></body></html>
+{{end}}

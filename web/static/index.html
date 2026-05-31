@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gitea Bugbot — Onboarding</title>
+  <title>Repository Detective — Onboarding</title>
   <link rel="stylesheet" href="/onboard/static/style.css">
 </head>
 <body>
   <div class="container">
     <header>
-      <h1>Gitea Bugbot</h1>
-      <p class="subtitle">Connect your Gitea repository and enable automated AI code review</p>
+      <h1>Repository Detective</h1>
+      <p class="subtitle">Inspect · Analyze · Improve — connect Gitea and enable automated repository assessment</p>
     </header>
 
     <section class="card">
@@ -25,16 +25,16 @@
           <input id="giteaToken" type="password" placeholder="Personal access token">
         </label>
         <label>
-          Bugbot public URL
-          <input id="publicUrl" type="url" placeholder="https://bugbot.example.com">
-          <small>Where Gitea can reach this Bugbot instance (for webhooks)</small>
+          Repository Detective public URL
+          <input id="publicUrl" type="url" placeholder="https://detective.example.com">
+          <small>Where Gitea can reach this Repository Detective instance (for webhooks). Legacy <code>BUGBOT_PUBLIC_URL</code> still works.</small>
         </label>
         <label>
           Webhook secret
           <input id="webhookSecret" type="text" placeholder="shared-secret">
         </label>
         <label>
-          Bugbot API key
+          Repository Detective API key
           <input id="apiKey" type="password" placeholder="Used to protect onboarding API">
         </label>
       </div>
@@ -87,7 +87,7 @@
 
     <section class="card">
       <h2>4. Register webhooks</h2>
-      <p>Select repositories above, then register push and pull request webhooks pointing at Bugbot.</p>
+      <p>Select repositories above, then register push and pull request webhooks pointing at Repository Detective.</p>
       <div class="actions">
         <button id="registerWebhooksBtn" type="button" class="primary">Register webhooks on selected repos</button>
         <span id="webhookStatus" class="status"></span>

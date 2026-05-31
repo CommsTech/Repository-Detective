@@ -1,0 +1,128 @@
+package issues
+
+import (
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
+	"path/filepath"
+	"regexp"
+	"strings"
+
+	"git.commsnet.org/commstech/bugbot/ai"
+)
+
+const lineBlockSize = 10
+
+var secretPatterns = []*regexp.Regexp{
+	regexp.MustCompile(`(?i)(password|api[_-]?key|secret|token|auth)\s*[:=]\s*["'][^"']{4,}["']`),
+	regexp.MustCompile(`AKIA[0-9A-Z]{16}`),
+	regexp.MustCompile(`(?i)Bearer\s+[A-Za-z0-9\-._~+/]+=*`),
+}
+
+// FingerprintInput carries fields used to compute a stable finding fingerprint.
+type FingerprintInput struct {
+	Repository   string
+	Category     string
+	Source       string
+	RuleID       string
+	File         string
+	Line         int
+	PackageName  string
+	EvidenceHash string
+}
+
+// ComputeFingerprint returns a stable Bugbot fingerprint for cross-scan tracking.
+func ComputeFingerprint(in FingerprintInput) string {
+	lineBlock := (in.Line / lineBlockSize) * lineBlockSize
+	if in.Line > 0 && lineBlock == 0 {
+		lineBlock = 1
+	}
+
+	parts := []string{
+		strings.ToLower(strings.TrimSpace(in.Repository)),
+		NormalizeCategory(in.Category, in.Source),
+		strings.ToLower(strings.TrimSpace(in.Source)),
+		strings.ToLower(strings.TrimSpace(in.RuleID)),
+		normalizePath(in.File),
+		fmt.Sprintf("block:%d", lineBlock),
+		strings.ToLower(strings.TrimSpace(in.PackageName)),
+		strings.TrimSpace(in.EvidenceHash),
+	}
+
+	sum := sha256.Sum256([]byte(strings.Join(parts, "|")))
+	return "bugbot-" + hex.EncodeToString(sum[:8])
+}
+
+// FingerprintFromIssue builds fingerprint input from a CodeIssue.
+func FingerprintFromIssue(repository string, issue *ai.CodeIssue) FingerprintInput {
+	if issue == nil {
+		return FingerprintInput{}
+	}
+	return FingerprintInput{
+		Repository:   repository,
+		Category:     issue.Category,
+		Source:       issue.Source,
+		RuleID:       firstNonEmpty(issue.RuleID, issue.ClusterID),
+		File:         issue.File,
+		Line:         issue.LineNumber,
+		PackageName:  issue.PackageName,
+		EvidenceHash: SanitizedEvidenceHash(issue.CodeSnippet),
+	}
+}
+
+// SanitizedEvidenceHash hashes redacted evidence for fingerprint stability without storing secrets.
+func SanitizedEvidenceHash(evidence string) string {
+	evidence = SanitizeSecretEvidence(evidence)
+	evidence = strings.TrimSpace(evidence)
+	if evidence == "" {
+		return ""
+	}
+	sum := sha256.Sum256([]byte(evidence))
+	return hex.EncodeToString(sum[:6])
+}
+
+// SanitizeSecretEvidence redacts likely secret material from snippets.
+func SanitizeSecretEvidence(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return ""
+	}
+	for _, pattern := range secretPatterns {
+		value = pattern.ReplaceAllString(value, "[REDACTED]")
+	}
+	return value
+}
+
+// ExtractFingerprintFromBody reads a fingerprint marker from an issue body.
+func ExtractFingerprintFromBody(body string) string {
+	for _, line := range strings.Split(body, "\n") {
+		line = strings.TrimSpace(line)
+		for _, marker := range []string{
+			"- " + FingerprintBodyMarker,
+			FingerprintBodyMarker,
+			"- Bugbot fingerprint:",
+			"Bugbot fingerprint:",
+		} {
+			if strings.HasPrefix(line, marker) {
+				return strings.TrimSpace(strings.TrimPrefix(line, marker))
+			}
+		}
+	}
+	return ""
+}
+
+func normalizePath(path string) string {
+	path = strings.TrimSpace(path)
+	path = strings.ReplaceAll(path, "\\", "/")
+	path = strings.TrimPrefix(path, "./")
+	return filepath.ToSlash(path)
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return strings.TrimSpace(value)
+		}
+	}
+	return ""
+}

@@ -15,6 +15,7 @@ type PrepareReport struct {
 	TrustBoundaries []TrustBoundary
 	RecentVulns     []VulnContext
 	TargetFiles     []string // empty = full repository scan
+	CommitPinned    bool
 }
 
 // EntryPoint represents a public-facing function or endpoint.

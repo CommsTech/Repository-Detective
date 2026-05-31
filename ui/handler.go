@@ -1,0 +1,890 @@
+package ui
+
+import (
+	"context"
+	"fmt"
+	"html/template"
+	"io/fs"
+	"net/http"
+	"net/url"
+	"strconv"
+	"strings"
+	"time"
+
+	"git.commsnet.org/commstech/bugbot/closure"
+	"git.commsnet.org/commstech/bugbot/internal/security"
+	"git.commsnet.org/commstech/bugbot/notify"
+	"git.commsnet.org/commstech/bugbot/operator"
+	"git.commsnet.org/commstech/bugbot/patcher"
+	"git.commsnet.org/commstech/bugbot/preinstall"
+	"git.commsnet.org/commstech/bugbot/remediation"
+	"git.commsnet.org/commstech/bugbot/store"
+	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
+)
+
+const settingsNotice = "Per-repo settings are enforced on scans (Phase 8). Runner policy is enforced for scheduled and manual full scans when runner delegation is enabled (Phase 12)."
+
+// Handler serves server-rendered operator UI pages.
+type Handler struct {
+	store             store.QueryStore
+	global            store.GlobalSettingsSnapshot
+	notifyGlobal      notify.Config
+	basePath          string
+	logger            *logrus.Logger
+	tmpl              *template.Template
+	preinstallRunner  *preinstall.Runner
+	preinstallEnabled bool
+	apiKeySecret      string
+	remediationEnabled bool
+	remediation       RemediationBackend
+	remediationPREnabled bool
+	remediationPR       RemediationPRBackend
+	closureEnabled      bool
+	closure             ClosureBackend
+	readinessFn         func() operator.Readiness
+}
+
+// RemediationBackend generates and updates remediation plans from the UI.
+type RemediationBackend interface {
+	GeneratePlan(ctx context.Context, findingID int64) (remediation.Plan, error)
+	ApprovePlan(ctx context.Context, planID string) error
+	RejectPlan(ctx context.Context, planID string) error
+}
+
+// RemediationPRBackend creates safe remediation pull requests from the UI.
+type RemediationPRBackend interface {
+	CheckPREligibility(ctx context.Context, planID string) (patcher.EligibilityResult, error)
+	AttemptPR(ctx context.Context, planID string) (patcher.PatchAttempt, error)
+	ListPatchAttempts(ctx context.Context, planID string) ([]patcher.PatchAttempt, error)
+}
+
+// ClosureBackend tracks evidence-based closure from the UI.
+type ClosureBackend interface {
+	GetClosureEvidence(ctx context.Context, findingID int64) (closure.Evidence, error)
+	VerifyClosure(ctx context.Context, findingID int64) (closure.Evidence, error)
+	CheckPatchAttemptMerge(ctx context.Context, attemptID string) (closure.Evidence, error)
+}
+
+// NewHandler creates a UI handler.
+func NewHandler(s store.QueryStore, global store.GlobalSettingsSnapshot, basePath string, logger *logrus.Logger, preinstallRunner *preinstall.Runner, preinstallEnabled bool, apiKeySecret string) (*Handler, error) {
+	basePath = normalizeBasePath(basePath)
+	funcs := template.FuncMap{
+		"join": strings.Join,
+	}
+	tmpl, err := template.New("layout").Funcs(funcs).ParseFS(templateFS, "templates/*.html")
+	if err != nil {
+		return nil, fmt.Errorf("parse templates: %w", err)
+	}
+	return &Handler{
+		store: s, global: global, basePath: basePath, logger: logger, tmpl: tmpl,
+		preinstallRunner: preinstallRunner, preinstallEnabled: preinstallEnabled, apiKeySecret: apiKeySecret,
+	}, nil
+}
+
+// SetNotificationGlobal attaches redacted global notification config for settings pages.
+func (h *Handler) SetNotificationGlobal(cfg notify.Config) {
+	if h != nil {
+		h.notifyGlobal = cfg
+	}
+}
+
+// SetRemediationBackend wires remediation planning actions for the UI.
+func (h *Handler) SetRemediationBackend(enabled bool, backend RemediationBackend) {
+	if h != nil {
+		h.remediationEnabled = enabled
+		h.remediation = backend
+	}
+}
+
+// SetRemediationPRBackend wires safe remediation PR actions for the UI.
+func (h *Handler) SetRemediationPRBackend(enabled bool, backend RemediationPRBackend) {
+	if h != nil {
+		h.remediationPREnabled = enabled
+		h.remediationPR = backend
+	}
+}
+
+// SetClosureBackend wires evidence-based closure for the UI.
+func (h *Handler) SetClosureBackend(enabled bool, backend ClosureBackend) {
+	if h != nil {
+		h.closureEnabled = enabled
+		h.closure = backend
+	}
+}
+
+// SetReadinessFn supplies operator readiness (tools + feature flags) for dashboard display.
+func (h *Handler) SetReadinessFn(fn func() operator.Readiness) {
+	if h != nil {
+		h.readinessFn = fn
+	}
+}
+
+func normalizeBasePath(path string) string {
+	path = strings.TrimSpace(path)
+	if path == "" {
+		path = "/ui"
+	}
+	if !strings.HasPrefix(path, "/") {
+		path = "/" + path
+	}
+	return strings.TrimSuffix(path, "/")
+}
+
+// RegisterRoutes mounts UI routes on the group (caller applies auth middleware).
+func (h *Handler) RegisterRoutes(g *gin.RouterGroup) {
+	if sub, err := fs.Sub(staticFS, "static"); err == nil {
+		g.StaticFS("/static", http.FS(sub))
+	}
+	g.GET("", h.Dashboard)
+	g.GET("/", h.Dashboard)
+	g.GET("/repos", h.Repositories)
+	g.GET("/repos/:id", h.RepoDetail)
+	g.GET("/repos/:id/settings", h.RepoSettings)
+	g.POST("/repos/:id/settings", h.SaveRepoSettings)
+	g.GET("/repos/:id/graph", h.RepoGraph)
+	g.GET("/scans/:scan_id", h.ScanDetail)
+	g.GET("/scans/:scan_id/graph", h.ScanGraph)
+	g.GET("/findings", h.Findings)
+	g.GET("/findings/:id", h.FindingDetail)
+	g.POST("/findings/:id/remediation/generate", h.GenerateFindingRemediation)
+	g.POST("/findings/:id/remediation/approve", h.ApproveFindingRemediation)
+	g.POST("/findings/:id/remediation/reject", h.RejectFindingRemediation)
+	g.POST("/findings/:id/remediation/attempt-pr", h.AttemptFindingRemediationPR)
+	g.POST("/findings/:id/closure/verify", h.VerifyFindingClosure)
+	g.POST("/findings/:id/closure/check-merge", h.CheckFindingClosureMerge)
+	if h.preinstallEnabled {
+		g.GET("/preinstall", h.Preinstall)
+		g.POST("/preinstall", h.StartPreinstallAudit)
+		g.GET("/preinstall/audits/:audit_id", h.PreinstallAuditDetail)
+		g.POST("/preinstall/reports/:report_id/reviewed", h.MarkPreinstallReportReviewed)
+	}
+}
+
+// BasePath returns the configured UI mount path.
+func (h *Handler) BasePath() string {
+	return h.basePath
+}
+
+func (h *Handler) requireStore(c *gin.Context) bool {
+	if h.store == nil {
+		c.Status(http.StatusServiceUnavailable)
+		h.render(c, "error.html", "Database disabled", map[string]any{
+			"Message": "Enable database_enabled to use the operator UI.",
+		})
+		return false
+	}
+	return true
+}
+
+type pageData struct {
+	Title     string
+	BasePath  string
+	APIKey    string
+	CSRFToken string
+	Notice    string
+	Data      map[string]any
+}
+
+func clientAPIKeyFromRequest(c *gin.Context) string {
+	if key := c.GetHeader("X-Repository-Detective-API-Key"); key != "" {
+		return key
+	}
+	if key := c.GetHeader("X-Bugbot-API-Key"); key != "" {
+		return key
+	}
+	return c.Query("api_key")
+}
+
+func (h *Handler) page(c *gin.Context, title string, data map[string]any) pageData {
+	if data == nil {
+		data = map[string]any{}
+	}
+	apiKey := clientAPIKeyFromRequest(c)
+	return pageData{
+		Title:     title,
+		BasePath:  h.basePath,
+		APIKey:    apiKey,
+		CSRFToken: security.CSRFToken(h.apiKeySecret, apiKey),
+		Notice:    settingsNotice,
+		Data:      data,
+	}
+}
+
+func (h *Handler) clientAPIKey(c *gin.Context) string {
+	return clientAPIKeyFromRequest(c)
+}
+
+func (h *Handler) requireCSRF(c *gin.Context) bool {
+	token := c.PostForm("csrf_token")
+	if !security.ValidCSRFToken(h.apiKeySecret, h.clientAPIKey(c), token) {
+		c.String(http.StatusForbidden, "invalid or missing CSRF token")
+		return false
+	}
+	return true
+}
+
+func (h *Handler) render(c *gin.Context, name string, title string, data map[string]any) {
+	if c.Writer.Status() == 0 {
+		c.Status(http.StatusOK)
+	}
+	c.Header("Content-Type", "text/html; charset=utf-8")
+	if err := h.tmpl.ExecuteTemplate(c.Writer, name, h.page(c, title, data)); err != nil {
+		h.logger.Errorf("render %s: %v", name, err)
+		c.String(http.StatusInternalServerError, "template error")
+	}
+}
+
+func (h *Handler) Dashboard(c *gin.Context) {
+	if !h.requireStore(c) {
+		return
+	}
+	summary, err := h.store.DashboardSummary(c.Request.Context(), 10)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "failed to load dashboard")
+		return
+	}
+	data := map[string]any{"Summary": summary}
+	if h.readinessFn != nil {
+		data["Readiness"] = h.readinessFn()
+	}
+	h.render(c, "dashboard.html", "Dashboard", data)
+}
+
+func (h *Handler) Repositories(c *gin.Context) {
+	if !h.requireStore(c) {
+		return
+	}
+	repos, err := h.store.ListRepositoriesWithSummary(c.Request.Context(), store.ListOptions{Limit: 100})
+	if err != nil {
+		c.String(http.StatusInternalServerError, "failed to list repositories")
+		return
+	}
+	h.render(c, "repos.html", "Repositories", map[string]any{"Repositories": repos})
+}
+
+func (h *Handler) RepoDetail(c *gin.Context) {
+	if !h.requireStore(c) {
+		return
+	}
+	id, ok := parseID(c, "id")
+	if !ok {
+		return
+	}
+	repo, err := h.store.GetRepository(c.Request.Context(), id)
+	if err != nil {
+		c.String(http.StatusNotFound, "repository not found")
+		return
+	}
+	scans, _ := h.store.ListScansByRepository(c.Request.Context(), id, store.ListOptions{Limit: 10})
+	findings, _ := h.store.ListFindings(c.Request.Context(), store.FindingFilter{RepositoryID: id, Limit: 20})
+	external, _ := h.store.ListExternalIssuesByRepository(c.Request.Context(), id, store.ListOptions{Limit: 20})
+	settings, _ := h.store.GetRepoSettings(c.Request.Context(), id)
+	effective, _ := store.ResolveEffectiveSettingsFull(h.global, settings)
+	var cronInfo store.CronDescription
+	if effective.ScheduleEnabled && effective.ScheduleCron != "" {
+		last, _ := h.store.GetLastScheduledScanFinishedAt(c.Request.Context(), id)
+		baseline := time.Now().UTC()
+		if last != nil {
+			baseline = last.UTC()
+		}
+		cronInfo = store.DescribeCron(effective.ScheduleCron, baseline)
+	}
+	scheduledScans, _ := h.store.ListRecentScheduledScans(c.Request.Context(), 5)
+	h.render(c, "repo_detail.html", repo.FullName, map[string]any{
+		"Repo": repo, "Scans": scans, "Findings": findings,
+		"ExternalIssues": external, "Effective": effective,
+		"CronInfo": cronInfo, "ScheduledScans": scheduledScans,
+	})
+}
+
+func (h *Handler) RepoSettings(c *gin.Context) {
+	if !h.requireStore(c) {
+		return
+	}
+	id, ok := parseID(c, "id")
+	if !ok {
+		return
+	}
+	repo, err := h.store.GetRepository(c.Request.Context(), id)
+	if err != nil {
+		c.String(http.StatusNotFound, "repository not found")
+		return
+	}
+	settings, _ := h.store.GetRepoSettings(c.Request.Context(), id)
+	effective, meta := store.ResolveEffectiveSettingsFull(h.global, settings)
+	var cronInfo store.CronDescription
+	if effective.ScheduleCron != "" {
+		last, _ := h.store.GetLastScheduledScanFinishedAt(c.Request.Context(), id)
+		baseline := time.Now().UTC()
+		if last != nil {
+			baseline = last.UTC()
+		}
+		cronInfo = store.DescribeCron(effective.ScheduleCron, baseline)
+	}
+	selectedProfile := meta.ScanProfile
+	if settings.ScanProfile != nil && *settings.ScanProfile != "" {
+		selectedProfile = *settings.ScanProfile
+	}
+	notifyEff := notify.ResolveEffective(h.notifyGlobal, settings)
+	h.render(c, "repo_settings.html", "Settings — "+repo.FullName, map[string]any{
+		"Repo": repo, "Settings": settings, "Effective": effective, "ProfileMeta": meta,
+		"SelectedProfile": selectedProfile,
+		"Profiles": store.AllowedScanProfiles, "ProfileDescriptions": store.ProfileDescriptions,
+		"Allowed": allowedSettingsDoc(), "CronInfo": cronInfo,
+		"NotificationGlobal": h.notifyGlobal, "EffectiveNotifications": notifyEff,
+		"NotificationEvents": store.AllowedNotificationEvents,
+	})
+}
+
+func (h *Handler) SaveRepoSettings(c *gin.Context) {
+	if !h.requireStore(c) {
+		return
+	}
+	if !h.requireCSRF(c) {
+		return
+	}
+	id, ok := parseID(c, "id")
+	if !ok {
+		return
+	}
+	if _, err := h.store.GetRepository(c.Request.Context(), id); err != nil {
+		c.String(http.StatusNotFound, "repository not found")
+		return
+	}
+
+	update := store.SettingsUpdate{
+		ScanProfile:       strPtr(c.PostForm("scan_profile")),
+		PolicyLevel:       strPtr(c.PostForm("policy_level")),
+		WorkspaceMode:     strPtr(c.PostForm("workspace_mode")),
+		SeverityGate:      strPtr(c.PostForm("severity_gate")),
+		IssuePolicy:       strPtr(c.PostForm("issue_policy")),
+		RemediationPolicy: strPtr(c.PostForm("remediation_policy")),
+		RunnerPolicy:      strPtr(c.PostForm("runner_policy")),
+		ScheduleCron:      strPtr(c.PostForm("schedule_cron")),
+		AIPolicy:          strPtr(c.PostForm("ai_policy")),
+	}
+	if v := c.PostForm("analysis_depth"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			update.AnalysisDepth = &n
+		}
+	}
+	if v := c.PostForm("confidence_gate"); v != "" {
+		if f, err := strconv.ParseFloat(v, 64); err == nil {
+			update.ConfidenceGate = &f
+		}
+	}
+	update.Enabled = boolPtr(c.PostForm("enabled"))
+	update.EnableLLMAuditors = boolPtr(c.PostForm("enable_llm_auditors"))
+	update.EnableTrivy = boolPtr(c.PostForm("enable_trivy"))
+	update.EnableGrype = boolPtr(c.PostForm("enable_grype"))
+	update.EnableGitleaks = boolPtr(c.PostForm("enable_gitleaks"))
+	update.EnableSemgrep = boolPtr(c.PostForm("enable_semgrep"))
+	update.EnableGovulncheck = boolPtr(c.PostForm("enable_govulncheck"))
+	update.EnableGosec = boolPtr(c.PostForm("enable_gosec"))
+	update.EnableStaticcheck = boolPtr(c.PostForm("enable_staticcheck"))
+	update.EnableHadolint = boolPtr(c.PostForm("enable_hadolint"))
+	update.EnableCheckov = boolPtr(c.PostForm("enable_checkov"))
+	update.EnableLinters = boolPtr(c.PostForm("enable_linters"))
+	update.ScheduleEnabled = boolPtr(c.PostForm("schedule_enabled"))
+	update.EnableHealthChecks = boolPtr(c.PostForm("enable_health_checks"))
+	update.EnableTechDebtChecks = boolPtr(c.PostForm("enable_tech_debt_checks"))
+	update.EnableReliabilityChecks = boolPtr(c.PostForm("enable_reliability_checks"))
+	update.EnableMaintainabilityChecks = boolPtr(c.PostForm("enable_maintainability_checks"))
+	update.EnableTestGapChecks = boolPtr(c.PostForm("enable_test_gap_checks"))
+	update.EnablePerformanceChecks = boolPtr(c.PostForm("enable_performance_checks"))
+	update.EnableAIRiskChecks = boolPtr(c.PostForm("enable_ai_risk_checks"))
+	update.HealthMaxFindings = intPtr(c.PostForm("health_max_findings"))
+	update.HealthLargeFileLines = intPtr(c.PostForm("health_large_file_lines"))
+	update.HealthLargeFunctionLines = intPtr(c.PostForm("health_large_function_lines"))
+	update.HealthMaxNestingDepth = intPtr(c.PostForm("health_max_nesting_depth"))
+	update.HealthMaxFunctionParams = intPtr(c.PostForm("health_max_function_params"))
+	update.EnableCodeGraph = boolPtr(c.PostForm("enable_code_graph"))
+	update.GraphMaxNodes = intPtr(c.PostForm("graph_max_nodes"))
+	update.GraphMaxEdges = intPtr(c.PostForm("graph_max_edges"))
+	update.GraphTimeoutSeconds = intPtr(c.PostForm("graph_timeout_seconds"))
+	update.GraphIncludeFunctions = boolPtr(c.PostForm("graph_include_functions"))
+	update.GraphIncludeFindings = boolPtr(c.PostForm("graph_include_findings"))
+	update.GovulncheckTimeoutSeconds = intPtr(c.PostForm("govulncheck_timeout_seconds"))
+	update.GosecTimeoutSeconds = intPtr(c.PostForm("gosec_timeout_seconds"))
+	update.StaticcheckTimeoutSeconds = intPtr(c.PostForm("staticcheck_timeout_seconds"))
+	update.GoScannerMaxFindings = intPtr(c.PostForm("go_scanner_max_findings"))
+	update.HadolintTimeoutSeconds = intPtr(c.PostForm("hadolint_timeout_seconds"))
+	update.CheckovTimeoutSeconds = intPtr(c.PostForm("checkov_timeout_seconds"))
+	update.IACScannerMaxFindings = intPtr(c.PostForm("iac_scanner_max_findings"))
+	update.NotificationsEnabled = boolPtr(c.PostForm("notifications_enabled"))
+	update.NotificationMinSeverity = strPtr(c.PostForm("notification_min_severity"))
+	update.NotificationEvents = strPtr(c.PostForm("notification_events"))
+	update.NotificationCooldownSeconds = intPtr(c.PostForm("notification_cooldown_seconds"))
+
+	if err := store.ValidateSettingsUpdate(update); err != nil {
+		h.render(c, "repo_settings.html", "Settings error", map[string]any{
+			"Error": err.Error(), "RepoID": id,
+		})
+		return
+	}
+
+	existing, _ := h.store.GetRepoSettings(c.Request.Context(), id)
+	existing.RepositoryID = id
+	merged := store.ApplySettingsUpdateWithProfilePolicy(existing, update)
+	if err := store.ValidateRepoSettings(merged); err != nil {
+		repo, _ := h.store.GetRepository(c.Request.Context(), id)
+		settings, _ := h.store.GetRepoSettings(c.Request.Context(), id)
+		effective, meta := store.ResolveEffectiveSettingsFull(h.global, settings)
+		h.render(c, "repo_settings.html", "Settings error", map[string]any{
+			"Error": err.Error(), "Repo": repo, "Settings": settings, "Effective": effective,
+			"ProfileMeta": meta, "Profiles": store.AllowedScanProfiles,
+			"ProfileDescriptions": store.ProfileDescriptions,
+			"Allowed": allowedSettingsDoc(),
+		})
+		return
+	}
+	if err := h.store.SaveRepoSettings(c.Request.Context(), merged); err != nil {
+		c.String(http.StatusInternalServerError, "failed to save settings")
+		return
+	}
+	q := ""
+	if key := c.Query("api_key"); key != "" {
+		q = "?api_key=" + url.QueryEscape(key)
+	}
+	c.Redirect(http.StatusSeeOther, fmt.Sprintf("%s/repos/%d/settings%s", h.basePath, id, q))
+}
+
+func (h *Handler) ScanDetail(c *gin.Context) {
+	if !h.requireStore(c) {
+		return
+	}
+	scanID := c.Param("scan_id")
+	scan, err := h.store.GetScan(c.Request.Context(), scanID)
+	if err != nil {
+		c.String(http.StatusNotFound, "scan not found")
+		return
+	}
+	results, _ := h.store.ListScannerResultsByScan(c.Request.Context(), scanID)
+	repo, _ := h.store.GetRepository(c.Request.Context(), scan.RepositoryID)
+	runnerJob, _ := h.store.GetRunnerJobByScanID(c.Request.Context(), scanID)
+	h.render(c, "scan_detail.html", "Scan "+scanID, map[string]any{
+		"Scan": scan, "ScannerResults": results, "Repo": repo, "RunnerJob": runnerJob,
+	})
+}
+
+func (h *Handler) ScanGraph(c *gin.Context) {
+	if !h.requireStore(c) {
+		return
+	}
+	scanID := c.Param("scan_id")
+	scan, err := h.store.GetScan(c.Request.Context(), scanID)
+	if err != nil {
+		c.String(http.StatusNotFound, "scan not found")
+		return
+	}
+	repo, _ := h.store.GetRepository(c.Request.Context(), scan.RepositoryID)
+	graphURL, exportURL := h.graphAPIURLs(c, scanID, 0)
+	h.render(c, "graph.html", "Repository Map — Scan", map[string]any{
+		"Scan": scan, "Repo": repo, "GraphScanID": scanID,
+		"GraphURL": graphURL, "ExportURL": exportURL,
+	})
+}
+
+func (h *Handler) RepoGraph(c *gin.Context) {
+	if !h.requireStore(c) {
+		return
+	}
+	id, ok := parseID(c, "id")
+	if !ok {
+		return
+	}
+	repo, err := h.store.GetRepository(c.Request.Context(), id)
+	if err != nil {
+		c.String(http.StatusNotFound, "repository not found")
+		return
+	}
+	graphURL, exportURL := h.graphAPIURLs(c, "", id)
+	h.render(c, "graph.html", "Repository Map — "+repo.FullName, map[string]any{
+		"Repo": repo, "GraphRepoID": id,
+		"GraphURL": graphURL, "ExportURL": exportURL,
+	})
+}
+
+func (h *Handler) graphAPIURLs(c *gin.Context, scanID string, repoID int64) (graphURL, exportURL string) {
+	q := ""
+	if key := clientAPIKeyFromRequest(c); key != "" {
+		q = "?api_key=" + url.QueryEscape(key)
+	}
+	if scanID != "" {
+		return "/api/v1/scans/" + scanID + "/graph" + q, "/api/v1/scans/" + scanID + "/graph/export" + q
+	}
+	id := strconv.FormatInt(repoID, 10)
+	return "/api/v1/repos/" + id + "/graph" + q, "/api/v1/repos/" + id + "/graph/export" + q
+}
+
+func (h *Handler) Findings(c *gin.Context) {
+	if !h.requireStore(c) {
+		return
+	}
+	filter := store.FindingFilter{
+		Severity: c.Query("severity"),
+		Category: c.Query("category"),
+		Status:   c.Query("status"),
+		Source:   c.Query("source"),
+		Limit:    100,
+	}
+	if v := c.Query("repo_id"); v != "" {
+		filter.RepositoryID, _ = strconv.ParseInt(v, 10, 64)
+	}
+	findings, err := h.store.ListFindings(c.Request.Context(), filter)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "failed to list findings")
+		return
+	}
+	h.render(c, "findings.html", "Findings", map[string]any{"Findings": findings, "Filter": filter})
+}
+
+func (h *Handler) FindingDetail(c *gin.Context) {
+	if !h.requireStore(c) {
+		return
+	}
+	id, ok := parseID(c, "id")
+	if !ok {
+		return
+	}
+	detail, err := h.store.GetFindingDetail(c.Request.Context(), id)
+	if err != nil {
+		c.String(http.StatusNotFound, "finding not found")
+		return
+	}
+	var plan remediation.Plan
+	var prEligibility patcher.EligibilityResult
+	var patchAttempts []patcher.PatchAttempt
+	if rec, perr := h.store.GetLatestRemediationPlanByFindingID(c.Request.Context(), id); perr == nil {
+		plan = store.RemediationPlanToDomain(rec)
+		if h.remediationPREnabled && h.remediationPR != nil && plan.ID != "" {
+			if elig, eerr := h.remediationPR.CheckPREligibility(c.Request.Context(), plan.ID); eerr == nil {
+				prEligibility = elig
+			}
+			if attempts, aerr := h.remediationPR.ListPatchAttempts(c.Request.Context(), plan.ID); aerr == nil {
+				patchAttempts = attempts
+			}
+		}
+	}
+	h.render(c, "finding_detail.html", detail.Title, map[string]any{
+		"Finding": detail, "RemediationPlan": plan, "PlannerEnabled": h.remediationEnabled,
+		"PREnabled": h.remediationPREnabled, "PREligibility": prEligibility, "PatchAttempts": patchAttempts,
+		"ClosureEnabled": h.closureEnabled, "ClosureEvidence": h.closureEvidenceForUI(c.Request.Context(), id),
+		"LifecycleLabel": lifecycleStageLabel(plan, patchAttempts, h.closureEvidenceForUI(c.Request.Context(), id)),
+	})
+}
+
+func (h *Handler) closureEvidenceForUI(ctx context.Context, findingID int64) closure.Evidence {
+	if h.closure == nil {
+		return closure.Evidence{FindingID: findingID, Status: closure.StatusPendingRescan, Reason: "not verified yet"}
+	}
+	ev, err := h.closure.GetClosureEvidence(ctx, findingID)
+	if err != nil || ev.Status == "" {
+		return closure.Evidence{FindingID: findingID, Status: closure.StatusPendingRescan, Reason: "not verified yet"}
+	}
+	return ev
+}
+
+func (h *Handler) GenerateFindingRemediation(c *gin.Context) {
+	if !h.requireStore(c) || !h.requireCSRF(c) || h.remediation == nil {
+		c.String(http.StatusServiceUnavailable, "remediation planner disabled")
+		return
+	}
+	id, ok := parseID(c, "id")
+	if !ok {
+		return
+	}
+	if _, err := h.remediation.GeneratePlan(c.Request.Context(), id); err != nil {
+		c.String(http.StatusBadRequest, err.Error())
+		return
+	}
+	h.redirectFindingSettings(c, id)
+}
+
+func (h *Handler) ApproveFindingRemediation(c *gin.Context) {
+	if !h.requireStore(c) || !h.requireCSRF(c) || h.remediation == nil {
+		c.String(http.StatusServiceUnavailable, "remediation planner disabled")
+		return
+	}
+	id, ok := parseID(c, "id")
+	if !ok {
+		return
+	}
+	planID := c.PostForm("plan_id")
+	if planID == "" {
+		c.String(http.StatusBadRequest, "plan_id required")
+		return
+	}
+	if err := h.remediation.ApprovePlan(c.Request.Context(), planID); err != nil {
+		c.String(http.StatusBadRequest, err.Error())
+		return
+	}
+	h.redirectFindingSettings(c, id)
+}
+
+func (h *Handler) RejectFindingRemediation(c *gin.Context) {
+	if !h.requireStore(c) || !h.requireCSRF(c) || h.remediation == nil {
+		c.String(http.StatusServiceUnavailable, "remediation planner disabled")
+		return
+	}
+	id, ok := parseID(c, "id")
+	if !ok {
+		return
+	}
+	planID := c.PostForm("plan_id")
+	if planID == "" {
+		c.String(http.StatusBadRequest, "plan_id required")
+		return
+	}
+	if err := h.remediation.RejectPlan(c.Request.Context(), planID); err != nil {
+		c.String(http.StatusBadRequest, err.Error())
+		return
+	}
+	h.redirectFindingSettings(c, id)
+}
+
+func (h *Handler) AttemptFindingRemediationPR(c *gin.Context) {
+	if !h.requireStore(c) || !h.requireCSRF(c) || h.remediationPR == nil {
+		c.String(http.StatusServiceUnavailable, "remediation PR feature disabled")
+		return
+	}
+	id, ok := parseID(c, "id")
+	if !ok {
+		return
+	}
+	planID := c.PostForm("plan_id")
+	if planID == "" {
+		c.String(http.StatusBadRequest, "plan_id required")
+		return
+	}
+	if _, err := h.remediationPR.AttemptPR(c.Request.Context(), planID); err != nil {
+		c.String(http.StatusBadRequest, err.Error())
+		return
+	}
+	h.redirectFindingSettings(c, id)
+}
+
+func (h *Handler) VerifyFindingClosure(c *gin.Context) {
+	if !h.requireStore(c) || !h.requireCSRF(c) || h.closure == nil {
+		c.String(http.StatusServiceUnavailable, "evidence closure disabled")
+		return
+	}
+	id, ok := parseID(c, "id")
+	if !ok {
+		return
+	}
+	if _, err := h.closure.VerifyClosure(c.Request.Context(), id); err != nil {
+		c.String(http.StatusBadRequest, err.Error())
+		return
+	}
+	h.redirectFindingSettings(c, id)
+}
+
+func (h *Handler) CheckFindingClosureMerge(c *gin.Context) {
+	if !h.requireStore(c) || !h.requireCSRF(c) || h.closure == nil {
+		c.String(http.StatusServiceUnavailable, "evidence closure disabled")
+		return
+	}
+	id, ok := parseID(c, "id")
+	if !ok {
+		return
+	}
+	attemptID := c.PostForm("attempt_id")
+	if attemptID == "" {
+		c.String(http.StatusBadRequest, "attempt_id required")
+		return
+	}
+	if _, err := h.closure.CheckPatchAttemptMerge(c.Request.Context(), attemptID); err != nil {
+		c.String(http.StatusBadRequest, err.Error())
+		return
+	}
+	h.redirectFindingSettings(c, id)
+}
+
+func (h *Handler) redirectFindingSettings(c *gin.Context, id int64) {
+	q := ""
+	if key := c.Query("api_key"); key != "" {
+		q = "?api_key=" + url.QueryEscape(key)
+	}
+	c.Redirect(http.StatusSeeOther, fmt.Sprintf("%s/findings/%d%s", h.basePath, id, q))
+}
+
+func (h *Handler) Preinstall(c *gin.Context) {
+	if !h.requireStore(c) {
+		return
+	}
+	audits, _ := h.store.ListAuditRequests(c.Request.Context(), store.ListOptions{Limit: 20})
+	h.render(c, "preinstall.html", "Pre-install audit", map[string]any{
+		"Audits":  audits,
+		"Enabled": h.preinstallEnabled && h.preinstallRunner != nil,
+	})
+}
+
+func (h *Handler) StartPreinstallAudit(c *gin.Context) {
+	if !h.requireStore(c) {
+		return
+	}
+	if !h.requireCSRF(c) {
+		return
+	}
+	if !h.preinstallEnabled || h.preinstallRunner == nil {
+		h.render(c, "error.html", "Pre-install audit disabled", map[string]any{
+			"Message": "Pre-install audit is disabled by configuration.",
+		})
+		return
+	}
+	repoURL := strings.TrimSpace(c.PostForm("repo_url"))
+	depth := c.PostForm("audit_depth")
+	auditID, err := h.preinstallRunner.StartAudit(c.Request.Context(), repoURL, depth)
+	if err != nil {
+		h.render(c, "preinstall.html", "Pre-install audit", map[string]any{
+			"Error":   err.Error(),
+			"RepoURL": repoURL,
+			"Depth":   depth,
+			"Enabled": true,
+		})
+		return
+	}
+	q := url.Values{}
+	if key := c.GetHeader("X-Bugbot-API-Key"); key != "" {
+		q.Set("api_key", key)
+	} else if key := c.Query("api_key"); key != "" {
+		q.Set("api_key", key)
+	}
+	dest := fmt.Sprintf("%s/preinstall/audits/%s", h.basePath, auditID)
+	if enc := q.Encode(); enc != "" {
+		dest += "?" + enc
+	}
+	c.Redirect(http.StatusSeeOther, dest)
+}
+
+func (h *Handler) PreinstallAuditDetail(c *gin.Context) {
+	if !h.requireStore(c) {
+		return
+	}
+	auditID := c.Param("audit_id")
+	audit, err := h.store.GetAuditRequest(c.Request.Context(), auditID)
+	if err != nil {
+		c.String(http.StatusNotFound, "audit not found")
+		return
+	}
+	findings, _ := h.store.ListAuditFindings(c.Request.Context(), auditID)
+	reports, _ := h.store.ListDisclosureReports(c.Request.Context(), auditID)
+	h.render(c, "preinstall_audit.html", "Audit "+auditID, map[string]any{
+		"Audit":    audit,
+		"Findings": findings,
+		"Reports":  reports,
+	})
+}
+
+func (h *Handler) MarkPreinstallReportReviewed(c *gin.Context) {
+	if !h.requireStore(c) {
+		return
+	}
+	if !h.requireCSRF(c) {
+		return
+	}
+	id, ok := parseID(c, "report_id")
+	if !ok {
+		return
+	}
+	_ = h.store.MarkDisclosureReportReviewed(c.Request.Context(), id)
+	report, err := h.store.GetDisclosureReport(c.Request.Context(), id)
+	if err != nil {
+		c.String(http.StatusNotFound, "report not found")
+		return
+	}
+	q := url.Values{}
+	if key := c.GetHeader("X-Bugbot-API-Key"); key != "" {
+		q.Set("api_key", key)
+	} else if key := c.Query("api_key"); key != "" {
+		q.Set("api_key", key)
+	}
+	dest := fmt.Sprintf("%s/preinstall/audits/%s", h.basePath, report.AuditID)
+	if enc := q.Encode(); enc != "" {
+		dest += "?" + enc
+	}
+	c.Redirect(http.StatusSeeOther, dest)
+}
+
+func parseID(c *gin.Context, param string) (int64, bool) {
+	id, err := strconv.ParseInt(c.Param(param), 10, 64)
+	if err != nil || id <= 0 {
+		c.String(http.StatusBadRequest, "invalid id")
+		return 0, false
+	}
+	return id, true
+}
+
+func strPtr(v string) *string {
+	v = strings.TrimSpace(v)
+	if v == "" {
+		return nil
+	}
+	return &v
+}
+
+func boolPtr(v string) *bool {
+	v = strings.TrimSpace(strings.ToLower(v))
+	if v == "" {
+		return nil
+	}
+	b := v == "true" || v == "1" || v == "on" || v == "yes"
+	return &b
+}
+
+func intPtr(v string) *int {
+	v = strings.TrimSpace(v)
+	if v == "" {
+		return nil
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil {
+		return nil
+	}
+	return &n
+}
+
+func allowedSettingsDoc() map[string][]string {
+	return map[string][]string{
+		"scan_profile":       store.AllowedScanProfiles,
+		"policy_level":       store.AllowedPolicyLevels,
+		"workspace_mode":     store.AllowedWorkspaceModes,
+		"severity_gate":      store.AllowedSeverities,
+		"notification_min_severity": store.AllowedSeverities,
+		"notification_events":     store.AllowedNotificationEvents,
+		"issue_policy":       store.AllowedIssuePolicies,
+		"remediation_policy": store.AllowedRemediationPolicies,
+		"runner_policy":      store.AllowedRunnerPolicies,
+		"ai_policy":          store.AllowedAIPolicies,
+	}
+}
+
+func lifecycleStageLabel(plan remediation.Plan, attempts []patcher.PatchAttempt, ev closure.Evidence) string {
+	switch ev.Status {
+	case closure.StatusVerified:
+		return "Verified resolved"
+	case closure.StatusBlocked:
+		return "Blocked: scanner did not run"
+	case closure.StatusStillPresent:
+		return "Still present after remediation"
+	case closure.StatusPendingRescan:
+		return "Waiting for rescan"
+	}
+	for _, a := range attempts {
+		if a.Status == patcher.StatusPROpened {
+			return "PR opened, not merged"
+		}
+		if a.Status == "pr_merged" {
+			return "Waiting for rescan"
+		}
+	}
+	if plan.ID != "" {
+		if plan.Status == remediation.StatusApproved {
+			return "Approved plan — ready for remediation PR"
+		}
+		return "Planning only"
+	}
+	return "Open finding"
+}

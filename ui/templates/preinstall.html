@@ -1,0 +1,27 @@
+{{define "preinstall.html"}}
+<!DOCTYPE html><html lang="en"><head>{{template "head" .}}</head><body>
+{{template "nav" .}}<main><h1>{{.Title}}</h1>
+<div class="warn">Third-party audit reports are drafts. Review before sharing or submitting externally. Repository Detective does not auto-file issues or send email for pre-install audits.</div>
+{{if .Data.Error}}<div class="warn">{{.Data.Error}}</div>{{end}}
+<div class="card">
+<form method="post" action="{{.BasePath}}/preinstall{{if .APIKey}}?api_key={{.APIKey}}{{end}}">
+<input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+<label>Repository URL (HTTPS)
+<input name="repo_url" type="url" required placeholder="https://github.com/owner/repo" value="{{.Data.RepoURL}}"></label>
+<label>Audit depth
+<select name="audit_depth">
+<option value="quick" {{if eq .Data.Depth "quick"}}selected{{end}}>Quick — secrets + basic manifest checks</option>
+<option value="standard" {{if or (eq .Data.Depth "standard") (eq .Data.Depth "")}}selected{{end}}>Standard — all deterministic scanners</option>
+<option value="deep" {{if eq .Data.Depth "deep"}}selected{{end}}>Deep — same as standard (reserved)</option>
+</select></label>
+<button type="submit" {{if not .Data.Enabled}}disabled{{end}}>Start audit</button>
+</form>
+</div>
+<div class="card"><h2>Recent audits</h2><table>
+<tr><th>Repo</th><th>Status</th><th>Risk</th><th>Recommendation</th><th>Started</th></tr>
+{{range .Data.Audits}}<tr>
+<td><a href="{{$.BasePath}}/preinstall/audits/{{.AuditID}}{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}">{{.NormalizedRepoURL}}</a></td>
+<td>{{.Status}}</td><td>{{.RiskScore}}</td><td>{{.Recommendation}}</td><td class="muted">{{.StartedAt}}</td>
+</tr>{{else}}<tr><td colspan="5" class="muted">No audits yet</td></tr>{{end}}
+</table></div></main></body></html>
+{{end}}

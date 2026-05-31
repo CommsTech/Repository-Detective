@@ -47,6 +47,22 @@ logs/
 .env.local
 .env.*.local
 
+# Local SQLite databases
+data/
+data/*.db
+*.db
+
+# Scanner workspace temp files
+.scanner-workspace/
+scanner-workspace/
+
+# Runner local artifact directories
+runner-artifacts/
+runner-work/
+
+# Dogfood reports (may contain redacted curl captures — keep local)
+docs/dogfood-reports/
+
 # Configuration overrides
 config.local.yaml
 config.*.local.yaml

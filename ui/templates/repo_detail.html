@@ -1,0 +1,20 @@
+{{define "repo_detail.html"}}
+<!DOCTYPE html><html lang="en"><head>{{template "head" .}}</head><body>
+{{template "nav" .}}<main><h1>{{.Title}}</h1>{{if .Notice}}<div class="warn">{{.Notice}}</div>{{end}}
+{{with .Data.Repo}}<div class="card"><p>{{.FullName}} ({{.ForgeType}})</p>
+<p><a href="{{$.BasePath}}/repos/{{.ID}}/settings{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}">Settings</a></p></div>{{end}}
+<div class="card"><h2>Schedule</h2>
+<p>Enabled: {{.Data.Effective.ScheduleEnabled}} · Cron: {{.Data.Effective.ScheduleCron}}</p>
+{{with .Data.CronInfo}}{{if .Valid}}<p class="muted">Next run (approx): {{.NextRun}}</p>{{else if .Error}}<p class="warn">{{.Error}}</p>{{end}}{{end}}
+</div>
+<div class="card"><h2>Recent scheduled scans</h2><table>
+{{range .Data.ScheduledScans}}<tr><td><a href="{{$.BasePath}}/scans/{{.ID}}{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}">{{.ID}}</a></td><td>{{.Status}}</td><td>{{.StartedAt.Format "2006-01-02 15:04"}}</td></tr>
+{{else}}<tr><td class="muted">None</td></tr>{{end}}</table></div>
+<div class="card"><h2>Scans</h2><table>
+{{range .Data.Scans}}<tr><td><a href="{{$.BasePath}}/scans/{{.ID}}{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}">{{.ID}}</a></td><td>{{.TriggerType}}</td><td>{{.Status}}</td></tr>
+{{else}}<tr><td class="muted">None</td></tr>{{end}}</table></div>
+<div class="card"><h2>Findings</h2><table>
+{{range .Data.Findings}}<tr><td><a href="{{$.BasePath}}/findings/{{.ID}}{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}">{{.Fingerprint}}</a></td><td>{{.Severity}}</td><td>{{.Title}}</td></tr>
+{{else}}<tr><td class="muted">None</td></tr>{{end}}</table></div>
+</main></body></html>
+{{end}}

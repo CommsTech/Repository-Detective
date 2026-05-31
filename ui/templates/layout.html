@@ -1,0 +1,32 @@
+{{define "nav"}}
+<header>
+  <strong>Repository Detective</strong>
+  <span class="tagline">Inspect · Analyze · Improve</span>
+  <a href="{{.BasePath}}{{if .APIKey}}?api_key={{.APIKey}}{{end}}">Dashboard</a>
+  <a href="{{.BasePath}}/repos{{if .APIKey}}?api_key={{.APIKey}}{{end}}">Repositories</a>
+  <a href="{{.BasePath}}/findings{{if .APIKey}}?api_key={{.APIKey}}{{end}}">Findings</a>
+  <a href="{{.BasePath}}/preinstall{{if .APIKey}}?api_key={{.APIKey}}{{end}}">Pre-install audit</a>
+</header>
+{{end}}
+
+{{define "head"}}
+<meta charset="utf-8">
+<title>{{.Title}} — Repository Detective</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 0; background: #f6f8fa; color: #0D1B2A; }
+  header { background: #0D1B2A; color: #fff; padding: 12px 20px; }
+  header a { color: #0EA5A4; margin-right: 16px; text-decoration: none; }
+  header .tagline { color: #9ca3af; font-size: 0.85em; margin-left: 12px; font-weight: normal; }
+  main { max-width: 1100px; margin: 20px auto; padding: 0 16px 40px; }
+  .card { background: #fff; border: 1px solid #d0d7de; border-radius: 6px; padding: 16px; margin-bottom: 16px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 8px; border-bottom: 1px solid #eaeef2; }
+  .muted { color: #656d76; font-size: 0.9em; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; background: #ddf4ff; font-size: 0.85em; }
+  .warn { background: #fff8c5; border: 1px solid #d4a72c; padding: 10px; border-radius: 6px; margin-bottom: 16px; }
+  pre { background: #f6f8fa; padding: 12px; overflow: auto; border-radius: 6px; white-space: pre-wrap; }
+  label { display: block; margin-top: 10px; font-weight: 600; }
+  input, select { max-width: 420px; padding: 6px; margin-top: 4px; display: block; }
+  button { margin-top: 16px; padding: 8px 16px; }
+</style>
+{{end}}

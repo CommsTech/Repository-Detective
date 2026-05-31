@@ -1,0 +1,4 @@
+{{define "error.html"}}
+<!DOCTYPE html><html lang="en"><head>{{template "head" .}}</head><body>
+{{template "nav" .}}<main><h1>{{.Title}}</h1><div class="warn">{{.Data.Message}}</div></main></body></html>
+{{end}}

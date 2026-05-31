@@ -1,0 +1,26 @@
+package store
+
+import "time"
+
+// ScanCompletion carries scan finish data without importing analyzers.
+type ScanCompletion struct {
+	IssuesFound       int
+	FilesAnalyzed     int
+	AnalysisTime      time.Duration
+	OverallScore      float64
+	CommitSHA         string
+	WorkspaceModeUsed string
+	PolicySnapshot    any
+	ScannerResults    []ScanCompletionScanner
+	GraphNodeCount    int
+	GraphEdgeCount    int
+	GraphJSON         []byte
+}
+
+// ScanCompletionScanner is a scanner outcome for persistence.
+type ScanCompletionScanner struct {
+	Scanner       string
+	Status        string
+	FindingsCount int
+	Detail        string
+}

@@ -99,17 +99,30 @@ type CodeAnalysisResult struct {
 
 // CodeIssue represents a detected issue in the code.
 type CodeIssue struct {
-	Severity       string  `json:"severity"`
-	Category       string  `json:"category"`
-	Title          string  `json:"title"`
-	Description    string  `json:"description"`
-	File           string  `json:"file,omitempty"`
-	LineNumber     int     `json:"line_number,omitempty"`
-	ColumnNumber   int     `json:"column_number,omitempty"`
-	CodeSnippet    string  `json:"code_snippet,omitempty"`
-	ProofOfConcept string  `json:"proof_of_concept,omitempty"`
-	Confidence     float64 `json:"confidence"`
-	ClusterID      string  `json:"cluster_id,omitempty"`
+	Severity               string  `json:"severity"`
+	Category               string  `json:"category"`
+	Title                  string  `json:"title"`
+	Description            string  `json:"description"`
+	File                   string  `json:"file,omitempty"`
+	LineNumber             int     `json:"line_number,omitempty"`
+	ColumnNumber           int     `json:"column_number,omitempty"`
+	CodeSnippet            string  `json:"code_snippet,omitempty"`
+	ProofOfConcept         string  `json:"proof_of_concept,omitempty"`
+	Confidence             float64 `json:"confidence"`
+	ClusterID              string  `json:"cluster_id,omitempty"`
+	Source                 string  `json:"source,omitempty"`
+	RuleID                 string  `json:"rule_id,omitempty"`
+	ScanID                 string  `json:"scan_id,omitempty"`
+	Fingerprint            string  `json:"fingerprint,omitempty"`
+	PackageName            string  `json:"package_name,omitempty"`
+	LifecycleState         string  `json:"lifecycle_state,omitempty"`
+	FromAI                 bool    `json:"from_ai,omitempty"`
+	Fixable                string  `json:"fixable,omitempty"`
+	FixComplexity          string  `json:"fix_complexity,omitempty"`
+	RegressionRisk           string  `json:"regression_risk,omitempty"`
+	RequiredTests            string  `json:"required_tests,omitempty"`
+	SuggestedPatchStrategy string  `json:"suggested_patch_strategy,omitempty"`
+	SafeForAutoPR            bool    `json:"safe_for_auto_pr,omitempty"`
 }
 
 // CodeSuggestion represents a suggested improvement.

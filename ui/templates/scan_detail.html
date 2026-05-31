@@ -1,0 +1,17 @@
+{{define "scan_detail.html"}}
+<!DOCTYPE html><html lang="en"><head>{{template "head" .}}</head><body>
+{{template "nav" .}}<main><h1>{{.Title}}</h1>
+<div class="card">{{with .Data.Scan}}
+<p><strong>Trigger:</strong> {{.TriggerType}} · <strong>Status:</strong> {{.Status}}</p>
+<p><strong>Ref:</strong> {{.Ref}} · <strong>Commit:</strong> {{.CommitSHA}}</p>
+<p><strong>Started:</strong> {{.StartedAt.Format "2006-01-02 15:04:05"}}</p>
+{{if .Error}}<p class="warn">{{.Error}}</p>{{end}}
+{{with .Data.RunnerJob}}{{if .JobID}}<p><strong>Runner job:</strong> {{.JobID}} · <strong>Status:</strong> {{.Status}} · <strong>Mode:</strong> {{.RunnerMode}}</p>{{end}}{{end}}
+<h3>Summary</h3><pre>{{printf "%s" .SummaryJSON}}</pre>
+{{end}}</div>
+<div class="card"><h2>Scanner results</h2><table>
+<tr><th>Scanner</th><th>Status</th><th>Findings</th><th>Detail</th></tr>
+{{range .Data.ScannerResults}}<tr><td>{{.ScannerName}}</td><td>{{.Status}}</td><td>{{.FindingsCount}}</td><td>{{.Detail}}</td></tr>
+{{else}}<tr><td colspan="4" class="muted">None</td></tr>{{end}}
+</table></div></main></body></html>
+{{end}}

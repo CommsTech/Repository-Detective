@@ -33,11 +33,8 @@ func TestRunTrivyOnSampleWorkspace(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
 
-	findings, err := scanners.RunTrivy(ctx, logger, dir, scanners.DefaultConfig())
-	if err != nil {
-		t.Fatalf("RunTrivy: %v", err)
-	}
-	t.Logf("trivy findings: %d", len(findings))
+	result := scanners.RunTrivy(ctx, logger, dir, scanners.DefaultConfig())
+	t.Logf("trivy status=%s findings=%d", result.Status, len(result.Findings))
 }
 
 func TestRunLintersOnGoFile(t *testing.T) {
@@ -70,13 +67,14 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
 
-	findings, err := scanners.RunLinters(ctx, logger, dir, []scanners.FileEntry{
+	findings := scanners.RunLinters(ctx, logger, dir, []scanners.FileEntry{
 		{Path: "main.go"},
 	}, true, true, scanners.DefaultConfig())
-	if err != nil {
-		t.Fatalf("RunLinters: %v", err)
+	var total int
+	for _, result := range findings {
+		total += len(result.Findings)
 	}
-	t.Logf("linter findings: %d", len(findings))
+	t.Logf("linter findings: %d", total)
 }
 
 func TestRunAllReturnsCandidates(t *testing.T) {
@@ -94,13 +92,20 @@ func TestRunAllReturnsCandidates(t *testing.T) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.WarnLevel)
 	cfg := scanners.Config{
-		EnableTrivy:   false,
-		EnableGrype:   false,
-		EnableLinters: false,
+		EnableTrivy:    false,
+		EnableGrype:    false,
+		EnableGitleaks: false,
+		EnableSemgrep:  false,
+		EnableLinters:  false,
 	}
 	entries := []scanners.FileEntry{{Path: "go.mod", Content: "module example.com/test\n\ngo 1.21\n"}}
-	candidates := scanners.RunAll(context.Background(), logger, dir, entries, cfg, true, true)
-	if len(candidates) != 0 {
-		t.Fatalf("expected no candidates with scanners disabled, got %d", len(candidates))
+	summary := scanners.RunAll(context.Background(), logger, dir, entries, cfg, true, true)
+	if len(summary.Candidates()) != 0 {
+		t.Fatalf("expected no candidates with scanners disabled, got %d", len(summary.Candidates()))
+	}
+	for _, result := range summary.Results {
+		if result.Status != scanners.StatusDisabled {
+			t.Fatalf("expected disabled status for %s, got %s", result.Scanner, result.Status)
+		}
 	}
 }

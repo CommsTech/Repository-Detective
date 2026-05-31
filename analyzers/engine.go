@@ -10,6 +10,9 @@ import (
 
 	"git.commsnet.org/commstech/bugbot/ai"
 	"git.commsnet.org/commstech/bugbot/gitea"
+	"git.commsnet.org/commstech/bugbot/graph"
+	"git.commsnet.org/commstech/bugbot/health"
+	"git.commsnet.org/commstech/bugbot/internal/scanid"
 	"git.commsnet.org/commstech/bugbot/models"
 	"git.commsnet.org/commstech/bugbot/scanners"
 	"github.com/sirupsen/logrus"
@@ -29,6 +32,9 @@ type Config struct {
 	SkipPatterns      []string
 	LanguageMapping   map[string]string
 	Scanners          scanners.Config
+	Workspace         scanners.WorkspaceConfig
+	Health            health.Config
+	Graph             graph.Config
 }
 
 // CodeSuggestion represents a code improvement suggestion
@@ -42,15 +48,21 @@ type CodeSuggestion struct {
 
 // AnalysisResult represents the complete result of analyzing a repository
 type AnalysisResult struct {
-	Repository    string
-	Commit        string
-	AnalysisTime  time.Duration
-	FilesAnalyzed int
-	IssuesFound   int
-	Issues        []ai.CodeIssue
-	Suggestions   []CodeSuggestion
-	OverallScore  float64
-	Errors        []string
+	Repository     string
+	Commit         string
+	CommitSHA      string
+	ScanID         string
+	AnalysisTime   time.Duration
+	FilesAnalyzed  int
+	IssuesFound    int
+	Issues         []ai.CodeIssue
+	ScannerResults []scanners.RunResult
+	Suggestions    []CodeSuggestion
+	OverallScore   float64
+	Errors         []string
+	PolicySnapshot    *PolicySnapshot
+	WorkspaceModeUsed string
+	Graph             *graph.Graph
 }
 
 // ============================================================================
@@ -73,17 +85,21 @@ type ProofOfConcept = models.ProofOfConcept
 
 // FinalReport is the complete Bugbot report
 type FinalReport struct {
+	ScanID      string
 	Repository  string
 	Commit      string
 	GeneratedAt time.Time
 	TotalTimeMs int64
 	Stages      []string // which stages completed
 
-	Prepare    *PrepareReport
-	Candidates []CandidateFinding
-	Validated  []ValidatedFinding
-	Deduped    []DedupedFinding
-	Proven     []ProvenFinding
+	Prepare        *PrepareReport
+	Candidates     []CandidateFinding
+	Validated      []ValidatedFinding
+	Deduped        []DedupedFinding
+	Proven         []ProvenFinding
+	ScannerResults []scanners.RunResult
+	Workspace      models.WorkspaceMeta
+	Graph          *graph.Graph
 
 	Stats ReportStats
 }
@@ -126,7 +142,8 @@ func NewEngine(giteaClient *gitea.Client, aiClient *ai.Client, config *Config, l
 
 // AnalysisOptions controls scoped vs full-repository analysis.
 type AnalysisOptions struct {
-	FilePaths []string // empty = scan entire repository
+	FilePaths    []string // empty = scan entire repository
+	CommitPinned bool
 }
 
 // RunCAHPipeline runs the full 5-stage CAH pipeline on a repository ref.
@@ -137,12 +154,25 @@ func (e *Engine) RunCAHPipeline(ctx context.Context, owner, repo, ref string) (*
 // RunCAHPipelineWithOptions runs the CAH pipeline, optionally limited to filePaths.
 func (e *Engine) RunCAHPipelineWithOptions(ctx context.Context, owner, repo, ref string, opts *AnalysisOptions) (*FinalReport, error) {
 	var filePaths []string
+	commitPinned := false
 	if opts != nil {
 		filePaths = opts.FilePaths
+		commitPinned = opts.CommitPinned
 	}
+	if !commitPinned {
+		commitPinned = looksLikeCommitSHA(ref)
+	}
+
+	id := scanid.From(ctx)
+	if id == "" {
+		id = scanid.New()
+	}
+	ctx = scanid.With(ctx, id)
+	log := e.scanLogger(ctx)
 
 	startTime := time.Now()
 	report := &FinalReport{
+		ScanID:      id,
 		Repository:  fmt.Sprintf("%s/%s", owner, repo),
 		Commit:      ref,
 		GeneratedAt: time.Now(),
@@ -150,70 +180,76 @@ func (e *Engine) RunCAHPipelineWithOptions(ctx context.Context, owner, repo, ref
 	}
 
 	if len(filePaths) > 0 {
-		e.logger.Infof("[CAH:PIPELINE] Scoped analysis on %d changed file(s)", len(filePaths))
+		log.Infof("[CAH:PIPELINE] Scoped analysis on %d changed file(s)", len(filePaths))
 	}
+	log.Info("[CAH:PIPELINE] Starting CAH pipeline")
 
 	// Stage 1: PREPARE
-	e.logger.Info("[CAH:PREPARE] Starting preparation phase...")
+	log.Info("[CAH:PREPARE] Starting preparation phase...")
 	pStart := time.Now()
-	prepareReport, err := e.Prepare(ctx, owner, repo, ref, filePaths)
+	prepareReport, err := e.Prepare(ctx, owner, repo, ref, filePaths, commitPinned)
 	if err != nil {
-		e.logger.Errorf("[CAH:PREPARE] Failed: %v", err)
+		log.Errorf("[CAH:PREPARE] Failed: %v", err)
 		return nil, fmt.Errorf("prepare failed: %w", err)
 	}
 	prepareReport.ScanTime = time.Since(pStart)
 	report.Prepare = prepareReport
 	report.Stages = append(report.Stages, "prepare")
-	e.logger.Infof("[CAH:PREPARE] Done in %v — found %d entry points, %d attack surface entries",
+	log.Infof("[CAH:PREPARE] Done in %v — found %d entry points, %d attack surface entries",
 		prepareReport.ScanTime, len(prepareReport.EntryPoints), len(prepareReport.AttackSurface))
 
 	// Stage 2: SCAN
-	e.logger.Info("[CAH:SCAN] Starting scan phase...")
+	log.Info("[CAH:SCAN] Starting scan phase...")
 	sStart := time.Now()
-	candidates, err := e.Scan(ctx, prepareReport)
+	candidates, scanSummary, workspaceMeta, repoGraph, err := e.Scan(ctx, prepareReport)
 	if err != nil {
-		e.logger.Errorf("[CAH:SCAN] Failed: %v", err)
+		log.Errorf("[CAH:SCAN] Failed: %v", err)
 		return nil, fmt.Errorf("scan failed: %w", err)
 	}
 	report.Candidates = candidates
+	report.ScannerResults = scanSummary.Results
+	report.Workspace = workspaceMeta
+	report.Graph = repoGraph
 	report.Stages = append(report.Stages, "scan")
-	e.logger.Infof("[CAH:SCAN] Done in %v — found %d candidates", time.Since(sStart), len(candidates))
+	scanSummary.LogResults(e.logger, id)
+	scanners.LogMeta(workspaceMeta, id, log)
+	log.Infof("[CAH:SCAN] Done in %v — found %d candidates", time.Since(sStart), len(candidates))
 
 	// Stage 3: VALIDATE
-	e.logger.Info("[CAH:VALIDATE] Starting validation phase...")
+	log.Info("[CAH:VALIDATE] Starting validation phase...")
 	vStart := time.Now()
 	validated, err := e.Validate(ctx, candidates)
 	if err != nil {
-		e.logger.Errorf("[CAH:VALIDATE] Failed: %v", err)
+		log.Errorf("[CAH:VALIDATE] Failed: %v", err)
 		return nil, fmt.Errorf("validate failed: %w", err)
 	}
 	report.Validated = validated
 	report.Stages = append(report.Stages, "validate")
-	e.logger.Infof("[CAH:VALIDATE] Done in %v — %d/%d validated", time.Since(vStart), len(validated), len(candidates))
+	log.Infof("[CAH:VALIDATE] Done in %v — %d/%d validated", time.Since(vStart), len(validated), len(candidates))
 
 	// Stage 4: DEDUP
-	e.logger.Info("[CAH:DEDUP] Starting deduplication phase...")
+	log.Info("[CAH:DEDUP] Starting deduplication phase...")
 	deduped := e.Dedup(validated)
 	report.Deduped = deduped
 	report.Stages = append(report.Stages, "dedup")
-	e.logger.Infof("[CAH:DEDUP] Done — %d unique findings from %d candidates", len(deduped), len(candidates))
+	log.Infof("[CAH:DEDUP] Done — %d unique findings from %d candidates", len(deduped), len(candidates))
 
 	// Stage 5: PROVE
-	e.logger.Info("[CAH:PROVE] Starting proof generation phase...")
+	log.Info("[CAH:PROVE] Starting proof generation phase...")
 	pStart = time.Now()
 	proven, err := e.Prove(ctx, deduped)
 	if err != nil {
-		e.logger.Warnf("[CAH:PROVE] Some proofs failed: %v", err)
+		log.Warnf("[CAH:PROVE] Some proofs failed: %v", err)
 	}
 	report.Proven = proven
 	report.Stages = append(report.Stages, "prove")
-	e.logger.Infof("[CAH:PROVE] Done in %v — generated %d proofs", time.Since(pStart), len(proven))
+	log.Infof("[CAH:PROVE] Done in %v — generated %d proofs", time.Since(pStart), len(proven))
 
 	// Compile stats
 	report.Stats = e.compileStats(report)
 	report.TotalTimeMs = time.Since(startTime).Milliseconds()
 
-	e.logger.Infof("[CAH:PIPELINE] Complete in %v — %d critical, %d high, %d medium, %d low",
+	log.Infof("[CAH:PIPELINE] Complete in %v — %d critical, %d high, %d medium, %d low",
 		time.Since(startTime), report.Stats.CriticalCount, report.Stats.HighCount,
 		report.Stats.MediumCount, report.Stats.LowCount)
 
@@ -225,10 +261,11 @@ func (e *Engine) RunCAHPipelineWithOptions(ctx context.Context, owner, repo, ref
 // ============================================================================
 
 // Prepare maps the repository attack surface, optionally scoped to targetFiles.
-func (e *Engine) Prepare(ctx context.Context, owner, repo, ref string, targetFiles []string) (*PrepareReport, error) {
+func (e *Engine) Prepare(ctx context.Context, owner, repo, ref string, targetFiles []string, commitPinned bool) (*PrepareReport, error) {
 	report := &PrepareReport{
 		Repository:      fmt.Sprintf("%s/%s", owner, repo),
 		Commit:          ref,
+		CommitPinned:    commitPinned,
 		Languages:       make(map[string]int),
 		EntryPoints:     []EntryPoint{},
 		AttackSurface:   []AttackSurfaceEntry{},
@@ -250,24 +287,24 @@ func (e *Engine) Prepare(ctx context.Context, owner, repo, ref string, targetFil
 		report.Languages[lang]++
 	}
 
-	// Use AI to identify entry points, attack surface, and trust boundaries
-	// by analyzing all files together (Prepare stage gets the full picture)
-	e.logger.Info("[CAH:PREPARE] Running attack surface analysis...")
+	// Use AI to identify entry points, attack surface, and trust boundaries when LLM stages are enabled.
+	if e.llmEnabledFor(ctx) {
+		log := e.scanLogger(ctx)
+		log.Info("[CAH:PREPARE] Running attack surface analysis...")
 
-	// Build a context summary for the AI
-	contextSummary := e.buildPrepareContext(files)
+		contextSummary := e.buildPrepareContext(files)
 
-	// Call AI to identify entry points and attack surface
-	surfaceFindings, err := e.aiClient.AnalyzeAttackSurface(ctx, &ai.AttackSurfaceRequest{
-		RepositoryName: report.Repository,
-		Files:          contextSummary,
-	})
-	if err != nil {
-		e.logger.Warnf("[CAH:PREPARE] Attack surface analysis failed: %v", err)
-	} else {
-		report.EntryPoints = surfaceFindings.EntryPoints
-		report.AttackSurface = surfaceFindings.AttackSurface
-		report.TrustBoundaries = surfaceFindings.TrustBoundaries
+		surfaceFindings, err := e.aiClient.AnalyzeAttackSurface(ctx, &ai.AttackSurfaceRequest{
+			RepositoryName: report.Repository,
+			Files:          contextSummary,
+		})
+		if err != nil {
+			log.Warnf("[CAH:PREPARE] Attack surface analysis failed: %v", err)
+		} else {
+			report.EntryPoints = surfaceFindings.EntryPoints
+			report.AttackSurface = surfaceFindings.AttackSurface
+			report.TrustBoundaries = surfaceFindings.TrustBoundaries
+		}
 	}
 
 	return report, nil
@@ -323,65 +360,135 @@ const (
 )
 
 // Scan runs deterministic checks first, then LLM auditors on flagged files.
-func (e *Engine) Scan(ctx context.Context, prepare *PrepareReport) ([]CandidateFinding, error) {
+func (e *Engine) Scan(ctx context.Context, prepare *PrepareReport) ([]CandidateFinding, scanners.RunSummary, models.WorkspaceMeta, *graph.Graph, error) {
+	log := e.scanLogger(ctx)
+	summary := scanners.RunSummary{}
+	workspaceMeta := models.WorkspaceMeta{
+		ModeUsed:     scanners.WorkspaceModeAPI,
+		RefUsed:      prepare.Commit,
+		CommitPinned: prepare.CommitPinned,
+	}
+	var repoGraph *graph.Graph
 	owner, repo := splitRepository(prepare.Repository)
 
 	analyzableFiles, err := e.resolveAnalyzableFiles(ctx, owner, repo, prepare.Commit, prepare.TargetFiles)
 	if err != nil {
-		return nil, fmt.Errorf("failed to resolve files: %w", err)
+		return nil, summary, workspaceMeta, nil, fmt.Errorf("failed to resolve files: %w", err)
 	}
 
 	fileContents, err := e.fetchFileContents(ctx, owner, repo, prepare.Commit, analyzableFiles)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch file contents: %w", err)
+		return nil, summary, workspaceMeta, nil, fmt.Errorf("failed to fetch file contents: %w", err)
 	}
 
+	cfg := e.configFor(ctx)
 	var allCandidates []CandidateFinding
-	depth := e.config.AnalysisDepth
+	depth := cfg.AnalysisDepth
 	if depth <= 0 {
 		depth = 3
 	}
 
 	// Stage 2a: deterministic static analysis (depth >= 1)
-	if depth >= 1 && (e.config.EnableSecurity || e.config.EnableQuality) {
-		staticFindings := RunStaticAnalysis(fileContents, e.config.EnableSecurity, e.config.EnableQuality)
+	if depth >= 1 && (cfg.EnableSecurity || cfg.EnableQuality) {
+		staticFindings := RunStaticAnalysis(fileContents, cfg.EnableSecurity, cfg.EnableQuality)
 		for _, f := range staticFindings {
 			allCandidates = append(allCandidates, CandidateFinding(f))
 		}
 		e.logger.Infof("[CAH:SCAN] Static analysis found %d candidate(s)", len(staticFindings))
 	}
 
-	// Stage 2a-b: external scanners (depth >= 2)
-	if depth >= 2 && (e.config.Scanners.EnableTrivy || e.config.Scanners.EnableGrype || e.config.Scanners.EnableLinters) {
-		manifestFiles, err := e.fetchManifestContents(ctx, owner, repo, prepare.Commit)
-		if err != nil {
-			e.logger.Warnf("[CAH:SCAN] Failed to fetch dependency manifests: %v", err)
+	// Stage 2a-health: deterministic repository health checks (depth >= 2)
+	if depth >= 2 && cfg.Health.Enabled {
+		allPaths := make([]string, 0, len(analyzableFiles))
+		for _, f := range analyzableFiles {
+			allPaths = append(allPaths, f.Path)
 		}
-		workspaceFiles := mergeFileContents(fileContents, manifestFiles)
-		entries := toScannerEntries(workspaceFiles)
-		workspaceDir, cleanup, err := scanners.CreateWorkspace(entries)
+		healthInputs := make([]health.FileContent, 0, len(fileContents))
+		for _, f := range fileContents {
+			healthInputs = append(healthInputs, health.FileContent{Path: f.Path, Content: f.Content, Language: f.Language})
+		}
+		healthFindings := health.Run(health.RunInput{
+			Files:    health.InputsFromFileContents(healthInputs),
+			AllPaths: allPaths,
+		}, cfg.Health, cfg.SkipPatterns)
+		for _, f := range health.ToCandidateFindings(healthFindings) {
+			allCandidates = append(allCandidates, CandidateFinding(f))
+		}
+		e.logger.Infof("[CAH:SCAN] Health checks found %d candidate(s)", len(healthFindings))
+	}
+
+	// Stage 2a-graph: repository map (depth >= 2)
+	if depth >= 2 && cfg.Graph.Enabled {
+		allPaths := make([]string, 0, len(analyzableFiles))
+		for _, f := range analyzableFiles {
+			allPaths = append(allPaths, f.Path)
+		}
+		graphFiles := make([]graph.FileInput, 0, len(fileContents))
+		for _, f := range fileContents {
+			graphFiles = append(graphFiles, graph.FileInput{Path: f.Path, Content: f.Content, Language: f.Language})
+		}
+		overlays := graphOverlaysFromCandidates(allCandidates)
+		g, graphFindings := graph.Build(ctx, graph.BuildInput{
+			ScanID:   scanid.From(ctx),
+			Files:    graphFiles,
+			AllPaths: allPaths,
+			Findings: overlays,
+		}, cfg.Graph, cfg.SkipPatterns)
+		repoGraph = &g
+		for _, f := range graph.ToCandidateFindings(graphFindings) {
+			allCandidates = append(allCandidates, CandidateFinding(f))
+		}
+		e.logger.Infof("[CAH:SCAN] Code graph generated %d nodes, %d edges, %d graph finding(s)",
+			g.Metrics.NodeCount, g.Metrics.EdgeCount, len(graphFindings))
+	}
+
+	// Stage 2a-b: external scanners (depth >= 2)
+	if depth >= 2 && (cfg.Scanners.EnableTrivy || cfg.Scanners.EnableGrype || cfg.Scanners.EnableGitleaks || cfg.Scanners.EnableSemgrep || cfg.Scanners.EnableGovulncheck || cfg.Scanners.EnableGosec || cfg.Scanners.EnableStaticcheck || cfg.Scanners.EnableHadolint || cfg.Scanners.EnableCheckov || cfg.Scanners.EnableLinters) {
+		apiEntries := toScannerEntries(fileContents)
+		if cfg.Workspace.NormalizedMode() != scanners.WorkspaceModeArchive {
+			manifestFiles, err := e.fetchManifestContents(ctx, owner, repo, prepare.Commit)
+			if err != nil {
+				log.Warnf("[CAH:SCAN] Failed to fetch dependency manifests: %v", err)
+			}
+			apiEntries = toScannerEntries(mergeFileContents(fileContents, manifestFiles))
+		}
+
+		prepared, err := scanners.PrepareWorkspace(
+			ctx,
+			cfg.Workspace,
+			e.giteaClient,
+			owner,
+			repo,
+			prepare.Commit,
+			prepare.CommitPinned,
+			apiEntries,
+		)
 		if err != nil {
-			e.logger.Warnf("[CAH:SCAN] Failed to create scanner workspace: %v", err)
+			log.Warnf("[CAH:SCAN] Failed to prepare scanner workspace: %v", err)
+			workspaceMeta.WorkspaceError = err.Error()
 		} else {
-			defer cleanup()
-			scannerFindings := scanners.RunAll(ctx, e.logger, workspaceDir, entries, e.config.Scanners, e.config.EnableSecurity, e.config.EnableQuality)
-			allCandidates = append(allCandidates, scannerFindings...)
-			e.logger.Infof("[CAH:SCAN] External scanners found %d candidate(s)", len(scannerFindings))
+			defer prepared.Cleanup()
+			workspaceMeta = prepared.Meta
+			summary = scanners.RunAll(ctx, e.logger, prepared.Dir, prepared.Entries, cfg.Scanners, cfg.EnableSecurity, cfg.EnableQuality)
+			for _, finding := range summary.Candidates() {
+				allCandidates = append(allCandidates, finding.ToCandidateFinding())
+			}
+			log.Infof("[CAH:SCAN] External scanners found %d candidate(s) (workspace_mode=%s)", len(summary.Candidates()), workspaceMeta.ModeUsed)
 		}
 	}
 
 	// Stage 2c: LLM auditors (depth >= 3)
-	if depth < 3 || !e.config.EnableSecurity || !e.config.EnableLLMAuditors {
-		return allCandidates, nil
+	if !e.llmEnabledFor(ctx) || !e.configFor(ctx).EnableSecurity {
+		return allCandidates, summary, workspaceMeta, repoGraph, nil
 	}
 
 	llmTargets := e.selectLLMTargetFiles(fileContents, allCandidates)
 	if len(llmTargets) == 0 {
-		e.logger.Info("[CAH:SCAN] No files selected for LLM audit")
-		return allCandidates, nil
+		log.Info("[CAH:SCAN] No files selected for LLM audit")
+		return allCandidates, summary, workspaceMeta, repoGraph, nil
 	}
 
-	e.logger.Infof("[CAH:SCAN] Running LLM auditors on %d file(s)", len(llmTargets))
+	log.Infof("[CAH:SCAN] Running LLM auditors on %d file(s)", len(llmTargets))
 
 	type result struct {
 		findings []CandidateFinding
@@ -413,13 +520,13 @@ func (e *Engine) Scan(ctx context.Context, prepare *PrepareReport) ([]CandidateF
 	for i := 0; i < len(auditors); i++ {
 		r := <-results
 		if r.err != nil {
-			e.logger.Warnf("[CAH:SCAN] Auditor %s failed: %v", r.auditor, r.err)
+			log.Warnf("[CAH:SCAN] Auditor %s failed: %v", r.auditor, r.err)
 			continue
 		}
 		allCandidates = append(allCandidates, r.findings...)
 	}
 
-	return allCandidates, nil
+	return allCandidates, summary, workspaceMeta, repoGraph, nil
 }
 
 // selectLLMTargetFiles limits LLM usage to files flagged by deterministic checks when possible.
@@ -492,12 +599,10 @@ func toScannerEntries(files []FileContent) []scanners.FileEntry {
 }
 
 func isDeterministicAuditor(auditorType string) bool {
-	switch auditorType {
-	case "static", "trivy", "grype", "golangci-lint", "ruff", "shellcheck":
+	if auditorType == "static" {
 		return true
-	default:
-		return false
 	}
+	return scanners.IsDeterministicSource(auditorType)
 }
 
 func (e *Engine) fetchFileContents(ctx context.Context, owner, repo, ref string, files []gitea.RepositoryContent) ([]FileContent, error) {
@@ -646,14 +751,25 @@ func (e *Engine) Validate(ctx context.Context, candidates []CandidateFinding) ([
 
 // validateOne runs a single candidate through debaters
 func (e *Engine) validateOne(ctx context.Context, candidate CandidateFinding) (*ValidatedFinding, error) {
-	// Deterministic scanner findings skip LLM debate (token savings)
-	if isDeterministicAuditor(candidate.AuditorType) && candidate.Confidence >= 0.85 {
+	// Deterministic findings skip LLM debate (scanners, static analysis, health checks).
+	if isDeterministicAuditor(candidate.AuditorType) {
 		return &ValidatedFinding{
 			CandidateFinding: candidate,
 			DebateResult: DebateResult{
 				AdvocateConfidence: candidate.Confidence,
 				CounselConfidence:  0.1,
 				Outcome:            "validated",
+			},
+		}, nil
+	}
+
+	if !e.llmEnabledFor(ctx) {
+		return &ValidatedFinding{
+			CandidateFinding: candidate,
+			DebateResult: DebateResult{
+				AdvocateConfidence: candidate.Confidence,
+				CounselConfidence:  0.0,
+				Outcome:            "downgraded",
 			},
 		}, nil
 	}
@@ -810,6 +926,11 @@ func (e *Engine) Prove(ctx context.Context, findings []DedupedFinding) ([]Proven
 			continue
 		}
 
+		if !e.llmEnabledFor(ctx) {
+			proven = append(proven, ProvenFinding{DedupedFinding: f})
+			continue
+		}
+
 		poc, err := e.aiClient.GeneratePoC(ctx, &ai.PoCRequest{
 			Finding: f,
 		})
@@ -835,6 +956,26 @@ func (e *Engine) Prove(ctx context.Context, findings []DedupedFinding) ([]Proven
 // ============================================================================
 // HELPER METHODS
 // ============================================================================
+
+func firstNonEmptyRuleID(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return strings.TrimSpace(value)
+		}
+	}
+	return ""
+}
+
+func packageNameFromFinding(f ProvenFinding) string {
+	code := strings.TrimSpace(f.Evidence.Code)
+	if code == "" {
+		return ""
+	}
+	if idx := strings.Index(code, "@"); idx > 0 {
+		return code[:idx]
+	}
+	return ""
+}
 
 func firstNonEmptyCategory(values ...string) string {
 	for _, value := range values {
@@ -954,12 +1095,20 @@ func (e *Engine) AnalyzeRepository(ctx context.Context, owner, repo, ref string)
 func (e *Engine) AnalyzeChangedFiles(ctx context.Context, owner, repo, ref string, filePaths []string) (*AnalysisResult, error) {
 	if len(filePaths) == 0 {
 		e.logger.Info("No changed files to analyze")
+		commitSHA := ""
+		if looksLikeCommitSHA(ref) {
+			commitSHA = ref
+		}
 		return &AnalysisResult{
 			Repository: fmt.Sprintf("%s/%s", owner, repo),
 			Commit:     ref,
+			CommitSHA:  commitSHA,
 		}, nil
 	}
-	return e.analysisResultFromReport(ctx, owner, repo, ref, ref, &AnalysisOptions{FilePaths: filePaths})
+	return e.analysisResultFromReport(ctx, owner, repo, ref, ref, &AnalysisOptions{
+		FilePaths:    filePaths,
+		CommitPinned: looksLikeCommitSHA(ref),
+	})
 }
 
 // AnalyzePullRequest analyzes only files changed in a pull request.
@@ -974,9 +1123,19 @@ func (e *Engine) AnalyzePullRequest(ctx context.Context, owner, repo string, prN
 		return nil, fmt.Errorf("failed to get changed files: %w", err)
 	}
 
-	e.logger.Infof("PR #%d: analyzing %d changed file(s) on branch %s", prNumber, len(changedFiles), pr.HeadBranch)
+	ref, commitPinned := PullRequestRef(pr)
+	if !commitPinned {
+		e.logger.Warnf("PR #%d: archive ref is branch %q (not commit-pinned) — workspace may drift if branch moves", prNumber, ref)
+	} else {
+		e.logger.Infof("PR #%d: using commit-pinned ref %s", prNumber, ref)
+	}
 
-	return e.analysisResultFromReport(ctx, owner, repo, pr.HeadBranch, fmt.Sprintf("PR #%d", prNumber), &AnalysisOptions{FilePaths: changedFiles})
+	e.logger.Infof("PR #%d: analyzing %d changed file(s)", prNumber, len(changedFiles))
+
+	return e.analysisResultFromReport(ctx, owner, repo, ref, fmt.Sprintf("PR #%d", prNumber), &AnalysisOptions{
+		FilePaths:    changedFiles,
+		CommitPinned: commitPinned,
+	})
 }
 
 func (e *Engine) analysisResultFromReport(ctx context.Context, owner, repo, ref, commitLabel string, opts *AnalysisOptions) (*AnalysisResult, error) {
@@ -990,11 +1149,24 @@ func (e *Engine) analysisResultFromReport(ctx context.Context, owner, repo, ref,
 	}
 
 	result := &AnalysisResult{
-		Repository:    fmt.Sprintf("%s/%s", owner, repo),
-		Commit:        commitLabel,
-		AnalysisTime:  time.Duration(report.TotalTimeMs) * time.Millisecond,
-		FilesAnalyzed: report.Stats.FilesAnalyzed,
-		IssuesFound:   len(report.Proven),
+		Repository:     fmt.Sprintf("%s/%s", owner, repo),
+		Commit:         commitLabel,
+		ScanID:         report.ScanID,
+		AnalysisTime:   time.Duration(report.TotalTimeMs) * time.Millisecond,
+		FilesAnalyzed:  report.Stats.FilesAnalyzed,
+		IssuesFound:    len(report.Proven),
+		ScannerResults: report.ScannerResults,
+		WorkspaceModeUsed: report.Workspace.ModeUsed,
+	}
+	if report.Graph != nil {
+		result.Graph = report.Graph
+	}
+	if policy, ok := ScanPolicyFromContext(ctx); ok {
+		s := SnapshotFromPolicy(policy)
+		result.PolicySnapshot = &s
+	}
+	if looksLikeCommitSHA(ref) {
+		result.CommitSHA = ref
 	}
 
 	// Prefer proven findings (include PoC); fall back to deduped if prove stage empty
@@ -1039,6 +1211,10 @@ func (e *Engine) analysisResultFromReport(ctx context.Context, owner, repo, ref,
 			ProofOfConcept: poc,
 			Confidence:     f.Confidence,
 			ClusterID:      f.ClusterID,
+			Source:         f.AuditorType,
+			RuleID:         firstNonEmptyRuleID(f.ID, f.ClusterID),
+			ScanID:         report.ScanID,
+			PackageName:    packageNameFromFinding(f),
 		})
 	}
 	return result, nil
@@ -1079,4 +1255,24 @@ func splitRepository(fullName string) (owner, repo string) {
 		return fullName, ""
 	}
 	return parts[0], parts[1]
+}
+
+func (e *Engine) scanLogger(ctx context.Context) *logrus.Entry {
+	if id := scanid.From(ctx); id != "" {
+		return e.logger.WithField("scan_id", id)
+	}
+	return logrus.NewEntry(e.logger)
+}
+
+func graphOverlaysFromCandidates(candidates []CandidateFinding) []graph.FindingOverlay {
+	out := make([]graph.FindingOverlay, 0, len(candidates))
+	for _, c := range candidates {
+		out = append(out, graph.FindingOverlay{
+			ID: c.ID, File: c.File, Line: c.Line,
+			Severity: c.Severity, Category: c.Category,
+			Source: c.AuditorType, RuleID: c.ID, Title: c.Hypothesis,
+			Confidence: c.Confidence,
+		})
+	}
+	return out
 }

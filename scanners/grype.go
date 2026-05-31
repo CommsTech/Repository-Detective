@@ -37,10 +37,12 @@ type grypeLocation struct {
 }
 
 // RunGrype scans a workspace directory with Grype.
-func RunGrype(ctx context.Context, logger *logrus.Logger, dir string, cfg Config) ([]Finding, error) {
+func RunGrype(ctx context.Context, logger *logrus.Logger, dir string, cfg Config) RunResult {
+	result := RunResult{Scanner: "grype"}
 	if !commandAvailable("grype") {
 		logger.Warn("[SCANNER:grype] binary not found — install grype or use the official Bugbot Docker image")
-		return nil, nil
+		result.Status = StatusBinaryMissing
+		return result
 	}
 
 	args := []string{
@@ -55,14 +57,29 @@ func RunGrype(ctx context.Context, logger *logrus.Logger, dir string, cfg Config
 	timeout := time.Duration(cfg.TimeoutSeconds) * time.Second
 	output, err := runCommand(ctx, timeout, dir, "grype", args...)
 	if err != nil && len(output) == 0 {
-		logger.Warnf("[SCANNER:grype] scan failed: %v", err)
-		return nil, nil
+		result.Status = classifyCommandError(err)
+		result.Detail = err.Error()
+		logger.Warnf("[SCANNER:grype] scan failed: status=%s err=%v", result.Status, err)
+		return result
 	}
 
+	findings, parseErr := parseGrypeOutput(output, dir, cfg)
+	if parseErr != nil {
+		result.Status = StatusParseFailed
+		result.Detail = parseErr.Error()
+		logger.Warnf("[SCANNER:grype] failed to parse output: %v", parseErr)
+		return result
+	}
+
+	result = resultWithFindings("grype", findings)
+	logger.Infof("[SCANNER:grype] status=%s findings=%d", result.Status, len(findings))
+	return result
+}
+
+func parseGrypeOutput(output []byte, dir string, cfg Config) ([]Finding, error) {
 	var report grypeReport
 	if err := json.Unmarshal(output, &report); err != nil {
-		logger.Warnf("[SCANNER:grype] failed to parse output: %v", err)
-		return nil, nil
+		return nil, err
 	}
 
 	minSeverity := cfg.GrypeFailOn
@@ -102,6 +119,5 @@ func RunGrype(ctx context.Context, logger *logrus.Logger, dir string, cfg Config
 		})
 	}
 
-	logger.Infof("[SCANNER:grype] found %d issue(s)", len(findings))
 	return findings, nil
 }

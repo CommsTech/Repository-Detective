@@ -7,41 +7,24 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+var defaultRegistry = DefaultScannerRegistry()
+
 // RunAll executes enabled external scanners against a workspace.
-func RunAll(ctx context.Context, logger *logrus.Logger, dir string, entries []FileEntry, cfg Config, enableSecurity, enableQuality bool) []models.CandidateFinding {
-	if !enableSecurity && !enableQuality {
-		return nil
-	}
+func RunAll(ctx context.Context, logger *logrus.Logger, dir string, entries []FileEntry, cfg Config, enableSecurity, enableQuality bool) RunSummary {
+	return defaultRegistry.RunAll(ctx, RunRequest{
+		Logger:         logger,
+		Workspace:      dir,
+		Entries:        entries,
+		Config:         cfg,
+		EnableSecurity: enableSecurity,
+		EnableQuality:  enableQuality,
+	})
+}
 
-	var raw []Finding
-
-	if cfg.EnableTrivy && enableSecurity {
-		findings, err := RunTrivy(ctx, logger, dir, cfg)
-		if err != nil {
-			logger.Warnf("[SCANNER] trivy error: %v", err)
-		} else {
-			raw = append(raw, findings...)
-		}
-	}
-
-	if cfg.EnableGrype && enableSecurity {
-		findings, err := RunGrype(ctx, logger, dir, cfg)
-		if err != nil {
-			logger.Warnf("[SCANNER] grype error: %v", err)
-		} else {
-			raw = append(raw, findings...)
-		}
-	}
-
-	if cfg.EnableLinters {
-		findings, err := RunLinters(ctx, logger, dir, entries, enableSecurity, enableQuality, cfg)
-		if err != nil {
-			logger.Warnf("[SCANNER] linters error: %v", err)
-		} else {
-			raw = append(raw, findings...)
-		}
-	}
-
+// RunAllCandidates preserves the previous helper return type for callers that only need findings.
+func RunAllCandidates(ctx context.Context, logger *logrus.Logger, dir string, entries []FileEntry, cfg Config, enableSecurity, enableQuality bool) []models.CandidateFinding {
+	summary := RunAll(ctx, logger, dir, entries, cfg, enableSecurity, enableQuality)
+	raw := summary.Candidates()
 	candidates := make([]models.CandidateFinding, 0, len(raw))
 	for _, finding := range raw {
 		candidates = append(candidates, finding.ToCandidateFinding())

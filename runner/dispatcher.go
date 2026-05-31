@@ -1,0 +1,90 @@
+package runner
+
+import (
+	"context"
+	"crypto/rand"
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
+	"time"
+
+	"git.commsnet.org/commstech/bugbot/analyzers"
+	"git.commsnet.org/commstech/bugbot/store"
+	"github.com/sirupsen/logrus"
+)
+
+// Dispatcher creates runner jobs on the core service.
+type Dispatcher struct {
+	store  store.QueryStore
+	cfg    Config
+	logger *logrus.Logger
+}
+
+// NewDispatcher creates a job dispatcher.
+func NewDispatcher(s store.QueryStore, cfg Config, logger *logrus.Logger) *Dispatcher {
+	return &Dispatcher{store: s, cfg: cfg.Normalized(), logger: logger}
+}
+
+// CreateScanJob enqueues a runner job for a started scan.
+func (d *Dispatcher) CreateScanJob(ctx context.Context, repo store.Repository, scanID, ref, commitSHA string, policy analyzers.PolicySnapshot) (store.RunnerJob, error) {
+	if d.store == nil {
+		return store.RunnerJob{}, fmt.Errorf("database disabled")
+	}
+	running, err := d.store.CountRunningRunnerJobs(ctx)
+	if err != nil {
+		return store.RunnerJob{}, err
+	}
+	if running >= d.cfg.MaxConcurrentJobs {
+		return store.RunnerJob{}, fmt.Errorf("runner job capacity reached")
+	}
+
+	jobID, err := newJobID()
+	if err != nil {
+		return store.RunnerJob{}, err
+	}
+	spec := BuildJobSpec(d.cfg, jobID, repo, scanID, ref, commitSHA, policy)
+	specJSON, err := json.Marshal(spec)
+	if err != nil {
+		return store.RunnerJob{}, err
+	}
+	policyJSON, err := json.Marshal(policy)
+	if err != nil {
+		return store.RunnerJob{}, err
+	}
+
+	now := time.Now().UTC()
+	expires := now.Add(time.Duration(d.cfg.JobTimeoutSeconds) * time.Second)
+	job := store.RunnerJob{
+		JobID:              jobID,
+		RepositoryID:       repo.ID,
+		ScanID:             scanID,
+		JobType:            store.RunnerJobTypeScanFullRepo,
+		Status:             store.RunnerJobStatusQueued,
+		RunnerMode:         ModeGiteaActions,
+		Ref:                ref,
+		CommitSHA:          commitSHA,
+		PolicySnapshotJSON: policyJSON,
+		JobSpecJSON:        specJSON,
+		ResultSummaryJSON:  json.RawMessage(`{}`),
+		CreatedAt:          now,
+		ExpiresAt:          &expires,
+	}
+	created, err := d.store.CreateRunnerJob(ctx, job)
+	if err != nil {
+		return store.RunnerJob{}, err
+	}
+	if d.logger != nil {
+		d.logger.WithFields(logrus.Fields{
+			"job_id": jobID, "scan_id": scanID, "repo": repo.FullName,
+		}).Info("Runner job queued")
+	}
+	return created, nil
+}
+
+func newJobID() (string, error) {
+	buf := make([]byte, 8)
+	if _, err := rand.Read(buf); err != nil {
+		return "", err
+	}
+	return "rj-" + hex.EncodeToString(buf), nil
+}

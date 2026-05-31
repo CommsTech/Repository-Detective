@@ -1,0 +1,150 @@
+package store
+
+import (
+	"context"
+	"time"
+)
+
+// RepositorySummary includes aggregate stats for list views.
+type RepositorySummary struct {
+	Repository
+	LastScanAt         *time.Time
+	LastScanStatus     string
+	OpenFindingsCount  int
+	TotalFindingsCount int
+}
+
+// ScanWithRepo attaches repository metadata to a scan.
+type ScanWithRepo struct {
+	Scan
+	RepoFullName string
+}
+
+// FindingFilter filters finding list queries.
+type FindingFilter struct {
+	RepositoryID int64
+	Severity     string
+	Category     string
+	Status       string
+	Source       string
+	Limit        int
+	Offset       int
+}
+
+// FindingListItem is a finding row for list views.
+type FindingListItem struct {
+	Finding
+	RepoFullName        string
+	ExternalIssueNumber int
+	ExternalIssueURL    string
+}
+
+// FindingDetail is a full finding with related records.
+type FindingDetail struct {
+	FindingListItem
+	Instances       []FindingInstance
+	ExternalIssues  []ExternalIssue
+	LifecycleEvents []LifecycleEvent
+}
+
+// DashboardSummary powers the operator dashboard.
+type DashboardSummary struct {
+	TotalRepositories      int
+	RecentScans            []ScanWithRepo
+	FailedScansCount       int
+	ScannerFailuresCount   int
+	OpenFindingsBySeverity map[string]int
+	RecentLifecycleEvents  []LifecycleEvent
+	ScheduledScansCount    int
+	LastScheduledScanAt    *time.Time
+	RecentScheduledScans   []ScanWithRepo
+	RunnerJobsByStatus     map[string]int
+	Remediation            RemediationSummary
+	Closure                ClosureSummary
+	Lifecycle              LifecycleSummary
+}
+
+// ListOptions bounds list query size.
+type ListOptions struct {
+	Limit  int
+	Offset int
+}
+
+// NormalizeListOptions applies defaults and caps.
+func NormalizeListOptions(opts ListOptions) ListOptions {
+	if opts.Limit <= 0 {
+		opts.Limit = 50
+	}
+	if opts.Limit > 200 {
+		opts.Limit = 200
+	}
+	if opts.Offset < 0 {
+		opts.Offset = 0
+	}
+	return opts
+}
+
+// QueryStore extends Store with read APIs for the control plane.
+type QueryStore interface {
+	Store
+
+	GetRepository(ctx context.Context, id int64) (Repository, error)
+
+	ListRepositoriesWithSummary(ctx context.Context, opts ListOptions) ([]RepositorySummary, error)
+	ListScansByRepository(ctx context.Context, repositoryID int64, opts ListOptions) ([]Scan, error)
+	ListScannerResultsByScan(ctx context.Context, scanID string) ([]ScannerResultRecord, error)
+
+	ListFindings(ctx context.Context, filter FindingFilter) ([]FindingListItem, error)
+	GetFindingDetail(ctx context.Context, id int64) (FindingDetail, error)
+	ListLifecycleEventsByFinding(ctx context.Context, findingID int64) ([]LifecycleEvent, error)
+
+	DashboardSummary(ctx context.Context, recentLimit int) (DashboardSummary, error)
+	ListExternalIssuesByRepository(ctx context.Context, repositoryID int64, opts ListOptions) ([]ExternalIssue, error)
+	ListExternalIssuesByFinding(ctx context.Context, findingID int64) ([]ExternalIssue, error)
+
+	ListScheduledRepositories(ctx context.Context) ([]ScheduledRepository, error)
+	HasRunningScanForRepository(ctx context.Context, repositoryID int64) (bool, error)
+	GetLastScheduledScanFinishedAt(ctx context.Context, repositoryID int64) (*time.Time, error)
+	ListRecentScheduledScans(ctx context.Context, limit int) ([]ScanWithRepo, error)
+	CountScheduledScansSince(ctx context.Context, since time.Time) (int, error)
+
+	CreateAuditRequest(ctx context.Context, req AuditRequest) (AuditRequest, error)
+	UpdateAuditRequest(ctx context.Context, req AuditRequest) error
+	GetAuditRequest(ctx context.Context, auditID string) (AuditRequest, error)
+	ListAuditRequests(ctx context.Context, opts ListOptions) ([]AuditRequest, error)
+	AddAuditFindings(ctx context.Context, findings []AuditFinding) error
+	ListAuditFindings(ctx context.Context, auditID string) ([]AuditFinding, error)
+	AddDisclosureReport(ctx context.Context, report DisclosureReport) (DisclosureReport, error)
+	ListDisclosureReports(ctx context.Context, auditID string) ([]DisclosureReport, error)
+	GetDisclosureReport(ctx context.Context, id int64) (DisclosureReport, error)
+	MarkDisclosureReportReviewed(ctx context.Context, id int64) error
+
+	ListRunnerJobs(ctx context.Context, opts ListOptions) ([]RunnerJob, error)
+	ListRunnerJobsByRepository(ctx context.Context, repositoryID int64, opts ListOptions) ([]RunnerJob, error)
+	GetRunnerJob(ctx context.Context, jobID string) (RunnerJob, error)
+	GetRunnerJobByScanID(ctx context.Context, scanID string) (RunnerJob, error)
+	CountRunnerJobsByStatus(ctx context.Context) (map[string]int, error)
+
+	SaveRemediationPlan(ctx context.Context, plan RemediationPlanRecord) (RemediationPlanRecord, error)
+	GetRemediationPlanByPlanID(ctx context.Context, planID string) (RemediationPlanRecord, error)
+	GetLatestRemediationPlanByFindingID(ctx context.Context, findingID int64) (RemediationPlanRecord, error)
+	UpdateRemediationPlanStatus(ctx context.Context, planID, status string) error
+	SupersedeRemediationPlansForFinding(ctx context.Context, findingID int64) error
+	RemediationSummary(ctx context.Context) (RemediationSummary, error)
+
+	SavePatchAttempt(ctx context.Context, attempt PatchAttemptRecord) (PatchAttemptRecord, error)
+	UpdatePatchAttempt(ctx context.Context, attempt PatchAttemptRecord) error
+	GetPatchAttemptByAttemptID(ctx context.Context, attemptID string) (PatchAttemptRecord, error)
+	ListPatchAttemptsByPlanID(ctx context.Context, planID string) ([]PatchAttemptRecord, error)
+
+	SaveClosureEvidence(ctx context.Context, rec ClosureEvidenceRecord) (ClosureEvidenceRecord, error)
+	UpdateClosureEvidence(ctx context.Context, rec ClosureEvidenceRecord) error
+	GetLatestClosureEvidenceByFindingID(ctx context.Context, findingID int64) (ClosureEvidenceRecord, error)
+	ListClosureEvidenceByRepositoryAndStatus(ctx context.Context, repositoryID int64, status string) ([]ClosureEvidenceRecord, error)
+	ClosureSummary(ctx context.Context) (ClosureSummary, error)
+	LifecycleSummary(ctx context.Context) (LifecycleSummary, error)
+	UpdateFindingStatus(ctx context.Context, findingID int64, status string) error
+	ListPatchAttemptsByRepositoryAndStatus(ctx context.Context, repositoryID int64, status string) ([]PatchAttemptRecord, error)
+	GetPatchAttemptForClosure(ctx context.Context, attemptID string) (PatchAttemptRecord, Finding, error)
+	UpdatePatchAttemptMerged(ctx context.Context, attemptID, mergeSHA string, mergedAt time.Time) error
+}

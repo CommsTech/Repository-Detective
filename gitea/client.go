@@ -122,8 +122,15 @@ type PullRequest struct {
 	MergedBy   *User      `json:"merged_by,omitempty"`
 	BaseBranch string     `json:"base_branch"`
 	HeadBranch string     `json:"head_branch"`
+	Head       PullRequestGitRef `json:"head"`
 	BaseRepo   Repository `json:"base_repo"`
 	HeadRepo   Repository `json:"head_repo"`
+}
+
+// PullRequestGitRef identifies the head commit/branch of a pull request.
+type PullRequestGitRef struct {
+	SHA string `json:"sha"`
+	Ref string `json:"ref"`
 }
 
 // Repository represents a Gitea repository

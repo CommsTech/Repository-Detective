@@ -4,8 +4,14 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
+
+// ErrUnsafeWorkspacePath is returned when a repo-relative path cannot be written safely.
+var ErrUnsafeWorkspacePath = fmt.Errorf("unsafe workspace path")
+
+var windowsDrivePath = regexp.MustCompile(`^[a-zA-Z]:`)
 
 // FileEntry is a file written into a scan workspace.
 type FileEntry struct {
@@ -48,6 +54,67 @@ func ManifestPaths() []string {
 	return out
 }
 
+// ValidateWorkspacePath ensures relPath stays inside workspaceRoot after cleaning.
+func ValidateWorkspacePath(workspaceRoot, relPath string) (string, error) {
+	if strings.TrimSpace(relPath) == "" {
+		return "", fmt.Errorf("%w: empty path", ErrUnsafeWorkspacePath)
+	}
+
+	normalized := filepath.ToSlash(strings.TrimSpace(relPath))
+	if filepath.IsAbs(normalized) || strings.HasPrefix(normalized, "/") {
+		return "", fmt.Errorf("%w: absolute path %q", ErrUnsafeWorkspacePath, relPath)
+	}
+	if windowsDrivePath.MatchString(normalized) {
+		return "", fmt.Errorf("%w: drive path %q", ErrUnsafeWorkspacePath, relPath)
+	}
+	if strings.Contains(normalized, "..") {
+		return "", fmt.Errorf("%w: parent segment in %q", ErrUnsafeWorkspacePath, relPath)
+	}
+
+	cleaned := pathClean(normalized)
+	if cleaned == "." || cleaned == "" {
+		return "", fmt.Errorf("%w: invalid path %q", ErrUnsafeWorkspacePath, relPath)
+	}
+
+	absRoot, err := filepath.Abs(workspaceRoot)
+	if err != nil {
+		return "", fmt.Errorf("workspace root: %w", err)
+	}
+	target := filepath.Join(absRoot, filepath.FromSlash(cleaned))
+	absTarget, err := filepath.Abs(target)
+	if err != nil {
+		return "", fmt.Errorf("workspace target: %w", err)
+	}
+
+	rootPrefix := absRoot + string(os.PathSeparator)
+	if absTarget != absRoot && !strings.HasPrefix(absTarget, rootPrefix) {
+		return "", fmt.Errorf("%w: resolves outside workspace: %q", ErrUnsafeWorkspacePath, relPath)
+	}
+
+	return cleaned, nil
+}
+
+func pathClean(path string) string {
+	parts := strings.Split(path, "/")
+	var clean []string
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" || part == "." {
+			continue
+		}
+		if part == ".." {
+			return ""
+		}
+		clean = append(clean, part)
+	}
+	return strings.Join(clean, "/")
+}
+
+// ListWorkspaceFiles enumerates relative file paths under a workspace root for scanning.
+func ListWorkspaceFiles(root string, maxFiles int) ([]FileEntry, error) {
+	return listWorkspaceEntries(root, maxFiles)
+}
+
 // CreateWorkspace writes files into a temporary directory tree for scanner tools.
 func CreateWorkspace(files []FileEntry) (dir string, cleanup func(), err error) {
 	dir, err = os.MkdirTemp("", "bugbot-scan-*")
@@ -61,16 +128,20 @@ func CreateWorkspace(files []FileEntry) (dir string, cleanup func(), err error) 
 
 	written := make(map[string]bool)
 	for _, file := range files {
-		path := strings.TrimPrefix(filepath.ToSlash(file.Path), "/")
-		if path == "" || file.Content == "" {
+		if file.Content == "" {
 			continue
 		}
-		target := filepath.Join(dir, path)
+		safePath, err := ValidateWorkspacePath(dir, file.Path)
+		if err != nil {
+			cleanup()
+			return "", nil, err
+		}
+		target := filepath.Join(dir, filepath.FromSlash(safePath))
 		if err := writeFile(target, file.Content); err != nil {
 			cleanup()
 			return "", nil, err
 		}
-		written[path] = true
+		written[safePath] = true
 	}
 
 	if len(written) == 0 {

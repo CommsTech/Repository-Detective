@@ -1,0 +1,173 @@
+# Per-repo scan policy (Phase 8)
+
+Repository Detective merges **global config** with **per-repo settings** from the local database on every scan. Global `config.yaml` / `REPOSITORY_DETECTIVE_*` (or legacy `BUGBOT_*`) env vars remain the fallback when a repo has no overrides.
+
+> **Naming:** See [NAMING.md](NAMING.md).
+
+## Resolution order
+
+```text
+global config snapshot
+→ global profile defaults (when repo scan_profile is NULL; see SCAN_PROFILES.md)
+→ repo profile defaults (when repo scan_profile is set and not custom)
+→ repo_settings DB explicit overrides (non-null fields only)
+→ scan execution
+```
+
+When `database_enabled=false`, only global config and global profile apply.
+
+See [SCAN_PROFILES.md](SCAN_PROFILES.md) for built-in profile names and defaults.
+
+## Policy levels
+
+| Level | Scans | Persist findings | Gitea issues | Fail commit status |
+|-------|-------|------------------|--------------|-------------------|
+| `monitor_only` | Yes | Yes | No | No (warning/success only) |
+| `issue_only` | Yes | Yes | Yes (per issue policy) | No |
+| `gate_pr` | Yes | Yes | Yes | Yes (when gates met) |
+| `suggest_fix` | Yes | Yes | Yes | Yes (like `gate_pr` until remediation PRs land) |
+| `auto_pr_with_approval` | Reserved | — | — | Like `gate_pr` for now |
+| `auto_pr_low_risk` | Reserved | — | — | Like `gate_pr` for now |
+
+Remediation PR levels log that full behavior is reserved for a later phase.
+
+## Issue policies
+
+| Policy | Behavior |
+|--------|----------|
+| `off` | No Gitea issue create/update; findings still persist locally |
+| `fingerprint` | Fingerprint + semantic dedup (default legacy behavior) |
+| `all` | Create/update all gate-passing findings; exact fingerprint dedup still applies |
+
+## Severity and confidence gates
+
+Severity order: `critical > high > medium > low > info`
+
+- Findings below `confidence_gate` do not create issues or fail status.
+- Findings below `severity_gate` do not create issues or fail status.
+- All findings are still stored in scan results and the local DB at original severity/confidence.
+
+## AI policy
+
+| Value | Behavior |
+|-------|----------|
+| `allowed` | LLM stages run when global AI is configured and `enable_llm_auditors=true` with depth ≥ 3 |
+| `disabled` | No LLM calls (PREPARE attack surface, SCAN auditors, VALIDATE debate, PROVE PoC) |
+
+Repo `ai_policy=disabled` wins over global AI enablement. Repo `ai_policy=allowed` does not enable AI if no provider is configured globally.
+
+## Scanner and workspace overrides
+
+Per-repo toggles override global scanner enablement:
+
+- `enable_trivy`, `enable_grype`, `enable_gitleaks`, `enable_semgrep`, `enable_govulncheck`, `enable_gosec`, `enable_staticcheck`, `enable_hadolint`, `enable_checkov`, `enable_linters`
+- `workspace_mode`: `api`, `archive`, or `auto`
+- `analysis_depth`: `1`, `2`, or `3`
+
+## Health checks (Phase 10)
+
+Deterministic repository health checks run when **global** `enable_health_checks: true` and effective `analysis_depth >= 2`. They do not require LLM and do not call AI.
+
+| Category | Typical severity | Notes |
+|----------|------------------|-------|
+| `tech_debt` | low–medium | TODO/FIXME/HACK markers |
+| `reliability` | medium | Ignored errors, missing HTTP timeouts |
+| `maintainability` / `code_quality` | low–medium | Large files/functions, deep nesting |
+| `test_gap` | medium | Missing `_test.go` or test scripts |
+| `performance` | low–medium | Regex-in-loop, long sleeps |
+| `ai_generated_risk` | low–medium | Optional; off by default |
+
+Health findings use the same severity/confidence gates as security findings for issue creation. All findings persist regardless of gates.
+
+Global toggles: `enable_tech_debt_checks`, `enable_reliability_checks`, `enable_maintainability_checks`, `enable_test_gap_checks`, `enable_performance_checks`, `enable_ai_risk_checks` (default `false`).
+
+Per-repo overrides use the same field names in `repo_settings` (nullable = inherit global). Configure via `PUT /api/v1/repos/{id}/settings` or `/ui/repos/:id/settings`.
+
+Pre-install audits use global pre-install/health config only — per-repo health overrides apply to connected repository scans.
+
+See [HEALTH_CHECKS.md](HEALTH_CHECKS.md).
+
+## Code graph / repository map (Phase 11B)
+
+Deterministic code graphs run when effective `analysis_depth >= 2` and effective `enable_code_graph: true`. Graph settings resolve from global defaults plus nullable per-repo overrides on `repo_settings`.
+
+| Field | Range / type |
+|-------|----------------|
+| `enable_code_graph` | bool |
+| `graph_max_nodes` | 100–50000 |
+| `graph_max_edges` | 100–200000 |
+| `graph_timeout_seconds` | 5–1800 |
+| `graph_include_functions` | bool |
+| `graph_include_findings` | bool |
+
+Scan policy snapshots include resolved graph settings. Pre-install audits use **global** graph config only.
+
+Disconnected-code graph findings use cautious wording and may false-positive on dynamic/reflection-heavy code — see [CODE_GRAPH.md](CODE_GRAPH.md).
+
+## Runner delegation (Phase 12)
+
+When `runner_delegation_enabled: true` and global `runner_mode` is not `core`, scheduled and manual full-repo scans may create `runner_jobs` instead of running the in-process analyzer.
+
+| `runner_policy` | Behavior |
+|-----------------|----------|
+| `core` | Always in-process |
+| `gitea_actions` | Queue runner job when global mode allows |
+| `auto` | Queue runner job; fall back to core on capacity/errors |
+
+Webhook push/PR scans remain on core in Phase 12. Runners never create issues or commit statuses — see [RUNNERS.md](RUNNERS.md).
+
+## Notifications (Phase 15)
+
+Per-repo notification overrides (`notifications_enabled`, `notification_min_severity`, `notification_events`, `notification_cooldown_seconds`) inherit global defaults when NULL. A repo can disable notifications even when global notifications are enabled. Channel credentials remain global — see [NOTIFICATIONS.md](NOTIFICATIONS.md).
+
+Notification fields do **not** switch the scan profile to `custom` when changed alone.
+
+## Remediation planner (Phase 16)
+
+See [REMEDIATION.md](REMEDIATION.md). Generates structured fix plans only by default. `remediation_policy` on repo settings remains stored; planner uses global toggles and severity/confidence gates.
+
+## Safe remediation PRs (Phase 17)
+
+See [REMEDIATION_PRS.md](REMEDIATION_PRS.md). **Disabled by default.** When enabled, only approved low-risk plans with deterministic patchers may open a branch + PR on connected Gitea repos. No auto-merge, no issue close, no secret or dependency auto-fix.
+
+## Evidence-based closure (Phase 18)
+
+See [EVIDENCE_CLOSURE.md](EVIDENCE_CLOSURE.md). **Enabled by default** for evidence tracking; **auto-close disabled by default**. Closes or marks resolved only after PR merge + rescan + fingerprint gone + scanner success.
+
+## Example: deterministic strict repo
+
+```yaml
+policy_level: gate_pr
+workspace_mode: auto
+analysis_depth: 2
+ai_policy: disabled
+enable_trivy: true
+enable_grype: true
+enable_gitleaks: true
+enable_semgrep: true
+enable_linters: true
+issue_policy: fingerprint
+severity_gate: medium
+confidence_gate: 0.85
+```
+
+Set via operator UI or `PUT /api/v1/repos/{id}/settings`.
+
+## Scan audit trail
+
+Each completed scan stores an `effective_settings` snapshot in scan summary JSON so you can see which policy was active for that run.
+
+## Rollback
+
+1. Clear per-repo overrides in UI/API (set fields to inherit).
+2. Or set `database_enabled=false` to revert to global-only behavior.
+3. No schema migration required.
+
+## Limitations (Phase 8)
+
+Pre-install audit mode (Phase 9) uses separate tables and does **not** use per-repo policy from `repo_settings`. Third-party audits always run with deterministic scanners only, `issue_policy=off`, and no Gitea issue creation.
+
+- `remediation_policy` is stored but not enforced on scan paths.
+- `runner_policy` is **enforced** for scheduled and manual full scans when global runner delegation is enabled (Phase 12). See [RUNNERS.md](RUNNERS.md).
+- Manual analyze of unknown repos uses global config only.
+- No `.bugbot.yaml` in-repo config yet.

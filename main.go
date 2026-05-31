@@ -2,23 +2,37 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"crypto/hmac"
 	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"sync/atomic"
 	"syscall"
 	"time"
 
 	"git.commsnet.org/commstech/bugbot/ai"
 	"git.commsnet.org/commstech/bugbot/analyzers"
+	"git.commsnet.org/commstech/bugbot/api"
 	"git.commsnet.org/commstech/bugbot/gitea"
+	"git.commsnet.org/commstech/bugbot/graph"
 	"git.commsnet.org/commstech/bugbot/handlers"
+	"git.commsnet.org/commstech/bugbot/health"
+	"git.commsnet.org/commstech/bugbot/internal/config/envcompat"
+	"git.commsnet.org/commstech/bugbot/internal/scanid"
+	"git.commsnet.org/commstech/bugbot/internal/security"
 	"git.commsnet.org/commstech/bugbot/issues"
 	"git.commsnet.org/commstech/bugbot/limiter"
 	"git.commsnet.org/commstech/bugbot/memory/qdrant"
+	"git.commsnet.org/commstech/bugbot/operator"
+	"git.commsnet.org/commstech/bugbot/orch"
+	"git.commsnet.org/commstech/bugbot/preinstall"
+	"git.commsnet.org/commstech/bugbot/runner"
 	"git.commsnet.org/commstech/bugbot/scanners"
+	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/bugbot/ui"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -29,66 +43,182 @@ var version = "dev"
 var componentsReady atomic.Bool
 
 var (
-	logger            *logrus.Logger
-	config            *Config
-	giteaClient       *gitea.Client
-	aiClient          *ai.Client
-	analysisEngine    *analyzers.Engine
-	issueManager      *issues.Manager
-	webhookHandler    *handlers.WebhookHandler
-	onboardingHandler *handlers.OnboardingHandler
-	analysisLimiter   *limiter.ConcurrencyLimiter
+	logger              *logrus.Logger
+	config              *Config
+	giteaClient         *gitea.Client
+	aiClient            *ai.Client
+	analysisEngine      *analyzers.Engine
+	issueManager        *issues.Manager
+	statusReporter      *gitea.StatusReporter
+	webhookHandler      *handlers.WebhookHandler
+	onboardingHandler   *handlers.OnboardingHandler
+	analysisLimiter     *limiter.ConcurrencyLimiter
+	bugbotStore         store.QueryStore
+	scanRecorder        *store.Recorder
+	controlPlaneHandler *api.Handler
+	preinstallHandler   *api.PreinstallHandler
+	preinstallRunner    *preinstall.Runner
+	operatorUI          *ui.Handler
+	scanScheduler       *orch.Scheduler
+	schedulerCtx        context.Context
+	schedulerCancel     context.CancelFunc
+	appGlobalSnapshot   store.GlobalSettingsSnapshot
+	runnerCfg           runner.Config
+	runnerDispatcher    *runner.Dispatcher
+	runnerReceiver      *runner.Receiver
+	runnerHandler       *api.RunnerHandler
 )
 
 // Config holds the plugin configuration
 type Config struct {
-	Port                      string            `mapstructure:"port"`
-	APIKey                    string            `mapstructure:"api_key"` // API key for manual analysis endpoints
-	GiteaURL                  string            `mapstructure:"gitea_url"`
-	GiteaToken                string            `mapstructure:"gitea_token"`
-	WebhookSecret             string            `mapstructure:"webhook_secret"`
-	AIProvider                string            `mapstructure:"ai_provider"`
-	AIBaseURL                 string            `mapstructure:"ai_base_url"`
-	AIAPIKey                  string            `mapstructure:"ai_api_key"`
-	AIModel                   string            `mapstructure:"ai_model"`
-	OpenWebUIURL              string            `mapstructure:"openwebui_url"`
-	OpenWebUIToken            string            `mapstructure:"openwebui_token"`
-	OpenWebUIModel            string            `mapstructure:"openwebui_model"`
-	LogLevel                  string            `mapstructure:"log_level"`
-	AnalysisDepth             int               `mapstructure:"analysis_depth"`
-	MaxFileSize               int64             `mapstructure:"max_file_size"`
-	EnableSecurity            bool              `mapstructure:"enable_security"`
-	EnableQuality             bool              `mapstructure:"enable_quality"`
-	EnableLLMAuditors         bool              `mapstructure:"enable_llm_auditors"`
-	EnableTrivy               bool              `mapstructure:"enable_trivy"`
-	EnableGrype               bool              `mapstructure:"enable_grype"`
-	EnableLinters             bool              `mapstructure:"enable_linters"`
-	ScannerTimeoutSeconds     int               `mapstructure:"scanner_timeout_seconds"`
-	MinIssueConfidence        float64           `mapstructure:"min_issue_confidence"`
-	QdrantEnabled             bool              `mapstructure:"qdrant_enabled"`
-	QdrantURL                 string            `mapstructure:"qdrant_url"`
-	QdrantAPIKey              string            `mapstructure:"qdrant_api_key"`
-	QdrantCollection          string            `mapstructure:"qdrant_collection"`
-	QdrantVectorSize          int               `mapstructure:"qdrant_vector_size"`
-	QdrantSimilarityThreshold float64           `mapstructure:"qdrant_similarity_threshold"`
-	EmbeddingModel            string            `mapstructure:"embedding_model"`
-	EmbeddingBaseURL          string            `mapstructure:"embedding_base_url"`
-	EmbeddingAPIKey           string            `mapstructure:"embedding_api_key"`
-	AutoCreateIssues          bool              `mapstructure:"auto_create_issues"`
-	MaxIssuesPerRun           int               `mapstructure:"max_issues_per_run"`
-	SkipLowSeverity           bool              `mapstructure:"skip_low_severity"`
-	GroupSimilarIssues        bool              `mapstructure:"group_similar_issues"`
-	SkipPatterns              []string          `mapstructure:"-"`
-	LanguageMapping           map[string]string `mapstructure:"-"`
-	RepositoryIncludePatterns []string          `mapstructure:"-"`
-	RepositoryExcludePatterns []string          `mapstructure:"-"`
-	PublicURL                 string            `mapstructure:"public_url"`
-	ListenHost                string            `mapstructure:"listen_host"`
-	StartupCheckTimeout       int               `mapstructure:"startup_check_timeout"`
-	MaxConcurrentAnalyses     int               `mapstructure:"max_concurrent_analyses"`
-	AnalysisTimeout           int               `mapstructure:"analysis_timeout"`
-	RateLimitPerMinute        int               `mapstructure:"rate_limit_per_minute"`
-	SkipStartupChecks         bool              `mapstructure:"skip_startup_checks"`
+	Port                              string            `mapstructure:"port"`
+	APIKey                            string            `mapstructure:"api_key"` // API key for manual analysis endpoints
+	GiteaURL                          string            `mapstructure:"gitea_url"`
+	GiteaToken                        string            `mapstructure:"gitea_token"`
+	WebhookSecret                     string            `mapstructure:"webhook_secret"`
+	AIProvider                        string            `mapstructure:"ai_provider"`
+	AIBaseURL                         string            `mapstructure:"ai_base_url"`
+	AIAPIKey                          string            `mapstructure:"ai_api_key"`
+	AIModel                           string            `mapstructure:"ai_model"`
+	OpenWebUIURL                      string            `mapstructure:"openwebui_url"`
+	OpenWebUIToken                    string            `mapstructure:"openwebui_token"`
+	OpenWebUIModel                    string            `mapstructure:"openwebui_model"`
+	LogLevel                          string            `mapstructure:"log_level"`
+	AnalysisDepth                     int               `mapstructure:"analysis_depth"`
+	MaxFileSize                       int64             `mapstructure:"max_file_size"`
+	EnableSecurity                    bool              `mapstructure:"enable_security"`
+	EnableQuality                     bool              `mapstructure:"enable_quality"`
+	EnableLLMAuditors                 bool              `mapstructure:"enable_llm_auditors"`
+	EnableTrivy                       bool              `mapstructure:"enable_trivy"`
+	EnableGrype                       bool              `mapstructure:"enable_grype"`
+	EnableGitleaks                    bool              `mapstructure:"enable_gitleaks"`
+	EnableSemgrep                     bool              `mapstructure:"enable_semgrep"`
+	EnableGovulncheck                 bool              `mapstructure:"enable_govulncheck"`
+	EnableGosec                       bool              `mapstructure:"enable_gosec"`
+	EnableStaticcheck                 bool              `mapstructure:"enable_staticcheck"`
+	EnableHadolint                    bool              `mapstructure:"enable_hadolint"`
+	EnableCheckov                     bool              `mapstructure:"enable_checkov"`
+	EnableLinters                     bool              `mapstructure:"enable_linters"`
+	ScanProfile                       string            `mapstructure:"scan_profile"`
+	GitleaksConfig                    string            `mapstructure:"gitleaks_config"`
+	GitleaksTimeoutSeconds            int               `mapstructure:"gitleaks_timeout_seconds"`
+	SemgrepConfig                     string            `mapstructure:"semgrep_config"`
+	SemgrepTimeoutSeconds             int               `mapstructure:"semgrep_timeout_seconds"`
+	SemgrepMaxFindings                int               `mapstructure:"semgrep_max_findings"`
+	SemgrepSeverityThreshold          string            `mapstructure:"semgrep_severity_threshold"`
+	GovulncheckTimeoutSeconds         int               `mapstructure:"govulncheck_timeout_seconds"`
+	GosecTimeoutSeconds               int               `mapstructure:"gosec_timeout_seconds"`
+	StaticcheckTimeoutSeconds         int               `mapstructure:"staticcheck_timeout_seconds"`
+	GoScannerMaxFindings              int               `mapstructure:"go_scanner_max_findings"`
+	HadolintTimeoutSeconds            int               `mapstructure:"hadolint_timeout_seconds"`
+	CheckovTimeoutSeconds             int               `mapstructure:"checkov_timeout_seconds"`
+	IACScannerMaxFindings             int               `mapstructure:"iac_scanner_max_findings"`
+	ScannerTimeoutSeconds             int               `mapstructure:"scanner_timeout_seconds"`
+	MinIssueConfidence                float64           `mapstructure:"min_issue_confidence"`
+	QdrantEnabled                     bool              `mapstructure:"qdrant_enabled"`
+	QdrantURL                         string            `mapstructure:"qdrant_url"`
+	QdrantAPIKey                      string            `mapstructure:"qdrant_api_key"`
+	QdrantCollection                  string            `mapstructure:"qdrant_collection"`
+	QdrantVectorSize                  int               `mapstructure:"qdrant_vector_size"`
+	QdrantSimilarityThreshold         float64           `mapstructure:"qdrant_similarity_threshold"`
+	EmbeddingModel                    string            `mapstructure:"embedding_model"`
+	EmbeddingBaseURL                  string            `mapstructure:"embedding_base_url"`
+	EmbeddingAPIKey                   string            `mapstructure:"embedding_api_key"`
+	AutoCreateIssues                  bool              `mapstructure:"auto_create_issues"`
+	MaxIssuesPerRun                   int               `mapstructure:"max_issues_per_run"`
+	SkipLowSeverity                   bool              `mapstructure:"skip_low_severity"`
+	GroupSimilarIssues                bool              `mapstructure:"group_similar_issues"`
+	SkipPatterns                      []string          `mapstructure:"-"`
+	LanguageMapping                   map[string]string `mapstructure:"-"`
+	RepositoryIncludePatterns         []string          `mapstructure:"-"`
+	RepositoryExcludePatterns         []string          `mapstructure:"-"`
+	PublicURL                         string            `mapstructure:"public_url"`
+	ListenHost                        string            `mapstructure:"listen_host"`
+	StartupCheckTimeout               int               `mapstructure:"startup_check_timeout"`
+	MaxConcurrentAnalyses             int               `mapstructure:"max_concurrent_analyses"`
+	AnalysisTimeout                   int               `mapstructure:"analysis_timeout"`
+	RateLimitPerMinute                int               `mapstructure:"rate_limit_per_minute"`
+	WorkspaceMode                     string            `mapstructure:"workspace_mode"`
+	WorkspaceMaxSizeMB                int               `mapstructure:"workspace_max_size_mb"`
+	WorkspaceMaxFiles                 int               `mapstructure:"workspace_max_files"`
+	WorkspaceArchiveTimeoutSeconds    int               `mapstructure:"workspace_archive_timeout_seconds"`
+	EnableGiteaStatus                 bool              `mapstructure:"enable_gitea_status"`
+	GiteaStatusContext                string            `mapstructure:"gitea_status_context"`
+	GiteaStatusFailOn                 string            `mapstructure:"gitea_status_fail_on"`
+	GiteaStatusWarnOn                 string            `mapstructure:"gitea_status_warn_on"`
+	GiteaStatusIncludeScannerFailures bool              `mapstructure:"gitea_status_include_scanner_failures"`
+	SkipStartupChecks                 bool              `mapstructure:"skip_startup_checks"`
+	DatabaseEnabled                   bool              `mapstructure:"database_enabled"`
+	DatabaseDriver                    string            `mapstructure:"database_driver"`
+	DatabasePath                      string            `mapstructure:"database_path"`
+	DatabaseDSN                       string            `mapstructure:"database_dsn"`
+	UIEnabled                         bool              `mapstructure:"ui_enabled"`
+	UIBasePath                        string            `mapstructure:"ui_base_path"`
+	SchedulerEnabled                  bool              `mapstructure:"scheduler_enabled"`
+	SchedulerPollIntervalSeconds      int               `mapstructure:"scheduler_poll_interval_seconds"`
+	SchedulerMaxConcurrentScans       int               `mapstructure:"scheduler_max_concurrent_scans"`
+	PreinstallAuditEnabled            bool              `mapstructure:"preinstall_audit_enabled"`
+	PreinstallAllowPrivateNetworks    bool              `mapstructure:"preinstall_allow_private_networks"`
+	PreinstallMaxRepoSizeMB           int               `mapstructure:"preinstall_max_repo_size_mb"`
+	PreinstallMaxFiles                int               `mapstructure:"preinstall_max_files"`
+	PreinstallTimeoutSeconds          int               `mapstructure:"preinstall_timeout_seconds"`
+	PreinstallMaxFindings             int               `mapstructure:"preinstall_max_findings"`
+	PreinstallAllowGitClone           bool              `mapstructure:"preinstall_allow_git_clone"`
+	EnableHealthChecks                bool              `mapstructure:"enable_health_checks"`
+	EnableTechDebtChecks              bool              `mapstructure:"enable_tech_debt_checks"`
+	EnableReliabilityChecks           bool              `mapstructure:"enable_reliability_checks"`
+	EnableMaintainabilityChecks       bool              `mapstructure:"enable_maintainability_checks"`
+	EnableTestGapChecks               bool              `mapstructure:"enable_test_gap_checks"`
+	EnablePerformanceChecks           bool              `mapstructure:"enable_performance_checks"`
+	EnableAIRiskChecks                bool              `mapstructure:"enable_ai_risk_checks"`
+	HealthMaxFindings                 int               `mapstructure:"health_max_findings"`
+	HealthLargeFileLines              int               `mapstructure:"health_large_file_lines"`
+	HealthLargeFunctionLines          int               `mapstructure:"health_large_function_lines"`
+	HealthMaxNestingDepth             int               `mapstructure:"health_max_nesting_depth"`
+	HealthMaxFunctionParams           int               `mapstructure:"health_max_function_params"`
+	EnableCodeGraph                   bool              `mapstructure:"enable_code_graph"`
+	GraphMaxNodes                     int               `mapstructure:"graph_max_nodes"`
+	GraphMaxEdges                     int               `mapstructure:"graph_max_edges"`
+	GraphTimeoutSeconds               int               `mapstructure:"graph_timeout_seconds"`
+	GraphIncludeFunctions             bool              `mapstructure:"graph_include_functions"`
+	GraphIncludeFindings              bool              `mapstructure:"graph_include_findings"`
+	RunnerDelegationEnabled           bool              `mapstructure:"runner_delegation_enabled"`
+	RunnerMode                        string            `mapstructure:"runner_mode"`
+	RunnerSharedSecret                string            `mapstructure:"runner_shared_secret"`
+	RunnerJobTimeoutSeconds           int               `mapstructure:"runner_job_timeout_seconds"`
+	RunnerMaxConcurrentJobs           int               `mapstructure:"runner_max_concurrent_jobs"`
+	RunnerResultMaxSizeMB             int               `mapstructure:"runner_result_max_size_mb"`
+	RunnerArtifactRetentionDays       int               `mapstructure:"runner_artifact_retention_days"`
+	RunnerCallbackBaseURL             string            `mapstructure:"runner_callback_base_url"`
+	LabelCompatMode                   string            `mapstructure:"label_compat_mode"`
+	NotificationsEnabled              bool              `mapstructure:"notifications_enabled"`
+	NotificationMinSeverity           string            `mapstructure:"notification_min_severity"`
+	NotificationCooldownSeconds       int               `mapstructure:"notification_cooldown_seconds"`
+	TelegramEnabled                   bool              `mapstructure:"telegram_enabled"`
+	TelegramBotToken                  string            `mapstructure:"telegram_bot_token"`
+	TelegramChatID                    string            `mapstructure:"telegram_chat_id"`
+	SlackEnabled                      bool              `mapstructure:"slack_enabled"`
+	SlackWebhookURL                   string            `mapstructure:"slack_webhook_url"`
+	DiscordEnabled                    bool              `mapstructure:"discord_enabled"`
+	DiscordWebhookURL                 string            `mapstructure:"discord_webhook_url"`
+	WebhookNotificationsEnabled       bool              `mapstructure:"webhook_notifications_enabled"`
+	WebhookNotificationURL            string            `mapstructure:"webhook_notification_url"`
+	WebhookNotificationSecret         string            `mapstructure:"webhook_notification_secret"`
+	RemediationPlannerEnabled         bool              `mapstructure:"remediation_planner_enabled"`
+	RemediationMinSeverity            string            `mapstructure:"remediation_min_severity"`
+	RemediationMinConfidence          float64           `mapstructure:"remediation_min_confidence"`
+	RemediationUseAI                  bool              `mapstructure:"remediation_use_ai"`
+	RemediationCommentOnIssue         bool              `mapstructure:"remediation_comment_on_issue"`
+	RemediationPREnabled              bool              `mapstructure:"remediation_pr_enabled"`
+	RemediationPRBranchPrefix         string            `mapstructure:"remediation_pr_branch_prefix"`
+	RemediationPRRequireApproval      bool              `mapstructure:"remediation_pr_require_approval"`
+	RemediationPRMaxFilesChanged      int               `mapstructure:"remediation_pr_max_files_changed"`
+	RemediationPRMaxDiffLines         int               `mapstructure:"remediation_pr_max_diff_lines"`
+	RemediationPRValidationTimeoutSeconds int           `mapstructure:"remediation_pr_validation_timeout_seconds"`
+	EvidenceClosureEnabled            bool              `mapstructure:"evidence_closure_enabled"`
+	EvidenceClosureCloseIssues        bool              `mapstructure:"evidence_closure_close_issues"`
+	EvidenceClosureComment            bool              `mapstructure:"evidence_closure_comment"`
+	EvidenceClosureRequireScannerSuccess bool           `mapstructure:"evidence_closure_require_scanner_success"`
 }
 
 func main() {
@@ -99,7 +229,7 @@ func main() {
 		FullTimestamp: true,
 	})
 
-	logger.Info("Bugbot starting...")
+	logger.Info("Repository Detective starting...")
 
 	// Load configuration
 	if err := loadConfig(); err != nil {
@@ -114,7 +244,7 @@ func main() {
 	}
 	logger.SetLevel(level)
 
-	logger.Info("Starting Gitea Bugbot Plugin...")
+	logger.Info("Starting Repository Detective...")
 	logger.Infof("Configuration loaded: Port=%s, ListenHost=%s, GiteaURL=%s, AIProvider=%s, SkipStartupChecks=%v",
 		config.Port, config.ListenHost, config.GiteaURL, config.effectiveAIProvider(), config.SkipStartupChecks)
 
@@ -145,8 +275,9 @@ func main() {
 	if err := initializeComponents(); err != nil {
 		logger.Fatalf("Failed to initialize components: %v", err)
 	}
+	registerControlPlaneRoutes(router)
 	componentsReady.Store(true)
-	logger.Info("Bugbot ready — all components initialized")
+	logger.Info("Repository Detective ready — all components initialized")
 
 	// Wait for interrupt signal or unexpected server failure.
 	quit := make(chan os.Signal, 1)
@@ -159,6 +290,13 @@ func main() {
 	}
 
 	logger.Info("Shutting down server...")
+
+	if scanScheduler != nil {
+		scanScheduler.Stop()
+	}
+	if schedulerCancel != nil {
+		schedulerCancel()
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -188,7 +326,28 @@ func loadConfig() error {
 	viper.SetDefault("enable_llm_auditors", true)
 	viper.SetDefault("enable_trivy", true)
 	viper.SetDefault("enable_grype", true)
+	viper.SetDefault("enable_gitleaks", false)
+	viper.SetDefault("enable_semgrep", false)
+	viper.SetDefault("enable_govulncheck", false)
+	viper.SetDefault("enable_gosec", false)
+	viper.SetDefault("enable_staticcheck", false)
+	viper.SetDefault("enable_hadolint", false)
+	viper.SetDefault("enable_checkov", false)
 	viper.SetDefault("enable_linters", true)
+	viper.SetDefault("scan_profile", "custom")
+	viper.SetDefault("gitleaks_config", "")
+	viper.SetDefault("gitleaks_timeout_seconds", 0)
+	viper.SetDefault("semgrep_config", "p/ci")
+	viper.SetDefault("semgrep_timeout_seconds", 0)
+	viper.SetDefault("semgrep_max_findings", 100)
+	viper.SetDefault("semgrep_severity_threshold", "INFO")
+	viper.SetDefault("govulncheck_timeout_seconds", 0)
+	viper.SetDefault("gosec_timeout_seconds", 0)
+	viper.SetDefault("staticcheck_timeout_seconds", 0)
+	viper.SetDefault("go_scanner_max_findings", 100)
+	viper.SetDefault("hadolint_timeout_seconds", 0)
+	viper.SetDefault("checkov_timeout_seconds", 0)
+	viper.SetDefault("iac_scanner_max_findings", 100)
 	viper.SetDefault("scanner_timeout_seconds", 120)
 	viper.SetDefault("min_issue_confidence", 0.5)
 	viper.SetDefault("qdrant_enabled", false)
@@ -206,8 +365,80 @@ func loadConfig() error {
 	viper.SetDefault("ai_provider", "")
 	viper.SetDefault("ai_model", "")
 	viper.SetDefault("skip_startup_checks", false)
+	viper.SetDefault("workspace_mode", "api")
+	viper.SetDefault("workspace_max_size_mb", 500)
+	viper.SetDefault("workspace_max_files", 5000)
+	viper.SetDefault("workspace_archive_timeout_seconds", 0)
+	viper.SetDefault("enable_gitea_status", false)
+	viper.SetDefault("gitea_status_context", "repository-detective/security-scan")
+	viper.SetDefault("gitea_status_fail_on", "high")
+	viper.SetDefault("gitea_status_warn_on", "medium")
+	viper.SetDefault("gitea_status_include_scanner_failures", true)
+	viper.SetDefault("database_enabled", true)
+	viper.SetDefault("database_driver", "sqlite")
+	viper.SetDefault("database_path", "./data/bugbot.db")
+	viper.SetDefault("database_dsn", "")
+	viper.SetDefault("ui_enabled", true)
+	viper.SetDefault("ui_base_path", "/ui")
+	viper.SetDefault("scheduler_enabled", true)
+	viper.SetDefault("scheduler_poll_interval_seconds", 60)
+	viper.SetDefault("scheduler_max_concurrent_scans", 1)
+	viper.SetDefault("preinstall_audit_enabled", true)
+	viper.SetDefault("preinstall_allow_private_networks", false)
+	viper.SetDefault("preinstall_max_repo_size_mb", 500)
+	viper.SetDefault("preinstall_max_files", 5000)
+	viper.SetDefault("preinstall_timeout_seconds", 600)
+	viper.SetDefault("preinstall_max_findings", 200)
+	viper.SetDefault("preinstall_allow_git_clone", true)
+	viper.SetDefault("enable_health_checks", true)
+	viper.SetDefault("enable_tech_debt_checks", true)
+	viper.SetDefault("enable_reliability_checks", true)
+	viper.SetDefault("enable_maintainability_checks", true)
+	viper.SetDefault("enable_test_gap_checks", true)
+	viper.SetDefault("enable_performance_checks", true)
+	viper.SetDefault("enable_ai_risk_checks", false)
+	viper.SetDefault("health_max_findings", 100)
+	viper.SetDefault("health_large_file_lines", 1000)
+	viper.SetDefault("health_large_function_lines", 150)
+	viper.SetDefault("health_max_nesting_depth", 5)
+	viper.SetDefault("health_max_function_params", 7)
+	viper.SetDefault("enable_code_graph", true)
+	viper.SetDefault("graph_max_nodes", 5000)
+	viper.SetDefault("graph_max_edges", 15000)
+	viper.SetDefault("graph_timeout_seconds", 120)
+	viper.SetDefault("graph_include_functions", true)
+	viper.SetDefault("graph_include_findings", true)
+	viper.SetDefault("runner_delegation_enabled", false)
+	viper.SetDefault("runner_mode", "core")
+	viper.SetDefault("runner_job_timeout_seconds", 900)
+	viper.SetDefault("runner_max_concurrent_jobs", 2)
+	viper.SetDefault("runner_result_max_size_mb", 50)
+	viper.SetDefault("runner_artifact_retention_days", 14)
+	viper.SetDefault("label_compat_mode", "dual")
+	viper.SetDefault("notifications_enabled", false)
+	viper.SetDefault("notification_min_severity", "high")
+	viper.SetDefault("notification_cooldown_seconds", 300)
+	viper.SetDefault("telegram_enabled", false)
+	viper.SetDefault("slack_enabled", false)
+	viper.SetDefault("discord_enabled", false)
+	viper.SetDefault("webhook_notifications_enabled", false)
+	viper.SetDefault("remediation_planner_enabled", true)
+	viper.SetDefault("remediation_min_severity", "medium")
+	viper.SetDefault("remediation_min_confidence", 0.80)
+	viper.SetDefault("remediation_use_ai", false)
+	viper.SetDefault("remediation_comment_on_issue", false)
+	viper.SetDefault("remediation_pr_enabled", false)
+	viper.SetDefault("remediation_pr_branch_prefix", "repository-detective/fix")
+	viper.SetDefault("remediation_pr_require_approval", true)
+	viper.SetDefault("remediation_pr_max_files_changed", 3)
+	viper.SetDefault("remediation_pr_max_diff_lines", 100)
+	viper.SetDefault("remediation_pr_validation_timeout_seconds", 300)
+	viper.SetDefault("evidence_closure_enabled", true)
+	viper.SetDefault("evidence_closure_close_issues", false)
+	viper.SetDefault("evidence_closure_comment", true)
+	viper.SetDefault("evidence_closure_require_scanner_success", true)
 
-	// Environment variables
+	// Environment variables — legacy BUGBOT_* plus REPOSITORY_DETECTIVE_* aliases.
 	viper.AutomaticEnv()
 	viper.SetEnvPrefix("BUGBOT")
 
@@ -218,6 +449,8 @@ func loadConfig() error {
 		}
 		logger.Warn("No config file found, using defaults and environment variables")
 	}
+
+	envcompat.Apply(viper.GetViper(), logger)
 
 	config = &Config{}
 	if err := viper.Unmarshal(config); err != nil {
@@ -240,6 +473,11 @@ func loadConfig() error {
 		return fmt.Errorf("failed to unmarshal repository_exclude_patterns: %w", err)
 	}
 
+	runnerCfg = mainRunnerConfig()
+	if err := runnerCfg.StartupValid(); err != nil {
+		return fmt.Errorf("runner configuration invalid: %w", err)
+	}
+
 	// Validate required fields
 	if config.GiteaURL == "" {
 		return fmt.Errorf("gitea_url is required")
@@ -247,8 +485,10 @@ func loadConfig() error {
 	if config.GiteaToken == "" {
 		return fmt.Errorf("gitea_token is required")
 	}
-	if config.effectiveAIProvider() == "" && config.OpenWebUIURL == "" && config.AIBaseURL == "" {
-		return fmt.Errorf("configure ai_provider + ai_base_url, or legacy openwebui_url")
+	if config.needsAIProvider() {
+		if config.effectiveAIProvider() == "" && config.OpenWebUIURL == "" && config.AIBaseURL == "" {
+			return fmt.Errorf("configure ai_provider + ai_base_url, or legacy openwebui_url")
+		}
 	}
 	if config.AnalysisTimeout <= 0 {
 		config.AnalysisTimeout = 300
@@ -262,31 +502,35 @@ func loadConfig() error {
 	if config.StartupCheckTimeout <= 0 {
 		config.StartupCheckTimeout = 10
 	}
+	if !config.DatabaseEnabled {
+		config.SchedulerEnabled = false
+	}
+	if config.SchedulerPollIntervalSeconds <= 0 {
+		config.SchedulerPollIntervalSeconds = 60
+	}
+	if config.SchedulerMaxConcurrentScans <= 0 {
+		config.SchedulerMaxConcurrentScans = 1
+	}
+
+	issues.SetLabelCompatMode(config.LabelCompatMode)
 
 	return nil
 }
 
 func setupRoutes(router *gin.Engine) {
-	// Set body size limit for all routes (防止 DoS)
+	router.Use(security.MiddlewareHeaders(), security.MiddlewareMaxBody(security.DefaultMaxRequestBody))
+	// Set body size limit for multipart uploads
 	router.MaxMultipartMemory = 8 << 20 // 8 MB max
 
 	// Health check — no auth required
 	router.GET("/health", func(c *gin.Context) {
-		if !componentsReady.Load() {
-			c.JSON(http.StatusServiceUnavailable, gin.H{
-				"status":     "starting",
-				"service":    "gitea-bugbot",
-				"version":    version,
-				"public_url": config.PublicURL,
-			})
+		ready := componentsReady.Load()
+		payload := healthPayload(ready)
+		if !ready {
+			c.JSON(http.StatusServiceUnavailable, payload)
 			return
 		}
-		c.JSON(http.StatusOK, gin.H{
-			"status":     "healthy",
-			"service":    "gitea-bugbot",
-			"version":    version,
-			"public_url": config.PublicURL,
-		})
+		c.JSON(http.StatusOK, payload)
 	})
 
 	router.GET("/", func(c *gin.Context) {
@@ -304,6 +548,7 @@ func setupRoutes(router *gin.Engine) {
 	{
 		api.POST("/analyze", handleManualAnalysis)
 		api.GET("/status", handleStatus)
+		api.GET("/about", handleAbout)
 		api.POST("/config/reload", handleConfigReload)
 	}
 
@@ -333,12 +578,12 @@ func requireComponentsReady() gin.HandlerFunc {
 		}
 		c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{
 			"status": "starting",
-			"error":  "Bugbot is still initializing — retry in a few seconds",
+			"error":  "Repository Detective is still initializing — retry in a few seconds",
 		})
 	}
 }
 
-// requireAPIKeyAuth middleware requires BUGBOT_API_KEY for API endpoints
+// requireAPIKeyAuth middleware requires API key for protected endpoints.
 func requireAPIKeyAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if config.APIKey == "" {
@@ -346,7 +591,10 @@ func requireAPIKeyAuth() gin.HandlerFunc {
 			return
 		}
 
-		apiKey := c.GetHeader("X-Bugbot-API-Key")
+		apiKey := c.GetHeader("X-Repository-Detective-API-Key")
+		if apiKey == "" {
+			apiKey = c.GetHeader("X-Bugbot-API-Key")
+		}
 		if apiKey == "" {
 			apiKey = c.Query("api_key")
 		}
@@ -370,6 +618,147 @@ func requireAPIKeyAuth() gin.HandlerFunc {
 func initializeComponents() error {
 	logger.Info("Initializing components...")
 
+	if bugbotStore != nil {
+		if err := bugbotStore.Close(); err != nil {
+			logger.Warnf("Failed to close existing database: %v", err)
+		}
+		bugbotStore = nil
+		scanRecorder = nil
+		controlPlaneHandler = nil
+		preinstallHandler = nil
+		preinstallRunner = nil
+		operatorUI = nil
+	}
+	if scanScheduler != nil {
+		scanScheduler.Stop()
+		scanScheduler = nil
+	}
+	if schedulerCancel != nil {
+		schedulerCancel()
+		schedulerCancel = nil
+	}
+
+	if config.DatabaseEnabled {
+		s, err := store.Open(store.Config{
+			Enabled: true,
+			Driver:  config.DatabaseDriver,
+			Path:    config.DatabasePath,
+			DSN:     config.DatabaseDSN,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to open database: %w", err)
+		}
+		bugbotStore = s
+		scanRecorder = store.NewRecorder(s, logger)
+		logger.Infof("Local database enabled (driver=%s path=%s)", config.DatabaseDriver, config.DatabasePath)
+	} else {
+		scanRecorder = store.NewRecorder(nil, logger)
+		logger.Info("Local database disabled — running without persistence")
+	}
+
+	globalSnapshot := api.GlobalSnapshotFromConfig(api.GlobalConfigInput{
+		ScanProfile:        config.ScanProfile,
+		WorkspaceMode:      config.WorkspaceMode,
+		AnalysisDepth:      config.AnalysisDepth,
+		EnableLLMAuditors:  config.EnableLLMAuditors,
+		EnableTrivy:        config.EnableTrivy,
+		EnableGrype:        config.EnableGrype,
+		EnableGitleaks:     config.EnableGitleaks,
+		EnableSemgrep:      config.EnableSemgrep,
+		EnableGovulncheck:  config.EnableGovulncheck,
+		EnableGosec:        config.EnableGosec,
+		EnableStaticcheck:  config.EnableStaticcheck,
+		EnableHadolint:     config.EnableHadolint,
+		EnableCheckov:      config.EnableCheckov,
+		EnableLinters:      config.EnableLinters,
+		GiteaStatusFailOn:  config.GiteaStatusFailOn,
+		MinIssueConfidence: config.MinIssueConfidence,
+		AutoCreateIssues:   config.AutoCreateIssues,
+		EnableHealthChecks:          config.EnableHealthChecks,
+		EnableTechDebtChecks:        config.EnableTechDebtChecks,
+		EnableReliabilityChecks:     config.EnableReliabilityChecks,
+		EnableMaintainabilityChecks: config.EnableMaintainabilityChecks,
+		EnableTestGapChecks:         config.EnableTestGapChecks,
+		EnablePerformanceChecks:     config.EnablePerformanceChecks,
+		EnableAIRiskChecks:          config.EnableAIRiskChecks,
+		HealthMaxFindings:           config.HealthMaxFindings,
+		HealthLargeFileLines:        config.HealthLargeFileLines,
+		HealthLargeFunctionLines:    config.HealthLargeFunctionLines,
+		HealthMaxNestingDepth:       config.HealthMaxNestingDepth,
+		HealthMaxFunctionParams:     config.HealthMaxFunctionParams,
+		EnableCodeGraph:             config.EnableCodeGraph,
+		GraphMaxNodes:               config.GraphMaxNodes,
+		GraphMaxEdges:               config.GraphMaxEdges,
+		GraphTimeoutSeconds:         config.GraphTimeoutSeconds,
+		GraphIncludeFunctions:       config.GraphIncludeFunctions,
+		GraphIncludeFindings:        config.GraphIncludeFindings,
+		GovulncheckTimeoutSeconds:   config.GovulncheckTimeoutSeconds,
+		GosecTimeoutSeconds:         config.GosecTimeoutSeconds,
+		StaticcheckTimeoutSeconds:   config.StaticcheckTimeoutSeconds,
+		GoScannerMaxFindings:        config.GoScannerMaxFindings,
+		HadolintTimeoutSeconds:      config.HadolintTimeoutSeconds,
+		CheckovTimeoutSeconds:       config.CheckovTimeoutSeconds,
+		IACScannerMaxFindings:       config.IACScannerMaxFindings,
+	})
+	appGlobalSnapshot = globalSnapshot
+	initNotifyManager()
+	controlPlaneHandler = api.NewHandler(bugbotStore, globalSnapshot, logger)
+	if notifyManager != nil {
+		controlPlaneHandler.SetNotificationGlobal(notifyManager.Config())
+	}
+
+	preinstallCfg := preinstall.Config{
+		Enabled:              config.PreinstallAuditEnabled,
+		AllowPrivateNetworks: config.PreinstallAllowPrivateNetworks,
+		MaxRepoSizeMB:        config.PreinstallMaxRepoSizeMB,
+		MaxFiles:             config.PreinstallMaxFiles,
+		TimeoutSeconds:       config.PreinstallTimeoutSeconds,
+		MaxFindings:          config.PreinstallMaxFindings,
+		AllowGitClone:        config.PreinstallAllowGitClone,
+		Health:               mainHealthConfig(),
+		Graph:                mainGraphConfig(),
+	}
+	if bugbotStore != nil && config.PreinstallAuditEnabled {
+		preinstallRunner = preinstall.NewRunner(bugbotStore, preinstallCfg, mainScannerConfig(), logger)
+		preinstallRunner.SetAuditNotifier(preinstallNotifyBridge{})
+		preinstallHandler = api.NewPreinstallHandler(bugbotStore, preinstallRunner, logger)
+		logger.Info("Pre-install audit mode enabled")
+	}
+
+	if bugbotStore != nil && runnerCfg.DelegationEnabled && runnerCfg.Mode != runner.ModeCore && runnerCfg.SharedSecret != "" {
+		runnerDispatcher = runner.NewDispatcher(bugbotStore, runnerCfg, logger)
+		runnerReceiver = runner.NewReceiver(bugbotStore, runnerCfg, logger, ingestRunnerResult)
+		runnerReceiver.SetJobsExpiredHandler(func(ctx context.Context, count int64) {
+			notifyRunnerJobsExpired(ctx, count)
+		})
+		runnerHandler = api.NewRunnerHandler(bugbotStore, runnerCfg, runnerReceiver, logger)
+		logger.Infof("Runner delegation enabled (mode=%s)", runnerCfg.Mode)
+	}
+
+	if config.UIEnabled {
+		uiHandler, err := ui.NewHandler(bugbotStore, globalSnapshot, config.UIBasePath, logger, preinstallRunner, config.PreinstallAuditEnabled, config.APIKey)
+		if err != nil {
+			return fmt.Errorf("failed to initialize operator UI: %w", err)
+		}
+		if notifyManager != nil {
+			uiHandler.SetNotificationGlobal(notifyManager.Config())
+		}
+		if config.RemediationPlannerEnabled {
+			uiHandler.SetRemediationBackend(true, remediationUIBridge{})
+		}
+		if config.RemediationPREnabled {
+			uiHandler.SetRemediationPRBackend(true, remediationPRUIBridge{})
+		}
+		if config.EvidenceClosureEnabled {
+			uiHandler.SetClosureBackend(true, closureUIBridge{})
+		}
+		uiHandler.SetReadinessFn(func() operator.Readiness { return buildReadiness("running") })
+		operatorUI = uiHandler
+		logger.Infof("Operator UI enabled at %s", uiHandler.BasePath())
+	} else {
+		logger.Info("Operator UI disabled")
+	}
+
 	checkTimeout := time.Duration(config.StartupCheckTimeout) * time.Second
 	ctx, cancel := context.WithTimeout(context.Background(), checkTimeout)
 	defer cancel()
@@ -388,33 +777,52 @@ func initializeComponents() error {
 		logger.Info("Gitea connection established")
 	}
 
-	// Initialize AI client (multi-provider)
-	var err error
-	aiClient, err = ai.NewClient(ai.Config{
-		Provider: ai.ProviderType(config.AIProvider),
-		BaseURL:  firstNonEmpty(config.AIBaseURL, config.OpenWebUIURL),
-		APIKey:   firstNonEmpty(config.AIAPIKey, config.OpenWebUIToken),
-		Model:    firstNonEmpty(config.AIModel, config.OpenWebUIModel),
-	}, ai.LegacyConfig{
-		OpenWebUIURL:   config.OpenWebUIURL,
-		OpenWebUIToken: config.OpenWebUIToken,
-		OpenWebUIModel: config.OpenWebUIModel,
-	}, logger)
-	if err != nil {
-		return fmt.Errorf("failed to configure AI client: %w", err)
-	}
+	statusReporter = gitea.NewStatusReporter(
+		giteaClient,
+		config.EnableGiteaStatus,
+		gitea.ChecksConfig{
+			Context:                config.GiteaStatusContext,
+			TargetURL:              config.PublicURL,
+			FailOn:                 config.GiteaStatusFailOn,
+			WarnOn:                 config.GiteaStatusWarnOn,
+			IncludeScannerFailures: config.GiteaStatusIncludeScannerFailures,
+		},
+		logger,
+	)
 
-	// Test AI connection
-	logger.Infof("Testing AI provider connection (timeout %s)...", checkTimeout)
-	if err := aiClient.TestConnection(ctx); err != nil {
-		if config.SkipStartupChecks {
-			logger.Warnf("AI provider connection check failed (skipped): %v", err)
+	// Initialize AI client (multi-provider) when LLM or Qdrant embeddings are required
+	if config.needsAIProvider() {
+		var err error
+		aiClient, err = ai.NewClient(ai.Config{
+			Provider: ai.ProviderType(config.AIProvider),
+			BaseURL:  firstNonEmpty(config.AIBaseURL, config.OpenWebUIURL),
+			APIKey:   firstNonEmpty(config.AIAPIKey, config.OpenWebUIToken),
+			Model:    firstNonEmpty(config.AIModel, config.OpenWebUIModel),
+		}, ai.LegacyConfig{
+			OpenWebUIURL:   config.OpenWebUIURL,
+			OpenWebUIToken: config.OpenWebUIToken,
+			OpenWebUIModel: config.OpenWebUIModel,
+		}, logger)
+		if err != nil {
+			return fmt.Errorf("failed to configure AI client: %w", err)
+		}
+
+		logger.Infof("Testing AI provider connection (timeout %s)...", checkTimeout)
+		if err := aiClient.TestConnection(ctx); err != nil {
+			if config.SkipStartupChecks {
+				logger.Warnf("AI provider connection check failed (skipped): %v", err)
+			} else {
+				return fmt.Errorf("failed to connect to AI provider: %w", err)
+			}
 		} else {
-			return fmt.Errorf("failed to connect to AI provider: %w", err)
+			logger.Infof("AI provider connection established (%s, model=%s)", aiClient.Provider(), aiClient.Model())
 		}
 	} else {
-		logger.Infof("AI provider connection established (%s, model=%s)", aiClient.Provider(), aiClient.Model())
+		logger.Info("AI provider not required — deterministic-only mode (no LLM auditors, Qdrant disabled)")
+		aiClient = nil
 	}
+	initRemediationPlanner()
+	initClosureEngine()
 
 	// Initialize analysis engine
 	analysisConfig := &analyzers.Config{
@@ -425,14 +833,15 @@ func initializeComponents() error {
 		EnableLLMAuditors: config.EnableLLMAuditors,
 		SkipPatterns:      config.SkipPatterns,
 		LanguageMapping:   config.LanguageMapping,
-		Scanners: scanners.Config{
-			EnableTrivy:       config.EnableTrivy,
-			EnableGrype:       config.EnableGrype,
-			EnableLinters:     config.EnableLinters,
-			TrivySeverity:     "HIGH,CRITICAL",
-			GrypeFailOn:       "high",
-			LinterMinSeverity: "warning",
-			TimeoutSeconds:    config.ScannerTimeoutSeconds,
+		Scanners: mainScannerConfig(),
+		Health:   mainHealthConfig(),
+		Graph:    mainGraphConfig(),
+		Workspace: scanners.WorkspaceConfig{
+			Mode:                   config.WorkspaceMode,
+			MaxSizeMB:              config.WorkspaceMaxSizeMB,
+			MaxFiles:               config.WorkspaceMaxFiles,
+			ArchiveTimeoutSeconds:  config.WorkspaceArchiveTimeoutSeconds,
+			DefaultAnalysisTimeout: config.AnalysisTimeout,
 		},
 	}
 	analysisEngine = analyzers.NewEngine(giteaClient, aiClient, analysisConfig, logger)
@@ -465,13 +874,13 @@ func initializeComponents() error {
 	// Initialize issue manager
 	issueConfig := &issues.Config{
 		AutoCreateIssues:   config.AutoCreateIssues,
-		IssueLabels:        []string{"bugbot", "automated-review"},
+		IssueLabels:        issues.DefaultIssueBaseLabels(),
 		MaxIssuesPerRun:    config.MaxIssuesPerRun,
 		SkipLowSeverity:    config.SkipLowSeverity,
 		GroupSimilarIssues: config.GroupSimilarIssues,
 		MinIssueConfidence: config.MinIssueConfidence,
 		IssueTitleTemplate: "[{{severity}}] {{title}}",
-		IssueBodyTemplate:  "## Issue Details\n\n**Severity:** {{severity}}\n**Category:** {{category}}\n**Confidence:** {{confidence}}\n\n## Description\n\n{{description}}\n\n## Context\n\n- **Repository:** {{repository}}\n- **Context:** {{context}}\n- **Commit:** {{commit}}\n\n---\n*This issue was automatically generated by the Gitea Bugbot*",
+		IssueBodyTemplate:  "## Issue Details\n\n**Severity:** {{severity}}\n**Category:** {{category}}\n**Confidence:** {{confidence}}\n\n## Description\n\n{{description}}\n\n## Context\n\n- **Repository:** {{repository}}\n- **Context:** {{context}}\n- **Commit:** {{commit}}\n\n---\n*This issue was automatically generated by Repository Detective*",
 	}
 	issueManager = issues.NewManager(giteaClient, issueConfig, logger, semanticStore)
 
@@ -484,6 +893,24 @@ func initializeComponents() error {
 	analysisLimiter = limiter.New(config.MaxConcurrentAnalyses)
 	logger.Infof("Analysis concurrency limit: %d", config.MaxConcurrentAnalyses)
 
+	if config.SchedulerEnabled && bugbotStore != nil {
+		schedulerCtx, schedulerCancel = context.WithCancel(context.Background())
+		scanScheduler = orch.NewScheduler(
+			bugbotStore,
+			runScheduledRepositoryScan,
+			analysisLimiter,
+			orch.Config{
+				Enabled:       true,
+				PollInterval:  time.Duration(config.SchedulerPollIntervalSeconds) * time.Second,
+				MaxConcurrent: config.SchedulerMaxConcurrentScans,
+			},
+			logger,
+		)
+		scanScheduler.Start(schedulerCtx)
+	} else {
+		logger.Info("Scheduled scans disabled (scheduler_enabled=false or database disabled)")
+	}
+
 	logger.Info("All components initialized successfully")
 	return nil
 }
@@ -495,14 +922,47 @@ func (p *webhookProcessor) ProcessPush(ctx context.Context, payload *handlers.Gi
 	repo := payload.Repository.Name
 	ref := payload.After
 	changedFiles := handlers.CollectChangedFiles(payload.Commits)
+	commitSHA := strings.TrimSpace(ref)
 
 	runAnalysis(ctx, func(analysisCtx context.Context) {
-		result, err := analysisEngine.AnalyzeChangedFiles(analysisCtx, owner, repo, ref, changedFiles)
-		if err != nil {
-			logger.Errorf("Push analysis failed: %v", err)
+		scanCtx := store.ScanContext{
+			Owner:         owner,
+			Repo:          repo,
+			TriggerType:   store.TriggerPush,
+			Ref:           payload.Ref,
+			CommitSHA:     commitSHA,
+			CloneURL:      payload.Repository.CloneURL,
+			ConnectedRepo: true,
+		}
+		analysisCtx, repositoryID := beginPersistedScan(analysisCtx, &scanCtx)
+		analysisCtx, effective := resolveEffectiveSettingsForRepo(analysisCtx, owner, repo)
+		if !effective.Enabled {
+			logger.Infof("Push scan skipped — repository %s/%s disabled in settings", owner, repo)
 			return
 		}
-		createIssuesFromResult(analysisCtx, owner, repo, result, fmt.Sprintf("Push to %s", payload.Ref), ref, 0)
+
+		statusReporter.ReportPending(analysisCtx, owner, repo, commitSHA)
+
+		result, err := analysisEngine.AnalyzeChangedFiles(analysisCtx, owner, repo, ref, changedFiles)
+		finishPersistedScan(analysisCtx, &scanCtx, repositoryID, result, err)
+		if err != nil {
+			logger.Errorf("Push analysis failed: %v", err)
+			statusReporter.ReportFinalWithPolicy(analysisCtx, owner, repo, resolveCommitSHA(result, commitSHA), nil, nil, true, effective.PolicyLevel, effective.SeverityGate)
+			return
+		}
+		eval := statusReporter.ReportFinalWithPolicy(
+			analysisCtx,
+			owner,
+			repo,
+			resolveCommitSHA(result, commitSHA),
+			severitiesForStatus(result, effective),
+			scannerSummaries(result),
+			false,
+			effective.PolicyLevel,
+			effective.SeverityGate,
+		)
+		notifyPRGateFailed(analysisCtx, repositoryID, owner, repo, scanCtx.ScanID, eval)
+		createIssuesFromResult(analysisCtx, owner, repo, result, fmt.Sprintf("Push to %s", payload.Ref), ref, 0, repositoryID, effective)
 	})
 }
 
@@ -510,15 +970,74 @@ func (p *webhookProcessor) ProcessPullRequest(ctx context.Context, payload *hand
 	owner := payload.Repository.Owner.LoginName()
 	repo := payload.Repository.Name
 	prNumber := payload.PullRequest.Number
+	commitSHA := strings.TrimSpace(payload.PullRequest.Head.SHA)
 
 	runAnalysis(ctx, func(analysisCtx context.Context) {
-		result, err := analysisEngine.AnalyzePullRequest(analysisCtx, owner, repo, prNumber)
-		if err != nil {
-			logger.Errorf("Pull request analysis failed: %v", err)
+		scanCtx := store.ScanContext{
+			Owner:         owner,
+			Repo:          repo,
+			TriggerType:   store.TriggerPR,
+			Ref:           payload.PullRequest.Head.Ref,
+			CommitSHA:     commitSHA,
+			PRNumber:      prNumber,
+			CloneURL:      payload.Repository.CloneURL,
+			ConnectedRepo: true,
+		}
+		analysisCtx, repositoryID := beginPersistedScan(analysisCtx, &scanCtx)
+		analysisCtx, effective := resolveEffectiveSettingsForRepo(analysisCtx, owner, repo)
+		if !effective.Enabled {
+			logger.Infof("PR scan skipped — repository %s/%s disabled in settings", owner, repo)
 			return
 		}
-		createIssuesFromResult(analysisCtx, owner, repo, result, fmt.Sprintf("Pull Request #%d", prNumber), "", prNumber)
+
+		statusReporter.ReportPending(analysisCtx, owner, repo, commitSHA)
+
+		result, err := analysisEngine.AnalyzePullRequest(analysisCtx, owner, repo, prNumber)
+		finishPersistedScan(analysisCtx, &scanCtx, repositoryID, result, err)
+		if err != nil {
+			logger.Errorf("Pull request analysis failed: %v", err)
+			statusReporter.ReportFinalWithPolicy(analysisCtx, owner, repo, resolveCommitSHA(result, commitSHA), nil, nil, true, effective.PolicyLevel, effective.SeverityGate)
+			return
+		}
+		eval := statusReporter.ReportFinalWithPolicy(
+			analysisCtx,
+			owner,
+			repo,
+			resolveCommitSHA(result, commitSHA),
+			severitiesForStatus(result, effective),
+			scannerSummaries(result),
+			false,
+			effective.PolicyLevel,
+			effective.SeverityGate,
+		)
+		notifyPRGateFailed(analysisCtx, repositoryID, owner, repo, scanCtx.ScanID, eval)
+		createIssuesFromResult(analysisCtx, owner, repo, result, fmt.Sprintf("Pull Request #%d", prNumber), "", prNumber, repositoryID, effective)
 	})
+}
+
+func resolveCommitSHA(result *analyzers.AnalysisResult, fallback string) string {
+	if result != nil && result.CommitSHA != "" {
+		return result.CommitSHA
+	}
+	fallback = strings.TrimSpace(fallback)
+	if gitea.IsCommitSHA(fallback) {
+		return fallback
+	}
+	return ""
+}
+
+func scannerSummaries(result *analyzers.AnalysisResult) []gitea.ScannerResultSummary {
+	if result == nil {
+		return nil
+	}
+	summaries := make([]gitea.ScannerResultSummary, 0, len(result.ScannerResults))
+	for _, scannerResult := range result.ScannerResults {
+		summaries = append(summaries, gitea.ScannerResultSummary{
+			Scanner: scannerResult.Scanner,
+			Status:  string(scannerResult.Status),
+		})
+	}
+	return summaries
 }
 
 func runAnalysis(_ context.Context, fn func(context.Context)) {
@@ -530,31 +1049,388 @@ func runAnalysis(_ context.Context, fn func(context.Context)) {
 	}
 }
 
-func createIssuesFromResult(ctx context.Context, owner, repo string, result *analyzers.AnalysisResult, contextLabel, commit string, prNumber int) {
-	if len(result.Issues) == 0 {
-		return
-	}
+func runScheduledRepositoryScan(ctx context.Context, repo store.ScheduledRepository) error {
+	var runErr error
+	analysisCtx, cancel := context.WithTimeout(context.Background(), time.Duration(config.AnalysisTimeout)*time.Second)
+	defer cancel()
 
-	issueReq := &issues.IssueCreationRequest{
-		Owner:      owner,
-		Repository: repo,
-		AnalysisResult: &ai.CodeAnalysisResult{
-			Issues:       result.Issues,
-			OverallScore: result.OverallScore,
-			AnalysisTime: result.AnalysisTime,
-		},
-		Context:     contextLabel,
-		Commit:      commit,
-		PullRequest: prNumber,
-	}
+	if err := analysisLimiter.Run(analysisCtx, func() {
+		ref := strings.TrimSpace(repo.DefaultBranch)
+		if ref == "" {
+			ref = "main"
+		}
 
-	issueResult, err := issueManager.CreateIssuesFromAnalysis(ctx, issueReq)
+		scanCtx := store.ScanContext{
+			Owner:         repo.Owner,
+			Repo:          repo.Name,
+			ForgeType:     repo.ForgeType,
+			CloneURL:      repo.CloneURL,
+			DefaultBranch: repo.DefaultBranch,
+			TriggerType:   store.TriggerScheduled,
+			Ref:           ref,
+			ConnectedRepo: true,
+		}
+		scanCtxInner, repositoryID := beginPersistedScan(analysisCtx, &scanCtx)
+		scanCtxInner, effective := resolveEffectiveSettingsForRepo(scanCtxInner, repo.Owner, repo.Name)
+		if !effective.Enabled {
+			logger.Infof("Scheduled scan skipped — repository %s disabled in settings", repo.FullName)
+			return
+		}
+
+		if bugbotStore != nil && repositoryID > 0 {
+			if dbRepo, rerr := bugbotStore.GetRepository(scanCtxInner, repositoryID); rerr == nil {
+				if delegated, derr := tryDelegateScan(scanCtxInner, &scanCtx, dbRepo, effective); delegated {
+					logger.WithFields(logrus.Fields{
+						"scan_id": scanCtx.ScanID, "repo": repo.FullName,
+					}).Info("Scheduled scan delegated to runner")
+					return
+				} else if derr != nil {
+					finishPersistedScan(scanCtxInner, &scanCtx, repositoryID, nil, derr)
+					runErr = derr
+					return
+				}
+			}
+		}
+
+		result, err := analysisEngine.AnalyzeRepository(scanCtxInner, repo.Owner, repo.Name, ref)
+		finishPersistedScan(scanCtxInner, &scanCtx, repositoryID, result, err)
+		if err != nil {
+			logger.WithFields(logrus.Fields{
+				"scan_id":       scanCtx.ScanID,
+				"repo":          repo.FullName,
+				"trigger_type":  store.TriggerScheduled,
+				"schedule_cron": repo.ScheduleCron,
+			}).Errorf("Scheduled analysis failed: %v", err)
+			runErr = err
+			return
+		}
+
+		createIssuesFromResult(scanCtxInner, repo.Owner, repo.Name, result,
+			fmt.Sprintf("Scheduled scan (%s)", repo.ScheduleCron), ref, 0, repositoryID, effective)
+	}); err != nil {
+		return fmt.Errorf("scheduled scan skipped: %w", err)
+	}
+	return runErr
+}
+
+func scanPolicyFromEffective(e store.EffectiveSettings) analyzers.ScanPolicy {
+	return analyzers.ScanPolicy{
+		Enabled:           e.Enabled,
+		PolicyLevel:       e.PolicyLevel,
+		WorkspaceMode:     e.WorkspaceMode,
+		AnalysisDepth:     e.AnalysisDepth,
+		EnableLLMAuditors: e.EnableLLMAuditors,
+		EnableTrivy:       e.EnableTrivy,
+		EnableGrype:       e.EnableGrype,
+		EnableGitleaks:    e.EnableGitleaks,
+		EnableSemgrep:     e.EnableSemgrep,
+		EnableGovulncheck: e.EnableGovulncheck,
+		EnableGosec:       e.EnableGosec,
+		EnableStaticcheck: e.EnableStaticcheck,
+		EnableHadolint:    e.EnableHadolint,
+		EnableCheckov:     e.EnableCheckov,
+		EnableLinters:     e.EnableLinters,
+		SeverityGate:      e.SeverityGate,
+		ConfidenceGate:    e.ConfidenceGate,
+		IssuePolicy:       e.IssuePolicy,
+		RemediationPolicy: e.RemediationPolicy,
+		AIPolicy:          e.AIPolicy,
+		EnableHealthChecks:          e.EnableHealthChecks,
+		EnableTechDebtChecks:        e.EnableTechDebtChecks,
+		EnableReliabilityChecks:     e.EnableReliabilityChecks,
+		EnableMaintainabilityChecks: e.EnableMaintainabilityChecks,
+		EnableTestGapChecks:         e.EnableTestGapChecks,
+		EnablePerformanceChecks:     e.EnablePerformanceChecks,
+		EnableAIRiskChecks:          e.EnableAIRiskChecks,
+		HealthMaxFindings:           e.HealthMaxFindings,
+		HealthLargeFileLines:        e.HealthLargeFileLines,
+		HealthLargeFunctionLines:    e.HealthLargeFunctionLines,
+		HealthMaxNestingDepth:       e.HealthMaxNestingDepth,
+		HealthMaxFunctionParams:     e.HealthMaxFunctionParams,
+		EnableCodeGraph:             e.EnableCodeGraph,
+		GraphMaxNodes:               e.GraphMaxNodes,
+		GraphMaxEdges:               e.GraphMaxEdges,
+		GraphTimeoutSeconds:         e.GraphTimeoutSeconds,
+		GraphIncludeFunctions:       e.GraphIncludeFunctions,
+		GraphIncludeFindings:        e.GraphIncludeFindings,
+		GovulncheckTimeoutSeconds:   e.GovulncheckTimeoutSeconds,
+		GosecTimeoutSeconds:         e.GosecTimeoutSeconds,
+		StaticcheckTimeoutSeconds:   e.StaticcheckTimeoutSeconds,
+		GoScannerMaxFindings:        e.GoScannerMaxFindings,
+		HadolintTimeoutSeconds:      e.HadolintTimeoutSeconds,
+		CheckovTimeoutSeconds:       e.CheckovTimeoutSeconds,
+		IACScannerMaxFindings:       e.IACScannerMaxFindings,
+	}
+}
+
+func resolveEffectiveSettingsForRepo(ctx context.Context, owner, repo string) (context.Context, store.EffectiveSettings) {
+	repoSettings := store.RepoSettings{}
+	effective, meta := store.ResolveEffectiveSettingsFull(appGlobalSnapshot, repoSettings)
+	if bugbotStore != nil {
+		fullName := owner + "/" + repo
+		dbRepo, err := bugbotStore.GetRepositoryByFullName(ctx, store.ForgeTypeGitea, fullName)
+		if err == nil {
+			settings, serr := bugbotStore.GetRepoSettings(ctx, dbRepo.ID)
+			if serr == nil {
+				repoSettings = settings
+				effective, meta = store.ResolveEffectiveSettingsFull(appGlobalSnapshot, settings)
+			}
+		}
+	}
+	if effective.AIPolicy == store.AIPolicyAllowed && aiClient == nil {
+		effective.EnableLLMAuditors = false
+	}
+	policy := scanPolicyFromEffective(effective)
+	policy.ScanProfile = meta.ScanProfile
+	policy.ProfileModified = meta.ProfileModified
+	policy.ProfileSource = meta.ProfileSource
+	return analyzers.WithScanPolicy(ctx, policy), effective
+}
+
+func filterIssuesForForge(issues []ai.CodeIssue, effective store.EffectiveSettings) []ai.CodeIssue {
+	if !store.ShouldCreateForgeIssues(effective) {
+		return nil
+	}
+	out := make([]ai.CodeIssue, 0, len(issues))
+	for _, issue := range issues {
+		if store.PassesIssueGates(issue.Severity, issue.Confidence, effective) {
+			out = append(out, issue)
+		}
+	}
+	return out
+}
+
+func severitiesForStatus(result *analyzers.AnalysisResult, effective store.EffectiveSettings) []string {
+	if result == nil {
+		return nil
+	}
+	severities := make([]string, len(result.Issues))
+	confidences := make([]float64, len(result.Issues))
+	for i, issue := range result.Issues {
+		severities[i] = issue.Severity
+		confidences[i] = issue.Confidence
+	}
+	return store.SeveritiesForStatus(severities, confidences, effective)
+}
+
+func beginPersistedScan(ctx context.Context, scanCtx *store.ScanContext) (context.Context, int64) {
+	if scanRecorder == nil || !scanRecorder.Enabled() || scanCtx == nil {
+		return ctx, 0
+	}
+	if scanCtx.ScanID == "" {
+		scanCtx.ScanID = scanid.New()
+	}
+	ctx = scanid.With(ctx, scanCtx.ScanID)
+
+	repo, err := scanRecorder.BeginScan(ctx, *scanCtx)
 	if err != nil {
-		logger.Errorf("Failed to create issues: %v", err)
+		logger.Warnf("Failed to begin scan persistence: %v", err)
+		return ctx, 0
+	}
+	return ctx, repo.ID
+}
+
+func finishPersistedScan(ctx context.Context, scanCtx *store.ScanContext, repositoryID int64, result *analyzers.AnalysisResult, analysisErr error) {
+	if scanRecorder == nil || !scanRecorder.Enabled() || scanCtx == nil || scanCtx.ScanID == "" {
+		return
+	}
+	scanID := scanCtx.ScanID
+	var data *store.ScanCompletion
+	if result != nil {
+		scanners := make([]store.ScanCompletionScanner, 0, len(result.ScannerResults))
+		for _, sr := range result.ScannerResults {
+			scanners = append(scanners, store.ScanCompletionScanner{
+				Scanner:       sr.Scanner,
+				Status:        string(sr.Status),
+				FindingsCount: len(sr.Findings),
+				Detail:        sr.Detail,
+			})
+		}
+		data = &store.ScanCompletion{
+			IssuesFound:       len(result.Issues),
+			FilesAnalyzed:     result.FilesAnalyzed,
+			AnalysisTime:      result.AnalysisTime,
+			OverallScore:      result.OverallScore,
+			CommitSHA:         result.CommitSHA,
+			WorkspaceModeUsed: result.WorkspaceModeUsed,
+			PolicySnapshot:    result.PolicySnapshot,
+			ScannerResults:    scanners,
+		}
+		if result.Graph != nil {
+			if raw, err := json.Marshal(result.Graph); err == nil {
+				data.GraphJSON = raw
+				data.GraphNodeCount = result.Graph.Metrics.NodeCount
+				data.GraphEdgeCount = result.Graph.Metrics.EdgeCount
+			}
+		}
+	}
+	if err := scanRecorder.FinishScan(ctx, scanID, data, analysisErr); err != nil {
+		logger.Warnf("Failed to finish scan persistence: %v", err)
+	}
+	notifyScanFinish(ctx, scanCtx, repositoryID, result, analysisErr)
+}
+
+func createIssuesFromResult(ctx context.Context, owner, repo string, result *analyzers.AnalysisResult, contextLabel, commit string, prNumber int, repositoryID int64, effective store.EffectiveSettings) {
+	if result == nil {
 		return
 	}
 
-	logger.Infof("Created %d issues, skipped %d", issueResult.IssuesCreated, issueResult.IssuesSkipped)
+	commitRef := commit
+	if commitRef == "" {
+		commitRef = result.CommitSHA
+	}
+
+	var processed []issues.ProcessedIssueRecord
+
+	if store.ShouldCreateForgeIssues(effective) {
+		forgeIssues := filterIssuesForForge(result.Issues, effective)
+		if len(forgeIssues) > 0 {
+			issueReq := &issues.IssueCreationRequest{
+				Owner:      owner,
+				Repository: repo,
+				AnalysisResult: &ai.CodeAnalysisResult{
+					Issues:       forgeIssues,
+					OverallScore: result.OverallScore,
+					AnalysisTime: result.AnalysisTime,
+				},
+				Context:            contextLabel,
+				Commit:             commitRef,
+				PullRequest:        prNumber,
+				ScanID:             result.ScanID,
+				UseSemanticDedup:     store.UseSemanticDedup(effective),
+				MinIssueConfidence:   effective.ConfidenceGate,
+				ForceIssueCreation:   true,
+			}
+
+			issueResult, err := issueManager.CreateIssuesFromAnalysis(ctx, issueReq)
+			if err != nil {
+				logger.Errorf("Failed to create issues: %v", err)
+			} else {
+				logger.Infof("Created %d issues, updated %d, skipped %d", issueResult.IssuesCreated, issueResult.IssuesUpdated, issueResult.IssuesSkipped)
+				processed = issueResult.ProcessedIssues
+			}
+		}
+	} else {
+		logger.Infof("Forge issue creation skipped (policy_level=%s issue_policy=%s)", effective.PolicyLevel, effective.IssuePolicy)
+	}
+
+	if scanRecorder != nil && scanRecorder.Enabled() && repositoryID > 0 && result.ScanID != "" {
+		if err := scanRecorder.RecordIssues(ctx, repositoryID, result.ScanID, result.Issues, processed); err != nil {
+			logger.Warnf("Failed to persist findings: %v", err)
+		} else {
+			maybeGenerateRemediationPlans(ctx, repositoryID, result.Issues, processed)
+		}
+	}
+	maybeProcessEvidenceClosure(ctx, owner, repo, repositoryID, result)
+}
+
+func mainRunnerConfig() runner.Config {
+	callback := strings.TrimSpace(config.RunnerCallbackBaseURL)
+	if pub := strings.TrimSpace(config.PublicURL); pub != "" {
+		callback = strings.TrimSuffix(pub, "/")
+	} else if callback == "" {
+		host := strings.TrimSpace(config.ListenHost)
+		if host == "" || host == "0.0.0.0" {
+			host = "127.0.0.1"
+		}
+		port := strings.TrimSpace(config.Port)
+		if port == "" {
+			port = "8080"
+		}
+		callback = fmt.Sprintf("http://%s:%s", host, port)
+	}
+	return runner.Config{
+		DelegationEnabled:     config.RunnerDelegationEnabled,
+		Mode:                  config.RunnerMode,
+		SharedSecret:          config.RunnerSharedSecret,
+		JobTimeoutSeconds:     config.RunnerJobTimeoutSeconds,
+		MaxConcurrentJobs:     config.RunnerMaxConcurrentJobs,
+		ResultMaxSizeMB:       config.RunnerResultMaxSizeMB,
+		ArtifactRetentionDays: config.RunnerArtifactRetentionDays,
+		CallbackBaseURL:       callback,
+		MaxRepoSizeMB:         config.WorkspaceMaxSizeMB,
+		MaxFiles:              config.WorkspaceMaxFiles,
+	}
+}
+
+func tryDelegateScan(ctx context.Context, scanCtx *store.ScanContext, repo store.Repository, effective store.EffectiveSettings) (bool, error) {
+	if runnerDispatcher == nil {
+		return false, nil
+	}
+	if runner.ShouldDelegate(runnerCfg, effective, scanCtx.TriggerType) != runner.DecisionDelegate {
+		return false, nil
+	}
+	policy := analyzers.SnapshotFromPolicy(scanPolicyFromEffective(effective))
+	if bugbotStore != nil {
+		settings, serr := bugbotStore.GetRepoSettings(ctx, repo.ID)
+		if serr == nil {
+			_, meta := store.ResolveEffectiveSettingsFull(appGlobalSnapshot, settings)
+			sp := scanPolicyFromEffective(effective)
+			sp.ScanProfile = meta.ScanProfile
+			sp.ProfileModified = meta.ProfileModified
+			sp.ProfileSource = meta.ProfileSource
+			policy = analyzers.SnapshotFromPolicy(sp)
+		}
+	}
+	_, err := runnerDispatcher.CreateScanJob(ctx, repo, scanCtx.ScanID, scanCtx.Ref, scanCtx.CommitSHA, policy)
+	if err != nil {
+		if runner.ShouldFallbackToCore(effective) {
+			logger.Warnf("Runner delegation unavailable, falling back to core scan: %v", err)
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
+func ingestRunnerResult(ctx context.Context, job store.RunnerJob, result runner.JobResult, repo store.Repository, _ store.EffectiveSettings) error {
+	ctx = scanid.With(ctx, job.ScanID)
+	ctx, effective := resolveEffectiveSettingsForRepo(ctx, repo.Owner, repo.Name)
+
+	var policy analyzers.PolicySnapshot
+	_ = json.Unmarshal(job.PolicySnapshotJSON, &policy)
+
+	if result.Status == runner.JobStatusFailed || job.Status == store.RunnerJobStatusFailed {
+		errMsg := job.Error
+		if len(result.Errors) > 0 {
+			errMsg = result.Errors[0]
+		}
+		if errMsg == "" {
+			errMsg = "runner job failed"
+		}
+		runnerScanCtx := &store.ScanContext{
+			Owner: repo.Owner, Repo: repo.Name, ScanID: job.ScanID,
+			TriggerType: store.TriggerScheduled, Ref: job.Ref, CommitSHA: job.CommitSHA, PRNumber: job.PRNumber,
+		}
+		finishPersistedScan(ctx, runnerScanCtx, repo.ID, nil, fmt.Errorf("%s", errMsg))
+		notifyRunnerJobFailed(ctx, repo.ID, repo.FullName, job.ScanID, errMsg)
+		return nil
+	}
+
+	analysisResult := result.ToAnalysisResult(repo.FullName, job.Ref, &policy)
+	runnerScanCtx := &store.ScanContext{
+		Owner: repo.Owner, Repo: repo.Name, ScanID: job.ScanID,
+		TriggerType: store.TriggerScheduled, Ref: job.Ref, CommitSHA: job.CommitSHA, PRNumber: job.PRNumber,
+	}
+	finishPersistedScan(ctx, runnerScanCtx, repo.ID, analysisResult, nil)
+	createIssuesFromResult(ctx, repo.Owner, repo.Name, analysisResult,
+		fmt.Sprintf("Runner scan (%s)", job.JobType), job.Ref, job.PRNumber, repo.ID, effective)
+	return nil
+}
+
+func runnerNonceMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if runnerReceiver == nil {
+			c.Next()
+			return
+		}
+		nonce := c.GetHeader(runner.HeaderNonce)
+		if err := runnerReceiver.CheckNonce(c.Request.Context(), nonce); err != nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "runner nonce rejected"})
+			return
+		}
+		c.Next()
+	}
 }
 
 // handleManualAnalysis handles manual analysis requests
@@ -577,25 +1453,60 @@ func handleManualAnalysis(c *gin.Context) {
 		runAnalysis(c.Request.Context(), func(ctx context.Context) {
 			var result *analyzers.AnalysisResult
 			var err error
+			var repositoryID int64
+
+			scanCtx := store.ScanContext{
+				Owner:         req.Owner,
+				Repo:          req.Repository,
+				TriggerType:   store.TriggerManual,
+				Ref:           req.Ref,
+				ConnectedRepo: true,
+			}
+			ctx, repositoryID = beginPersistedScan(ctx, &scanCtx)
+			ctx, effective := resolveEffectiveSettingsForRepo(ctx, req.Owner, req.Repository)
+			if !effective.Enabled {
+				logger.Infof("Manual scan skipped — repository %s/%s disabled in settings", req.Owner, req.Repository)
+				return
+			}
+
+			if req.Type != "pull_request" || req.PRNumber <= 0 {
+				if bugbotStore != nil && repositoryID > 0 {
+					if dbRepo, rerr := bugbotStore.GetRepository(ctx, repositoryID); rerr == nil {
+						if delegated, derr := tryDelegateScan(ctx, &scanCtx, dbRepo, effective); delegated {
+							logger.WithFields(logrus.Fields{
+								"scan_id": scanCtx.ScanID, "repo": dbRepo.FullName,
+							}).Info("Manual scan delegated to runner")
+							return
+						} else if derr != nil {
+							finishPersistedScan(ctx, &scanCtx, repositoryID, nil, derr)
+							return
+						}
+					}
+				}
+			}
 
 			if req.Type == "pull_request" && req.PRNumber > 0 {
+				scanCtx.PRNumber = req.PRNumber
+				scanCtx.TriggerType = store.TriggerPR
 				result, err = analysisEngine.AnalyzePullRequest(ctx, req.Owner, req.Repository, req.PRNumber)
 			} else {
 				ref := req.Ref
 				if ref == "" {
 					ref = "main"
 				}
+				scanCtx.Ref = ref
 				result, err = analysisEngine.AnalyzeRepository(ctx, req.Owner, req.Repository, ref)
 			}
 
+			finishPersistedScan(ctx, &scanCtx, repositoryID, result, err)
 			if err != nil {
 				logger.Errorf("Manual analysis failed: %v", err)
 				return
 			}
 
-			if len(result.Issues) > 0 {
+			if len(result.Issues) > 0 || scanRecorder != nil && scanRecorder.Enabled() {
 				createIssuesFromResult(ctx, req.Owner, req.Repository, result,
-					fmt.Sprintf("Manual analysis - %s", req.Type), req.Ref, req.PRNumber)
+					fmt.Sprintf("Manual analysis - %s", req.Type), req.Ref, req.PRNumber, repositoryID, effective)
 			}
 		})
 	}()
@@ -605,13 +1516,24 @@ func handleManualAnalysis(c *gin.Context) {
 
 // handleStatus handles status requests
 func handleStatus(c *gin.Context) {
+	r := buildReadiness("running")
+	c.JSON(http.StatusOK, r)
+}
+
+func handleAbout(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
-		"status":      "running",
-		"service":     "gitea-bugbot",
-		"version":     version,
-		"ai_provider": aiClient.Provider(),
-		"ai_model":    aiClient.Model(),
-		"timestamp":   time.Now().Format(time.RFC3339),
+		"product_name": "Repository Detective",
+		"legacy_name":  "Bugbot",
+		"tagline":      "Inspect. Analyze. Improve.",
+		"version":      version,
+		"documentation_index": "/docs/README.md",
+		"compatibility": gin.H{
+			"bugbot_env":          true,
+			"bugbot_labels":       true,
+			"bugbot_fingerprints": true,
+			"label_compat_mode":   issues.LabelCompatMode(),
+		},
+		"safe_loop": "detect → issue → plan → approve → patch PR → merge → rescan → verified closure",
 	})
 }
 
@@ -641,6 +1563,18 @@ func (c *Config) effectiveAIProvider() string {
 	return ""
 }
 
+// needsAIProvider reports whether an AI backend must be configured at startup.
+func (c *Config) needsAIProvider() bool {
+	if c.QdrantEnabled {
+		return true
+	}
+	depth := c.AnalysisDepth
+	if depth <= 0 {
+		depth = 3
+	}
+	return depth >= 3 && c.EnableLLMAuditors
+}
+
 func firstNonEmpty(values ...string) string {
 	for _, value := range values {
 		if value != "" {
@@ -648,4 +1582,102 @@ func firstNonEmpty(values ...string) string {
 		}
 	}
 	return ""
+}
+
+func mainHealthConfig() health.Config {
+	return health.Config{
+		Enabled:               config.EnableHealthChecks,
+		EnableTechDebt:        config.EnableTechDebtChecks,
+		EnableReliability:     config.EnableReliabilityChecks,
+		EnableMaintainability: config.EnableMaintainabilityChecks,
+		EnableTestGap:         config.EnableTestGapChecks,
+		EnablePerformance:     config.EnablePerformanceChecks,
+		EnableAIRisk:          config.EnableAIRiskChecks,
+		MaxFindings:           config.HealthMaxFindings,
+		LargeFileLines:        config.HealthLargeFileLines,
+		LargeFunctionLines:    config.HealthLargeFunctionLines,
+		MaxNestingDepth:       config.HealthMaxNestingDepth,
+		MaxFunctionParams:     config.HealthMaxFunctionParams,
+	}
+}
+
+func mainGraphConfig() graph.Config {
+	return graph.Config{
+		Enabled:          config.EnableCodeGraph,
+		MaxNodes:         config.GraphMaxNodes,
+		MaxEdges:         config.GraphMaxEdges,
+		TimeoutSeconds:   config.GraphTimeoutSeconds,
+		IncludeFunctions: config.GraphIncludeFunctions,
+		IncludeFindings:  config.GraphIncludeFindings,
+	}
+}
+
+func mainScannerConfig() scanners.Config {
+	return scanners.Config{
+		EnableTrivy:              config.EnableTrivy,
+		EnableGrype:              config.EnableGrype,
+		EnableGitleaks:           config.EnableGitleaks,
+		EnableSemgrep:            config.EnableSemgrep,
+		EnableGovulncheck:        config.EnableGovulncheck,
+		EnableGosec:              config.EnableGosec,
+		EnableStaticcheck:        config.EnableStaticcheck,
+		EnableHadolint:           config.EnableHadolint,
+		EnableCheckov:            config.EnableCheckov,
+		EnableLinters:            config.EnableLinters,
+		GitleaksConfig:           config.GitleaksConfig,
+		GitleaksTimeoutSeconds:   config.GitleaksTimeoutSeconds,
+		SemgrepConfig:            config.SemgrepConfig,
+		SemgrepTimeoutSeconds:    config.SemgrepTimeoutSeconds,
+		SemgrepMaxFindings:       config.SemgrepMaxFindings,
+		SemgrepSeverityThreshold: config.SemgrepSeverityThreshold,
+		GovulncheckTimeoutSeconds: config.GovulncheckTimeoutSeconds,
+		GosecTimeoutSeconds:       config.GosecTimeoutSeconds,
+		StaticcheckTimeoutSeconds: config.StaticcheckTimeoutSeconds,
+		GoScannerMaxFindings:      config.GoScannerMaxFindings,
+		HadolintTimeoutSeconds:    config.HadolintTimeoutSeconds,
+		CheckovTimeoutSeconds:     config.CheckovTimeoutSeconds,
+		IACScannerMaxFindings:     config.IACScannerMaxFindings,
+		TrivySeverity:            "HIGH,CRITICAL",
+		GrypeFailOn:              "high",
+		LinterMinSeverity:        "warning",
+		TimeoutSeconds:           config.ScannerTimeoutSeconds,
+	}
+}
+
+func registerControlPlaneRoutes(router *gin.Engine) {
+	if controlPlaneHandler == nil {
+		return
+	}
+	cp := router.Group("/api/v1")
+	cp.Use(requireComponentsReady(), requireAPIKeyAuth())
+	controlPlaneHandler.RegisterRoutes(cp)
+	if runnerHandler != nil {
+		runnerHandler.RegisterOperatorRoutes(cp)
+	}
+	if preinstallHandler != nil {
+		preinstallHandler.RegisterRoutes(cp)
+	}
+	if notifyManager != nil {
+		api.NewNotificationHandler(notifyManager).RegisterRoutes(cp)
+	}
+	if config.RemediationPlannerEnabled {
+		api.NewRemediationHandler(bugbotStore, remediationBridge{}, config.RemediationPREnabled).RegisterRoutes(cp)
+	}
+	if config.EvidenceClosureEnabled {
+		api.NewClosureHandler(bugbotStore, closureBridge{}).RegisterRoutes(cp)
+	}
+
+	if runnerHandler != nil && runnerCfg.SharedSecret != "" {
+		rg := router.Group("/api/v1/runner")
+		rg.Use(requireComponentsReady(), runnerNonceMiddleware(), api.RequireRunnerHMAC(runnerCfg.SharedSecret))
+		runnerHandler.RegisterRunnerRoutes(rg)
+	}
+
+	if !config.UIEnabled || operatorUI == nil {
+		return
+	}
+	uiGroup := router.Group(operatorUI.BasePath())
+	uiGroup.Use(requireComponentsReady(), requireAPIKeyAuth())
+	operatorUI.RegisterRoutes(uiGroup)
+	logger.Infof("Control plane API and UI routes registered")
 }

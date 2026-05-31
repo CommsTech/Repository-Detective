@@ -58,6 +58,7 @@ func (s *SemanticStore) FindDuplicate(ctx context.Context, repository string, is
 		Severity:    issue.Severity,
 		Category:    issue.Category,
 		Confidence:  issue.Confidence,
+		Fingerprint: issue.Fingerprint,
 	}
 
 	vector, err := s.embedder.Embed(ctx, qdrant.EmbeddingText(input))
@@ -98,6 +99,7 @@ func (s *SemanticStore) Remember(ctx context.Context, repository string, issue *
 		Category:    issue.Category,
 		Confidence:  issue.Confidence,
 		ClusterID:   clusterID,
+		Fingerprint: issue.Fingerprint,
 	}
 
 	vector, err := s.embedder.Embed(ctx, qdrant.EmbeddingText(input))
@@ -109,15 +111,22 @@ func (s *SemanticStore) Remember(ctx context.Context, repository string, issue *
 
 // DuplicateCommentBody formats a comment when updating an existing issue.
 func DuplicateCommentBody(issue *ai.CodeIssue, score float64) string {
-	return fmt.Sprintf(
-		"Bugbot detected a semantically similar finding (score %.2f).\n\n**%s**\n\nSeverity: %s\nCategory: %s\nConfidence: %.2f\nFile: `%s` line %d\n\n%s",
+	snippet := SanitizeSecretEvidence(issue.CodeSnippet)
+	body := fmt.Sprintf(
+		"Bugbot detected a semantically similar finding (score %.2f).\n\n**%s**\n\nSeverity: %s\nCategory: %s\nConfidence: %.2f\nSource: %s\nFingerprint: %s\nFile: `%s` line %d\n\n%s",
 		score,
 		issue.Title,
 		issue.Severity,
 		issue.Category,
 		issue.Confidence,
+		issue.Source,
+		issue.Fingerprint,
 		issue.File,
 		issue.LineNumber,
 		issue.Description,
 	)
+	if snippet != "" {
+		body += "\n\nEvidence:\n```\n" + snippet + "\n```"
+	}
+	return body
 }

@@ -42,6 +42,7 @@ type MatchInput struct {
 	Category    string
 	Confidence  float64
 	ClusterID   string
+	Fingerprint string
 }
 
 // MatchResult describes a prior similar finding.
@@ -102,10 +103,17 @@ func (s *Store) Remember(ctx context.Context, input MatchInput, issueURL string,
 		IssueURL:    issueURL,
 		IssueNumber: issueNumber,
 		ClusterID:   input.ClusterID,
-		Fingerprint: fingerprint(input),
+		Fingerprint: fingerprintValue(input),
 	}
 
 	return s.client.Upsert(ctx, payload.Fingerprint, vector, payload)
+}
+
+func fingerprintValue(input MatchInput) string {
+	if strings.TrimSpace(input.Fingerprint) != "" {
+		return strings.TrimSpace(input.Fingerprint)
+	}
+	return fingerprint(input)
 }
 
 func fingerprint(input MatchInput) string {

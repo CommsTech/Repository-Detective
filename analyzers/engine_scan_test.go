@@ -2,6 +2,8 @@ package analyzers
 
 import (
 	"testing"
+
+	"git.commsnet.org/commstech/bugbot/scanners"
 )
 
 func TestIsDeterministicAuditor(t *testing.T) {
@@ -9,6 +11,8 @@ func TestIsDeterministicAuditor(t *testing.T) {
 		"static":        true,
 		"trivy":         true,
 		"grype":         true,
+		"gitleaks":      true,
+		"semgrep":       true,
 		"golangci-lint": true,
 		"ruff":          true,
 		"shellcheck":    true,
@@ -20,6 +24,16 @@ func TestIsDeterministicAuditor(t *testing.T) {
 		if got := isDeterministicAuditor(auditor); got != want {
 			t.Fatalf("auditor %q: got %v want %v", auditor, got, want)
 		}
+	}
+}
+
+func TestIsDeterministicAuditorUsesScannerRegistry(t *testing.T) {
+	scanners.RegisterDeterministicSource("future-scanner")
+	if !isDeterministicAuditor("future-scanner") {
+		t.Fatal("expected registered scanner source to be deterministic")
+	}
+	if isDeterministicAuditor("not-a-scanner") {
+		t.Fatal("unexpected deterministic classification")
 	}
 }
 

@@ -1,0 +1,68 @@
+{{define "dashboard.html"}}
+<!DOCTYPE html><html lang="en"><head>{{template "head" .}}</head><body>
+{{template "nav" .}}<main><h1>{{.Title}}</h1>{{if .Notice}}<div class="warn">{{.Notice}}</div>{{end}}
+{{with .Data.Summary}}
+<div class="card"><p><strong>Repositories:</strong> {{.TotalRepositories}}</p>
+<p><strong>Failed scans:</strong> {{.FailedScansCount}} · <strong>Scanner failures:</strong> {{.ScannerFailuresCount}}</p>
+<p><strong>Scheduled scans (7d):</strong> {{.ScheduledScansCount}}{{if .LastScheduledScanAt}} · <strong>Last scheduled:</strong> {{.LastScheduledScanAt.Format "2006-01-02 15:04"}}{{end}}</p>
+{{if .RunnerJobsByStatus}}<p><strong>Runner jobs:</strong> {{range $k, $v := .RunnerJobsByStatus}}{{$k}}={{$v}} {{end}}</p>{{end}}
+</div>
+<div class="card"><h2>Safe remediation lifecycle</h2>
+<p class="muted">detect → issue → plan → approve → patch PR → merge → rescan → verified closure</p>
+<table>
+<tr><th>Stage</th><th>Count</th><th>Label</th></tr>
+<tr><td>Open findings</td><td>{{.Lifecycle.OpenFindings}}</td><td class="muted">Awaiting triage</td></tr>
+<tr><td>Remediation candidates</td><td>{{.Lifecycle.RemediationCandidates}}</td><td class="muted">Planning only</td></tr>
+<tr><td>Approved plans</td><td>{{.Lifecycle.ApprovedPlans}}</td><td class="muted">Approved — PR not opened</td></tr>
+<tr><td>PRs opened</td><td>{{.Lifecycle.PROpened}}</td><td class="muted">PR opened, not merged</td></tr>
+<tr><td>PRs merged</td><td>{{.Lifecycle.PRMerged}}</td><td class="muted">Merged — may need rescan</td></tr>
+<tr><td>Pending rescan</td><td>{{.Lifecycle.PendingRescan}}</td><td class="muted">Waiting for rescan</td></tr>
+<tr><td>Closure blocked</td><td>{{.Lifecycle.ClosureBlocked}}</td><td class="muted">Blocked: scanner did not run</td></tr>
+<tr><td>Still present</td><td>{{.Lifecycle.StillPresent}}</td><td class="muted">Fix did not remove fingerprint</td></tr>
+<tr><td>Resolved verified</td><td>{{.Lifecycle.ResolvedVerified}}</td><td class="muted">Verified resolved</td></tr>
+</table>
+<p><strong>Remediation summary:</strong> candidates={{.Remediation.Candidates}} · human review={{.Remediation.HumanReview}} · approved waiting={{.Remediation.ApprovedWaiting}}</p>
+<p><strong>Closure summary:</strong> pending rescan={{.Closure.PendingRescan}} · verified={{.Closure.Verified}} · blocked={{.Closure.Blocked}}</p>
+</div>
+{{end}}
+{{with .Data.Readiness}}
+<div class="card"><h2>Operator readiness</h2>
+<p><strong>Product:</strong> {{.ProductName}} — {{.Tagline}} · v{{.Version}}</p>
+<p><strong>Scan profile:</strong> {{.Features.ScanProfile}} · <strong>Public URL configured:</strong> {{.Features.PublicURLConfigured}}</p>
+<p><strong>Features:</strong>
+database={{.Features.DatabaseEnabled}}/healthy={{.Features.DatabaseHealthy}} ·
+scheduler={{.Features.SchedulerEnabled}} ·
+runners={{.Features.RunnerDelegationEnabled}} ·
+notifications={{.Features.NotificationsEnabled}} ·
+pre-install={{.Features.PreinstallAuditEnabled}} ·
+remediation planner={{.Features.RemediationPlannerEnabled}} ·
+remediation PR={{.Features.RemediationPREnabled}} ·
+evidence closure={{.Features.EvidenceClosureEnabled}}
+</p>
+<h3>Scanner binaries</h3>
+<table>
+<tr><th>Tool</th><th>Configured</th><th>Available</th><th>Version</th></tr>
+{{range .Tools}}<tr>
+<td>{{.Name}}</td><td>{{.Configured}}</td><td>{{if .Available}}yes{{else}}<span class="warn">missing</span>{{end}}</td>
+<td class="muted">{{if .Version}}{{.Version}}{{else}}—{{end}}</td></tr>
+{{end}}
+</table>
+<p class="muted">Use <code>GET /api/v1/status</code> for the same readiness JSON.</p>
+</div>
+{{end}}
+<div class="card"><h2>Recent scans</h2><table>
+<tr><th>Scan</th><th>Repo</th><th>Trigger</th><th>Status</th><th>Started</th></tr>
+{{with .Data.Summary}}{{range .RecentScans}}<tr>
+<td><a href="{{$.BasePath}}/scans/{{.ID}}{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}">{{.ID}}</a></td>
+<td>{{.RepoFullName}}</td><td>{{.TriggerType}}</td><td>{{.Status}}</td><td>{{.StartedAt.Format "2006-01-02 15:04"}}</td></tr>
+{{else}}<tr><td colspan="5" class="muted">No scans yet</td></tr>{{end}}{{end}}
+</table></div>
+<div class="card"><h2>Recent scheduled scans</h2><table>
+<tr><th>Scan</th><th>Repo</th><th>Status</th><th>Started</th></tr>
+{{with .Data.Summary}}{{range .RecentScheduledScans}}<tr>
+<td><a href="{{$.BasePath}}/scans/{{.ID}}{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}">{{.ID}}</a></td>
+<td>{{.RepoFullName}}</td><td>{{.Status}}</td><td>{{.StartedAt.Format "2006-01-02 15:04"}}</td></tr>
+{{else}}<tr><td colspan="4" class="muted">No scheduled scans yet</td></tr>{{end}}{{end}}
+</table></div>
+</main></body></html>
+{{end}}

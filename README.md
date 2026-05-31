@@ -1,6 +1,10 @@
-# Gitea Bugbot
+# Repository Detective
 
-Automated code review for Gitea. Bugbot watches pushes and pull requests, runs security and quality checks, and opens Gitea issues when it finds problems.
+**Inspect. Analyze. Improve.**
+
+Automated code review and repository assessment for Gitea. Repository Detective watches pushes and pull requests, runs security and quality checks, and opens Gitea issues when it finds problems.
+
+> **Naming:** [Repository Detective](docs/NAMING.md) is the product name. **Bugbot** legacy env vars (`BUGBOT_*`), labels (`bugbot/*`), and fingerprints (`bugbot-<hex>`) remain supported. Prefer `REPOSITORY_DETECTIVE_*` for new deployments — see [docs/BRANDING_MIGRATION.md](docs/BRANDING_MIGRATION.md).
 
 Repo: https://git.commsnet.org/commstech/Bugbot.git
 
@@ -28,20 +32,21 @@ Then open http://localhost:8080/onboard
 
 ## Configuration
 
-Environment variables use the `BUGBOT_` prefix. Examples:
+Environment variables prefer the `REPOSITORY_DETECTIVE_` prefix. Legacy `BUGBOT_*` variables remain supported.
 
-| Setting | Variable |
-|---------|----------|
-| HTTP port | `BUGBOT_PORT` (default `8080`) |
-| Bind address | `BUGBOT_LISTEN_HOST` (default `0.0.0.0`) |
-| API key | `BUGBOT_API_KEY` |
-| Public URL for webhooks | `BUGBOT_PUBLIC_URL` |
-| Gitea | `BUGBOT_GITEA_URL`, `BUGBOT_GITEA_TOKEN` |
-| Webhook secret | `BUGBOT_WEBHOOK_SECRET` |
-| AI | `BUGBOT_AI_PROVIDER`, `BUGBOT_AI_BASE_URL`, `BUGBOT_AI_API_KEY`, `BUGBOT_AI_MODEL` |
-| Deterministic scanners | `BUGBOT_ENABLE_TRIVY`, `BUGBOT_ENABLE_GRYPE`, `BUGBOT_ENABLE_LINTERS` |
-| LLM auditors | `BUGBOT_ENABLE_LLM_AUDITORS` (set `false` for no AI scans) |
-| Skip Gitea/AI ping on boot | `BUGBOT_SKIP_STARTUP_CHECKS=true` |
+| Setting | Preferred variable | Legacy alias |
+|---------|-------------------|--------------|
+| HTTP port | `REPOSITORY_DETECTIVE_PORT` | `BUGBOT_PORT` |
+| Bind address | `REPOSITORY_DETECTIVE_LISTEN_HOST` | `BUGBOT_LISTEN_HOST` |
+| API key | `REPOSITORY_DETECTIVE_API_KEY` | `BUGBOT_API_KEY` |
+| Public URL for webhooks | `REPOSITORY_DETECTIVE_PUBLIC_URL` | `BUGBOT_PUBLIC_URL` |
+| Gitea | `REPOSITORY_DETECTIVE_GITEA_URL`, `REPOSITORY_DETECTIVE_GITEA_TOKEN` | `BUGBOT_GITEA_*` |
+| Webhook secret | `REPOSITORY_DETECTIVE_WEBHOOK_SECRET` | `BUGBOT_WEBHOOK_SECRET` |
+| AI | `REPOSITORY_DETECTIVE_AI_*` | `BUGBOT_AI_*` |
+| Deterministic scanners | `REPOSITORY_DETECTIVE_ENABLE_TRIVY`, etc. | `BUGBOT_ENABLE_*` |
+| LLM auditors | `REPOSITORY_DETECTIVE_ENABLE_LLM_AUDITORS` | `BUGBOT_ENABLE_LLM_AUDITORS` |
+| Label compat mode | `REPOSITORY_DETECTIVE_LABEL_COMPAT_MODE` | `BUGBOT_LABEL_COMPAT_MODE` |
+| Skip Gitea/AI ping on boot | `REPOSITORY_DETECTIVE_SKIP_STARTUP_CHECKS=true` | `BUGBOT_SKIP_STARTUP_CHECKS` |
 
 Repo include/exclude patterns and skip patterns are set in `config/config.yaml` only (not env vars).
 

@@ -2,10 +2,32 @@ package scanners
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"os/exec"
 	"strings"
 	"time"
+
+	"git.commsnet.org/commstech/bugbot/internal/security"
 )
+
+// commandExitError wraps subprocess failures with timeout and output context.
+type commandExitError struct {
+	err     error
+	timedOut bool
+	output  []byte
+}
+
+func (e *commandExitError) Error() string {
+	if e.timedOut {
+		return fmt.Sprintf("command timed out: %v", e.err)
+	}
+	return e.err.Error()
+}
+
+func (e *commandExitError) Unwrap() error {
+	return e.err
+}
 
 func runCommand(ctx context.Context, timeout time.Duration, dir string, name string, args ...string) ([]byte, error) {
 	if timeout <= 0 {
@@ -16,7 +38,21 @@ func runCommand(ctx context.Context, timeout time.Duration, dir string, name str
 
 	cmd := exec.CommandContext(cmdCtx, name, args...)
 	cmd.Dir = dir
-	return cmd.Output()
+	cmd.Env = security.MinimalSubprocessEnv()
+
+	stdout := &cappedBuffer{limit: maxCommandOutputBytes}
+	stderr := &cappedBuffer{limit: maxCommandOutputBytes}
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
+
+	err := cmd.Run()
+	output := append(stdout.Bytes(), stderr.Bytes()...)
+	if err == nil {
+		return output, nil
+	}
+
+	timedOut := errors.Is(cmdCtx.Err(), context.DeadlineExceeded)
+	return output, &commandExitError{err: err, timedOut: timedOut, output: output}
 }
 
 func commandAvailable(name string) bool {

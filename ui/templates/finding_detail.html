@@ -1,0 +1,89 @@
+{{define "finding_detail.html"}}
+<!DOCTYPE html><html lang="en"><head>{{template "head" .}}</head><body>
+{{template "nav" .}}<main><h1>{{.Title}}</h1>
+{{with .Data.Finding}}<div class="card">
+<p><strong>Lifecycle stage:</strong> <em>{{$.Data.LifecycleLabel}}</em></p>
+<p><strong>Fingerprint:</strong> {{.Fingerprint}}</p>
+<p><strong>Repo:</strong> {{.RepoFullName}} · <strong>Severity:</strong> {{.Severity}} · <strong>Category:</strong> {{.Category}}</p>
+<p><strong>Source:</strong> {{.Source}} · <strong>Confidence:</strong> {{printf "%.2f" .Confidence}}</p>
+{{if .ExternalIssueURL}}<p><a href="{{.ExternalIssueURL}}">External issue #{{.ExternalIssueNumber}}</a></p>{{end}}
+<h3>Evidence (redacted)</h3>
+{{range .Instances}}<pre>{{.EvidenceRedacted}}</pre>{{end}}
+<h3>Lifecycle</h3><ul>
+{{range .LifecycleEvents}}<li>{{.EventType}} — {{.Message}} ({{.CreatedAt.Format "2006-01-02"}})</li>{{end}}
+</ul></div>{{end}}
+<div class="card">
+<h2>Remediation plan</h2>
+<div class="warn">Planning only — approve a plan before attempting a remediation PR.</div>
+{{if .Data.PlannerEnabled}}
+{{with .Data.RemediationPlan}}{{if .ID}}
+<p><strong>Status:</strong> {{.Status}} · <strong>Plan ID:</strong> {{.ID}}</p>
+<p><strong>Summary:</strong> {{.Summary}}</p>
+<p><strong>Fix strategy:</strong> {{.FixStrategy}}</p>
+{{if .AffectedFiles}}<p><strong>Affected files:</strong> {{join .AffectedFiles ", "}}</p>{{end}}
+{{if .RequiredTests}}<p><strong>Required tests:</strong></p><ul>{{range .RequiredTests}}<li>{{.}}</li>{{end}}</ul>{{end}}
+{{if .ValidationCommands}}<p><strong>Validation commands (suggested):</strong></p><ul>{{range .ValidationCommands}}<li><code>{{.}}</code></li>{{end}}</ul>{{end}}
+<p><strong>Risk:</strong> {{.RegressionRisk}} · <strong>Complexity:</strong> {{.FixComplexity}}</p>
+<p><strong>Safe for auto-PR:</strong> {{.SafeForAutoPR}} · <strong>Requires human review:</strong> {{.RequiresHumanReview}}</p>
+{{if .BlockedReasons}}<p><strong>Blocked reasons:</strong></p><ul>{{range .BlockedReasons}}<li>{{.}}</li>{{end}}</ul>{{end}}
+{{if eq .Status "proposed"}}
+<form method="post" action="{{$.BasePath}}/findings/{{$.Data.Finding.ID}}/remediation/approve{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}" style="display:inline">
+<input type="hidden" name="csrf_token" value="{{$.CSRFToken}}"><input type="hidden" name="plan_id" value="{{.ID}}">
+<button type="submit">Approve plan</button></form>
+<form method="post" action="{{$.BasePath}}/findings/{{$.Data.Finding.ID}}/remediation/reject{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}" style="display:inline">
+<input type="hidden" name="csrf_token" value="{{$.CSRFToken}}"><input type="hidden" name="plan_id" value="{{.ID}}">
+<button type="submit">Reject plan</button></form>
+{{end}}
+{{if $.Data.PREnabled}}
+<h3>Safe remediation PR</h3>
+<div class="warn">Repository Detective will create a branch and PR only. It will not merge or close the issue.</div>
+{{with $.Data.PREligibility}}
+<p><strong>PR eligible:</strong> {{.Eligible}}</p>
+{{if .Checklist}}<p><strong>Eligibility checklist:</strong></p><ul>{{range $k, $v := .Checklist}}<li>{{$k}}: {{$v}}</li>{{end}}</ul>{{end}}
+{{if .BlockedReasons}}<p><strong>Blocked reasons:</strong></p><ul>{{range .BlockedReasons}}<li>{{.}}</li>{{end}}</ul>{{end}}
+{{if .Eligible}}
+<form method="post" action="{{$.BasePath}}/findings/{{$.Data.Finding.ID}}/remediation/attempt-pr{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}">
+<input type="hidden" name="csrf_token" value="{{$.CSRFToken}}"><input type="hidden" name="plan_id" value="{{$.Data.RemediationPlan.ID}}">
+<button type="submit">Create remediation PR</button></form>
+{{end}}{{end}}
+{{if $.Data.PatchAttempts}}<h4>Latest patch attempts</h4><ul>
+{{range $.Data.PatchAttempts}}<li>{{.Status}} — branch <code>{{.BranchName}}</code>
+{{if .PullRequestURL}} · <a href="{{.PullRequestURL}}">PR</a>{{end}}
+{{if .Error}} · {{.Error}}{{end}}
+</li>{{end}}</ul>{{end}}
+{{else}}<p class="muted">Remediation PR feature disabled globally.</p>{{end}}
+{{else}}<p class="muted">No remediation plan yet.</p>{{end}}{{end}}
+<form method="post" action="{{$.BasePath}}/findings/{{$.Data.Finding.ID}}/remediation/generate{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}">
+<input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+<button type="submit">Generate / regenerate plan</button></form>
+{{else}}<p class="muted">Remediation planner disabled globally.</p>{{end}}
+</div>
+{{if $.Data.ClosureEnabled}}
+<div class="card">
+<h2>Closure evidence</h2>
+<div class="warn">Not closed because a PR exists — only after merge + rescan verification.</div>
+{{with $.Data.ClosureEvidence}}
+<p><strong>Status:</strong> {{if .Status}}{{.Status}}{{else}}not verified yet{{end}}</p>
+{{if .Reason}}<p><strong>Reason:</strong> {{.Reason}}</p>{{end}}
+{{if .MergeCommitSHA}}<p><strong>Merge commit:</strong> <code>{{.MergeCommitSHA}}</code></p>{{end}}
+{{if .VerificationScanID}}<p><strong>Verification scan:</strong> <code>{{.VerificationScanID}}</code></p>{{end}}
+{{if .OriginalSource}}<p><strong>Original scanner:</strong> {{.OriginalSource}} · status: {{.ScannerStatus}}</p>{{end}}
+<p><strong>Fingerprint present in verification scan:</strong> {{.FingerprintPresent}}</p>
+{{if eq .Status "pending_rescan"}}<p class="warn">Waiting for rescan</p>{{end}}
+{{if eq .Status "blocked"}}<p class="warn">Blocked: scanner did not run</p>{{end}}
+{{if eq .Status "still_present"}}<p class="warn">Still present after remediation.</p>{{end}}
+{{if eq .Status "verified"}}<p><strong>Resolved verified</strong></p>{{end}}
+{{end}}
+{{if $.Data.PatchAttempts}}
+<form method="post" action="{{$.BasePath}}/findings/{{$.Data.Finding.ID}}/closure/check-merge{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}">
+<input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+<input type="hidden" name="attempt_id" value="{{(index $.Data.PatchAttempts 0).ID}}">
+<button type="submit">Check PR merge</button></form>
+{{end}}
+<form method="post" action="{{$.BasePath}}/findings/{{$.Data.Finding.ID}}/closure/verify{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}">
+<input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+<button type="submit">Verify closure from latest scan</button></form>
+</div>
+{{end}}
+</main></body></html>
+{{end}}

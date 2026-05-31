@@ -49,10 +49,12 @@ type trivySecret struct {
 }
 
 // RunTrivy scans a workspace directory with Trivy filesystem mode.
-func RunTrivy(ctx context.Context, logger *logrus.Logger, dir string, cfg Config) ([]Finding, error) {
+func RunTrivy(ctx context.Context, logger *logrus.Logger, dir string, cfg Config) RunResult {
+	result := RunResult{Scanner: "trivy"}
 	if !commandAvailable("trivy") {
 		logger.Warn("[SCANNER:trivy] binary not found — install trivy or use the official Bugbot Docker image")
-		return nil, nil
+		result.Status = StatusBinaryMissing
+		return result
 	}
 
 	severity := cfg.TrivySeverity
@@ -72,25 +74,39 @@ func RunTrivy(ctx context.Context, logger *logrus.Logger, dir string, cfg Config
 	timeout := time.Duration(cfg.TimeoutSeconds) * time.Second
 	output, err := runCommand(ctx, timeout, dir, "trivy", args...)
 	if err != nil {
-		// Trivy exits non-zero when findings exist; try parsing stdout from wrapped error
 		if len(output) == 0 {
-			logger.Warnf("[SCANNER:trivy] scan failed: %v", err)
-			return nil, nil
+			result.Status = classifyCommandError(err)
+			result.Detail = err.Error()
+			logger.Warnf("[SCANNER:trivy] scan failed: status=%s err=%v", result.Status, err)
+			return result
 		}
 	}
 
+	findings, parseErr := parseTrivyOutput(output, dir)
+	if parseErr != nil {
+		result.Status = StatusParseFailed
+		result.Detail = parseErr.Error()
+		logger.Warnf("[SCANNER:trivy] failed to parse output: %v", parseErr)
+		return result
+	}
+
+	result = resultWithFindings("trivy", findings)
+	logger.Infof("[SCANNER:trivy] status=%s findings=%d", result.Status, len(findings))
+	return result
+}
+
+func parseTrivyOutput(output []byte, dir string) ([]Finding, error) {
 	var report trivyReport
 	if err := json.Unmarshal(output, &report); err != nil {
-		logger.Warnf("[SCANNER:trivy] failed to parse output: %v", err)
-		return nil, nil
+		return nil, err
 	}
 
 	var findings []Finding
-	for _, result := range report.Results {
-		target := strings.TrimPrefix(result.Target, dir)
+	for _, scanResult := range report.Results {
+		target := strings.TrimPrefix(scanResult.Target, dir)
 		target = strings.TrimPrefix(target, "/")
 
-		for _, vuln := range result.Vulnerabilities {
+		for _, vuln := range scanResult.Vulnerabilities {
 			title := vuln.Title
 			if title == "" {
 				title = fmt.Sprintf("%s in %s", vuln.VulnerabilityID, vuln.PkgName)
@@ -113,7 +129,7 @@ func RunTrivy(ctx context.Context, logger *logrus.Logger, dir string, cfg Config
 			})
 		}
 
-		for _, mis := range result.Misconfigurations {
+		for _, mis := range scanResult.Misconfigurations {
 			findings = append(findings, Finding{
 				ID:          fmt.Sprintf("TRIVY-MIS-%s", mis.ID),
 				Source:      "trivy",
@@ -128,7 +144,7 @@ func RunTrivy(ctx context.Context, logger *logrus.Logger, dir string, cfg Config
 			})
 		}
 
-		for _, secret := range result.Secrets {
+		for _, secret := range scanResult.Secrets {
 			findings = append(findings, Finding{
 				ID:          fmt.Sprintf("TRIVY-SECRET-%s", secret.RuleID),
 				Source:      "trivy",
@@ -144,7 +160,6 @@ func RunTrivy(ctx context.Context, logger *logrus.Logger, dir string, cfg Config
 		}
 	}
 
-	logger.Infof("[SCANNER:trivy] found %d issue(s)", len(findings))
 	return findings, nil
 }
 

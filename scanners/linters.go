@@ -17,14 +17,14 @@ type linterSpec struct {
 	lang     string
 	quality  bool
 	matchExt map[string]bool
-	run      func(ctx context.Context, logger *logrus.Logger, dir string, files []string, cfg Config) ([]Finding, error)
+	run      func(ctx context.Context, logger *logrus.Logger, dir string, files []string, cfg Config) RunResult
 }
 
 // RunLinters executes language-specific linters against files in the workspace.
-func RunLinters(ctx context.Context, logger *logrus.Logger, dir string, entries []FileEntry, enableSecurity, enableQuality bool, cfg Config) ([]Finding, error) {
+func RunLinters(ctx context.Context, logger *logrus.Logger, dir string, entries []FileEntry, enableSecurity, enableQuality bool, cfg Config) []RunResult {
 	byExt := groupFilesByExtension(entries)
 	if len(byExt) == 0 {
-		return nil, nil
+		return nil
 	}
 
 	specs := []linterSpec{
@@ -48,7 +48,7 @@ func RunLinters(ctx context.Context, logger *logrus.Logger, dir string, entries 
 		},
 	}
 
-	var all []Finding
+	var results []RunResult
 	for _, spec := range specs {
 		var matched []string
 		for ext, paths := range byExt {
@@ -61,22 +61,19 @@ func RunLinters(ctx context.Context, logger *logrus.Logger, dir string, entries 
 		}
 
 		if spec.quality && !enableQuality {
+			results = append(results, RunResult{Scanner: spec.name, Status: StatusDisabled, Detail: "quality analysis disabled"})
 			continue
 		}
 		if !spec.quality && !enableSecurity {
+			results = append(results, RunResult{Scanner: spec.name, Status: StatusDisabled, Detail: "security analysis disabled"})
 			continue
 		}
 
-		findings, err := spec.run(ctx, logger, dir, matched, cfg)
-		if err != nil {
-			logger.Warnf("[SCANNER:%s] %v", spec.name, err)
-			continue
-		}
-		all = append(all, findings...)
+		result := spec.run(ctx, logger, dir, matched, cfg)
+		results = append(results, result)
 	}
 
-	logger.Infof("[SCANNER:linters] found %d issue(s)", len(all))
-	return all, nil
+	return results
 }
 
 func groupFilesByExtension(entries []FileEntry) map[string][]string {
@@ -105,14 +102,18 @@ type golangciReport struct {
 	Issues []golangciIssue `json:"Issues"`
 }
 
-func runGolangciLint(ctx context.Context, logger *logrus.Logger, dir string, files []string, cfg Config) ([]Finding, error) {
+func runGolangciLint(ctx context.Context, logger *logrus.Logger, dir string, files []string, cfg Config) RunResult {
+	result := RunResult{Scanner: "golangci-lint"}
 	if !commandAvailable("golangci-lint") {
 		logger.Warn("[SCANNER:golangci-lint] binary not found")
-		return nil, nil
+		result.Status = StatusBinaryMissing
+		return result
 	}
 
 	var findings []Finding
 	timeout := time.Duration(cfg.TimeoutSeconds) * time.Second
+	hadFailure := false
+	hadParseFailure := false
 
 	for _, relPath := range files {
 		target := filepath.Join(dir, filepath.FromSlash(relPath))
@@ -127,42 +128,77 @@ func runGolangciLint(ctx context.Context, logger *logrus.Logger, dir string, fil
 			target,
 		}
 		output, err := runCommand(ctx, timeout, dir, "golangci-lint", args...)
-		if err != nil && len(output) == 0 {
-			continue
-		}
-
-		var report golangciReport
-		if err := json.Unmarshal(output, &report); err != nil {
-			continue
-		}
-
-		for _, issue := range report.Issues {
-			severity := normalizeSeverity(issue.Severity)
-			if severity == "medium" && issue.FromLinter != "" {
-				severity = linterSeverityFromName(issue.FromLinter)
-			}
-			if !meetsMinSeverity(severity, cfg.LinterMinSeverity) {
+		if err != nil {
+			if len(output) == 0 {
+				if classifyCommandError(err) == StatusTimedOut {
+					result.Status = StatusTimedOut
+					result.Detail = err.Error()
+					return result
+				}
+				hadFailure = true
 				continue
 			}
-
-			file := strings.TrimPrefix(issue.Pos.Filename, dir)
-			file = strings.TrimPrefix(file, string(filepath.Separator))
-			findings = append(findings, Finding{
-				ID:          fmt.Sprintf("LINT-GO-%s-%d", issue.FromLinter, issue.Pos.Line),
-				Source:      "golangci-lint",
-				Category:    "lint",
-				Severity:    severity,
-				Title:       issue.Text,
-				Description: fmt.Sprintf("%s reported by golangci-lint (%s)", issue.Text, issue.FromLinter),
-				File:        firstNonEmpty(file, relPath),
-				Line:        issue.Pos.Line,
-				Confidence:  0.9,
-				Reference:   issue.FromLinter,
-				Code:        issue.Text,
-			})
 		}
+
+		fileFindings, parseErr := parseGolangciOutput(output, dir, relPath, cfg)
+		if parseErr != nil {
+			hadParseFailure = true
+			continue
+		}
+		findings = append(findings, fileFindings...)
 	}
 
+	if result.Status == StatusTimedOut {
+		return result
+	}
+	if hadParseFailure && len(findings) == 0 {
+		result.Status = StatusParseFailed
+		result.Detail = "failed to parse golangci-lint output"
+		return result
+	}
+	if hadFailure && len(findings) == 0 {
+		result.Status = StatusFailed
+		result.Detail = "golangci-lint command failed"
+		return result
+	}
+
+	result = resultWithFindings("golangci-lint", findings)
+	logger.Infof("[SCANNER:golangci-lint] status=%s findings=%d", result.Status, len(findings))
+	return result
+}
+
+func parseGolangciOutput(output []byte, dir, relPath string, cfg Config) ([]Finding, error) {
+	var report golangciReport
+	if err := json.Unmarshal(output, &report); err != nil {
+		return nil, err
+	}
+
+	var findings []Finding
+	for _, issue := range report.Issues {
+		severity := normalizeSeverity(issue.Severity)
+		if severity == "medium" && issue.FromLinter != "" {
+			severity = linterSeverityFromName(issue.FromLinter)
+		}
+		if !meetsMinSeverity(severity, cfg.LinterMinSeverity) {
+			continue
+		}
+
+		file := strings.TrimPrefix(issue.Pos.Filename, dir)
+		file = strings.TrimPrefix(file, string(filepath.Separator))
+		findings = append(findings, Finding{
+			ID:          fmt.Sprintf("LINT-GO-%s-%d", issue.FromLinter, issue.Pos.Line),
+			Source:      "golangci-lint",
+			Category:    "lint",
+			Severity:    severity,
+			Title:       issue.Text,
+			Description: fmt.Sprintf("%s reported by golangci-lint (%s)", issue.Text, issue.FromLinter),
+			File:        firstNonEmpty(file, relPath),
+			Line:        issue.Pos.Line,
+			Confidence:  0.9,
+			Reference:   issue.FromLinter,
+			Code:        issue.Text,
+		})
+	}
 	return findings, nil
 }
 
@@ -175,10 +211,12 @@ type ruffIssue struct {
 	} `json:"location"`
 }
 
-func runRuff(ctx context.Context, logger *logrus.Logger, dir string, files []string, cfg Config) ([]Finding, error) {
+func runRuff(ctx context.Context, logger *logrus.Logger, dir string, files []string, cfg Config) RunResult {
+	result := RunResult{Scanner: "ruff"}
 	if !commandAvailable("ruff") {
 		logger.Warn("[SCANNER:ruff] binary not found")
-		return nil, nil
+		result.Status = StatusBinaryMissing
+		return result
 	}
 
 	var targets []string
@@ -189,19 +227,35 @@ func runRuff(ctx context.Context, logger *logrus.Logger, dir string, files []str
 		}
 	}
 	if len(targets) == 0 {
-		return nil, nil
+		result.Status = StatusClean
+		return result
 	}
 
 	args := append([]string{"check", "--output-format", "json"}, targets...)
 	timeout := time.Duration(cfg.TimeoutSeconds) * time.Second
 	output, err := runCommand(ctx, timeout, dir, "ruff", args...)
 	if err != nil && len(output) == 0 {
-		return nil, nil
+		result.Status = classifyCommandError(err)
+		result.Detail = err.Error()
+		return result
 	}
 
+	findings, parseErr := parseRuffOutput(output, dir, cfg)
+	if parseErr != nil {
+		result.Status = StatusParseFailed
+		result.Detail = parseErr.Error()
+		return result
+	}
+
+	result = resultWithFindings("ruff", findings)
+	logger.Infof("[SCANNER:ruff] status=%s findings=%d", result.Status, len(findings))
+	return result
+}
+
+func parseRuffOutput(output []byte, dir string, cfg Config) ([]Finding, error) {
 	var issues []ruffIssue
 	if err := json.Unmarshal(output, &issues); err != nil {
-		return nil, nil
+		return nil, err
 	}
 
 	var findings []Finding
@@ -226,7 +280,6 @@ func runRuff(ctx context.Context, logger *logrus.Logger, dir string, files []str
 			Code:        issue.Message,
 		})
 	}
-
 	return findings, nil
 }
 
@@ -246,10 +299,12 @@ type shellcheckIssue struct {
 	Message string `json:"message"`
 }
 
-func runShellcheck(ctx context.Context, logger *logrus.Logger, dir string, files []string, cfg Config) ([]Finding, error) {
+func runShellcheck(ctx context.Context, logger *logrus.Logger, dir string, files []string, cfg Config) RunResult {
+	result := RunResult{Scanner: "shellcheck"}
 	if !commandAvailable("shellcheck") {
 		logger.Warn("[SCANNER:shellcheck] binary not found")
-		return nil, nil
+		result.Status = StatusBinaryMissing
+		return result
 	}
 
 	var targets []string
@@ -260,19 +315,35 @@ func runShellcheck(ctx context.Context, logger *logrus.Logger, dir string, files
 		}
 	}
 	if len(targets) == 0 {
-		return nil, nil
+		result.Status = StatusClean
+		return result
 	}
 
 	args := append([]string{"-f", "json"}, targets...)
 	timeout := time.Duration(cfg.TimeoutSeconds) * time.Second
 	output, err := runCommand(ctx, timeout, dir, "shellcheck", args...)
 	if err != nil && len(output) == 0 {
-		return nil, nil
+		result.Status = classifyCommandError(err)
+		result.Detail = err.Error()
+		return result
 	}
 
+	findings, parseErr := parseShellcheckOutput(output, dir, cfg)
+	if parseErr != nil {
+		result.Status = StatusParseFailed
+		result.Detail = parseErr.Error()
+		return result
+	}
+
+	result = resultWithFindings("shellcheck", findings)
+	logger.Infof("[SCANNER:shellcheck] status=%s findings=%d", result.Status, len(findings))
+	return result
+}
+
+func parseShellcheckOutput(output []byte, dir string, cfg Config) ([]Finding, error) {
 	var reports [][]shellcheckIssue
 	if err := json.Unmarshal(output, &reports); err != nil {
-		return nil, nil
+		return nil, err
 	}
 
 	var findings []Finding
@@ -299,7 +370,6 @@ func runShellcheck(ctx context.Context, logger *logrus.Logger, dir string, files
 			})
 		}
 	}
-
 	return findings, nil
 }
 
