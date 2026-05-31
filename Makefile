@@ -177,7 +177,9 @@ release: clean deps test build-all
 	@mkdir -p release
 	@cp $(BUILD_DIR)/* release/
 	@cp config/config.yaml release/
-	@cp docker-compose.yml release/
+	@cp docker-compose.public.yml release/
+	@cp docker-compose.offline.yml release/
+	@cp .env.example release/
 	@cp README.md release/
 	@echo "Release prepared in release/ directory"
 

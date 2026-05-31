@@ -23,14 +23,14 @@ type RepositorySummary struct {
 
 // HookConfig is used to create repository webhooks.
 type HookConfig struct {
-	Type string `json:"type"`
+	Type   string `json:"type"`
 	Config struct {
 		URL         string `json:"url"`
 		ContentType string `json:"content_type"`
 		Secret      string `json:"secret"`
 	} `json:"config"`
-	Events          []string `json:"events"`
-	Active          bool     `json:"active"`
+	Events []string `json:"events"`
+	Active bool     `json:"active"`
 }
 
 // ListUserRepositories lists repositories visible to the authenticated user.
@@ -67,7 +67,7 @@ func (c *Client) listRepositories(ctx context.Context, url string) ([]Repository
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("Gitea API returned status %d: %s", resp.StatusCode, string(body))
+		return nil, fmt.Errorf("gitea API returned status %d: %s", resp.StatusCode, string(body))
 	}
 
 	var repos []RepositorySummary
@@ -100,7 +100,7 @@ func (c *Client) CreateRepositoryHook(ctx context.Context, owner, repo string, h
 
 	if resp.StatusCode != http.StatusCreated {
 		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("Gitea API returned status %d: %s", resp.StatusCode, string(body))
+		return fmt.Errorf("gitea API returned status %d: %s", resp.StatusCode, string(body))
 	}
 	return nil
 }
@@ -124,7 +124,7 @@ func (c *Client) ListRepositoryLabels(ctx context.Context, owner, repo string) (
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("Gitea API returned status %d: %s", resp.StatusCode, string(body))
+		return nil, fmt.Errorf("gitea API returned status %d: %s", resp.StatusCode, string(body))
 	}
 
 	var labels []Label
@@ -157,7 +157,7 @@ func (c *Client) CreateRepositoryLabel(ctx context.Context, owner, repo, name, c
 
 	if resp.StatusCode != http.StatusCreated {
 		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("Gitea API returned status %d: %s", resp.StatusCode, string(body))
+		return nil, fmt.Errorf("gitea API returned status %d: %s", resp.StatusCode, string(body))
 	}
 
 	var label Label

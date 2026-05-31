@@ -41,7 +41,8 @@ func NewOnboardingHandler(logger *logrus.Logger, cfg OnboardingConfig) *Onboardi
 }
 
 // RegisterRoutes mounts onboarding UI and API routes.
-func (h *OnboardingHandler) RegisterRoutes(router *gin.Engine, api *gin.RouterGroup) {
+// onboardAPI should be /api/v1/onboard with API key auth but without requiring full startup.
+func (h *OnboardingHandler) RegisterRoutes(router *gin.Engine, onboardAPI *gin.RouterGroup) {
 	staticFS, err := fs.Sub(web.Static, "static")
 	if err != nil {
 		h.logger.Errorf("Failed to load onboarding static files: %v", err)
@@ -53,22 +54,22 @@ func (h *OnboardingHandler) RegisterRoutes(router *gin.Engine, api *gin.RouterGr
 	})
 	router.StaticFS("/onboard/static", http.FS(staticFS))
 
-	api.GET("/onboard/defaults", h.handleDefaults)
-	api.POST("/onboard/test-gitea", h.handleTestGitea)
-	api.POST("/onboard/test-ai", h.handleTestAI)
-	api.POST("/onboard/repos", h.handleListRepos)
-	api.POST("/onboard/webhooks", h.handleRegisterWebhooks)
+	onboardAPI.GET("/defaults", h.handleDefaults)
+	onboardAPI.POST("/test-gitea", h.handleTestGitea)
+	onboardAPI.POST("/test-ai", h.handleTestAI)
+	onboardAPI.POST("/repos", h.handleListRepos)
+	onboardAPI.POST("/webhooks", h.handleRegisterWebhooks)
 }
 
 func (h *OnboardingHandler) handleDefaults(c *gin.Context) {
 	webhookURL := strings.TrimSuffix(h.publicURL, "/") + "/webhook"
 	c.JSON(http.StatusOK, gin.H{
-		"gitea_url":    h.giteaURL,
-		"public_url":   h.publicURL,
-		"webhook_url":  webhookURL,
-		"ai_provider":  h.aiConfig.Provider,
-		"ai_model":     h.aiConfig.Model,
-		"ai_base_url":  h.aiConfig.BaseURL,
+		"gitea_url":   h.giteaURL,
+		"public_url":  h.publicURL,
+		"webhook_url": webhookURL,
+		"ai_provider": h.aiConfig.Provider,
+		"ai_model":    h.aiConfig.Model,
+		"ai_base_url": h.aiConfig.BaseURL,
 	})
 }
 
@@ -237,10 +238,10 @@ func (h *OnboardingHandler) handleRegisterWebhooks(c *gin.Context) {
 	}
 
 	c.JSON(status, gin.H{
-		"message": message,
-		"created": created,
-		"failed":  failed,
-		"errors":  errors,
+		"message":     message,
+		"created":     created,
+		"failed":      failed,
+		"errors":      errors,
 		"webhook_url": webhookURL,
 	})
 }

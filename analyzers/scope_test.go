@@ -1,6 +1,9 @@
 package analyzers
 
-import "testing"
+import (
+	"context"
+	"testing"
+)
 
 func TestShouldAnalyzeFileSkipsVendorAndBinaries(t *testing.T) {
 	engine := &Engine{config: &Config{
@@ -29,7 +32,7 @@ func TestShouldAnalyzeFileSkipsVendorAndBinaries(t *testing.T) {
 func TestResolveAnalyzableFilesScoped(t *testing.T) {
 	engine := &Engine{config: &Config{}}
 
-	files, err := engine.resolveAnalyzableFiles(nil, "owner", "repo", "main", []string{
+	files, err := engine.resolveAnalyzableFiles(context.Background(), "owner", "repo", "main", []string{
 		"main.go",
 		"vendor/x.go",
 		"readme.png",

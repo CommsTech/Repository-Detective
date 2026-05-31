@@ -1,11 +1,16 @@
 package handlers
 
 import (
+	"bytes"
 	"context"
 	"crypto/hmac"
+	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
+	"strings"
 	"sync"
 
 	"golang.org/x/time/rate"
@@ -86,6 +91,14 @@ type User struct {
 	Username  string `json:"username"`
 }
 
+// LoginName returns the Gitea username from either login or username field.
+func (u User) LoginName() string {
+	if u.Username != "" {
+		return u.Username
+	}
+	return u.Login
+}
+
 // PullRequest represents a Gitea pull request
 type PullRequest struct {
 	ID         int64      `json:"id"`
@@ -131,7 +144,6 @@ func NewWebhookHandler(logger *logrus.Logger, config *Config, processor Analysis
 
 // HandleWebhook processes incoming webhook requests
 func (h *WebhookHandler) HandleWebhook(c *gin.Context) {
-	// Apply rate limiting per IP
 	ip := c.ClientIP()
 	limiter := getRateLimiter(ip)
 	if !limiter.Allow() {
@@ -142,22 +154,36 @@ func (h *WebhookHandler) HandleWebhook(c *gin.Context) {
 
 	h.logger.Info("Received webhook request")
 
-	// Verify webhook secret if configured
-	if err := h.verifyWebhookSecret(c); err != nil {
+	body, err := readRequestBody(c)
+	if err != nil {
+		h.logger.Errorf("Failed to read webhook body: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid payload"})
+		return
+	}
+
+	if err := h.verifyWebhookSecret(c, body); err != nil {
 		h.logger.Errorf("Webhook secret verification failed: %v", err)
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
 
-	// Parse webhook payload
 	var payload GiteaWebhookPayload
-	if err := c.ShouldBindJSON(&payload); err != nil {
+	if err := bindJSONBody(body, &payload); err != nil {
 		h.logger.Errorf("Failed to parse webhook payload: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid payload"})
 		return
 	}
 
-	h.logger.Infof("Processing webhook for repository: %s, action: %s",
+	// Gitea may include the shared secret in the JSON payload on delivery.
+	if payload.Secret != "" && h.config.WebhookSecret != "" {
+		if !hmac.Equal([]byte(payload.Secret), []byte(h.config.WebhookSecret)) {
+			h.logger.Errorf("Webhook JSON secret mismatch")
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			return
+		}
+	}
+
+	h.logger.Infof("Processing webhook for repository: %s, action: %q",
 		payload.Repository.FullName, payload.Action)
 
 	if !RepoAllowed(payload.Repository.FullName, h.config.IncludePatterns, h.config.ExcludePatterns) {
@@ -166,32 +192,60 @@ func (h *WebhookHandler) HandleWebhook(c *gin.Context) {
 		return
 	}
 
-	// Process webhook based on action type
-	switch payload.Action {
-	case "push":
+	switch classifyWebhookEvent(&payload) {
+	case webhookEventPush:
 		h.handlePushEvent(c, &payload)
-	case "pull_request":
+	case webhookEventPullRequest:
 		h.handlePullRequestEvent(c, &payload)
-	case "issues":
-		h.handleIssueEvent(c, &payload)
 	default:
-		h.logger.Infof("Unhandled webhook action: %s", payload.Action)
+		h.logger.Infof("Unhandled webhook event (action=%q)", payload.Action)
 		c.JSON(http.StatusOK, gin.H{"status": "ignored"})
 	}
+}
+
+type webhookEventKind int
+
+const (
+	webhookEventUnknown webhookEventKind = iota
+	webhookEventPush
+	webhookEventPullRequest
+)
+
+// classifyWebhookEvent detects event type from payload shape.
+// Gitea push hooks omit action; PR hooks use action=opened|synchronized|...
+func classifyWebhookEvent(payload *GiteaWebhookPayload) webhookEventKind {
+	if payload.PullRequest.Number > 0 || payload.PullRequest.ID > 0 {
+		return webhookEventPullRequest
+	}
+	if len(payload.Commits) > 0 || (payload.Ref != "" && payload.After != "") {
+		return webhookEventPush
+	}
+	return webhookEventUnknown
+}
+
+func readRequestBody(c *gin.Context) ([]byte, error) {
+	body, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		return nil, err
+	}
+	c.Request.Body = io.NopCloser(bytes.NewBuffer(body))
+	return body, nil
+}
+
+func bindJSONBody(body []byte, payload *GiteaWebhookPayload) error {
+	return json.Unmarshal(body, payload)
 }
 
 // handlePushEvent processes push events
 func (h *WebhookHandler) handlePushEvent(c *gin.Context, payload *GiteaWebhookPayload) {
 	h.logger.Infof("Processing push event for repository: %s", payload.Repository.FullName)
 
-	// Skip if no commits
 	if len(payload.Commits) == 0 {
 		h.logger.Info("No commits in push event, skipping")
 		c.JSON(http.StatusOK, gin.H{"status": "no commits"})
 		return
 	}
 
-	// Analyze changed commits in the background
 	go h.processor.ProcessPush(c.Request.Context(), payload)
 
 	c.JSON(http.StatusOK, gin.H{"status": "processing"})
@@ -199,12 +253,17 @@ func (h *WebhookHandler) handlePushEvent(c *gin.Context, payload *GiteaWebhookPa
 
 // handlePullRequestEvent processes pull request events
 func (h *WebhookHandler) handlePullRequestEvent(c *gin.Context, payload *GiteaWebhookPayload) {
-	h.logger.Infof("Processing pull request event: %s #%d",
-		payload.Repository.FullName, payload.PullRequest.Number)
+	h.logger.Infof("Processing pull request event: %s #%d action=%q",
+		payload.Repository.FullName, payload.PullRequest.Number, payload.Action)
 
-	// Only process on open or synchronize
 	if payload.PullRequest.State != "open" {
 		h.logger.Infof("Pull request is not open, skipping")
+		c.JSON(http.StatusOK, gin.H{"status": "ignored"})
+		return
+	}
+
+	switch payload.Action {
+	case "closed", "closed_merged", "closed_unmerged":
 		c.JSON(http.StatusOK, gin.H{"status": "ignored"})
 		return
 	}
@@ -214,59 +273,45 @@ func (h *WebhookHandler) handlePullRequestEvent(c *gin.Context, payload *GiteaWe
 	c.JSON(http.StatusOK, gin.H{"status": "processing"})
 }
 
-// handleIssueEvent processes issue events
-func (h *WebhookHandler) handleIssueEvent(c *gin.Context, payload *GiteaWebhookPayload) {
-	h.logger.Infof("Processing issue event for repository: %s", payload.Repository.FullName)
-	// Issue events are typically not relevant for code analysis
-	c.JSON(http.StatusOK, gin.H{"status": "ignored"})
-}
-
-// verifyWebhookSecret verifies the webhook secret if configured
-func (h *WebhookHandler) verifyWebhookSecret(c *gin.Context) error {
-	// CRITICAL: Empty secret means authentication is DISABLED
-	// This is a security risk — require a non-empty secret in production
+// verifyWebhookSecret validates Gitea webhook authenticity.
+// Gitea signs the raw body with HMAC-SHA256 and sends hex digest in X-Gitea-Signature.
+func (h *WebhookHandler) verifyWebhookSecret(c *gin.Context, body []byte) error {
 	if h.config.WebhookSecret == "" {
 		h.logger.Warnf("WARNING: Webhook secret is empty — webhook authentication is DISABLED. Set BUGBOT_WEBHOOK_SECRET in production.")
-		return nil // Return nil but log a warning
-	}
-
-	// Get secret from header (X-Gitea-Signature for HMAC) or query parameter
-	providedSecret := c.GetHeader("X-Gitea-Signature")
-	if providedSecret == "" {
-		providedSecret = c.Query("secret")
-	}
-
-	if providedSecret == "" {
-		return fmt.Errorf("no webhook secret provided")
-	}
-
-	// Use constant-time comparison to prevent timing attacks
-	expectedBytes, err := hex.DecodeString(h.config.WebhookSecret)
-	if err != nil {
-		// Fall back to string comparison if not hex-encoded
-		expected := []byte(h.config.WebhookSecret)
-		provided := []byte(providedSecret)
-		if !hmac.Equal(expected, provided) {
-			return fmt.Errorf("invalid webhook secret")
-		}
 		return nil
 	}
 
-	providedBytes, err := hex.DecodeString(providedSecret)
-	if err != nil {
-		return fmt.Errorf("invalid secret format")
-	}
-
-	if !hmac.Equal(expectedBytes, providedBytes) {
+	if querySecret := c.Query("secret"); querySecret != "" {
+		if hmac.Equal([]byte(querySecret), []byte(h.config.WebhookSecret)) {
+			return nil
+		}
 		return fmt.Errorf("invalid webhook secret")
 	}
 
+	signature := c.GetHeader("X-Gitea-Signature")
+	if signature == "" {
+		signature = c.GetHeader("X-Hub-Signature-256")
+	}
+	if signature == "" {
+		return fmt.Errorf("missing webhook signature")
+	}
+
+	signature = strings.TrimPrefix(signature, "sha256=")
+	signature = strings.TrimSpace(signature)
+
+	mac := hmac.New(sha256.New, []byte(h.config.WebhookSecret))
+	mac.Write(body)
+	expected := hex.EncodeToString(mac.Sum(nil))
+
+	if !hmac.Equal([]byte(strings.ToLower(signature)), []byte(expected)) {
+		return fmt.Errorf("invalid webhook signature")
+	}
 	return nil
 }
 
 // Config holds webhook handler configuration
 type Config struct {
-	WebhookSecret         string
-	IncludePatterns       []string
-	ExcludePatterns       []string
+	WebhookSecret   string
+	IncludePatterns []string
+	ExcludePatterns []string
 }

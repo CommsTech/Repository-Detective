@@ -40,27 +40,27 @@ var (
 
 // Config holds the plugin configuration
 type Config struct {
-	Port                  string            `mapstructure:"port"`
-	APIKey                string            `mapstructure:"api_key"` // API key for manual analysis endpoints
-	GiteaURL              string            `mapstructure:"gitea_url"`
-	GiteaToken            string            `mapstructure:"gitea_token"`
-	WebhookSecret         string            `mapstructure:"webhook_secret"`
-	AIProvider            string            `mapstructure:"ai_provider"`
-	AIBaseURL             string            `mapstructure:"ai_base_url"`
-	AIAPIKey              string            `mapstructure:"ai_api_key"`
-	AIModel               string            `mapstructure:"ai_model"`
-	OpenWebUIURL          string            `mapstructure:"openwebui_url"`
-	OpenWebUIToken        string            `mapstructure:"openwebui_token"`
-	OpenWebUIModel        string            `mapstructure:"openwebui_model"`
-	LogLevel              string            `mapstructure:"log_level"`
-	AnalysisDepth         int               `mapstructure:"analysis_depth"`
-	MaxFileSize           int64             `mapstructure:"max_file_size"`
-	EnableSecurity        bool              `mapstructure:"enable_security"`
-	EnableQuality         bool              `mapstructure:"enable_quality"`
-	AutoCreateIssues      bool              `mapstructure:"auto_create_issues"`
-	MaxIssuesPerRun       int               `mapstructure:"max_issues_per_run"`
-	SkipLowSeverity       bool              `mapstructure:"skip_low_severity"`
-	GroupSimilarIssues    bool              `mapstructure:"group_similar_issues"`
+	Port                      string            `mapstructure:"port"`
+	APIKey                    string            `mapstructure:"api_key"` // API key for manual analysis endpoints
+	GiteaURL                  string            `mapstructure:"gitea_url"`
+	GiteaToken                string            `mapstructure:"gitea_token"`
+	WebhookSecret             string            `mapstructure:"webhook_secret"`
+	AIProvider                string            `mapstructure:"ai_provider"`
+	AIBaseURL                 string            `mapstructure:"ai_base_url"`
+	AIAPIKey                  string            `mapstructure:"ai_api_key"`
+	AIModel                   string            `mapstructure:"ai_model"`
+	OpenWebUIURL              string            `mapstructure:"openwebui_url"`
+	OpenWebUIToken            string            `mapstructure:"openwebui_token"`
+	OpenWebUIModel            string            `mapstructure:"openwebui_model"`
+	LogLevel                  string            `mapstructure:"log_level"`
+	AnalysisDepth             int               `mapstructure:"analysis_depth"`
+	MaxFileSize               int64             `mapstructure:"max_file_size"`
+	EnableSecurity            bool              `mapstructure:"enable_security"`
+	EnableQuality             bool              `mapstructure:"enable_quality"`
+	AutoCreateIssues          bool              `mapstructure:"auto_create_issues"`
+	MaxIssuesPerRun           int               `mapstructure:"max_issues_per_run"`
+	SkipLowSeverity           bool              `mapstructure:"skip_low_severity"`
+	GroupSimilarIssues        bool              `mapstructure:"group_similar_issues"`
 	SkipPatterns              []string          `mapstructure:"-"`
 	LanguageMapping           map[string]string `mapstructure:"-"`
 	RepositoryIncludePatterns []string          `mapstructure:"-"`
@@ -69,9 +69,9 @@ type Config struct {
 	ListenHost                string            `mapstructure:"listen_host"`
 	StartupCheckTimeout       int               `mapstructure:"startup_check_timeout"`
 	MaxConcurrentAnalyses     int               `mapstructure:"max_concurrent_analyses"`
-	AnalysisTimeout       int               `mapstructure:"analysis_timeout"`
-	RateLimitPerMinute    int               `mapstructure:"rate_limit_per_minute"`
-	SkipStartupChecks     bool              `mapstructure:"skip_startup_checks"`
+	AnalysisTimeout           int               `mapstructure:"analysis_timeout"`
+	RateLimitPerMinute        int               `mapstructure:"rate_limit_per_minute"`
+	SkipStartupChecks         bool              `mapstructure:"skip_startup_checks"`
 }
 
 func main() {
@@ -276,6 +276,9 @@ func setupRoutes(router *gin.Engine) {
 		api.POST("/config/reload", handleConfigReload)
 	}
 
+	onboardAPI := router.Group("/api/v1/onboard")
+	onboardAPI.Use(requireAPIKeyAuth())
+
 	onboardingHandler = handlers.NewOnboardingHandler(logger, handlers.OnboardingConfig{
 		GiteaURL:  config.GiteaURL,
 		PublicURL: config.PublicURL,
@@ -286,7 +289,7 @@ func setupRoutes(router *gin.Engine) {
 			Model:    firstNonEmpty(config.AIModel, config.OpenWebUIModel),
 		},
 	})
-	onboardingHandler.RegisterRoutes(router, api)
+	onboardingHandler.RegisterRoutes(router, onboardAPI)
 
 	logger.Info("Routes configured successfully")
 }
@@ -421,7 +424,7 @@ func initializeComponents() error {
 type webhookProcessor struct{}
 
 func (p *webhookProcessor) ProcessPush(ctx context.Context, payload *handlers.GiteaWebhookPayload) {
-	owner := payload.Repository.Owner.Username
+	owner := payload.Repository.Owner.LoginName()
 	repo := payload.Repository.Name
 	ref := payload.After
 	changedFiles := handlers.CollectChangedFiles(payload.Commits)
@@ -437,7 +440,7 @@ func (p *webhookProcessor) ProcessPush(ctx context.Context, payload *handlers.Gi
 }
 
 func (p *webhookProcessor) ProcessPullRequest(ctx context.Context, payload *handlers.GiteaWebhookPayload) {
-	owner := payload.Repository.Owner.Username
+	owner := payload.Repository.Owner.LoginName()
 	repo := payload.Repository.Name
 	prNumber := payload.PullRequest.Number
 

@@ -57,8 +57,8 @@ var staticRules = []staticRule{
 
 // FileContent holds fetched source for analysis.
 type FileContent struct {
-	Path    string
-	Content string
+	Path     string
+	Content  string
 	Language string
 }
 

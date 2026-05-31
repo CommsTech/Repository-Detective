@@ -95,7 +95,7 @@ Manual alternative (per repo → Settings → Webhooks):
 
 - URL: `{BUGBOT_PUBLIC_URL}/webhook`
 - Content type: `application/json`
-- Secret: same as `BUGBOT_WEBHOOK_SECRET`
+- Secret: same as `BUGBOT_WEBHOOK_SECRET` (Gitea uses this to HMAC-sign the body; Bugbot checks the `X-Gitea-Signature` header)
 - Events: Push, Pull request
 
 ---

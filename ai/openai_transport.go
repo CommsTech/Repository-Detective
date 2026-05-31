@@ -82,10 +82,7 @@ func (t *OpenAICompatibleTransport) Complete(ctx context.Context, req ChatReques
 		MaxTokens:   req.MaxTokens,
 	}
 	for _, message := range req.Messages {
-		payload.Messages = append(payload.Messages, openAIChatMessage{
-			Role:    message.Role,
-			Content: message.Content,
-		})
+		payload.Messages = append(payload.Messages, openAIChatMessage(message))
 	}
 
 	body, err := json.Marshal(payload)

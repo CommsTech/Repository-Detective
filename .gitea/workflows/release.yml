@@ -100,8 +100,9 @@ jobs:
           GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
         run: |
           VERSION="${GITHUB_REF_NAME}"
-          OWNER="${GITEA_REPOSITORY%%/*}"
-          REPO="${GITEA_REPOSITORY#*/}"
+          REPO_SLUG="${GITHUB_REPOSITORY:-${GITEA_REPOSITORY}}"
+          OWNER="${REPO_SLUG%%/*}"
+          REPO="${REPO_SLUG#*/}"
           API="${GITEA_API_URL:-${GITEA_SERVER_URL:-https://git.commsnet.org}/api/v1}"
 
           if [ -z "$GITEA_TOKEN" ]; then

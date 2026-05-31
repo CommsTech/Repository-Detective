@@ -250,7 +250,7 @@ func (c *Client) fetchContentsResponse(ctx context.Context, owner, repo, ref, pa
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("Gitea API returned status %d: %s", resp.StatusCode, string(body))
+		return nil, fmt.Errorf("gitea API returned status %d: %s", resp.StatusCode, string(body))
 	}
 
 	return body, nil
@@ -305,7 +305,7 @@ func (c *Client) CreateIssue(ctx context.Context, owner, repo string, issueReq *
 
 	if resp.StatusCode != http.StatusCreated {
 		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("Gitea API returned status %d: %s", resp.StatusCode, string(body))
+		return nil, fmt.Errorf("gitea API returned status %d: %s", resp.StatusCode, string(body))
 	}
 
 	var issue Issue
@@ -336,7 +336,7 @@ func (c *Client) GetRepository(ctx context.Context, owner, repo string) (*Reposi
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("Gitea API returned status %d: %s", resp.StatusCode, string(body))
+		return nil, fmt.Errorf("gitea API returned status %d: %s", resp.StatusCode, string(body))
 	}
 
 	var repository Repository
@@ -367,7 +367,7 @@ func (c *Client) GetPullRequest(ctx context.Context, owner, repo string, prNumbe
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("Gitea API returned status %d: %s", resp.StatusCode, string(body))
+		return nil, fmt.Errorf("gitea API returned status %d: %s", resp.StatusCode, string(body))
 	}
 
 	var pullRequest PullRequest
@@ -398,7 +398,7 @@ func (c *Client) GetChangedFiles(ctx context.Context, owner, repo string, prNumb
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("Gitea API returned status %d: %s", resp.StatusCode, string(body))
+		return nil, fmt.Errorf("gitea API returned status %d: %s", resp.StatusCode, string(body))
 	}
 
 	var files []struct {
@@ -484,7 +484,7 @@ func (c *Client) TestConnection(ctx context.Context) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("Gitea API returned status %d", resp.StatusCode)
+		return fmt.Errorf("gitea API returned status %d", resp.StatusCode)
 	}
 
 	return nil

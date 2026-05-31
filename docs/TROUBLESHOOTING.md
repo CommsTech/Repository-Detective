@@ -42,7 +42,10 @@ Gitea cannot reach private IPs. Bugbot needs a public URL — [NETWORKING.md](NE
 2. Set `BUGBOT_PUBLIC_URL` in `.env`, restart container
 3. Webhook URL: `{PUBLIC_URL}/webhook`
 4. Secret in Gitea must match `BUGBOT_WEBHOOK_SECRET`
-5. Test delivery in Gitea webhook settings
+5. Gitea signs each delivery with **HMAC-SHA256** of the raw JSON body and sends the hex digest in the `X-Gitea-Signature` header (Bugbot verifies this automatically)
+6. Test delivery in Gitea webhook settings (expect HTTP 200)
+
+**401 Unauthorized on webhook test:** Secret mismatch, or missing signature header. Confirm the secret matches on both sides and that Gitea is sending `X-Gitea-Signature`.
 
 ---
 
