@@ -11,7 +11,7 @@
 | PREPARE | Partial | File tree + LLM attack surface mapping. No call graph or git history yet. |
 | SCAN | Done | Static regex, **Trivy, Grype, linters**, then LLM auditors on flagged files only. |
 | VALIDATE | Done | Advocate/counsel debate. Deterministic findings skip debate. |
-| DEDUP | Partial | Groups by file + line block, not semantic root cause. |
+| DEDUP | Partial | Line-block clustering with `cluster-000` IDs; optional **Qdrant** semantic dedup at issue creation |
 | PROVE | Partial | LLM-generated PoC (curl/scripts). No ASan/UBSan execution. |
 
 Auditors running today: SQL, XSS, auth, injection, crypto, config (+ static rules; **Trivy, Grype, golangci-lint, ruff, shellcheck**).

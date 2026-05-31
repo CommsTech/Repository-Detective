@@ -71,6 +71,7 @@ API key header: `X-Bugbot-API-Key: your-key`
 | [docs/AI_PROVIDERS.md](docs/AI_PROVIDERS.md) | AI backend config |
 | [docs/CAH_PIPELINE.md](docs/CAH_PIPELINE.md) | Analysis pipeline spec |
 | [docs/SCANNERS.md](docs/SCANNERS.md) | Trivy, Grype, linters (deterministic) |
+| [docs/QDRANT.md](docs/QDRANT.md) | Semantic dedup via existing Qdrant server |
 | [docs/TESTING.md](docs/TESTING.md) | Unit tests, Docker smoke test, E2E |
 | [docs/TUNNEL.md](docs/TUNNEL.md) | Cloudflare tunnel (optional) |
 

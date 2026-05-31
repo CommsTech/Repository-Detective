@@ -17,6 +17,7 @@ import (
 	"git.commsnet.org/commstech/bugbot/handlers"
 	"git.commsnet.org/commstech/bugbot/issues"
 	"git.commsnet.org/commstech/bugbot/limiter"
+	"git.commsnet.org/commstech/bugbot/memory/qdrant"
 	"git.commsnet.org/commstech/bugbot/scanners"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
@@ -63,6 +64,16 @@ type Config struct {
 	EnableGrype               bool              `mapstructure:"enable_grype"`
 	EnableLinters             bool              `mapstructure:"enable_linters"`
 	ScannerTimeoutSeconds     int               `mapstructure:"scanner_timeout_seconds"`
+	MinIssueConfidence        float64           `mapstructure:"min_issue_confidence"`
+	QdrantEnabled             bool              `mapstructure:"qdrant_enabled"`
+	QdrantURL                 string            `mapstructure:"qdrant_url"`
+	QdrantAPIKey              string            `mapstructure:"qdrant_api_key"`
+	QdrantCollection          string            `mapstructure:"qdrant_collection"`
+	QdrantVectorSize          int               `mapstructure:"qdrant_vector_size"`
+	QdrantSimilarityThreshold float64           `mapstructure:"qdrant_similarity_threshold"`
+	EmbeddingModel            string            `mapstructure:"embedding_model"`
+	EmbeddingBaseURL          string            `mapstructure:"embedding_base_url"`
+	EmbeddingAPIKey           string            `mapstructure:"embedding_api_key"`
 	AutoCreateIssues          bool              `mapstructure:"auto_create_issues"`
 	MaxIssuesPerRun           int               `mapstructure:"max_issues_per_run"`
 	SkipLowSeverity           bool              `mapstructure:"skip_low_severity"`
@@ -179,6 +190,13 @@ func loadConfig() error {
 	viper.SetDefault("enable_grype", true)
 	viper.SetDefault("enable_linters", true)
 	viper.SetDefault("scanner_timeout_seconds", 120)
+	viper.SetDefault("min_issue_confidence", 0.5)
+	viper.SetDefault("qdrant_enabled", false)
+	viper.SetDefault("qdrant_url", "http://127.0.0.1:6333")
+	viper.SetDefault("qdrant_collection", "bugbot-findings")
+	viper.SetDefault("qdrant_vector_size", 1536)
+	viper.SetDefault("qdrant_similarity_threshold", 0.85)
+	viper.SetDefault("embedding_model", "text-embedding-3-small")
 	viper.SetDefault("auto_create_issues", true)
 	viper.SetDefault("max_issues_per_run", 50)
 	viper.SetDefault("max_concurrent_analyses", 5)
@@ -256,16 +274,18 @@ func setupRoutes(router *gin.Engine) {
 	router.GET("/health", func(c *gin.Context) {
 		if !componentsReady.Load() {
 			c.JSON(http.StatusServiceUnavailable, gin.H{
-				"status":  "starting",
-				"service": "gitea-bugbot",
-				"version": version,
+				"status":     "starting",
+				"service":    "gitea-bugbot",
+				"version":    version,
+				"public_url": config.PublicURL,
 			})
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{
-			"status":  "healthy",
-			"service": "gitea-bugbot",
-			"version": version,
+			"status":     "healthy",
+			"service":    "gitea-bugbot",
+			"version":    version,
+			"public_url": config.PublicURL,
 		})
 	})
 
@@ -417,6 +437,31 @@ func initializeComponents() error {
 	}
 	analysisEngine = analyzers.NewEngine(giteaClient, aiClient, analysisConfig, logger)
 
+	// Initialize semantic dedup (optional Qdrant)
+	qdrantCfg := qdrant.Config{
+		Enabled:             config.QdrantEnabled,
+		URL:                 config.QdrantURL,
+		APIKey:              config.QdrantAPIKey,
+		Collection:          config.QdrantCollection,
+		VectorSize:          config.QdrantVectorSize,
+		SimilarityThreshold: config.QdrantSimilarityThreshold,
+	}
+	embedder := ai.NewEmbedder(ai.EmbedderConfig{
+		BaseURL:    firstNonEmpty(config.EmbeddingBaseURL, config.AIBaseURL, config.OpenWebUIURL),
+		APIKey:     firstNonEmpty(config.EmbeddingAPIKey, config.AIAPIKey, config.OpenWebUIToken),
+		Model:      config.EmbeddingModel,
+		Dimensions: config.QdrantVectorSize,
+	})
+	semanticStore := issues.NewSemanticStore(qdrant.NewStore(qdrantCfg), embedder, logger)
+	if semanticStore.Enabled() {
+		if err := semanticStore.Prepare(ctx); err != nil {
+			logger.Warnf("Qdrant prepare failed (semantic dedup disabled): %v", err)
+		} else {
+			logger.Infof("Qdrant semantic dedup enabled (collection=%s, threshold=%.2f)",
+				config.QdrantCollection, config.QdrantSimilarityThreshold)
+		}
+	}
+
 	// Initialize issue manager
 	issueConfig := &issues.Config{
 		AutoCreateIssues:   config.AutoCreateIssues,
@@ -424,10 +469,11 @@ func initializeComponents() error {
 		MaxIssuesPerRun:    config.MaxIssuesPerRun,
 		SkipLowSeverity:    config.SkipLowSeverity,
 		GroupSimilarIssues: config.GroupSimilarIssues,
+		MinIssueConfidence: config.MinIssueConfidence,
 		IssueTitleTemplate: "[{{severity}}] {{title}}",
 		IssueBodyTemplate:  "## Issue Details\n\n**Severity:** {{severity}}\n**Category:** {{category}}\n**Confidence:** {{confidence}}\n\n## Description\n\n{{description}}\n\n## Context\n\n- **Repository:** {{repository}}\n- **Context:** {{context}}\n- **Commit:** {{commit}}\n\n---\n*This issue was automatically generated by the Gitea Bugbot*",
 	}
-	issueManager = issues.NewManager(giteaClient, issueConfig, logger)
+	issueManager = issues.NewManager(giteaClient, issueConfig, logger, semanticStore)
 
 	webhookHandler = handlers.NewWebhookHandler(logger, &handlers.Config{
 		WebhookSecret:   config.WebhookSecret,

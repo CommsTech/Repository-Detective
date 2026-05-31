@@ -35,6 +35,9 @@ func TestDedupKeepsHighestConfidence(t *testing.T) {
 	if deduped[0].Confidence != 0.95 {
 		t.Fatalf("expected confidence 0.95, got %f", deduped[0].Confidence)
 	}
+	if deduped[0].ClusterID != "cluster-000" {
+		t.Fatalf("expected cluster-000, got %s", deduped[0].ClusterID)
+	}
 	if len(deduped[0].Files) != 2 {
 		t.Fatalf("expected 2 files in group, got %d", len(deduped[0].Files))
 	}

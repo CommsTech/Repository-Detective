@@ -37,6 +37,15 @@ enable_grype: true
 enable_linters: true
 enable_llm_auditors: true
 scanner_timeout_seconds: 120
+min_issue_confidence: 0.5
+
+# Qdrant semantic dedup — connect to your existing Qdrant server (see docs/QDRANT.md)
+qdrant_enabled: false
+qdrant_url: "http://127.0.0.1:6333"
+qdrant_collection: "bugbot-findings"
+qdrant_vector_size: 1536
+qdrant_similarity_threshold: 0.85
+embedding_model: "text-embedding-3-small"
 
 # Issue Management Configuration
 auto_create_issues: true

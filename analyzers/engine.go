@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -93,6 +94,7 @@ type ReportStats struct {
 	CandidatesFound   int
 	ValidatedFindings int
 	DedupedFindings   int
+	DedupClusters     int
 	ProvenFindings    int
 	CriticalCount     int
 	HighCount         int
@@ -335,9 +337,13 @@ func (e *Engine) Scan(ctx context.Context, prepare *PrepareReport) ([]CandidateF
 	}
 
 	var allCandidates []CandidateFinding
+	depth := e.config.AnalysisDepth
+	if depth <= 0 {
+		depth = 3
+	}
 
-	// Stage 2a: deterministic static analysis (no LLM tokens)
-	if e.config.EnableSecurity || e.config.EnableQuality {
+	// Stage 2a: deterministic static analysis (depth >= 1)
+	if depth >= 1 && (e.config.EnableSecurity || e.config.EnableQuality) {
 		staticFindings := RunStaticAnalysis(fileContents, e.config.EnableSecurity, e.config.EnableQuality)
 		for _, f := range staticFindings {
 			allCandidates = append(allCandidates, CandidateFinding(f))
@@ -345,8 +351,8 @@ func (e *Engine) Scan(ctx context.Context, prepare *PrepareReport) ([]CandidateF
 		e.logger.Infof("[CAH:SCAN] Static analysis found %d candidate(s)", len(staticFindings))
 	}
 
-	// Stage 2a-b: external scanners (Trivy, Grype, linters) — no LLM tokens
-	if e.config.Scanners.EnableTrivy || e.config.Scanners.EnableGrype || e.config.Scanners.EnableLinters {
+	// Stage 2a-b: external scanners (depth >= 2)
+	if depth >= 2 && (e.config.Scanners.EnableTrivy || e.config.Scanners.EnableGrype || e.config.Scanners.EnableLinters) {
 		manifestFiles, err := e.fetchManifestContents(ctx, owner, repo, prepare.Commit)
 		if err != nil {
 			e.logger.Warnf("[CAH:SCAN] Failed to fetch dependency manifests: %v", err)
@@ -364,8 +370,8 @@ func (e *Engine) Scan(ctx context.Context, prepare *PrepareReport) ([]CandidateF
 		}
 	}
 
-	// Stage 2b: LLM auditors — optional; scoped to flagged files when possible
-	if !e.config.EnableSecurity || !e.config.EnableLLMAuditors {
+	// Stage 2c: LLM auditors (depth >= 3)
+	if depth < 3 || !e.config.EnableSecurity || !e.config.EnableLLMAuditors {
 		return allCandidates, nil
 	}
 
@@ -714,23 +720,27 @@ func (e *Engine) validateOne(ctx context.Context, candidate CandidateFinding) (*
 // STAGE 4: DEDUP
 // ============================================================================
 
-// Dedup collapses semantically equivalent findings
+// Dedup collapses semantically equivalent findings and assigns stable cluster IDs.
 func (e *Engine) Dedup(candidates []ValidatedFinding) []DedupedFinding {
 	if len(candidates) == 0 {
 		return []DedupedFinding{}
 	}
 
-	// Group by root cause (simplified: group by file + similar line range)
 	groups := make(map[string][]ValidatedFinding)
 	for _, c := range candidates {
-		// Use file + line as dedup key
-		key := fmt.Sprintf("%s:%d", c.File, c.Line/10*10) // group by 10-line blocks
+		key := fmt.Sprintf("%s:%d", c.File, c.Line/10*10)
 		groups[key] = append(groups[key], c)
 	}
 
+	keys := make([]string, 0, len(groups))
+	for key := range groups {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
 	var deduped []DedupedFinding
-	for _, group := range groups {
-		// Keep the highest-confidence finding
+	for clusterIndex, key := range keys {
+		group := groups[key]
 		best := group[0]
 		for i := 1; i < len(group); i++ {
 			if group[i].Confidence > best.Confidence {
@@ -738,12 +748,25 @@ func (e *Engine) Dedup(candidates []ValidatedFinding) []DedupedFinding {
 			}
 		}
 
-		// Collect all affected files
 		var files []string
 		var lines []int
+		var related []string
 		for _, c := range group {
 			files = append(files, c.File)
 			lines = append(lines, c.Line)
+			if c.Hypothesis != "" && c.Hypothesis != best.Hypothesis {
+				related = append(related, c.Hypothesis)
+			}
+		}
+
+		clusterID := fmt.Sprintf("cluster-%03d", clusterIndex)
+		description := best.Hypothesis
+		if len(group) > 1 {
+			description = fmt.Sprintf("%s\n\n**Dedup cluster `%s`** — merged %d related finding(s):\n",
+				best.Hypothesis, clusterID, len(group))
+			for _, item := range group {
+				description += fmt.Sprintf("- %s (`%s:%d`, confidence %.2f)\n", item.Hypothesis, item.File, item.Line, item.Confidence)
+			}
 		}
 
 		deduped = append(deduped, DedupedFinding{
@@ -751,13 +774,15 @@ func (e *Engine) Dedup(candidates []ValidatedFinding) []DedupedFinding {
 			Severity:    best.Severity,
 			Category:    firstNonEmptyCategory(best.Category, "security"),
 			Title:       best.Hypothesis,
-			Description: best.Hypothesis,
+			Description: description,
 			AuditorType: best.AuditorType,
 			Files:       files,
 			Lines:       lines,
 			Evidence:    best.Evidence,
 			Confidence:  best.Confidence,
-			DedupGroup:  fmt.Sprintf("%s:%d", best.File, best.Line/10*10),
+			DedupGroup:  key,
+			ClusterID:   clusterID,
+			Related:     related,
 		})
 	}
 
@@ -898,6 +923,7 @@ func (e *Engine) compileStats(report *FinalReport) ReportStats {
 		CandidatesFound:   len(report.Candidates),
 		ValidatedFindings: len(report.Validated),
 		DedupedFindings:   len(report.Deduped),
+		DedupClusters:     len(report.Deduped),
 		ProvenFindings:    len(report.Proven),
 	}
 	for _, f := range report.Deduped {
@@ -1012,6 +1038,7 @@ func (e *Engine) analysisResultFromReport(ctx context.Context, owner, repo, ref,
 			CodeSnippet:    f.Evidence.Code,
 			ProofOfConcept: poc,
 			Confidence:     f.Confidence,
+			ClusterID:      f.ClusterID,
 		})
 	}
 	return result, nil

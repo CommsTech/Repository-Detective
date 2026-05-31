@@ -70,6 +70,14 @@ Fixed in commit `c0580f6`. Pull latest and rebuild or reload image.
 
 ---
 
+## Labels not attached to issues
+
+Bugbot uses `POST /issues/{index}/labels` with body `{"labels":["security",1080]}`. If Gitea returns `[]`, Bugbot re-fetches labels via GET to verify attachment.
+
+Check token issue-write permission. Missing label names are auto-created on the repository.
+
+---
+
 ## Scanner tools missing in logs
 
 ```

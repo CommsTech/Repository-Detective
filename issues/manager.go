@@ -13,9 +13,10 @@ import (
 
 // Manager handles issue creation and management
 type Manager struct {
-	giteaClient *gitea.Client
-	logger      *logrus.Logger
-	config      *Config
+	giteaClient   *gitea.Client
+	logger        *logrus.Logger
+	config        *Config
+	semanticStore *SemanticStore
 }
 
 // Config holds issue manager configuration
@@ -27,6 +28,7 @@ type Config struct {
 	MaxIssuesPerRun    int
 	SkipLowSeverity    bool
 	GroupSimilarIssues bool
+	MinIssueConfidence float64
 	IssueTitleTemplate string
 	IssueBodyTemplate  string
 }
@@ -50,11 +52,12 @@ type IssueCreationResult struct {
 }
 
 // NewManager creates a new issue manager
-func NewManager(giteaClient *gitea.Client, config *Config, logger *logrus.Logger) *Manager {
+func NewManager(giteaClient *gitea.Client, config *Config, logger *logrus.Logger, semanticStore *SemanticStore) *Manager {
 	return &Manager{
-		giteaClient: giteaClient,
-		logger:      logger,
-		config:      config,
+		giteaClient:   giteaClient,
+		logger:        logger,
+		config:        config,
+		semanticStore: semanticStore,
 	}
 }
 
@@ -83,6 +86,17 @@ func (m *Manager) CreateIssuesFromAnalysis(ctx context.Context, req *IssueCreati
 			m.logger.Infof("Reached maximum issues limit (%d), skipping remaining issues", m.config.MaxIssuesPerRun)
 			result.IssuesSkipped += len(req.AnalysisResult.Issues) - i
 			break
+		}
+
+		// Epistemic gate — discard very low confidence findings
+		minConfidence := m.config.MinIssueConfidence
+		if minConfidence <= 0 {
+			minConfidence = 0.5
+		}
+		if issue.Confidence > 0 && issue.Confidence < minConfidence {
+			m.logger.Debugf("Skipping low-confidence issue: %s (%.2f)", issue.Title, issue.Confidence)
+			result.IssuesSkipped++
+			continue
 		}
 
 		// Skip low severity issues if configured
@@ -117,10 +131,30 @@ func (m *Manager) CreateIssuesFromAnalysis(ctx context.Context, req *IssueCreati
 
 // createIssueForProblem creates a Gitea issue for a specific code problem
 func (m *Manager) createIssueForProblem(ctx context.Context, req *IssueCreationRequest, issue *ai.CodeIssue, result *IssueCreationResult) error {
+	repository := fmt.Sprintf("%s/%s", req.Owner, req.Repository)
+
+	if m.semanticStore != nil && m.semanticStore.Enabled() {
+		dup, err := m.semanticStore.FindDuplicate(ctx, repository, issue)
+		if err != nil {
+			m.logger.Warnf("Semantic dedup lookup failed: %v", err)
+		} else if dup != nil && dup.IssueNumber > 0 {
+			comment := DuplicateCommentBody(issue, dup.Score)
+			if err := m.giteaClient.CreateIssueComment(ctx, req.Owner, req.Repository, dup.IssueNumber, comment); err != nil {
+				m.logger.Warnf("Failed to comment on duplicate issue #%d: %v", dup.IssueNumber, err)
+			} else {
+				m.logger.Infof("Updated existing issue #%d instead of creating duplicate (score %.2f)", dup.IssueNumber, dup.Score)
+				result.IssuesSkipped++
+				result.IssueURLs = append(result.IssueURLs, dup.IssueURL)
+				return nil
+			}
+		}
+	}
+
 	title := m.createIssueTitle(issue, req)
 	body := m.createIssueBody(issue, req)
 
-	labelIDs, err := m.giteaClient.ResolveLabelIDs(ctx, req.Owner, req.Repository, m.config.IssueLabels)
+	labelNames := m.labelsForIssue(issue)
+	labelIDs, err := m.giteaClient.ResolveLabelIDs(ctx, req.Owner, req.Repository, labelNames)
 	if err != nil {
 		m.logger.Warnf("Failed to resolve labels: %v", err)
 	}
@@ -131,10 +165,27 @@ func (m *Manager) createIssueForProblem(ctx context.Context, req *IssueCreationR
 		Labels: labelIDs,
 	}
 
-	// Create the issue
 	createdIssue, err := m.giteaClient.CreateIssue(ctx, req.Owner, req.Repository, issueReq)
 	if err != nil {
 		return fmt.Errorf("failed to create issue: %w", err)
+	}
+
+	if len(labelNames) > 0 {
+		labelPayload := make([]any, 0, len(labelNames))
+		for _, name := range labelNames {
+			labelPayload = append(labelPayload, name)
+		}
+		if attached, err := m.giteaClient.AddIssueLabels(ctx, req.Owner, req.Repository, createdIssue.Number, labelPayload); err != nil {
+			m.logger.Warnf("Failed to attach labels to issue #%d: %v", createdIssue.Number, err)
+		} else if len(attached) == 0 {
+			m.logger.Warnf("Label attach returned empty for issue #%d — verify labels in Gitea UI", createdIssue.Number)
+		}
+	}
+
+	if m.semanticStore != nil && m.semanticStore.Enabled() {
+		if err := m.semanticStore.Remember(ctx, repository, issue, createdIssue.HTMLURL, createdIssue.Number, issue.ClusterID); err != nil {
+			m.logger.Warnf("Failed to store finding in Qdrant: %v", err)
+		}
 	}
 
 	result.IssuesCreated++
@@ -143,6 +194,41 @@ func (m *Manager) createIssueForProblem(ctx context.Context, req *IssueCreationR
 	m.logger.Infof("Created issue #%d: %s", createdIssue.Number, title)
 
 	return nil
+}
+
+func (m *Manager) labelsForIssue(issue *ai.CodeIssue) []string {
+	labels := append([]string{}, m.config.IssueLabels...)
+
+	switch {
+	case issue.Confidence >= 0.9:
+		labels = append(labels, "high-confidence")
+	case issue.Confidence >= 0.7:
+		// default confidence band — no extra label
+	case issue.Confidence >= 0.5:
+		labels = append(labels, "low-confidence")
+	}
+
+	if issue.Severity != "" {
+		labels = append(labels, strings.ToLower(issue.Severity))
+	}
+	if issue.Category != "" {
+		labels = append(labels, strings.ToLower(issue.Category))
+	}
+	return uniqueStrings(labels)
+}
+
+func uniqueStrings(values []string) []string {
+	seen := make(map[string]bool, len(values))
+	var out []string
+	for _, value := range values {
+		key := strings.ToLower(strings.TrimSpace(value))
+		if key == "" || seen[key] {
+			continue
+		}
+		seen[key] = true
+		out = append(out, value)
+	}
+	return out
 }
 
 // createSummaryIssue creates a summary issue when multiple issues are found
@@ -165,6 +251,16 @@ func (m *Manager) createSummaryIssue(ctx context.Context, req *IssueCreationRequ
 	createdIssue, err := m.giteaClient.CreateIssue(ctx, req.Owner, req.Repository, issueReq)
 	if err != nil {
 		return fmt.Errorf("failed to create summary issue: %w", err)
+	}
+
+	if len(labelIDs) > 0 {
+		payload := make([]any, 0, len(labelIDs))
+		for _, id := range labelIDs {
+			payload = append(payload, id)
+		}
+		if _, err := m.giteaClient.AddIssueLabels(ctx, req.Owner, req.Repository, createdIssue.Number, payload); err != nil {
+			m.logger.Warnf("Failed to attach summary labels: %v", err)
+		}
 	}
 
 	result.IssuesCreated++
@@ -339,6 +435,7 @@ func GetDefaultConfig() *Config {
 		MaxIssuesPerRun:    50,
 		SkipLowSeverity:    false,
 		GroupSimilarIssues: true,
+		MinIssueConfidence: 0.5,
 		IssueTitleTemplate: "[{{severity}}] {{title}}",
 		IssueBodyTemplate:  "## Issue Details\n\n**Severity:** {{severity}}\n**Category:** {{category}}\n**Confidence:** {{confidence}}\n\n## Description\n\n{{description}}\n\n## Context\n\n- **Repository:** {{repository}}\n- **Context:** {{context}}\n- **Commit:** {{commit}}\n\n---\n*This issue was automatically generated by the Gitea Bugbot*",
 	}

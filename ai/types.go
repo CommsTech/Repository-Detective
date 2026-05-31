@@ -109,6 +109,7 @@ type CodeIssue struct {
 	CodeSnippet    string  `json:"code_snippet,omitempty"`
 	ProofOfConcept string  `json:"proof_of_concept,omitempty"`
 	Confidence     float64 `json:"confidence"`
+	ClusterID      string  `json:"cluster_id,omitempty"`
 }
 
 // CodeSuggestion represents a suggested improvement.

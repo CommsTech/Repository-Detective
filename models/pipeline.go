@@ -108,6 +108,8 @@ type DedupedFinding struct {
 	Evidence    Evidence
 	Confidence  float64
 	DedupGroup  string
+	ClusterID   string
+	Related     []string
 }
 
 // ProvenFinding includes a proof-of-concept for the finding.
