@@ -177,7 +177,7 @@ trigger_scan_all() {
 
   local org=""
   if [[ -f .env ]]; then
-    org="$(grep -E '^[[:space:]]*GITEA_SCAN_ORGS=' .env 2>/dev/null | tail -1 | cut -d= -f2- | tr -d ' "'\''\r' | cut -d, -f1)"
+    org="$(grep -E '^[[:space:]]*GITEA_SCAN_ORGS=' .env 2>/dev/null | tail -1 | cut -d= -f2- | tr -d " \r\"'" | cut -d, -f1 || true)"
   fi
   local body
   if [[ -n "$org" && -n "$profile" ]]; then
