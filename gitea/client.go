@@ -437,6 +437,17 @@ func (c *Client) GetChangedFiles(ctx context.Context, owner, repo string, prNumb
 	return changedFiles, nil
 }
 
+// repositoryPathSkipped reports paths under common vendor or VCS directories.
+func repositoryPathSkipped(path string) bool {
+	for _, segment := range strings.Split(strings.Trim(path, "/"), "/") {
+		switch strings.ToLower(segment) {
+		case "node_modules", "vendor", ".git", ".venv", "venv", "__pycache__", "build", "dist", "target":
+			return true
+		}
+	}
+	return false
+}
+
 // ListAllFiles recursively lists all files in a repository
 func (c *Client) ListAllFiles(ctx context.Context, owner, repo, ref, dirPath string) ([]RepositoryContent, error) {
 	var allFiles []RepositoryContent
@@ -462,6 +473,9 @@ func (c *Client) ListAllFiles(ctx context.Context, owner, repo, ref, dirPath str
 
 	for _, item := range contents {
 		if item.Type == "dir" {
+			if repositoryPathSkipped(item.Path) {
+				continue
+			}
 			// Recursively fetch subdirectory
 			subFiles, err := c.ListAllFiles(ctx, owner, repo, ref, item.Path)
 			if err != nil {

@@ -1003,7 +1003,7 @@ func (e *Engine) shouldAnalyzeFile(path string) bool {
 			return false
 		}
 	}
-	skipDirs := []string{"node_modules", "vendor", ".git", "build", "dist", "target"}
+	skipDirs := []string{"node_modules", "vendor", ".git", ".venv", "venv", "__pycache__", "build", "dist", "target"}
 	for _, dir := range skipDirs {
 		if strings.Contains(path, dir) {
 			return false
