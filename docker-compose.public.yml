@@ -9,12 +9,12 @@ version: '3.7'
 # See DEPLOYMENT.md and docs/SETUP.md
 
 services:
-  gitea-bugbot:
+  repository-detective:
     build:
       context: .
       dockerfile: Dockerfile
-    image: gitea-bugbot:latest
-    container_name: gitea-bugbot
+    image: repository-detective:latest
+    container_name: repository-detective
     network_mode: host
     env_file:
       - .env

@@ -31,9 +31,9 @@ RUN if [ -d vendor/modules.txt ]; then \
     fi
 
 RUN if [ -d vendor/modules.txt ]; then \
-      CGO_ENABLED=0 GOOS=linux go build -mod=vendor -ldflags="-s -w" -o gitea-bugbot .; \
+      CGO_ENABLED=0 GOOS=linux go build -mod=vendor -ldflags="-s -w" -o repository-detective .; \
     else \
-      CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o gitea-bugbot .; \
+      CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o repository-detective .; \
     fi
 
 FROM alpine:3.20
@@ -58,17 +58,17 @@ RUN apk --no-cache add ca-certificates tzdata wget su-exec \
            | tar xz -C /usr/local/bin --strip-components=1 "ruff-x86_64-unknown-linux-musl/ruff"; \
        fi
 
-RUN addgroup -g 1001 -S bugbot && \
-    adduser -u 1001 -S bugbot -G bugbot
+RUN addgroup -g 1001 -S repositorydetective && \
+    adduser -u 1001 -S repositorydetective -G repositorydetective
 
 WORKDIR /app
 
-COPY --from=builder /app/gitea-bugbot .
+COPY --from=builder /app/repository-detective .
 COPY --from=builder /app/config ./config
 COPY scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 
-RUN chmod +x gitea-bugbot /usr/local/bin/docker-entrypoint.sh && \
-    chown -R bugbot:bugbot /app
+RUN chmod +x repository-detective /usr/local/bin/docker-entrypoint.sh && \
+    chown -R repositorydetective:repositorydetective /app
 
 EXPOSE 8080
 
@@ -76,4 +76,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:8080/health || exit 1
 
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
-CMD ["/app/gitea-bugbot"]
+CMD ["/app/repository-detective"]

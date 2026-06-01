@@ -15,10 +15,10 @@ cd "$ROOT"
 
 COMPOSE_FILE="docker-compose.public.yml"
 COMPOSE=(docker-compose -f "$COMPOSE_FILE")
-CONTAINER="gitea-bugbot"
+CONTAINER="repository-detective"
 HEALTH_URL="http://127.0.0.1:8081/health"
 LEGACY_DIR="${BUGBOT_LEGACY_DIR:-$HOME/bugbot}"
-BINARY="$ROOT/build/gitea-bugbot"
+BINARY="$ROOT/build/repository-detective"
 
 log() { printf '==> %s\n' "$*"; }
 warn() { printf 'warning: %s\n' "$*" >&2; }
@@ -60,6 +60,8 @@ build_image() {
   log "building Docker image from Dockerfile"
   "${COMPOSE[@]}" build
 }
+
+ensure_certs() {
   if [[ -d "$LEGACY_DIR/certs" ]] && [[ -z "$(ls -A certs 2>/dev/null || true)" ]]; then
     log "copying TLS certs from $LEGACY_DIR/certs"
     cp -a "$LEGACY_DIR/certs/." certs/
@@ -74,9 +76,9 @@ migrate_legacy_config() {
 }
 
 stop_legacy_process() {
-  if pgrep -f '/home/commstech/bugbot/gitea-bugbot' >/dev/null 2>&1; then
-    log "stopping legacy non-Docker bugbot process"
-    pkill -f '/home/commstech/bugbot/gitea-bugbot' || true
+  if pgrep -f '/home/commstech/bugbot/(gitea-bugbot|repository-detective)' >/dev/null 2>&1; then
+    log "stopping legacy non-Docker Repository Detective process"
+    pkill -f '/home/commstech/bugbot/(gitea-bugbot|repository-detective)' || true
     sleep 2
   fi
 }
@@ -97,7 +99,7 @@ cd "$ROOT"
 exec docker-compose -f docker-compose.public.yml up -d --remove-orphans
 EOF
   chmod +x "$run_sh"
-  warn "run 'sudo systemctl disable bugbot.service' when ready and rely on Docker restart policy instead"
+  warn "run 'sudo systemctl disable bugbot.service' (legacy unit) when ready and rely on Docker restart policy instead"
 }
 
 start_stack() {

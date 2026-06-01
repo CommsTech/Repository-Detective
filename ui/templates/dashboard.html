@@ -5,6 +5,18 @@
 <body class="rd-app">
 {{template "nav" .}}
 
+<section class="rd-hero">
+  <div>
+    <p class="rd-hero-kicker">Repository Detective Control Center</p>
+    <h2>Defend code quality and security in one place.</h2>
+    <p class="rd-muted">Track risk posture, scanner health, and remediation flow with a cleaner operator view.</p>
+  </div>
+  <div class="rd-hero-actions">
+    <a class="rd-btn" href="{{.BasePath}}/findings{{if .APIKey}}?api_key={{.APIKey}}{{end}}">Review Findings</a>
+    <a class="rd-btn rd-btn-secondary" href="{{.BasePath}}/repos{{if .APIKey}}?api_key={{.APIKey}}{{end}}">Manage Repositories</a>
+  </div>
+</section>
+
 <div class="rd-features">
   <div class="rd-feature"><strong>🛡 Security First</strong>Surface vulnerabilities</div>
   <div class="rd-feature"><strong>&lt;/&gt; Code Quality</strong>Identify anti-patterns</div>

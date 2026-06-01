@@ -2,7 +2,7 @@
 set -eu
 
 if [ -d /app/data ] && [ "$(id -u)" -eq 0 ]; then
-  chown -R bugbot:bugbot /app/data
+  chown -R repositorydetective:repositorydetective /app/data
 fi
 
 # Trust operator-provided CA bundles (e.g. self-signed OpenClaw gateway).
@@ -17,7 +17,7 @@ if [ -d /app/certs ]; then
 fi
 
 if [ "$(id -u)" -eq 0 ]; then
-  exec su-exec bugbot "$@"
+  exec su-exec repositorydetective "$@"
 fi
 
 exec "$@"

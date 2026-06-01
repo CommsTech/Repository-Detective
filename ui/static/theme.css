@@ -136,6 +136,54 @@ body.rd-app {
   width: 100%;
 }
 
+.rd-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 24px;
+  margin-bottom: 18px;
+  border-radius: 14px;
+  background: linear-gradient(120deg, #0d1b2a 0%, #1e3a8a 62%, #0ea5a4 100%);
+  color: #fff;
+  box-shadow: 0 10px 28px rgba(13, 27, 42, 0.24);
+}
+
+.rd-hero h2 {
+  margin: 6px 0 10px;
+  font-size: 1.45rem;
+  color: #fff;
+}
+
+.rd-hero .rd-muted {
+  color: rgba(255, 255, 255, 0.86);
+  margin: 0;
+}
+
+.rd-hero-kicker {
+  margin: 0;
+  font-size: 0.74rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #a5f3fc;
+}
+
+.rd-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.rd-hero .rd-btn {
+  margin-top: 0;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.rd-hero .rd-btn:hover {
+  background: rgba(255, 255, 255, 0.24);
+}
+
 .rd-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -367,6 +415,7 @@ button:hover, .rd-btn:hover {
   .rd-layout { flex-direction: column; }
   .rd-sidebar { width: 100%; padding: 16px; }
   .rd-tagline { margin-left: 0; }
+  .rd-hero { flex-direction: column; align-items: flex-start; }
 }
 
 /* Legacy class aliases for pages not yet fully migrated */
