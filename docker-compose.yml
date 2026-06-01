@@ -1,4 +1,4 @@
-version: '3.8'
+version: '3.7'
 
 # Default production deploy — builds from Dockerfile, host networking, port 8081.
 #

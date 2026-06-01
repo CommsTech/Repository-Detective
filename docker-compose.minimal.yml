@@ -1,4 +1,4 @@
-version: '3.8'
+version: '3.7'
 
 # Local development — bridge networking, port 8080 on the host.
 #
