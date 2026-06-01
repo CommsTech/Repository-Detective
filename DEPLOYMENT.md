@@ -1,5 +1,7 @@
 # Deployment
 
+See **[docs/DEPLOYMENT_ISSUES.md](docs/DEPLOYMENT_ISSUES.md)** for known deployment problems and workarounds on this host.
+
 See **[docs/SETUP.md](docs/SETUP.md)** for the full walkthrough.
 
 ## Prerequisites
@@ -14,10 +16,36 @@ See **[docs/SETUP.md](docs/SETUP.md)** for the full walkthrough.
 ```bash
 git clone https://git.commsnet.org/commstech/Bugbot.git
 cd Bugbot
-cp .env.example .env
+cp .env.example .env   # or copy from a legacy install at ~/bugbot/.env
 # edit .env
-docker compose -f docker-compose.public.yml up -d --build
+docker-compose -f docker-compose.public.yml up -d --build
 curl -m 5 http://127.0.0.1:8081/health
+```
+
+Or use the helper script:
+
+```bash
+./deploy.sh
+./deploy.sh --scan     # optional: dogfood scan on commstech/Bugbot
+```
+
+### DNS-filtered networks
+
+If `docker build` fails on `storage.googleapis.com` (Go module proxy redirects), vendor dependencies first:
+
+```bash
+./scripts/vendor-deps.sh
+docker-compose -f docker-compose.public.yml up -d --build
+```
+
+This uses `goproxy.io` as a fallback when Google’s module CDN is blocked. The `vendor/` directory is not committed — generate it before building on filtered networks. Normal networks can build without it.
+
+When Docker bridge IP pools are exhausted, `docker-compose.public.yml` uses `network_mode: host` (listens on port 8081).
+
+Disable the legacy systemd unit after Docker is healthy:
+
+```bash
+sudo systemctl disable --now bugbot.service
 ```
 
 ## Compose files

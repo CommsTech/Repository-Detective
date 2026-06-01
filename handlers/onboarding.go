@@ -49,10 +49,20 @@ func (h *OnboardingHandler) RegisterRoutes(router *gin.Engine, onboardAPI *gin.R
 		return
 	}
 
-	router.GET("/onboard", func(c *gin.Context) {
-		c.FileFromFS("index.html", http.FS(staticFS))
-	})
-	router.StaticFS("/onboard/static", http.FS(staticFS))
+	indexHTML, err := fs.ReadFile(staticFS, "index.html")
+	if err != nil {
+		h.logger.Errorf("Failed to load onboarding index.html: %v", err)
+		return
+	}
+
+	serveOnboard := func(c *gin.Context) {
+		c.Data(http.StatusOK, "text/html; charset=utf-8", indexHTML)
+	}
+	// Both paths avoid a Gin trailing-slash redirect loop with StaticFS under /onboard/*.
+	router.GET("/onboard", serveOnboard)
+	router.GET("/onboard/", serveOnboard)
+	// Assets live under /onboard/assets (not /onboard/static) to avoid route prefix clashes.
+	router.StaticFS("/onboard/assets", http.FS(staticFS))
 
 	onboardAPI.GET("/defaults", h.handleDefaults)
 	onboardAPI.POST("/test-gitea", h.handleTestGitea)

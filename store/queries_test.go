@@ -64,6 +64,32 @@ func TestListFindingsFilters(t *testing.T) {
 	}
 }
 
+func TestListFindingsIgnoresSQLInjectionPayloads(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	s, err := store.Open(store.Config{Enabled: true, Path: filepath.Join(dir, "sqli.db")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+
+	repo, _ := s.UpsertRepository(ctx, store.Repository{Owner: "o", Name: "r", FullName: "o/r"})
+	now := time.Now().UTC()
+	_, _ = s.UpsertFinding(ctx, store.Finding{RepositoryID: repo.ID, Fingerprint: "safe", Severity: "high", Category: "security", Source: "semgrep", FirstSeenAt: now, LastSeenAt: now})
+
+	got, err := s.ListFindings(ctx, store.FindingFilter{
+		Severity: `high' OR 1=1 --`,
+		Category: `security'; DROP TABLE findings; --`,
+		Limit:    10,
+	})
+	if err != nil {
+		t.Fatalf("list findings: %v", err)
+	}
+	if len(got) != 0 {
+		t.Fatalf("expected injection payloads to match nothing, got %d rows", len(got))
+	}
+}
+
 func TestListScansByRepository(t *testing.T) {
 	ctx := context.Background()
 	s := openTestStore(t)

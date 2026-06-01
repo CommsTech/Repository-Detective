@@ -22,6 +22,7 @@ type Manager struct {
 // Config holds issue manager configuration
 type Config struct {
 	AutoCreateIssues   bool
+	GiteaBaseURL       string
 	IssueLabels        []string
 	IssueTemplate      string
 	CommentTemplate    string
@@ -331,42 +332,67 @@ func (m *Manager) createSummaryIssue(ctx context.Context, req *IssueCreationRequ
 func (m *Manager) createIssueTitle(issue *ai.CodeIssue, req *IssueCreationRequest) string {
 	if m.config.IssueTitleTemplate != "" {
 		title := m.config.IssueTitleTemplate
-		title = strings.ReplaceAll(title, "{{severity}}", issue.Severity)
+		title = strings.ReplaceAll(title, "{{severity}}", strings.ToUpper(issue.Severity))
 		title = strings.ReplaceAll(title, "{{category}}", issue.Category)
 		title = strings.ReplaceAll(title, "{{title}}", issue.Title)
 		title = strings.ReplaceAll(title, "{{file}}", issue.File)
+		if issue.LineNumber > 0 {
+			title = strings.ReplaceAll(title, "{{line}}", fmt.Sprintf("%d", issue.LineNumber))
+		}
 		return title
 	}
 
 	severity := strings.ToUpper(issue.Severity)
-	return fmt.Sprintf("[%s] %s", severity, issue.Title)
+	title := issue.Title
+	if loc := locationRef(issue); loc != "" && !strings.Contains(title, loc) {
+		title = fmt.Sprintf("%s — %s", title, loc)
+	}
+	return fmt.Sprintf("[%s] %s", severity, title)
 }
 
 func (m *Manager) createIssueBody(issue *ai.CodeIssue, req *IssueCreationRequest) string {
+	repository := fmt.Sprintf("%s/%s", req.Owner, req.Repository)
 	if m.config.IssueBodyTemplate != "" {
-		body := m.config.IssueBodyTemplate
-		body = strings.ReplaceAll(body, "{{description}}", issue.Description)
-		body = strings.ReplaceAll(body, "{{severity}}", issue.Severity)
-		body = strings.ReplaceAll(body, "{{category}}", issue.Category)
-		body = strings.ReplaceAll(body, "{{confidence}}", fmt.Sprintf("%.2f", issue.Confidence))
-		body = strings.ReplaceAll(body, "{{context}}", req.Context)
-		body = strings.ReplaceAll(body, "{{commit}}", req.Commit)
-		body = strings.ReplaceAll(body, "{{fingerprint}}", issue.Fingerprint)
-		body = strings.ReplaceAll(body, "{{scan_id}}", req.ScanID)
-		if req.PullRequest > 0 {
-			body = strings.ReplaceAll(body, "{{pull_request}}", fmt.Sprintf("#%d", req.PullRequest))
-		}
+		body := m.applyIssueBodyTemplate(m.config.IssueBodyTemplate, issue, req, repository)
 		return body
 	}
 
 	return RenderIssueBody(IssueRenderInput{
-		Issue:       issue,
-		Repository:  fmt.Sprintf("%s/%s", req.Owner, req.Repository),
-		Context:     req.Context,
-		Commit:      req.Commit,
-		PullRequest: req.PullRequest,
-		ScanID:      req.ScanID,
+		Issue:        issue,
+		Repository:   repository,
+		Owner:        req.Owner,
+		RepoName:     req.Repository,
+		GiteaBaseURL: m.config.GiteaBaseURL,
+		Context:      req.Context,
+		Commit:       req.Commit,
+		Ref:          req.Commit,
+		PullRequest:  req.PullRequest,
+		ScanID:       req.ScanID,
 	})
+}
+
+func (m *Manager) applyIssueBodyTemplate(tmpl string, issue *ai.CodeIssue, req *IssueCreationRequest, repository string) string {
+	body := tmpl
+	body = strings.ReplaceAll(body, "{{description}}", issue.Description)
+	body = strings.ReplaceAll(body, "{{title}}", issue.Title)
+	body = strings.ReplaceAll(body, "{{severity}}", issue.Severity)
+	body = strings.ReplaceAll(body, "{{category}}", issue.Category)
+	body = strings.ReplaceAll(body, "{{confidence}}", fmt.Sprintf("%.2f", issue.Confidence))
+	body = strings.ReplaceAll(body, "{{context}}", req.Context)
+	body = strings.ReplaceAll(body, "{{commit}}", req.Commit)
+	body = strings.ReplaceAll(body, "{{repository}}", repository)
+	body = strings.ReplaceAll(body, "{{fingerprint}}", issue.Fingerprint)
+	body = strings.ReplaceAll(body, "{{scan_id}}", req.ScanID)
+	body = strings.ReplaceAll(body, "{{file}}", issue.File)
+	body = strings.ReplaceAll(body, "{{line}}", fmt.Sprintf("%d", issue.LineNumber))
+	body = strings.ReplaceAll(body, "{{source}}", issue.Source)
+	body = strings.ReplaceAll(body, "{{rule_id}}", issue.RuleID)
+	body = strings.ReplaceAll(body, "{{evidence}}", SanitizeSecretEvidence(issue.CodeSnippet))
+	body = strings.ReplaceAll(body, "{{recommended_fix}}", recommendedFix(issue))
+	if req.PullRequest > 0 {
+		body = strings.ReplaceAll(body, "{{pull_request}}", fmt.Sprintf("#%d", req.PullRequest))
+	}
+	return body
 }
 
 func (m *Manager) createSummaryIssueBody(req *IssueCreationRequest) string {

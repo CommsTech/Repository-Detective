@@ -29,11 +29,15 @@ func TestRenderIssueBodyIncludesSections(t *testing.T) {
 	}
 
 	body := RenderIssueBody(IssueRenderInput{
-		Issue:      issue,
-		Repository: "owner/repo",
-		ScanID:     "scan-1",
-		Commit:     "abc1234",
-		Now:        time.Date(2026, 5, 31, 12, 0, 0, 0, time.UTC),
+		Issue:        issue,
+		Repository:   "owner/repo",
+		Owner:        "owner",
+		RepoName:     "repo",
+		GiteaBaseURL:   "https://git.example.org",
+		ScanID:       "scan-1",
+		Commit:       "main",
+		Ref:          "main",
+		Now:          time.Date(2026, 5, 31, 12, 0, 0, 0, time.UTC),
 	})
 
 	for _, section := range []string{
@@ -45,9 +49,14 @@ func TestRenderIssueBodyIncludesSections(t *testing.T) {
 		"## Recommended fix",
 		"## Regression risk",
 		"## Suggested tests",
+		"## Reproduction",
+		"## Report flow",
+		"## Acceptance criteria",
+		"## Links",
 		"## Tracking",
 		"Repository Detective fingerprint: bugbot-abc123",
 		"Scan ID: scan-1",
+		"src/app.py",
 	} {
 		if !strings.Contains(body, section) {
 			t.Fatalf("missing section %q in body", section)

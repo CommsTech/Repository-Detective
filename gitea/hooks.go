@@ -167,6 +167,34 @@ func (c *Client) CreateRepositoryLabel(ctx context.Context, owner, repo, name, c
 	return &label, nil
 }
 
+// UpdateRepositoryLabel updates an existing repository label's color.
+func (c *Client) UpdateRepositoryLabel(ctx context.Context, owner, repo string, labelID int64, name, color string) error {
+	url := fmt.Sprintf("%s/api/v1/repos/%s/%s/labels/%d", c.baseURL, owner, repo, labelID)
+	payload, _ := json.Marshal(map[string]string{
+		"name":  name,
+		"color": color,
+	})
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPatch, url, bytes.NewReader(payload))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", "token "+c.token)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("gitea API returned status %d: %s", resp.StatusCode, string(body))
+	}
+	return nil
+}
+
 // ResolveLabelIDs returns label IDs for the given names, creating missing labels when needed.
 func (c *Client) ResolveLabelIDs(ctx context.Context, owner, repo string, names []string) ([]int64, error) {
 	if len(names) == 0 {
@@ -178,18 +206,25 @@ func (c *Client) ResolveLabelIDs(ctx context.Context, owner, repo string, names 
 		return nil, err
 	}
 
-	byName := make(map[string]int64, len(existing))
+	byName := make(map[string]Label, len(existing))
 	for _, label := range existing {
-		byName[strings.ToLower(label.Name)] = label.ID
+		byName[strings.ToLower(label.Name)] = label
 	}
 
 	var ids []int64
 	for _, name := range names {
-		if id, ok := byName[strings.ToLower(name)]; ok {
-			ids = append(ids, id)
+		wantColor := DefaultLabelColor(name)
+		key := strings.ToLower(name)
+		if label, ok := byName[key]; ok {
+			if !strings.EqualFold(label.Color, wantColor) {
+				if err := c.UpdateRepositoryLabel(ctx, owner, repo, label.ID, label.Name, wantColor); err != nil {
+					c.logger.Warnf("Failed to update label color for %s: %v", name, err)
+				}
+			}
+			ids = append(ids, label.ID)
 			continue
 		}
-		created, err := c.CreateRepositoryLabel(ctx, owner, repo, name, "5319e7")
+		created, err := c.CreateRepositoryLabel(ctx, owner, repo, name, wantColor)
 		if err != nil {
 			c.logger.Warnf("Failed to create label %s: %v", name, err)
 			continue

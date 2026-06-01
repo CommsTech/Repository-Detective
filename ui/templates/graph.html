@@ -1,18 +1,18 @@
 {{define "graph.html"}}
-<!DOCTYPE html><html lang="en"><head>{{template "head" .}}</head><body>
-{{template "nav" .}}<main><h1>{{.Title}}</h1>
-<p class="muted">Repository Detective — Inspect. Analyze. Improve. Interactive repository map with findings overlay.</p>
-<div class="card">
+<!DOCTYPE html><html lang="en"><head>{{template "head" .}}</head><body class="rd-app">
+{{template "nav" .}}
+<p class="rd-muted">Repository Detective — Inspect. Analyze. Improve. Interactive repository map with findings overlay.</p>
+<div class="rd-card">
 <div id="graph-controls">
 <label>Layout <select id="layout-mode"><option value="cose">Architecture clusters</option><option value="breadthfirst">Directory tree</option><option value="circle">Dependency ring</option></select></label>
 <label>Node type <select id="filter-type"><option value="">All</option><option value="file">Files</option><option value="package">Packages</option><option value="function">Functions</option><option value="finding">Findings</option><option value="directory">Directories</option></select></label>
 <label><input type="checkbox" id="filter-disconnected"> Disconnected only</label>
 <label><input type="checkbox" id="filter-findings-off"> Hide findings overlay</label>
 <label><input type="checkbox" id="filter-entrypoints"> Highlight entrypoints</label>
-{{if .Data.ExportURL}}<a id="export-graph" href="{{.Data.ExportURL}}" class="button-link">Download JSON</a>{{end}}
+{{if .Data.ExportURL}}<a id="export-graph" href="{{.Data.ExportURL}}" class="rd-btn rd-btn-secondary">Download JSON</a>{{end}}
 <button type="button" id="copy-graph-summary">Copy graph summary</button>
 </div>
-<div id="graph-legend" class="muted">
+<div id="graph-legend" class="rd-muted">
 <span class="legend-item"><span class="dot type-file"></span> File</span>
 <span class="legend-item"><span class="dot type-package"></span> Package</span>
 <span class="legend-item"><span class="dot type-function"></span> Function</span>
@@ -24,9 +24,9 @@
 <span class="legend-item"><span class="dot sev-medium"></span> Medium</span>
 <span class="legend-item"><span class="dot sev-low"></span> Low/Info</span>
 </div>
-<div id="graph-truncated" class="warn" style="display:none">Graph was truncated due to node/edge limits. Increase per-repo or global graph limits for fuller coverage.</div>
+<div id="graph-truncated" class="rd-alert" style="display:none">Graph was truncated due to node/edge limits. Increase per-repo or global graph limits for fuller coverage.</div>
 <div id="cy" style="width:100%;height:70vh;min-height:420px;border:1px solid #334155;border-radius:8px;background:#0f172a;"></div>
-<p id="graph-status" class="muted">Loading graph…</p>
+<p id="graph-status" class="rd-muted">Loading graph…</p>
 <div id="node-detail" class="muted card" style="margin-top:0.5rem;padding:0.75rem;min-height:2.5rem">Select a node for details.</div>
 </div>
 <div id="graph-app"
@@ -44,5 +44,6 @@
 #graph-controls label{margin-right:1rem}
 #graph-controls .button-link,#graph-controls button{margin-right:0.5rem}
 </style>
-</main></body></html>
+{{template "foot" .}}
+</body></html>
 {{end}}

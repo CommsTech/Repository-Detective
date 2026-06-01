@@ -1,20 +1,65 @@
 {{define "finding_detail.html"}}
-<!DOCTYPE html><html lang="en"><head>{{template "head" .}}</head><body>
-{{template "nav" .}}<main><h1>{{.Title}}</h1>
-{{with .Data.Finding}}<div class="card">
-<p><strong>Lifecycle stage:</strong> <em>{{$.Data.LifecycleLabel}}</em></p>
-<p><strong>Fingerprint:</strong> {{.Fingerprint}}</p>
-<p><strong>Repo:</strong> {{.RepoFullName}} · <strong>Severity:</strong> {{.Severity}} · <strong>Category:</strong> {{.Category}}</p>
-<p><strong>Source:</strong> {{.Source}} · <strong>Confidence:</strong> {{printf "%.2f" .Confidence}}</p>
-{{if .ExternalIssueURL}}<p><a href="{{.ExternalIssueURL}}">External issue #{{.ExternalIssueNumber}}</a></p>{{end}}
-<h3>Evidence (redacted)</h3>
-{{range .Instances}}<pre>{{.EvidenceRedacted}}</pre>{{end}}
-<h3>Lifecycle</h3><ul>
-{{range .LifecycleEvents}}<li>{{.EventType}} — {{.Message}} ({{.CreatedAt.Format "2006-01-02"}})</li>{{end}}
-</ul></div>{{end}}
-<div class="card">
+<!DOCTYPE html><html lang="en"><head>{{template "head" .}}</head><body class="rd-app">
+{{template "nav" .}}
+{{with .Data.Finding}}
+<div class="rd-grid">
+  <div class="rd-stat {{severityBadge .Severity}}">
+    <div class="rd-stat-value"><span class="rd-badge {{severityBadge .Severity}}">{{.Severity}}</span></div>
+    <div class="rd-stat-label">Severity</div>
+  </div>
+  <div class="rd-stat info">
+    <div class="rd-stat-value"><span class="rd-badge {{categoryBadge .Category}}">{{.Category}}</span></div>
+    <div class="rd-stat-label">Category</div>
+  </div>
+  <div class="rd-stat">
+    <div class="rd-stat-value">{{printf "%.0f%%" (mul .Confidence 100)}}</div>
+    <div class="rd-stat-label">Confidence</div>
+  </div>
+  <div class="rd-stat">
+    <div class="rd-stat-value"><span class="rd-badge {{statusBadge .Status}}">{{.Status}}</span></div>
+    <div class="rd-stat-label">Status</div>
+  </div>
+</div>
+
+<div class="rd-card">
+  <h2>{{.Title}}</h2>
+  <p class="rd-muted"><strong>Lifecycle:</strong> {{$.Data.LifecycleLabel}} · <strong>Source:</strong> {{.Source}} · <strong>Fingerprint:</strong> {{.Fingerprint}}</p>
+  <p><strong>Repository:</strong> {{.RepoFullName}}</p>
+  {{if .ExternalIssueURL}}<p><a class="rd-btn rd-btn-secondary" href="{{.ExternalIssueURL}}" target="_blank">Open Gitea issue #{{.ExternalIssueNumber}}</a></p>{{end}}
+</div>
+
+<div class="rd-card">
+  <h2>Report flow</h2>
+  <div class="rd-pipeline">
+    <div class="rd-pipeline-step done">1. Triage</div>
+    <div class="rd-pipeline-step">2. Reproduce</div>
+    <div class="rd-pipeline-step">3. Fix</div>
+    <div class="rd-pipeline-step">4. Test</div>
+    <div class="rd-pipeline-step">5. Verify</div>
+  </div>
+  <table class="rd-table">
+    <tr><th>Step</th><th>Action</th><th>Notes</th></tr>
+    <tr><td>1. Triage</td><td>Validate severity, category, and true positive</td><td class="rd-muted">Confirm labels and assign owner</td></tr>
+    <tr><td>2. Reproduce</td><td>Inspect evidence at the reported location</td><td class="rd-muted">Compare snippet to current code</td></tr>
+    <tr><td>3. Fix</td><td>Apply minimal targeted change</td><td class="rd-muted">Follow remediation plan when approved</td></tr>
+    <tr><td>4. Test</td><td>Run suggested tests and CI</td><td class="rd-muted">Ensure no regressions</td></tr>
+    <tr><td>5. Verify</td><td>Re-scan or manually confirm resolution</td><td class="rd-muted">Close when fingerprint no longer reproduces</td></tr>
+  </table>
+</div>
+
+<div class="rd-card">
+  <h2>Evidence (redacted)</h2>
+  {{range .Instances}}<pre class="rd-pre">{{.EvidenceRedacted}}</pre>{{else}}<p class="rd-muted">No evidence instances recorded.</p>{{end}}
+</div>
+
+<div class="rd-card">
+  <h2>Lifecycle events</h2>
+  <ul>{{range .LifecycleEvents}}<li><span class="rd-badge {{statusBadge .EventType}}">{{.EventType}}</span> — {{.Message}} <span class="rd-muted">({{.CreatedAt.Format "2006-01-02"}})</span></li>{{else}}<li class="rd-muted">No lifecycle events yet.</li>{{end}}</ul>
+</div>
+{{end}}
+<div class="rd-card">
 <h2>Remediation plan</h2>
-<div class="warn">Planning only — approve a plan before attempting a remediation PR.</div>
+<div class="rd-alert">Planning only — approve a plan before attempting a remediation PR.</div>
 {{if .Data.PlannerEnabled}}
 {{with .Data.RemediationPlan}}{{if .ID}}
 <p><strong>Status:</strong> {{.Status}} · <strong>Plan ID:</strong> {{.ID}}</p>
@@ -36,7 +81,7 @@
 {{end}}
 {{if $.Data.PREnabled}}
 <h3>Safe remediation PR</h3>
-<div class="warn">Repository Detective will create a branch and PR only. It will not merge or close the issue.</div>
+<div class="rd-alert">Repository Detective will create a branch and PR only. It will not merge or close the issue.</div>
 {{with $.Data.PREligibility}}
 <p><strong>PR eligible:</strong> {{.Eligible}}</p>
 {{if .Checklist}}<p><strong>Eligibility checklist:</strong></p><ul>{{range $k, $v := .Checklist}}<li>{{$k}}: {{$v}}</li>{{end}}</ul>{{end}}
@@ -51,17 +96,17 @@
 {{if .PullRequestURL}} · <a href="{{.PullRequestURL}}">PR</a>{{end}}
 {{if .Error}} · {{.Error}}{{end}}
 </li>{{end}}</ul>{{end}}
-{{else}}<p class="muted">Remediation PR feature disabled globally.</p>{{end}}
-{{else}}<p class="muted">No remediation plan yet.</p>{{end}}{{end}}
+{{else}}<p class="rd-muted">Remediation PR feature disabled globally.</p>{{end}}
+{{else}}<p class="rd-muted">No remediation plan yet.</p>{{end}}{{end}}
 <form method="post" action="{{$.BasePath}}/findings/{{$.Data.Finding.ID}}/remediation/generate{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}">
 <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
 <button type="submit">Generate / regenerate plan</button></form>
-{{else}}<p class="muted">Remediation planner disabled globally.</p>{{end}}
+{{else}}<p class="rd-muted">Remediation planner disabled globally.</p>{{end}}
 </div>
 {{if $.Data.ClosureEnabled}}
-<div class="card">
+<div class="rd-card">
 <h2>Closure evidence</h2>
-<div class="warn">Not closed because a PR exists — only after merge + rescan verification.</div>
+<div class="rd-alert">Not closed because a PR exists — only after merge + rescan verification.</div>
 {{with $.Data.ClosureEvidence}}
 <p><strong>Status:</strong> {{if .Status}}{{.Status}}{{else}}not verified yet{{end}}</p>
 {{if .Reason}}<p><strong>Reason:</strong> {{.Reason}}</p>{{end}}
@@ -69,9 +114,9 @@
 {{if .VerificationScanID}}<p><strong>Verification scan:</strong> <code>{{.VerificationScanID}}</code></p>{{end}}
 {{if .OriginalSource}}<p><strong>Original scanner:</strong> {{.OriginalSource}} · status: {{.ScannerStatus}}</p>{{end}}
 <p><strong>Fingerprint present in verification scan:</strong> {{.FingerprintPresent}}</p>
-{{if eq .Status "pending_rescan"}}<p class="warn">Waiting for rescan</p>{{end}}
-{{if eq .Status "blocked"}}<p class="warn">Blocked: scanner did not run</p>{{end}}
-{{if eq .Status "still_present"}}<p class="warn">Still present after remediation.</p>{{end}}
+{{if eq .Status "pending_rescan"}}<p class="rd-alert">Waiting for rescan</p>{{end}}
+{{if eq .Status "blocked"}}<p class="rd-alert">Blocked: scanner did not run</p>{{end}}
+{{if eq .Status "still_present"}}<p class="rd-alert">Still present after remediation.</p>{{end}}
 {{if eq .Status "verified"}}<p><strong>Resolved verified</strong></p>{{end}}
 {{end}}
 {{if $.Data.PatchAttempts}}
@@ -85,5 +130,6 @@
 <button type="submit">Verify closure from latest scan</button></form>
 </div>
 {{end}}
-</main></body></html>
+{{template "foot" .}}
+</body></html>
 {{end}}

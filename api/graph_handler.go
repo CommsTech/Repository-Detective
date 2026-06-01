@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"git.commsnet.org/commstech/bugbot/internal/security"
 	"github.com/gin-gonic/gin"
 )
 
@@ -31,7 +32,7 @@ func (h *Handler) ExportScanGraph(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "graph not found"})
 		return
 	}
-	filename := fmt.Sprintf("graph-scan-%s.json", scanID)
+	filename := security.SafeAttachmentFilename("graph-scan", scanID) + ".json"
 	c.Header("Content-Disposition", "attachment; filename="+filename)
 	c.Data(http.StatusOK, "application/json", record.GraphJSON)
 }
@@ -82,7 +83,7 @@ func (h *Handler) ExportRepoGraph(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to encode graph"})
 		return
 	}
-	filename := fmt.Sprintf("graph-repo-%d.json", id)
+	filename := security.SafeAttachmentFilename("graph-repo", fmt.Sprintf("%d", id)) + ".json"
 	c.Header("Content-Disposition", "attachment; filename="+filename)
 	c.Data(http.StatusOK, "application/json", body)
 }

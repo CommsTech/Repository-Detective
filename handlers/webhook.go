@@ -19,17 +19,26 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// rateLimiters per IP
+// rateLimiters per IP (bounded map to avoid unbounded growth).
 var (
-	rateLimiterMap = make(map[string]*rate.Limiter)
-	rateLimiterMu  sync.Mutex
-	defaultRate    = rate.Limit(10) // 10 requests per second
-	defaultBurst   = 20
+	rateLimiterMap   = make(map[string]*rate.Limiter)
+	rateLimiterMu    sync.Mutex
+	defaultRate      = rate.Limit(10) // 10 requests per second
+	defaultBurst     = 20
+	maxRateLimiters  = 4096
 )
 
 func getRateLimiter(ip string) *rate.Limiter {
 	rateLimiterMu.Lock()
 	defer rateLimiterMu.Unlock()
+	if len(rateLimiterMap) >= maxRateLimiters {
+		for key := range rateLimiterMap {
+			delete(rateLimiterMap, key)
+			if len(rateLimiterMap) < maxRateLimiters/2 {
+				break
+			}
+		}
+	}
 	if _, exists := rateLimiterMap[ip]; !exists {
 		rateLimiterMap[ip] = rate.NewLimiter(defaultRate, defaultBurst)
 	}
@@ -181,14 +190,7 @@ func (h *WebhookHandler) HandleWebhook(c *gin.Context) {
 		return
 	}
 
-	// Gitea may include the shared secret in the JSON payload on delivery.
-	if payload.Secret != "" && h.config.WebhookSecret != "" {
-		if !hmac.Equal([]byte(payload.Secret), []byte(h.config.WebhookSecret)) {
-			h.logger.Errorf("Webhook JSON secret mismatch")
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-			return
-		}
-	}
+	// JSON body secret is not a supported auth mechanism — rely on HMAC header only.
 
 	h.logger.Infof("Processing webhook for repository: %s, action: %q",
 		payload.Repository.FullName, payload.Action)
@@ -284,15 +286,11 @@ func (h *WebhookHandler) handlePullRequestEvent(c *gin.Context, payload *GiteaWe
 // Gitea signs the raw body with HMAC-SHA256 and sends hex digest in X-Gitea-Signature.
 func (h *WebhookHandler) verifyWebhookSecret(c *gin.Context, body []byte) error {
 	if h.config.WebhookSecret == "" {
-		h.logger.Warnf("WARNING: Webhook secret is empty — webhook authentication is DISABLED. Set BUGBOT_WEBHOOK_SECRET in production.")
-		return nil
-	}
-
-	if querySecret := c.Query("secret"); querySecret != "" {
-		if hmac.Equal([]byte(querySecret), []byte(h.config.WebhookSecret)) {
+		if h.config.AllowInsecureWebhooks {
+			h.logger.Warnf("Webhook secret is empty — accepting webhooks because allow_insecure_webhooks is enabled (development only)")
 			return nil
 		}
-		return fmt.Errorf("invalid webhook secret")
+		return fmt.Errorf("webhook secret is not configured")
 	}
 
 	signature := c.GetHeader("X-Gitea-Signature")
@@ -318,7 +316,8 @@ func (h *WebhookHandler) verifyWebhookSecret(c *gin.Context, body []byte) error 
 
 // Config holds webhook handler configuration
 type Config struct {
-	WebhookSecret   string
-	IncludePatterns []string
-	ExcludePatterns []string
+	WebhookSecret         string
+	AllowInsecureWebhooks bool
+	IncludePatterns       []string
+	ExcludePatterns       []string
 }

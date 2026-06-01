@@ -2,6 +2,7 @@ package issues
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -14,8 +15,12 @@ const maxEvidenceSnippetLen = 500
 type IssueRenderInput struct {
 	Issue       *ai.CodeIssue
 	Repository  string
+	Owner       string
+	RepoName    string
+	GiteaBaseURL string
 	Context     string
 	Commit      string
+	Ref         string
 	PullRequest int
 	ScanID      string
 	Now         time.Time
@@ -60,16 +65,26 @@ func RenderIssueBody(in IssueRenderInput) string {
 
 	b.WriteString("\n## Location\n\n")
 	if issue.File != "" {
-		b.WriteString(fmt.Sprintf("- File: `%s`\n", issue.File))
+		if link := fileSourceLink(in); link != "" {
+			b.WriteString(fmt.Sprintf("- File: [`%s`](%s)\n", locationRef(issue), link))
+		} else {
+			b.WriteString(fmt.Sprintf("- File: `%s`\n", locationRef(issue)))
+		}
 	}
 	if issue.LineNumber > 0 {
 		b.WriteString(fmt.Sprintf("- Line: %d\n", issue.LineNumber))
 	}
+	if in.Repository != "" {
+		b.WriteString(fmt.Sprintf("- Repository: `%s`\n", in.Repository))
+	}
+	if in.Context != "" {
+		b.WriteString(fmt.Sprintf("- Trigger context: %s\n", in.Context))
+	}
 	if in.Commit != "" {
-		b.WriteString(fmt.Sprintf("- Commit: %s\n", in.Commit))
+		b.WriteString(fmt.Sprintf("- Commit / ref: `%s`\n", in.Commit))
 	}
 	if in.PullRequest > 0 {
-		b.WriteString(fmt.Sprintf("- PR: #%d\n", in.PullRequest))
+		b.WriteString(fmt.Sprintf("- Pull request: #%d\n", in.PullRequest))
 	}
 
 	b.WriteString("\n## Why this matters\n\n")
@@ -77,9 +92,14 @@ func RenderIssueBody(in IssueRenderInput) string {
 
 	b.WriteString("## Evidence\n\n")
 	if evidence != "" {
-		b.WriteString("```\n" + evidence + "\n```\n\n")
+		lang := evidenceLanguage(issue)
+		if lang != "" {
+			b.WriteString("```" + lang + "\n" + evidence + "\n```\n\n")
+		} else {
+			b.WriteString("```\n" + evidence + "\n```\n\n")
+		}
 	} else {
-		b.WriteString("_No code snippet available._\n\n")
+		b.WriteString("_No code snippet available. Open the file at the location above and inspect surrounding logic._\n\n")
 	}
 
 	b.WriteString("## Recommended fix\n\n")
@@ -90,6 +110,18 @@ func RenderIssueBody(in IssueRenderInput) string {
 
 	b.WriteString("## Suggested tests\n\n")
 	b.WriteString(strings.TrimSpace(issue.RequiredTests) + "\n\n")
+
+	b.WriteString("## Reproduction\n\n")
+	b.WriteString(reproductionSteps(issue, in) + "\n\n")
+
+	b.WriteString("## Report flow\n\n")
+	b.WriteString(reportFlowTable(issue, in) + "\n\n")
+
+	b.WriteString("## Acceptance criteria\n\n")
+	b.WriteString(acceptanceCriteria(issue) + "\n\n")
+
+	b.WriteString("## Links\n\n")
+	b.WriteString(reportLinks(in, issue) + "\n\n")
 
 	b.WriteString("## Tracking\n\n")
 	b.WriteString(fmt.Sprintf("- %s %s\n", FingerprintBodyMarker, issue.Fingerprint))
@@ -208,6 +240,135 @@ func defaultString(value, fallback string) string {
 		return fallback
 	}
 	return value
+}
+
+func locationRef(issue *ai.CodeIssue) string {
+	if issue.File == "" {
+		return ""
+	}
+	if issue.LineNumber > 0 {
+		return fmt.Sprintf("%s:%d", issue.File, issue.LineNumber)
+	}
+	return issue.File
+}
+
+func fileSourceLink(in IssueRenderInput) string {
+	if in.GiteaBaseURL == "" || in.Owner == "" || in.RepoName == "" || in.Issue == nil || in.Issue.File == "" {
+		return ""
+	}
+	ref := strings.TrimSpace(in.Ref)
+	if ref == "" {
+		ref = strings.TrimSpace(in.Commit)
+	}
+	if ref == "" {
+		ref = "main"
+	}
+	base := strings.TrimRight(in.GiteaBaseURL, "/")
+	link := fmt.Sprintf("%s/%s/%s/src/branch/%s/%s", base, in.Owner, in.RepoName, ref, in.Issue.File)
+	if in.Issue.LineNumber > 0 {
+		link += fmt.Sprintf("#L%d", in.Issue.LineNumber)
+	}
+	return link
+}
+
+func evidenceLanguage(issue *ai.CodeIssue) string {
+	if issue == nil || issue.File == "" {
+		return ""
+	}
+	switch strings.ToLower(filepath.Ext(issue.File)) {
+	case ".go":
+		return "go"
+	case ".py":
+		return "python"
+	case ".js", ".jsx":
+		return "javascript"
+	case ".ts", ".tsx":
+		return "typescript"
+	case ".yaml", ".yml":
+		return "yaml"
+	case ".sh":
+		return "bash"
+	case ".sql":
+		return "sql"
+	default:
+		return ""
+	}
+}
+
+func reproductionSteps(issue *ai.CodeIssue, in IssueRenderInput) string {
+	var steps []string
+	if issue.File != "" {
+		loc := locationRef(issue)
+		if link := fileSourceLink(in); link != "" {
+			steps = append(steps, fmt.Sprintf("1. Open [`%s`](%s).", loc, link))
+		} else {
+			steps = append(steps, fmt.Sprintf("1. Open `%s` in the repository.", loc))
+		}
+	} else {
+		steps = append(steps, "1. Locate the affected code path referenced in the summary.")
+	}
+	if issue.RuleID != "" {
+		steps = append(steps, fmt.Sprintf("2. Search for rule `%s` / pattern from scanner `%s`.", issue.RuleID, displaySource(issue)))
+	} else {
+		steps = append(steps, fmt.Sprintf("2. Review the logic flagged by `%s`.", displaySource(issue)))
+	}
+	if strings.TrimSpace(issue.CodeSnippet) != "" {
+		steps = append(steps, "3. Confirm the evidence snippet matches current code (may drift after refactors).")
+	} else {
+		steps = append(steps, "3. Re-run the relevant scanner or manual review to confirm the finding still applies.")
+	}
+	steps = append(steps, "4. Document whether the issue is a true positive, false positive, or accepted risk.")
+	return strings.Join(steps, "\n")
+}
+
+func reportFlowTable(issue *ai.CodeIssue, in IssueRenderInput) string {
+	var b strings.Builder
+	b.WriteString("Use this checklist to triage, fix, and verify the finding:\n\n")
+	b.WriteString("| Step | Action | Done |\n")
+	b.WriteString("| --- | --- | --- |\n")
+	b.WriteString("| 1. Triage | Validate severity, category, and whether this is a true positive | [ ] |\n")
+	b.WriteString("| 2. Assign | Set an owner and target milestone | [ ] |\n")
+	b.WriteString("| 3. Reproduce | Follow reproduction steps above | [ ] |\n")
+	b.WriteString("| 4. Fix | Apply the recommended fix with minimal scope | [ ] |\n")
+	b.WriteString("| 5. Test | Run suggested tests and CI | [ ] |\n")
+	b.WriteString("| 6. Verify | Re-scan or manually confirm; close when fingerprint no longer reproduces | [ ] |\n")
+	if ConfidenceNeedsHumanReview(issue.Confidence) {
+		b.WriteString("\n> **Needs human review** — confidence is below the auto-remediation threshold.\n")
+	}
+	if in.ScanID != "" {
+		b.WriteString(fmt.Sprintf("\nTrack verification against scan `%s`.\n", in.ScanID))
+	}
+	return b.String()
+}
+
+func acceptanceCriteria(issue *ai.CodeIssue) string {
+	var items []string
+	items = append(items, "- The vulnerable or problematic pattern no longer exists at the reported location.")
+	items = append(items, "- Suggested tests pass and no related regressions are introduced.")
+	if issue.Fingerprint != "" {
+		items = append(items, fmt.Sprintf("- Re-scan does not reopen fingerprint `%s`.", issue.Fingerprint))
+	}
+	if issue.FromAI {
+		items = append(items, "- A human reviewer confirms the AI finding matches project context.")
+	}
+	return strings.Join(items, "\n")
+}
+
+func reportLinks(in IssueRenderInput, issue *ai.CodeIssue) string {
+	var links []string
+	if in.Repository != "" {
+		links = append(links, fmt.Sprintf("- Repository: `%s`", in.Repository))
+	}
+	if link := fileSourceLink(in); link != "" {
+		links = append(links, fmt.Sprintf("- Source file: %s", link))
+	}
+	if in.ScanID != "" {
+		links = append(links, fmt.Sprintf("- Scan ID: `%s`", in.ScanID))
+	}
+	if issue.RuleID != "" {
+		links = append(links, fmt.Sprintf("- Rule ID: `%s`", issue.RuleID))
+	}
+	return strings.Join(links, "\n")
 }
 
 // AIGeneratedRiskWording returns cautious phrasing for future AI-code findings.

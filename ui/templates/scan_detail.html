@@ -1,17 +1,98 @@
 {{define "scan_detail.html"}}
-<!DOCTYPE html><html lang="en"><head>{{template "head" .}}</head><body>
-{{template "nav" .}}<main><h1>{{.Title}}</h1>
-<div class="card">{{with .Data.Scan}}
-<p><strong>Trigger:</strong> {{.TriggerType}} · <strong>Status:</strong> {{.Status}}</p>
-<p><strong>Ref:</strong> {{.Ref}} · <strong>Commit:</strong> {{.CommitSHA}}</p>
-<p><strong>Started:</strong> {{.StartedAt.Format "2006-01-02 15:04:05"}}</p>
-{{if .Error}}<p class="warn">{{.Error}}</p>{{end}}
-{{with .Data.RunnerJob}}{{if .JobID}}<p><strong>Runner job:</strong> {{.JobID}} · <strong>Status:</strong> {{.Status}} · <strong>Mode:</strong> {{.RunnerMode}}</p>{{end}}{{end}}
-<h3>Summary</h3><pre>{{printf "%s" .SummaryJSON}}</pre>
-{{end}}</div>
-<div class="card"><h2>Scanner results</h2><table>
-<tr><th>Scanner</th><th>Status</th><th>Findings</th><th>Detail</th></tr>
-{{range .Data.ScannerResults}}<tr><td>{{.ScannerName}}</td><td>{{.Status}}</td><td>{{.FindingsCount}}</td><td>{{.Detail}}</td></tr>
-{{else}}<tr><td colspan="4" class="muted">None</td></tr>{{end}}
-</table></div></main></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>{{template "head" .}}</head>
+<body class="rd-app">
+{{template "nav" .}}
+
+{{with .Data}}
+{{with .Scan}}
+<div class="rd-grid">
+  <div class="rd-stat {{scanBadge .Status}}">
+    <div class="rd-stat-value"><span class="rd-badge {{scanBadge .Status}}">{{.Status}}</span></div>
+    <div class="rd-stat-label">Scan status</div>
+  </div>
+  <div class="rd-stat high">
+    <div class="rd-stat-value">{{$.Data.Summary.IssuesFound}}</div>
+    <div class="rd-stat-label">Issues found</div>
+  </div>
+  <div class="rd-stat info">
+    <div class="rd-stat-value">{{$.Data.Summary.FilesAnalyzed}}</div>
+    <div class="rd-stat-label">Files analyzed</div>
+  </div>
+  <div class="rd-stat">
+    <div class="rd-stat-value">{{formatDuration .StartedAt .FinishedAt}}</div>
+    <div class="rd-stat-label">Duration</div>
+  </div>
+</div>
+
+<div class="rd-card">
+  <h2>Scan {{shortID .ID 12}}</h2>
+  {{if $.Data.RepoName}}<p><strong>Repository:</strong> {{$.Data.RepoName}}</p>{{end}}
+  <p><strong>Trigger:</strong> {{.TriggerType}} · <strong>Ref:</strong> {{.Ref}} · <strong>Profile:</strong> {{$.Data.Summary.ScanProfile}}</p>
+  <p><strong>Commit:</strong> {{if .CommitSHA}}{{.CommitSHA}}{{else}}<span class="rd-muted">not pinned</span>{{end}}
+     · <strong>Workspace:</strong> {{.WorkspaceModeUsed}}</p>
+  <p><strong>Started:</strong> {{.StartedAt.Format "2006-01-02 15:04:05 UTC"}}
+     · <strong>Finished:</strong> {{formatTime .FinishedAt}}</p>
+
+  {{if eq .Status "completed"}}
+  <div class="rd-pipeline">
+    <div class="rd-pipeline-step done">Prepare</div>
+    <div class="rd-pipeline-step done">Scan</div>
+    <div class="rd-pipeline-step done">Validate</div>
+    <div class="rd-pipeline-step done">Dedup</div>
+    <div class="rd-pipeline-step done">Prove</div>
+  </div>
+  {{else if eq .Status "running"}}
+  <div class="rd-alert info">Scan is still running. Refresh this page to see updated results.</div>
+  <div class="rd-pipeline">
+    <div class="rd-pipeline-step done">Prepare</div>
+    <div class="rd-pipeline-step active">Scan</div>
+    <div class="rd-pipeline-step">Validate</div>
+    <div class="rd-pipeline-step">Dedup</div>
+    <div class="rd-pipeline-step">Prove</div>
+  </div>
+  {{end}}
+
+  {{if .Error}}<div class="rd-alert">{{.Error}}</div>{{end}}
+
+  {{with $.Data.RunnerJob}}{{if .JobID}}
+  <p><strong>Runner job:</strong> {{.JobID}} · <span class="rd-badge {{scanBadge .Status}}">{{.Status}}</span> · {{.RunnerMode}}</p>
+  {{end}}{{end}}
+
+  <div class="rd-actions">
+    <a class="rd-btn" href="{{$.BasePath}}/findings{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}">View findings</a>
+    <a class="rd-btn rd-btn-secondary" href="{{$.BasePath}}/scans/{{.ID}}/graph{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}">Repository map</a>
+  </div>
+</div>
+
+<div class="rd-card">
+  <h2>Scanner results</h2>
+  <table class="rd-table">
+    <tr><th>Scanner</th><th>Status</th><th>Findings</th><th>Detail</th></tr>
+    {{range $.Data.ScannerResults}}
+    <tr>
+      <td><strong>{{.ScannerName}}</strong></td>
+      <td><span class="rd-badge {{scannerBadge .Status}}">{{.Status}}</span></td>
+      <td>{{.FindingsCount}}</td>
+      <td class="rd-muted">{{if .Detail}}{{.Detail}}{{else}}—{{end}}</td>
+    </tr>
+    {{else}}
+    <tr><td colspan="4" class="rd-muted">No scanner results recorded</td></tr>
+    {{end}}
+  </table>
+  <p class="rd-muted">Missing scanners need binaries in the Docker image or host PATH. Trivy and Grype are bundled in the official image.</p>
+</div>
+
+<div class="rd-card">
+  <h2>Scan summary</h2>
+  <p class="rd-muted">Graph: {{$.Data.Summary.GraphNodes}} nodes · {{$.Data.Summary.GraphEdges}} edges · Analysis {{$.Data.Summary.AnalysisTimeMS}}ms</p>
+  <pre class="rd-pre">{{jsonPretty .SummaryJSON}}</pre>
+</div>
+{{end}}
+{{end}}
+
+{{template "foot" .}}
+</body>
+</html>
 {{end}}

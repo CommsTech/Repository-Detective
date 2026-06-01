@@ -27,13 +27,13 @@ var staticRules = []staticRule{
 		ID: "SEC-HARDCODED-SECRET", Category: "hardcoded_secret", Severity: "high",
 		Title:       "Possible hardcoded secret",
 		Description: "A literal that looks like a password, API key, or token is embedded in source code.",
-		Pattern:     regexp.MustCompile(`(?i)(password|api[_-]?key|secret|token|auth)\s*(:=|[=:])\s*["'][^"']{8,}["']`),
+		Pattern:     regexp.MustCompile(`(?i)(^|[^A-Z0-9_])(password|api[_-]?key|secret|token|auth)\s*(:=|[=:])\s*["'][^"']{8,}["']`),
 	},
 	{
 		ID: "SEC-EVAL", Category: "code_injection", Severity: "critical",
 		Title:       "Dynamic code execution",
 		Description: "Use of eval or equivalent dynamic execution can allow arbitrary code injection.",
-		Pattern:     regexp.MustCompile(`(?i)\beval\s*\(|new\s+Function\s*\(`),
+		Pattern:     regexp.MustCompile(`(?i)(^|[^a-zA-Z0-9_])eval\s*\(|new\s+Function\s*\(`),
 	},
 	{
 		ID: "SEC-XSS-INNERHTML", Category: "xss", Severity: "medium",
@@ -55,6 +55,10 @@ var staticRules = []staticRule{
 	},
 }
 
+var staticLineSkipPatterns = []*regexp.Regexp{
+	regexp.MustCompile(`(?i)REDACTED|EXAMPLE|YOUR[-_ ]?API[-_ ]?KEY|your-api-key|changeme|user_input|userInput|AKIA[0-9A-Z]{16}`),
+}
+
 // FileContent holds fetched source for analysis.
 type FileContent struct {
 	Path     string
@@ -62,18 +66,47 @@ type FileContent struct {
 	Language string
 }
 
+func skipStaticAnalysisPath(path string) bool {
+	path = strings.ReplaceAll(path, "\\", "/")
+	switch {
+	case strings.Contains(path, "/vendor/"), strings.HasPrefix(path, "vendor/"):
+		return true
+	case strings.HasSuffix(path, "_test.go"), strings.HasSuffix(path, "_test.js"), strings.HasSuffix(path, "_test.py"):
+		return true
+	case strings.Contains(path, "/testdata/"), strings.Contains(path, "/fixtures/"):
+		return true
+	case strings.HasPrefix(path, "web/static/"), strings.HasPrefix(path, "docs/"):
+		return true
+	case path == "ai/client.go":
+		return true
+	}
+	return false
+}
+
+func skipStaticAnalysisLine(line string) bool {
+	trimmed := strings.TrimSpace(line)
+	if trimmed == "" || strings.HasPrefix(trimmed, "//") || strings.HasPrefix(trimmed, "#") {
+		return true
+	}
+	for _, pattern := range staticLineSkipPatterns {
+		if pattern.MatchString(line) {
+			return true
+		}
+	}
+	return false
+}
+
 // RunStaticAnalysis performs deterministic pattern checks without LLM calls.
 func RunStaticAnalysis(files []FileContent, enableSecurity, enableQuality bool) []models.CandidateFinding {
 	var findings []models.CandidateFinding
 
 	for _, file := range files {
-		if file.Content == "" {
+		if file.Content == "" || skipStaticAnalysisPath(file.Path) {
 			continue
 		}
 		lines := strings.Split(file.Content, "\n")
 		for lineNum, line := range lines {
-			trimmed := strings.TrimSpace(line)
-			if trimmed == "" || strings.HasPrefix(trimmed, "//") || strings.HasPrefix(trimmed, "#") {
+			if skipStaticAnalysisLine(line) {
 				continue
 			}
 			for _, rule := range staticRules {

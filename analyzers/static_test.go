@@ -4,6 +4,16 @@ import (
 	"testing"
 )
 
+func TestRunStaticAnalysisSkipsTestFiles(t *testing.T) {
+	findings := RunStaticAnalysis([]FileContent{{
+		Path:    "handlers/webhook_test.go",
+		Content: `secret := "super-secret-token-12345"`,
+	}}, true, false)
+	if len(findings) != 0 {
+		t.Fatalf("expected test files to be skipped, got %d findings", len(findings))
+	}
+}
+
 func TestRunStaticAnalysisFindsHardcodedSecret(t *testing.T) {
 	findings := RunStaticAnalysis([]FileContent{{
 		Path:    "config.go",

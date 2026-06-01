@@ -44,8 +44,62 @@ func TestDashboardRenders(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Fatalf("status %d", w.Code)
 	}
-	if !strings.Contains(w.Body.String(), "Repository Detective") {
+	body := w.Body.String()
+	if !strings.Contains(body, "Repository Detective") {
 		t.Fatal("expected page title branding")
+	}
+	if !strings.Contains(body, "theme.css") {
+		t.Fatal("expected branded theme stylesheet")
+	}
+}
+
+func TestScanDetailRenders(t *testing.T) {
+	dir := t.TempDir()
+	s, _ := store.Open(store.Config{Enabled: true, Path: filepath.Join(dir, "ui.db")})
+	defer s.Close()
+	ctx := context.Background()
+	repo, _ := s.UpsertRepository(ctx, store.Repository{Owner: "o", Name: "r", FullName: "o/r"})
+	scanID := "34a0c0d5698a5da1"
+	summary, _ := json.Marshal(map[string]any{
+		"issues_found":     804,
+		"files_analyzed":   362,
+		"analysis_time_ms": 234000,
+		"effective_settings": map[string]any{"scan_profile": "standard"},
+	})
+	finished := time.Now().UTC()
+	_, _ = s.CreateScan(ctx, store.Scan{
+		ID:           scanID,
+		RepositoryID: repo.ID,
+		TriggerType:  store.TriggerManual,
+		Ref:          "main",
+		Status:       store.ScanStatusCompleted,
+		StartedAt:    finished.Add(-4 * time.Minute),
+		FinishedAt:   &finished,
+		SummaryJSON:  summary,
+	})
+	_ = s.AddScannerResults(ctx, []store.ScannerResultRecord{{
+		ScanID: scanID, ScannerName: "trivy", Status: "found", FindingsCount: 3,
+	}})
+	r, _ := testUI(t, s)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, "/ui/scans/"+scanID, nil)
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("scan detail status %d: %s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "804") {
+		t.Fatal("expected issues count from summary")
+	}
+	if !strings.Contains(body, "completed") {
+		t.Fatal("expected completed scan status")
+	}
+	if !strings.Contains(body, "o/r") {
+		t.Fatal("expected repository name")
+	}
+	if strings.Contains(body, "can't evaluate field") {
+		t.Fatal("template render error leaked into page")
 	}
 }
 

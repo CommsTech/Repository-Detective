@@ -1,25 +1,25 @@
 {{define "preinstall_audit.html"}}
-<!DOCTYPE html><html lang="en"><head>{{template "head" .}}</head><body>
+<!DOCTYPE html><html lang="en"><head>{{template "head" .}}</head><body class="rd-app">
 {{template "nav" .}}<main><h1>Pre-install audit</h1>
-<div class="warn">Draft reports require human review before submission. No automatic issue filing or email in Phase 9.</div>
-<div class="card">
+<div class="rd-alert">Draft reports require human review before submission. No automatic issue filing or email in Phase 9.</div>
+<div class="rd-card">
 <p><strong>Repository:</strong> {{.Data.Audit.NormalizedRepoURL}}</p>
 <p><strong>Commit:</strong> <code>{{.Data.Audit.CommitSHA}}</code></p>
 <p><strong>Status:</strong> <span class="badge">{{.Data.Audit.Status}}</span></p>
 <p><strong>Risk score:</strong> {{.Data.Audit.RiskScore}} / 100</p>
 <p><strong>Recommendation:</strong> {{.Data.Audit.Recommendation}}</p>
-{{if .Data.Audit.Error}}<p class="warn">{{.Data.Audit.Error}}</p>{{end}}
+{{if .Data.Audit.Error}}<p class="rd-alert">{{.Data.Audit.Error}}</p>{{end}}
 </div>
-<div class="card"><h2>Findings</h2><table>
+<div class="rd-card"><h2>Findings</h2><table>
 <tr><th>Severity</th><th>Category</th><th>Source</th><th>Title</th><th>File</th></tr>
 {{range .Data.Findings}}<tr>
 <td>{{.Severity}}</td><td>{{.Category}}</td><td>{{.Source}}</td><td>{{.Title}}</td><td><code>{{.FilePath}}</code></td>
-</tr>{{else}}<tr><td colspan="5" class="muted">No findings recorded</td></tr>{{end}}
+</tr>{{else}}<tr><td colspan="5" class="rd-muted">No findings recorded</td></tr>{{end}}
 </table></div>
-<div class="card"><h2>Generated reports</h2>
+<div class="rd-card"><h2>Generated reports</h2>
 {{range .Data.Reports}}
 <h3>{{.Title}} <span class="badge">{{.ReportType}}</span></h3>
-<p class="muted">Sensitivity: {{.Sensitivity}} · Confidence: {{.Confidence}}{{if .ApprovedByUser}} · Reviewed{{end}}</p>
+<p class="rd-muted">Sensitivity: {{.Sensitivity}} · Confidence: {{.Confidence}}{{if .ApprovedByUser}} · Reviewed{{end}}</p>
 <pre id="report-{{.ID}}">{{.BodyMarkdown}}</pre>
 <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('report-{{.ID}}').innerText)">Copy markdown</button>
 <form method="post" action="{{$.BasePath}}/preinstall/reports/{{.ID}}/reviewed{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}" style="display-muted">
@@ -27,8 +27,9 @@
 <button type="submit" {{if .ApprovedByUser}}disabled{{end}}>Mark reviewed</button>
 </form>
 <hr>
-{{else}}<p class="muted">Reports appear when the audit completes.</p>{{end}}
+{{else}}<p class="rd-muted">Reports appear when the audit completes.</p>{{end}}
 </div>
 <p><a href="{{.BasePath}}/preinstall{{if .APIKey}}?api_key={{.APIKey}}{{end}}">← Back to pre-install audits</a></p>
-</main></body></html>
+{{template "foot" .}}
+</body></html>
 {{end}}

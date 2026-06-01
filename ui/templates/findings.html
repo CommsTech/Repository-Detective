@@ -1,18 +1,44 @@
 {{define "findings.html"}}
-<!DOCTYPE html><html lang="en"><head>{{template "head" .}}</head><body>
-{{template "nav" .}}<main><h1>{{.Title}}</h1>
-<form method="get"><div class="card">
-<label>Severity <input name="severity" value="{{.Data.Filter.Severity}}"></label>
-<label>Category <input name="category" value="{{.Data.Filter.Category}}"></label>
-<label>Status <input name="status" value="{{.Data.Filter.Status}}"></label>
-<button type="submit">Filter</button>
+<!DOCTYPE html><html lang="en"><head>{{template "head" .}}</head><body class="rd-app">
+{{template "nav" .}}
+
+<form method="get"><div class="rd-card">
+  <h2>Filter findings</h2>
+  <div class="rd-grid" style="margin-bottom:0">
+    <label>Severity
+      <select name="severity">
+        <option value="">All</option>
+        <option value="critical" {{if eq .Data.Filter.Severity "critical"}}selected{{end}}>Critical</option>
+        <option value="high" {{if eq .Data.Filter.Severity "high"}}selected{{end}}>High</option>
+        <option value="medium" {{if eq .Data.Filter.Severity "medium"}}selected{{end}}>Medium</option>
+        <option value="low" {{if eq .Data.Filter.Severity "low"}}selected{{end}}>Low</option>
+      </select>
+    </label>
+    <label>Category <input name="category" value="{{.Data.Filter.Category}}" placeholder="security, secret, dependency…"></label>
+    <label>Status <input name="status" value="{{.Data.Filter.Status}}" placeholder="open, resolved…"></label>
+  </div>
+  <div class="rd-actions"><button type="submit">Apply filters</button></div>
 </div></form>
-<div class="card"><table>
-<tr><th>Repo</th><th>Fingerprint</th><th>Severity</th><th>Title</th><th>Status</th></tr>
-{{range .Data.Findings}}<tr>
-<td>{{.RepoFullName}}</td>
-<td><a href="{{$.BasePath}}/findings/{{.ID}}{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}">{{.Fingerprint}}</a></td>
-<td>{{.Severity}}</td><td>{{.Title}}</td><td>{{.Status}}</td></tr>
-{{else}}<tr><td colspan="5" class="muted">No findings</td></tr>{{end}}
-</table></div></main></body></html>
+
+<div class="rd-card">
+  <h2>Findings</h2>
+  <p class="rd-muted">Each finding follows the Repository Detective report flow: triage → reproduce → fix → test → verify.</p>
+  <table class="rd-table">
+    <tr><th>Repository</th><th>Severity</th><th>Category</th><th>Finding</th><th>Status</th><th>Issue</th></tr>
+    {{range .Data.Findings}}
+    <tr>
+      <td>{{.RepoFullName}}</td>
+      <td><span class="rd-badge {{severityBadge .Severity}}">{{.Severity}}</span></td>
+      <td><span class="rd-badge {{categoryBadge .Category}}">{{.Category}}</span></td>
+      <td><a href="{{$.BasePath}}/findings/{{.ID}}{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}"><strong>{{.Title}}</strong></a><br><span class="rd-muted">{{shortID .Fingerprint 16}}</span></td>
+      <td><span class="rd-badge {{statusBadge .Status}}">{{.Status}}</span></td>
+      <td>{{if .ExternalIssueURL}}<a href="{{.ExternalIssueURL}}" target="_blank">#{{.ExternalIssueNumber}}</a>{{else}}<span class="rd-muted">—</span>{{end}}</td>
+    </tr>
+    {{else}}
+    <tr><td colspan="6" class="rd-muted">No findings match the current filters.</td></tr>
+    {{end}}
+  </table>
+</div>
+
+{{template "foot" .}}</body></html>
 {{end}}

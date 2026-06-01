@@ -69,9 +69,7 @@ type ClosureBackend interface {
 // NewHandler creates a UI handler.
 func NewHandler(s store.QueryStore, global store.GlobalSettingsSnapshot, basePath string, logger *logrus.Logger, preinstallRunner *preinstall.Runner, preinstallEnabled bool, apiKeySecret string) (*Handler, error) {
 	basePath = normalizeBasePath(basePath)
-	funcs := template.FuncMap{
-		"join": strings.Join,
-	}
+	funcs := templateFuncs()
 	tmpl, err := template.New("layout").Funcs(funcs).ParseFS(templateFS, "templates/*.html")
 	if err != nil {
 		return nil, fmt.Errorf("parse templates: %w", err)
@@ -463,8 +461,18 @@ func (h *Handler) ScanDetail(c *gin.Context) {
 	results, _ := h.store.ListScannerResultsByScan(c.Request.Context(), scanID)
 	repo, _ := h.store.GetRepository(c.Request.Context(), scan.RepositoryID)
 	runnerJob, _ := h.store.GetRunnerJobByScanID(c.Request.Context(), scanID)
-	h.render(c, "scan_detail.html", "Scan "+scanID, map[string]any{
-		"Scan": scan, "ScannerResults": results, "Repo": repo, "RunnerJob": runnerJob,
+	summaryView := buildScanDetailView(scan.SummaryJSON)
+	repoName := ""
+	if repo.FullName != "" {
+		repoName = repo.FullName
+	}
+	h.render(c, "scan_detail.html", "Scan "+scanID[:8], map[string]any{
+		"Scan":           scan,
+		"ScannerResults": results,
+		"Repo":           repo,
+		"RepoName":       repoName,
+		"RunnerJob":      runnerJob,
+		"Summary":        summaryView,
 	})
 }
 

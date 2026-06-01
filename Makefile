@@ -126,15 +126,18 @@ docker-push:
 # Docker Compose targets
 compose-up:
 	@echo "Starting services with Docker Compose..."
-	docker-compose up -d
+	docker-compose -f docker-compose.public.yml up -d
 
 compose-down:
 	@echo "Stopping services with Docker Compose..."
-	docker-compose down
+	docker-compose -f docker-compose.public.yml down
 
 compose-logs:
 	@echo "Showing Docker Compose logs..."
-	docker-compose logs -f
+	docker-compose -f docker-compose.public.yml logs -f
+
+deploy:
+	@./deploy.sh
 
 # Development helpers
 watch:

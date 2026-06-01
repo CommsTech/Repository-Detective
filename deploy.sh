@@ -1,0 +1,204 @@
+#!/usr/bin/env bash
+# One-command Bugbot / Repository Detective deployment.
+#
+# Usage:
+#   ./deploy.sh              # build from Dockerfile + start on port 8081
+#   ./deploy.sh --stop       # stop container
+#   ./deploy.sh --restart    # restart container
+#   ./deploy.sh --status     # health + container status
+#   ./deploy.sh --scan       # trigger self-scan on commstech/Bugbot
+#
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$ROOT"
+
+COMPOSE_FILE="docker-compose.public.yml"
+COMPOSE=(docker-compose -f "$COMPOSE_FILE")
+CONTAINER="gitea-bugbot"
+HEALTH_URL="http://127.0.0.1:8081/health"
+LEGACY_DIR="${BUGBOT_LEGACY_DIR:-$HOME/bugbot}"
+BINARY="$ROOT/build/gitea-bugbot"
+
+log() { printf '==> %s\n' "$*"; }
+warn() { printf 'warning: %s\n' "$*" >&2; }
+
+need_cmd() {
+  command -v "$1" >/dev/null 2>&1 || { echo "missing required command: $1" >&2; exit 1; }
+}
+
+ensure_env() {
+  if [[ ! -f .env ]]; then
+    if [[ -f "$LEGACY_DIR/.env" ]]; then
+      log "copying .env from $LEGACY_DIR"
+      cp "$LEGACY_DIR/.env" .env
+    else
+      log "creating .env from .env.example — edit secrets before production use"
+      cp .env.example .env
+    fi
+  fi
+}
+
+ensure_dirs() {
+  mkdir -p build data certs config
+}
+
+ensure_vendor() {
+  if [[ -f vendor/modules.txt ]]; then
+    return
+  fi
+  if [[ -x scripts/vendor-deps.sh ]]; then
+    log "vendor/ missing — generating for offline-friendly Docker build"
+    bash scripts/vendor-deps.sh
+    return
+  fi
+  warn "vendor/ missing; Docker build needs network access to proxy.golang.org"
+}
+
+build_image() {
+  ensure_vendor
+  log "building Docker image from Dockerfile"
+  "${COMPOSE[@]}" build
+}
+  if [[ -d "$LEGACY_DIR/certs" ]] && [[ -z "$(ls -A certs 2>/dev/null || true)" ]]; then
+    log "copying TLS certs from $LEGACY_DIR/certs"
+    cp -a "$LEGACY_DIR/certs/." certs/
+  fi
+}
+
+migrate_legacy_config() {
+  if [[ -f "$LEGACY_DIR/config/config.yaml" ]] && [[ ! -f config/config.yaml ]]; then
+    log "copying config from legacy install"
+    cp "$LEGACY_DIR/config/config.yaml" config/config.yaml
+  fi
+}
+
+stop_legacy_process() {
+  if pgrep -f '/home/commstech/bugbot/gitea-bugbot' >/dev/null 2>&1; then
+    log "stopping legacy non-Docker bugbot process"
+    pkill -f '/home/commstech/bugbot/gitea-bugbot' || true
+    sleep 2
+  fi
+}
+
+install_systemd_wrapper() {
+  local run_sh="$LEGACY_DIR/run.sh"
+  if [[ ! -f "$run_sh" ]]; then
+    return
+  fi
+  if grep -q 'docker-compose.public.yml' "$run_sh" 2>/dev/null; then
+    return
+  fi
+  log "updating $run_sh to manage Docker (disables legacy binary on systemd restart)"
+  cat > "$run_sh" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$ROOT"
+exec docker-compose -f docker-compose.public.yml up -d --remove-orphans
+EOF
+  chmod +x "$run_sh"
+  warn "run 'sudo systemctl disable bugbot.service' when ready and rely on Docker restart policy instead"
+}
+
+start_stack() {
+  stop_legacy_process
+  log "starting $CONTAINER"
+  "${COMPOSE[@]}" up -d --remove-orphans
+}
+
+wait_healthy() {
+  log "waiting for $HEALTH_URL"
+  for _ in $(seq 1 30); do
+    if curl -sf -m 3 "$HEALTH_URL" >/dev/null 2>&1; then
+      curl -s "$HEALTH_URL"
+      echo
+      return 0
+    fi
+    sleep 2
+  done
+  warn "health check timed out — see: docker-compose -f $COMPOSE_FILE logs --tail=50"
+  return 1
+}
+
+register_webhook() {
+  # shellcheck disable=SC1091
+  set -a && source .env && set +a
+  local api_key="${REPOSITORY_DETECTIVE_API_KEY:-${BUGBOT_API_KEY:-}}"
+  local gitea_url="${REPOSITORY_DETECTIVE_GITEA_URL:-${BUGBOT_GITEA_URL:-}}"
+  local gitea_token="${REPOSITORY_DETECTIVE_GITEA_TOKEN:-${BUGBOT_GITEA_TOKEN:-}}"
+  local public_url="${REPOSITORY_DETECTIVE_PUBLIC_URL:-${BUGBOT_PUBLIC_URL:-}}"
+  local webhook_secret="${REPOSITORY_DETECTIVE_WEBHOOK_SECRET:-${BUGBOT_WEBHOOK_SECRET:-}}"
+  local owner="${BUGBOT_REPO_OWNER:-commstech}"
+  local repo="${BUGBOT_REPO_NAME:-Bugbot}"
+
+  [[ -n "$gitea_url" && -n "$gitea_token" && -n "$public_url" && -n "$webhook_secret" ]] || {
+    warn "skipping webhook registration — set Gitea URL, token, public URL, and webhook secret in .env"
+    return 0
+  }
+
+  log "registering webhook for $owner/$repo -> ${public_url%/}/webhook"
+  curl -sf -X POST "$gitea_url/api/v1/repos/$owner/$repo/hooks" \
+    -H "Authorization: token $gitea_token" \
+    -H "Content-Type: application/json" \
+    -d "{\"type\":\"gitea\",\"config\":{\"url\":\"${public_url%/}/webhook\",\"content_type\":\"json\",\"secret\":\"$webhook_secret\"},\"events\":[\"push\",\"pull_request\"],\"active\":true}" \
+    >/dev/null 2>&1 && log "webhook registered" || warn "webhook registration failed (may already exist)"
+}
+
+trigger_scan() {
+  # shellcheck disable=SC1091
+  set -a && source .env && set +a
+  local api_key="${REPOSITORY_DETECTIVE_API_KEY:-${BUGBOT_API_KEY:-}}"
+  local public_url="${REPOSITORY_DETECTIVE_PUBLIC_URL:-${BUGBOT_PUBLIC_URL:-http://127.0.0.1:8081}}"
+  local owner="${BUGBOT_REPO_OWNER:-commstech}"
+  local repo="${BUGBOT_REPO_NAME:-Bugbot}"
+
+  [[ -n "$api_key" ]] || { warn "BUGBOT_API_KEY not set"; return 1; }
+
+  log "triggering scan on $owner/$repo@main"
+  curl -sf -X POST "${public_url%/}/api/v1/analyze" \
+    -H "X-Bugbot-API-Key: $api_key" \
+    -H "Content-Type: application/json" \
+    -d "{\"owner\":\"$owner\",\"repository\":\"$repo\",\"ref\":\"main\"}"
+  echo
+}
+
+cmd="${1:-deploy}"
+
+need_cmd docker
+need_cmd docker-compose
+need_cmd curl
+
+case "$cmd" in
+  --stop)
+    "${COMPOSE[@]}" down
+    ;;
+  --restart)
+    "${COMPOSE[@]}" restart
+    wait_healthy || true
+    ;;
+  --status)
+    docker ps --filter "name=$CONTAINER"
+    curl -s -m 5 "$HEALTH_URL" || true
+    echo
+    ;;
+  --scan)
+    trigger_scan
+    ;;
+  deploy|--deploy|"")
+    ensure_dirs
+    ensure_env
+    migrate_legacy_config
+    ensure_certs
+    install_systemd_wrapper
+    build_image
+    start_stack
+    wait_healthy || true
+    register_webhook
+    log "done — UI: http://127.0.0.1:8081/ui  onboard: http://127.0.0.1:8081/onboard"
+    log "run ./deploy.sh --scan to dogfood this repository"
+    ;;
+  *)
+    echo "unknown command: $cmd" >&2
+    exit 1
+    ;;
+esac

@@ -30,7 +30,7 @@ function updateEnvExport() {
     `BUGBOT_GITEA_URL=${p.gitea_url}`,
     `BUGBOT_GITEA_TOKEN=${p.gitea_token || 'your-token'}`,
     `BUGBOT_WEBHOOK_SECRET=${p.webhook_secret || 'your-webhook-secret'}`,
-    `BUGBOT_API_KEY=${document.getElementById('apiKey').value.trim() || 'your-api-key'}`,
+    `BUGBOT_API_KEY=${document.getElementById('apiKey').value.trim() || '<set-api-key>'}`,
     `BUGBOT_PUBLIC_URL=${p.public_url}`,
     `BUGBOT_AI_PROVIDER=${p.ai_provider}`,
     `BUGBOT_AI_BASE_URL=${p.ai_base_url}`,

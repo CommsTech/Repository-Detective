@@ -16,22 +16,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func TestVerifyWebhookSecretPlainTextQuery(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	handler := &WebhookHandler{
-		logger: logrus.New(),
-		config: &Config{WebhookSecret: "super-secret"},
-	}
-
-	rec := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(rec)
-	c.Request = httptest.NewRequest(http.MethodPost, "/webhook?secret=super-secret", nil)
-
-	if err := handler.verifyWebhookSecret(c, []byte(`{}`)); err != nil {
-		t.Fatalf("expected valid secret, got error: %v", err)
-	}
-}
-
 func TestVerifyWebhookSecretHMACSignature(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	secret := "my-webhook-secret"
