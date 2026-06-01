@@ -81,6 +81,7 @@ type Config struct {
 	AIBaseURL                         string            `mapstructure:"ai_base_url"`
 	AIAPIKey                          string            `mapstructure:"ai_api_key"`
 	AIModel                           string            `mapstructure:"ai_model"`
+	AIInsecureSkipTLSVerify           bool              `mapstructure:"ai_insecure_skip_tls_verify"`
 	OpenWebUIURL                      string            `mapstructure:"openwebui_url"`
 	OpenWebUIToken                    string            `mapstructure:"openwebui_token"`
 	OpenWebUIModel                    string            `mapstructure:"openwebui_model"`
@@ -365,6 +366,7 @@ func loadConfig() error {
 	viper.SetDefault("openwebui_model", "default")
 	viper.SetDefault("ai_provider", "")
 	viper.SetDefault("ai_model", "")
+	viper.SetDefault("ai_insecure_skip_tls_verify", false)
 	viper.SetDefault("skip_startup_checks", false)
 	viper.SetDefault("workspace_mode", "api")
 	viper.SetDefault("workspace_max_size_mb", 500)
@@ -548,6 +550,7 @@ func setupRoutes(router *gin.Engine) {
 	api.Use(requireComponentsReady(), requireAPIKeyAuth())
 	{
 		api.POST("/analyze", handleManualAnalysis)
+		api.POST("/analyze/all", handleBulkAnalysis)
 		api.GET("/status", handleStatus)
 		api.GET("/about", handleAbout)
 		api.POST("/config/reload", handleConfigReload)
@@ -800,10 +803,11 @@ func initializeComponents() error {
 	if config.needsAIProvider() {
 		var err error
 		aiClient, err = ai.NewClient(ai.Config{
-			Provider: ai.ProviderType(config.AIProvider),
-			BaseURL:  firstNonEmpty(config.AIBaseURL, config.OpenWebUIURL),
-			APIKey:   firstNonEmpty(config.AIAPIKey, config.OpenWebUIToken),
-			Model:    firstNonEmpty(config.AIModel, config.OpenWebUIModel),
+			Provider:              ai.ProviderType(config.AIProvider),
+			BaseURL:               firstNonEmpty(config.AIBaseURL, config.OpenWebUIURL),
+			APIKey:                firstNonEmpty(config.AIAPIKey, config.OpenWebUIToken),
+			Model:                 firstNonEmpty(config.AIModel, config.OpenWebUIModel),
+			InsecureSkipTLSVerify: config.AIInsecureSkipTLSVerify,
 		}, ai.LegacyConfig{
 			OpenWebUIURL:   config.OpenWebUIURL,
 			OpenWebUIToken: config.OpenWebUIToken,
@@ -952,14 +956,16 @@ func (p *webhookProcessor) ProcessPush(ctx context.Context, payload *handlers.Gi
 		statusReporter.ReportPending(analysisCtx, owner, repo, commitSHA)
 
 		result, err := analysisEngine.AnalyzeChangedFiles(analysisCtx, owner, repo, ref, changedFiles)
-		finishPersistedScan(analysisCtx, &scanCtx, repositoryID, result, err)
+		postCtx, postCancel := postAnalysisContext(analysisCtx)
+		defer postCancel()
+		finishPersistedScan(postCtx, &scanCtx, repositoryID, result, err)
 		if err != nil {
 			logger.Errorf("Push analysis failed: %v", err)
-			statusReporter.ReportFinalWithPolicy(analysisCtx, owner, repo, resolveCommitSHA(result, commitSHA), nil, nil, true, effective.PolicyLevel, effective.SeverityGate)
+			statusReporter.ReportFinalWithPolicy(postCtx, owner, repo, resolveCommitSHA(result, commitSHA), nil, nil, true, effective.PolicyLevel, effective.SeverityGate)
 			return
 		}
 		eval := statusReporter.ReportFinalWithPolicy(
-			analysisCtx,
+			postCtx,
 			owner,
 			repo,
 			resolveCommitSHA(result, commitSHA),
@@ -969,8 +975,8 @@ func (p *webhookProcessor) ProcessPush(ctx context.Context, payload *handlers.Gi
 			effective.PolicyLevel,
 			effective.SeverityGate,
 		)
-		notifyPRGateFailed(analysisCtx, repositoryID, owner, repo, scanCtx.ScanID, eval)
-		createIssuesFromResult(analysisCtx, owner, repo, result, fmt.Sprintf("Push to %s", payload.Ref), ref, 0, repositoryID, effective)
+		notifyPRGateFailed(postCtx, repositoryID, owner, repo, scanCtx.ScanID, eval)
+		createIssuesFromResult(postCtx, owner, repo, result, fmt.Sprintf("Push to %s", payload.Ref), ref, 0, repositoryID, effective)
 	})
 }
 
@@ -1001,14 +1007,16 @@ func (p *webhookProcessor) ProcessPullRequest(ctx context.Context, payload *hand
 		statusReporter.ReportPending(analysisCtx, owner, repo, commitSHA)
 
 		result, err := analysisEngine.AnalyzePullRequest(analysisCtx, owner, repo, prNumber)
-		finishPersistedScan(analysisCtx, &scanCtx, repositoryID, result, err)
+		postCtx, postCancel := postAnalysisContext(analysisCtx)
+		defer postCancel()
+		finishPersistedScan(postCtx, &scanCtx, repositoryID, result, err)
 		if err != nil {
 			logger.Errorf("Pull request analysis failed: %v", err)
-			statusReporter.ReportFinalWithPolicy(analysisCtx, owner, repo, resolveCommitSHA(result, commitSHA), nil, nil, true, effective.PolicyLevel, effective.SeverityGate)
+			statusReporter.ReportFinalWithPolicy(postCtx, owner, repo, resolveCommitSHA(result, commitSHA), nil, nil, true, effective.PolicyLevel, effective.SeverityGate)
 			return
 		}
 		eval := statusReporter.ReportFinalWithPolicy(
-			analysisCtx,
+			postCtx,
 			owner,
 			repo,
 			resolveCommitSHA(result, commitSHA),
@@ -1018,8 +1026,8 @@ func (p *webhookProcessor) ProcessPullRequest(ctx context.Context, payload *hand
 			effective.PolicyLevel,
 			effective.SeverityGate,
 		)
-		notifyPRGateFailed(analysisCtx, repositoryID, owner, repo, scanCtx.ScanID, eval)
-		createIssuesFromResult(analysisCtx, owner, repo, result, fmt.Sprintf("Pull Request #%d", prNumber), "", prNumber, repositoryID, effective)
+		notifyPRGateFailed(postCtx, repositoryID, owner, repo, scanCtx.ScanID, eval)
+		createIssuesFromResult(postCtx, owner, repo, result, fmt.Sprintf("Pull Request #%d", prNumber), "", prNumber, repositoryID, effective)
 	})
 }
 
@@ -1101,7 +1109,9 @@ func runScheduledRepositoryScan(ctx context.Context, repo store.ScheduledReposit
 		}
 
 		result, err := analysisEngine.AnalyzeRepository(scanCtxInner, repo.Owner, repo.Name, ref)
-		finishPersistedScan(scanCtxInner, &scanCtx, repositoryID, result, err)
+		postCtx, postCancel := postAnalysisContext(scanCtxInner)
+		defer postCancel()
+		finishPersistedScan(postCtx, &scanCtx, repositoryID, result, err)
 		if err != nil {
 			logger.WithFields(logrus.Fields{
 				"scan_id":       scanCtx.ScanID,
@@ -1113,7 +1123,7 @@ func runScheduledRepositoryScan(ctx context.Context, repo store.ScheduledReposit
 			return
 		}
 
-		createIssuesFromResult(scanCtxInner, repo.Owner, repo.Name, result,
+		createIssuesFromResult(postCtx, repo.Owner, repo.Name, result,
 			fmt.Sprintf("Scheduled scan (%s)", repo.ScheduleCron), ref, 0, repositoryID, effective)
 	}); err != nil {
 		return fmt.Errorf("scheduled scan skipped: %w", err)
@@ -1278,10 +1288,23 @@ func finishPersistedScan(ctx context.Context, scanCtx *store.ScanContext, reposi
 	notifyScanFinish(ctx, scanCtx, repositoryID, result, analysisErr)
 }
 
+func postAnalysisContext(parent context.Context) (context.Context, context.CancelFunc) {
+	if parent == nil {
+		parent = context.Background()
+	}
+	return context.WithTimeout(context.WithoutCancel(parent), 15*time.Minute)
+}
+
 func createIssuesFromResult(ctx context.Context, owner, repo string, result *analyzers.AnalysisResult, contextLabel, commit string, prNumber int, repositoryID int64, effective store.EffectiveSettings) {
 	if result == nil {
 		return
 	}
+
+	postCtx, cancel := postAnalysisContext(ctx)
+	defer cancel()
+
+	repository := fmt.Sprintf("%s/%s", owner, repo)
+	issues.EnrichIssues(repository, result.ScanID, result.Issues)
 
 	commitRef := commit
 	if commitRef == "" {
@@ -1310,7 +1333,7 @@ func createIssuesFromResult(ctx context.Context, owner, repo string, result *ana
 				ForceIssueCreation:   true,
 			}
 
-			issueResult, err := issueManager.CreateIssuesFromAnalysis(ctx, issueReq)
+			issueResult, err := issueManager.CreateIssuesFromAnalysis(postCtx, issueReq)
 			if err != nil {
 				logger.Errorf("Failed to create issues: %v", err)
 			} else {
@@ -1323,13 +1346,13 @@ func createIssuesFromResult(ctx context.Context, owner, repo string, result *ana
 	}
 
 	if scanRecorder != nil && scanRecorder.Enabled() && repositoryID > 0 && result.ScanID != "" {
-		if err := scanRecorder.RecordIssues(ctx, repositoryID, result.ScanID, result.Issues, processed); err != nil {
+		if err := scanRecorder.RecordIssues(postCtx, repositoryID, result.ScanID, result.Issues, processed); err != nil {
 			logger.Warnf("Failed to persist findings: %v", err)
 		} else {
-			maybeGenerateRemediationPlans(ctx, repositoryID, result.Issues, processed)
+			maybeGenerateRemediationPlans(postCtx, repositoryID, result.Issues, processed)
 		}
 	}
-	maybeProcessEvidenceClosure(ctx, owner, repo, repositoryID, result)
+	maybeProcessEvidenceClosure(postCtx, owner, repo, repositoryID, result)
 }
 
 func mainRunnerConfig() runner.Config {
@@ -1441,24 +1464,17 @@ func runnerNonceMiddleware() gin.HandlerFunc {
 	}
 }
 
-// handleManualAnalysis handles manual analysis requests
-func handleManualAnalysis(c *gin.Context) {
-	var req struct {
-		Owner      string `json:"owner" binding:"required"`
-		Repository string `json:"repository" binding:"required"`
-		Ref        string `json:"ref"`
-		Type       string `json:"type"` // "repository" or "pull_request"
-		PRNumber   int    `json:"pr_number"`
-	}
+type manualAnalysisRequest struct {
+	Owner      string `json:"owner" binding:"required"`
+	Repository string `json:"repository" binding:"required"`
+	Ref        string `json:"ref"`
+	Type       string `json:"type"` // "repository" or "pull_request"
+	PRNumber   int    `json:"pr_number"`
+}
 
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
-		return
-	}
-
-	// Start analysis in background
+func enqueueManualAnalysis(parentCtx context.Context, req manualAnalysisRequest) {
 	go func() {
-		runAnalysis(c.Request.Context(), func(ctx context.Context) {
+		runAnalysis(parentCtx, func(ctx context.Context) {
 			var result *analyzers.AnalysisResult
 			var err error
 			var repositoryID int64
@@ -1506,20 +1522,125 @@ func handleManualAnalysis(c *gin.Context) {
 				result, err = analysisEngine.AnalyzeRepository(ctx, req.Owner, req.Repository, ref)
 			}
 
-			finishPersistedScan(ctx, &scanCtx, repositoryID, result, err)
+			postCtx, postCancel := postAnalysisContext(ctx)
+			defer postCancel()
+			finishPersistedScan(postCtx, &scanCtx, repositoryID, result, err)
 			if err != nil {
 				logger.Errorf("Manual analysis failed: %v", err)
 				return
 			}
 
 			if len(result.Issues) > 0 || scanRecorder != nil && scanRecorder.Enabled() {
-				createIssuesFromResult(ctx, req.Owner, req.Repository, result,
+				createIssuesFromResult(postCtx, req.Owner, req.Repository, result,
 					fmt.Sprintf("Manual analysis - %s", req.Type), req.Ref, req.PRNumber, repositoryID, effective)
 			}
 		})
 	}()
+}
 
+// handleManualAnalysis handles manual analysis requests
+func handleManualAnalysis(c *gin.Context) {
+	var req manualAnalysisRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		return
+	}
+
+	enqueueManualAnalysis(c.Request.Context(), req)
 	c.JSON(http.StatusOK, gin.H{"status": "analysis started"})
+}
+
+// handleBulkAnalysis queues a full-repository scan for every Gitea repo the token can see.
+func handleBulkAnalysis(c *gin.Context) {
+	var req struct {
+		Orgs   []string `json:"orgs"`
+		Ref    string   `json:"ref"`
+		DryRun bool     `json:"dry_run"`
+	}
+	_ = c.ShouldBindJSON(&req)
+
+	if giteaClient == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Gitea client not configured"})
+		return
+	}
+
+	listCtx, cancel := context.WithTimeout(c.Request.Context(), 2*time.Minute)
+	defer cancel()
+
+	reposByID := make(map[int64]gitea.RepositorySummary)
+	userRepos, err := giteaClient.ListAllUserRepositories(listCtx)
+	if err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{"error": fmt.Sprintf("list user repositories: %v", err)})
+		return
+	}
+	for _, repo := range userRepos {
+		reposByID[repo.ID] = repo
+	}
+
+	orgs := req.Orgs
+	if len(orgs) == 0 {
+		if envOrgs := strings.TrimSpace(os.Getenv("GITEA_SCAN_ORGS")); envOrgs != "" {
+			for _, org := range strings.Split(envOrgs, ",") {
+				if o := strings.TrimSpace(org); o != "" {
+					orgs = append(orgs, o)
+				}
+			}
+		}
+	}
+	for _, org := range orgs {
+		orgRepos, err := giteaClient.ListAllOrgRepositories(listCtx, org)
+		if err != nil {
+			c.JSON(http.StatusBadGateway, gin.H{"error": fmt.Sprintf("list org %s repositories: %v", org, err)})
+			return
+		}
+		for _, repo := range orgRepos {
+			reposByID[repo.ID] = repo
+		}
+	}
+
+	var queued, skipped []string
+	defaultRef := strings.TrimSpace(req.Ref)
+	for _, repo := range reposByID {
+		fullName := strings.TrimSpace(repo.FullName)
+		if fullName == "" {
+			continue
+		}
+		if !handlers.RepoAllowed(fullName, config.RepositoryIncludePatterns, config.RepositoryExcludePatterns) {
+			skipped = append(skipped, fullName)
+			continue
+		}
+		parts := strings.SplitN(fullName, "/", 2)
+		if len(parts) != 2 {
+			skipped = append(skipped, fullName)
+			continue
+		}
+		ref := defaultRef
+		if ref == "" {
+			ref = strings.TrimSpace(repo.DefaultBranch)
+		}
+		if ref == "" {
+			ref = "main"
+		}
+		queued = append(queued, fullName)
+		if req.DryRun {
+			continue
+		}
+		enqueueManualAnalysis(c.Request.Context(), manualAnalysisRequest{
+			Owner:      parts[0],
+			Repository: parts[1],
+			Ref:        ref,
+			Type:       "repository",
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status":       "bulk analysis queued",
+		"queued_count": len(queued),
+		"skipped_count": len(skipped),
+		"queued":       queued,
+		"skipped":      skipped,
+		"dry_run":      req.DryRun,
+	})
 }
 
 // handleStatus handles status requests

@@ -12,13 +12,14 @@ import (
 
 // RepositorySummary is a lightweight repo listing entry.
 type RepositorySummary struct {
-	ID          int64  `json:"id"`
-	Name        string `json:"name"`
-	FullName    string `json:"full_name"`
-	Owner       User   `json:"owner"`
-	Private     bool   `json:"private"`
-	HTMLURL     string `json:"html_url"`
-	Description string `json:"description"`
+	ID            int64  `json:"id"`
+	Name          string `json:"name"`
+	FullName      string `json:"full_name"`
+	Owner         User   `json:"owner"`
+	Private       bool   `json:"private"`
+	HTMLURL       string `json:"html_url"`
+	Description   string `json:"description"`
+	DefaultBranch string `json:"default_branch"`
 }
 
 // HookConfig is used to create repository webhooks.
@@ -33,22 +34,64 @@ type HookConfig struct {
 	Active bool     `json:"active"`
 }
 
+const defaultRepoPageSize = 50
+
 // ListUserRepositories lists repositories visible to the authenticated user.
 func (c *Client) ListUserRepositories(ctx context.Context, limit int) ([]RepositorySummary, error) {
 	if limit <= 0 {
-		limit = 50
+		limit = defaultRepoPageSize
 	}
 	url := fmt.Sprintf("%s/api/v1/user/repos?limit=%d", c.baseURL, limit)
 	return c.listRepositories(ctx, url)
 }
 
+// ListAllUserRepositories lists every repository visible to the authenticated user (paginated).
+func (c *Client) ListAllUserRepositories(ctx context.Context) ([]RepositorySummary, error) {
+	return c.listAllRepositories(ctx, fmt.Sprintf("%s/api/v1/user/repos", c.baseURL))
+}
+
 // ListOrgRepositories lists repositories for an organization.
 func (c *Client) ListOrgRepositories(ctx context.Context, org string, limit int) ([]RepositorySummary, error) {
 	if limit <= 0 {
-		limit = 50
+		limit = defaultRepoPageSize
 	}
 	url := fmt.Sprintf("%s/api/v1/orgs/%s/repos?limit=%d", c.baseURL, org, limit)
 	return c.listRepositories(ctx, url)
+}
+
+// ListAllOrgRepositories lists every repository in an organization (paginated).
+func (c *Client) ListAllOrgRepositories(ctx context.Context, org string) ([]RepositorySummary, error) {
+	org = strings.TrimSpace(org)
+	if org == "" {
+		return nil, fmt.Errorf("organization name is required")
+	}
+	return c.listAllRepositories(ctx, fmt.Sprintf("%s/api/v1/orgs/%s/repos", c.baseURL, org))
+}
+
+func (c *Client) listAllRepositories(ctx context.Context, basePath string) ([]RepositorySummary, error) {
+	var all []RepositorySummary
+	seen := make(map[int64]struct{})
+	for page := 1; ; page++ {
+		url := fmt.Sprintf("%s?limit=%d&page=%d", basePath, defaultRepoPageSize, page)
+		pageRepos, err := c.listRepositories(ctx, url)
+		if err != nil {
+			return nil, err
+		}
+		if len(pageRepos) == 0 {
+			break
+		}
+		for _, repo := range pageRepos {
+			if _, ok := seen[repo.ID]; ok {
+				continue
+			}
+			seen[repo.ID] = struct{}{}
+			all = append(all, repo)
+		}
+		if len(pageRepos) < defaultRepoPageSize {
+			break
+		}
+	}
+	return all, nil
 }
 
 func (c *Client) listRepositories(ctx context.Context, url string) ([]RepositorySummary, error) {

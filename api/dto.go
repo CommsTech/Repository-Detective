@@ -213,9 +213,12 @@ type lifecycleEventResponse struct {
 
 type dashboardSummaryResponse struct {
 	TotalRepositories      int                      `json:"total_repositories"`
-	FailedScansCount       int                      `json:"failed_scans_count"`
-	ScannerFailuresCount   int                      `json:"scanner_failures_count"`
-	OpenFindingsBySeverity map[string]int           `json:"open_findings_by_severity"`
+	FailedScansCount         int                      `json:"failed_scans_count"`
+	ScannerFailuresCount     int                      `json:"scanner_failures_count"`
+	ScannerToolsMissingCount int                      `json:"scanner_tools_missing_count"`
+	OpenFindingsCount        int                      `json:"open_findings_count"`
+	IssuesDetectedInScans    int                      `json:"issues_detected_in_scans"`
+	OpenFindingsBySeverity   map[string]int           `json:"open_findings_by_severity"`
 	RecentScans            []scanResponse           `json:"recent_scans"`
 	RecentLifecycleEvents  []lifecycleEventResponse `json:"recent_lifecycle_events"`
 	ScheduledScansCount    int                      `json:"scheduled_scans_count"`
@@ -487,7 +490,9 @@ func toLifecycleEventResponse(ev store.LifecycleEvent) lifecycleEventResponse {
 func toDashboardSummaryResponse(s store.DashboardSummary) dashboardSummaryResponse {
 	resp := dashboardSummaryResponse{
 		TotalRepositories: s.TotalRepositories, FailedScansCount: s.FailedScansCount,
-		ScannerFailuresCount: s.ScannerFailuresCount, OpenFindingsBySeverity: s.OpenFindingsBySeverity,
+		ScannerFailuresCount: s.ScannerFailuresCount, ScannerToolsMissingCount: s.ScannerToolsMissingCount,
+		OpenFindingsCount: s.OpenFindingsCount, IssuesDetectedInScans: s.IssuesDetectedInScans,
+		OpenFindingsBySeverity: s.OpenFindingsBySeverity,
 		ScheduledScansCount: s.ScheduledScansCount, LastScheduledScanAt: s.LastScheduledScanAt,
 		RunnerJobsByStatus: s.RunnerJobsByStatus,
 		RemediationCandidates: s.Remediation.Candidates,

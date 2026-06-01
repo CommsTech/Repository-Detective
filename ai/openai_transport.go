@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/sirupsen/logrus"
 )
@@ -46,7 +45,7 @@ type OpenAICompatibleTransport struct {
 }
 
 // NewOpenAICompatibleTransport creates a transport for OpenAI-style APIs.
-func NewOpenAICompatibleTransport(name, baseURL, apiKey string, extraHeaders map[string]string, logger *logrus.Logger) *OpenAICompatibleTransport {
+func NewOpenAICompatibleTransport(name, baseURL, apiKey string, extraHeaders map[string]string, insecureSkipTLSVerify bool, logger *logrus.Logger) *OpenAICompatibleTransport {
 	base := normalizeBaseURL(baseURL)
 	endpoint := base
 	if !strings.HasSuffix(base, "/chat/completions") {
@@ -63,10 +62,8 @@ func NewOpenAICompatibleTransport(name, baseURL, apiKey string, extraHeaders map
 		endpointURL:  endpoint,
 		apiKey:       apiKey,
 		extraHeaders: headers,
-		httpClient: &http.Client{
-			Timeout: 120 * time.Second,
-		},
-		logger: logger,
+		httpClient:            NewHTTPClient(insecureSkipTLSVerify),
+		logger:                logger,
 	}
 }
 

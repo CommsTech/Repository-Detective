@@ -43,7 +43,7 @@ func TestOpenAICompatibleTransportComplete(t *testing.T) {
 	}))
 	defer server.Close()
 
-	transport := NewOpenAICompatibleTransport("openai", server.URL+"/v1", "test-token", nil, logrus.New())
+	transport := NewOpenAICompatibleTransport("openai", server.URL+"/v1", "test-token", nil, false, logrus.New())
 	resp, err := transport.Complete(context.Background(), ChatRequest{
 		Model: "gpt-4o-mini",
 		Messages: []ChatMessage{
@@ -75,7 +75,7 @@ func TestClientUsesTransport(t *testing.T) {
 	}))
 	defer server.Close()
 
-	transport := NewOpenAICompatibleTransport("test", server.URL+"/v1", "", nil, logrus.New())
+	transport := NewOpenAICompatibleTransport("test", server.URL+"/v1", "", nil, false, logrus.New())
 	client := NewClientWithTransport(transport, "test-model", logrus.New())
 
 	resp, err := client.RunAuditor(context.Background(), &AuditorRequest{

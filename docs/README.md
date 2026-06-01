@@ -33,6 +33,7 @@ detect → issue → plan → approve → patch PR → merge → rescan → veri
 | Document | Description |
 |----------|-------------|
 | [SCANNERS.md](SCANNERS.md) | Deterministic scanner tools and configuration |
+| [FALSE_POSITIVES.md](FALSE_POSITIVES.md) | Tuning heuristics and avoiding noisy Gitea issues |
 | [HEALTH_CHECKS.md](HEALTH_CHECKS.md) | Repository health checks (tech debt, reliability, etc.) |
 | [CODE_GRAPH.md](CODE_GRAPH.md) | Optional code graph analysis |
 | [PREINSTALL_AUDIT.md](PREINSTALL_AUDIT.md) | Third-party repo audit before install (no scripts/deps) |

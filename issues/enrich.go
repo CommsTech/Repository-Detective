@@ -50,6 +50,13 @@ func SeverityLabel(severity string) string {
 	}
 }
 
+// EnrichIssues normalizes every issue in a scan result (fingerprints, categories, etc.).
+func EnrichIssues(repository string, scanID string, codeIssues []ai.CodeIssue) {
+	for i := range codeIssues {
+		EnrichIssue(repository, &codeIssues[i], scanID)
+	}
+}
+
 // EnrichIssue normalizes category, fingerprint, and remediation metadata on an issue.
 func EnrichIssue(repository string, issue *ai.CodeIssue, scanID string) {
 	if issue == nil {

@@ -300,9 +300,29 @@ func (s *SQLiteStore) DashboardSummary(ctx context.Context, recentLimit int) (Da
 
 	if err := s.db.QueryRowContext(ctx, `
 		SELECT COUNT(1) FROM scanner_results
-		WHERE status IN ('failed', 'timed_out', 'binary_missing', 'parse_failed')
+		WHERE status IN ('failed', 'timed_out', 'parse_failed', 'error')
 	`).Scan(&summary.ScannerFailuresCount); err != nil {
 		return summary, fmt.Errorf("count scanner failures: %w", err)
+	}
+
+	if err := s.db.QueryRowContext(ctx, `
+		SELECT COUNT(1) FROM scanner_results WHERE status = 'binary_missing'
+	`).Scan(&summary.ScannerToolsMissingCount); err != nil {
+		return summary, fmt.Errorf("count missing scanner tools: %w", err)
+	}
+
+	if err := s.db.QueryRowContext(ctx, `
+		SELECT COUNT(1) FROM findings WHERE status = 'open'
+	`).Scan(&summary.OpenFindingsCount); err != nil {
+		return summary, fmt.Errorf("count open findings: %w", err)
+	}
+
+	if err := s.db.QueryRowContext(ctx, `
+		SELECT COALESCE(SUM(CAST(json_extract(summary_json, '$.issues_found') AS INTEGER)), 0)
+		FROM scans
+		WHERE status = 'completed' AND started_at >= datetime('now', '-7 days')
+	`).Scan(&summary.IssuesDetectedInScans); err != nil {
+		return summary, fmt.Errorf("sum issues in scans: %w", err)
 	}
 
 	summary.OpenFindingsBySeverity = map[string]int{}

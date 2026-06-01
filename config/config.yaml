@@ -13,6 +13,8 @@ ai_provider: "openclaw"
 ai_base_url: "https://192.168.255.11:18789/v1"
 ai_api_key: "6fb709944fe22e3c98cdcde607ed15bae797ffa058630527"
 ai_model: "openclaw/software-engineer"
+# Homelab OpenClaw often uses a private CA — enable only on trusted networks.
+ai_insecure_skip_tls_verify: true
 
 scan_profile: standard_deterministic
 analysis_depth: 3
@@ -30,7 +32,7 @@ enable_staticcheck: true
 enable_linters: true
 enable_llm_auditors: true
 scanner_timeout_seconds: 120
-min_issue_confidence: 0.5
+min_issue_confidence: 0.7
 
 qdrant_enabled: true
 qdrant_url: "http://192.168.255.11:6333"
@@ -50,8 +52,8 @@ auto_create_issues: true
 max_issues_per_run: 50
 skip_low_severity: false
 group_similar_issues: true
-max_concurrent_analyses: 5
-analysis_timeout: 300
+max_concurrent_analyses: 2
+analysis_timeout: 900
 rate_limit_per_minute: 60
 skip_startup_checks: true
 

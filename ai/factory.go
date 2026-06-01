@@ -13,23 +13,23 @@ func NewTransport(cfg Config, logger *logrus.Logger) (ChatTransport, error) {
 		if cfg.APIKey == "" {
 			return nil, fmt.Errorf("ai_api_key is required for anthropic provider")
 		}
-		return NewAnthropicTransport(cfg.BaseURL, cfg.APIKey, logger), nil
+		return NewAnthropicTransport(cfg.BaseURL, cfg.APIKey, cfg.InsecureSkipTLSVerify, logger), nil
 	case ProviderOpenAI:
 		if cfg.APIKey == "" {
 			return nil, fmt.Errorf("ai_api_key is required for openai provider")
 		}
-		return NewOpenAICompatibleTransport(string(ProviderOpenAI), cfg.BaseURL, cfg.APIKey, cfg.ExtraHeaders, logger), nil
+		return NewOpenAICompatibleTransport(string(ProviderOpenAI), cfg.BaseURL, cfg.APIKey, cfg.ExtraHeaders, cfg.InsecureSkipTLSVerify, logger), nil
 	case ProviderOpenRouter:
 		if cfg.APIKey == "" {
 			return nil, fmt.Errorf("ai_api_key is required for openrouter provider")
 		}
-		return NewOpenAICompatibleTransport(string(ProviderOpenRouter), cfg.BaseURL, cfg.APIKey, cfg.ExtraHeaders, logger), nil
+		return NewOpenAICompatibleTransport(string(ProviderOpenRouter), cfg.BaseURL, cfg.APIKey, cfg.ExtraHeaders, cfg.InsecureSkipTLSVerify, logger), nil
 	case ProviderOllama:
-		return NewOpenAICompatibleTransport(string(ProviderOllama), cfg.BaseURL, cfg.APIKey, cfg.ExtraHeaders, logger), nil
+		return NewOpenAICompatibleTransport(string(ProviderOllama), cfg.BaseURL, cfg.APIKey, cfg.ExtraHeaders, cfg.InsecureSkipTLSVerify, logger), nil
 	case ProviderOpenWebUI:
-		return NewOpenAICompatibleTransport(string(ProviderOpenWebUI), cfg.BaseURL, cfg.APIKey, cfg.ExtraHeaders, logger), nil
+		return NewOpenAICompatibleTransport(string(ProviderOpenWebUI), cfg.BaseURL, cfg.APIKey, cfg.ExtraHeaders, cfg.InsecureSkipTLSVerify, logger), nil
 	case ProviderOpenClaw:
-		return NewOpenAICompatibleTransport(string(ProviderOpenClaw), cfg.BaseURL, cfg.APIKey, cfg.ExtraHeaders, logger), nil
+		return NewOpenAICompatibleTransport(string(ProviderOpenClaw), cfg.BaseURL, cfg.APIKey, cfg.ExtraHeaders, cfg.InsecureSkipTLSVerify, logger), nil
 	default:
 		return nil, fmt.Errorf("unsupported provider %q", cfg.Provider)
 	}

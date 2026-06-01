@@ -6,7 +6,7 @@ Bugbot runs **external security and lint tools** before (and instead of) LLM ana
 
 ```
 Changed files fetched from Gitea
-  ├─ Static regex rules          (built-in, no binaries)
+  ├─ Static regex rules          (built-in, no binaries; see [FALSE_POSITIVES.md](FALSE_POSITIVES.md))
   ├─ Trivy fs scan               (CVEs, secrets, misconfig)
   ├─ Grype dir scan              (dependency CVEs)
   ├─ Gitleaks dir scan           (hardcoded secrets, filesystem snapshot)

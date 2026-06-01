@@ -43,7 +43,7 @@ func TestAnthropicTransportComplete(t *testing.T) {
 	}))
 	defer server.Close()
 
-	transport := NewAnthropicTransport(server.URL+"/v1", "anthropic-key", logrus.New())
+	transport := NewAnthropicTransport(server.URL+"/v1", "anthropic-key", false, logrus.New())
 	resp, err := transport.Complete(context.Background(), ChatRequest{
 		Model: "claude-3-5-haiku-latest",
 		Messages: []ChatMessage{

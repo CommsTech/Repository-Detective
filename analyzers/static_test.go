@@ -28,6 +28,39 @@ func TestRunStaticAnalysisFindsHardcodedSecret(t *testing.T) {
 	}
 }
 
+func TestRunStaticAnalysisSkipsEnvAndDeployShell(t *testing.T) {
+	findings := RunStaticAnalysis([]FileContent{{
+		Path: "deploy.sh",
+		Content: `# shellcheck disable=SC1091
+set -a && source .env && set +a
+local api_key="${REPOSITORY_DETECTIVE_API_KEY:-${BUGBOT_API_KEY:-}}"
+`,
+	}}, true, false)
+	if len(findings) != 0 {
+		t.Fatalf("expected deploy.sh env reads to be skipped, got %d: %+v", len(findings), findings)
+	}
+}
+
+func TestRunStaticAnalysisSkipsHTMLDataAPIKey(t *testing.T) {
+	findings := RunStaticAnalysis([]FileContent{{
+		Path: "ui/templates/graph.html",
+		Content: `<div data-api-key="{{.APIKey}}"></div>`,
+	}}, true, false)
+	if len(findings) != 0 {
+		t.Fatalf("expected template data-api-key to be skipped, got %d", len(findings))
+	}
+}
+
+func TestRunStaticAnalysisSkipsSafeSQLConcat(t *testing.T) {
+	findings := RunStaticAnalysis([]FileContent{{
+		Path: "store/closure_sqlite.go",
+		Content: `query := patchAttemptSelect + ` + "` WHERE status = ?`",
+	}}, true, false)
+	if len(findings) != 0 {
+		t.Fatalf("expected safe SQL concat to be skipped, got %d: %+v", len(findings), findings)
+	}
+}
+
 func TestRunStaticAnalysisQualityDisabled(t *testing.T) {
 	findings := RunStaticAnalysis([]FileContent{{
 		Path:    "app.js",
@@ -36,5 +69,32 @@ func TestRunStaticAnalysisQualityDisabled(t *testing.T) {
 
 	if len(findings) != 0 {
 		t.Fatalf("expected no quality findings when disabled, got %d", len(findings))
+	}
+}
+
+func TestIsFalsePositiveHardcodedSecret(t *testing.T) {
+	line := `local gitea_token="${BUGBOT_GITEA_TOKEN:-}"`
+	if !isFalsePositiveHardcodedSecret("deploy.sh", line) {
+		t.Fatal("expected bash env expansion to be false positive")
+	}
+}
+
+func TestSkipStaticAnalysisPath(t *testing.T) {
+	paths := []string{"ui/templates/x.html", "scripts/foo.sh", "vendor/x.go"}
+	for _, p := range paths {
+		if !skipStaticAnalysisPath(p) {
+			t.Fatalf("expected skip %s", p)
+		}
+	}
+	if skipStaticAnalysisPath("handlers/webhook.go") {
+		t.Fatal("expected webhook.go to be analyzed")
+	}
+}
+
+func TestStaticRuleConfidenceOrdering(t *testing.T) {
+	eval := staticRuleConfidence(staticRule{ID: "SEC-EVAL"})
+	secret := staticRuleConfidence(staticRule{ID: "SEC-HARDCODED-SECRET"})
+	if eval <= secret {
+		t.Fatalf("eval confidence should exceed heuristic secret: eval=%v secret=%v", eval, secret)
 	}
 }

@@ -19,11 +19,12 @@ const (
 
 // Config holds AI provider settings.
 type Config struct {
-	Provider     ProviderType
-	BaseURL      string
-	APIKey       string
-	Model        string
-	ExtraHeaders map[string]string
+	Provider              ProviderType
+	BaseURL               string
+	APIKey                string
+	Model                 string
+	ExtraHeaders          map[string]string
+	InsecureSkipTLSVerify bool
 }
 
 // LegacyConfig holds deprecated OpenWebUI-only settings for backward compatibility.

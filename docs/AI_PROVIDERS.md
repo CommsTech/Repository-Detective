@@ -22,6 +22,8 @@ ai_provider: openai
 ai_base_url: ""           # optional override
 ai_api_key: "sk-..."
 ai_model: "gpt-4o-mini"
+# Homelab / private CA only (never on production internet-facing hosts):
+# ai_insecure_skip_tls_verify: true
 ```
 
 ### Environment Variables

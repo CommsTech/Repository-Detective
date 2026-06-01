@@ -147,7 +147,7 @@ func (m *Manager) CreateIssuesFromAnalysis(ctx context.Context, req *IssueCreati
 		}
 	}
 
-	if m.config.GroupSimilarIssues && req.AnalysisResult != nil && len(req.AnalysisResult.Issues) > 1 {
+	if m.config.GroupSimilarIssues && req.AnalysisResult != nil && shouldCreateSummaryIssue(req.AnalysisResult.Issues) {
 		if err := m.createSummaryIssue(ctx, req, result); err != nil {
 			errorMsg := fmt.Sprintf("Failed to create summary issue: %v", err)
 			result.Errors = append(result.Errors, errorMsg)
@@ -159,6 +159,11 @@ func (m *Manager) CreateIssuesFromAnalysis(ctx context.Context, req *IssueCreati
 		time.Since(startTime), result.IssuesCreated, result.IssuesUpdated, result.IssuesSkipped)
 
 	return result, nil
+}
+
+// shouldCreateSummaryIssue avoids one extra rollup ticket for tiny scan runs (reduces board noise).
+func shouldCreateSummaryIssue(issues []ai.CodeIssue) bool {
+	return len(issues) >= 5
 }
 
 func (m *Manager) createOrUpdateIssue(ctx context.Context, req *IssueCreationRequest, repository string, issue *ai.CodeIssue, result *IssueCreationResult) (string, error) {

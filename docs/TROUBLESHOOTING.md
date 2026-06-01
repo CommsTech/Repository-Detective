@@ -55,6 +55,37 @@ Fixed in commit `c0580f6`. Pull latest and rebuild or reload image.
 
 ---
 
+## AI provider TLS / certificate errors
+
+Log example:
+
+```text
+AI provider connection check failed: tls: failed to verify certificate: x509: certificate signed by unknown authority
+```
+
+For **trusted homelab** endpoints with a private CA (e.g. OpenClaw on HTTPS):
+
+```yaml
+ai_insecure_skip_tls_verify: true
+```
+
+Or `BUGBOT_AI_INSECURE_SKIP_TLS_VERIFY=true` in `.env`. Prefer installing the CA on the host instead when possible.
+
+---
+
+## Too many false-positive Gitea issues
+
+Static heuristics can flag safe patterns (shell env vars, `data-api-key` in templates, SQL fragments with `?` placeholders). See [FALSE_POSITIVES.md](FALSE_POSITIVES.md).
+
+Quick mitigations:
+
+- Raise `min_issue_confidence` (e.g. `0.7`)
+- Lower `max_issues_per_run`
+- Rebuild after analyzer updates and re-run `./deploy.sh --scan-all`
+- Close stale tickets #33-style with a comment referencing the fix commit
+
+---
+
 ## No issues after push
 
 - `BUGBOT_AUTO_CREATE_ISSUES=true`

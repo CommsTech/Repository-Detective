@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"time"
 
 	"github.com/sirupsen/logrus"
 )
@@ -42,14 +41,12 @@ type AnthropicTransport struct {
 }
 
 // NewAnthropicTransport creates an Anthropic Messages API transport.
-func NewAnthropicTransport(baseURL, apiKey string, logger *logrus.Logger) *AnthropicTransport {
+func NewAnthropicTransport(baseURL, apiKey string, insecureSkipTLSVerify bool, logger *logrus.Logger) *AnthropicTransport {
 	return &AnthropicTransport{
 		endpointURL: normalizeBaseURL(baseURL) + "/messages",
 		apiKey:      apiKey,
-		httpClient: &http.Client{
-			Timeout: 120 * time.Second,
-		},
-		logger: logger,
+		httpClient:  NewHTTPClient(insecureSkipTLSVerify),
+		logger:      logger,
 	}
 }
 

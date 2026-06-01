@@ -7,6 +7,8 @@
 #   ./deploy.sh --restart    # restart container
 #   ./deploy.sh --status     # health + container status
 #   ./deploy.sh --scan       # trigger self-scan on commstech/Bugbot
+#   ./deploy.sh --scan-all   # queue scans on every Gitea repo the token can see
+#   ./deploy.sh --webhooks-all  # register push/PR webhooks on all visible repos
 #
 set -euo pipefail
 
@@ -164,6 +166,81 @@ trigger_scan() {
   echo
 }
 
+trigger_scan_all() {
+  # shellcheck disable=SC1091
+  set -a && source .env && set +a
+  local api_key="${REPOSITORY_DETECTIVE_API_KEY:-${BUGBOT_API_KEY:-}}"
+  local public_url="${REPOSITORY_DETECTIVE_PUBLIC_URL:-${BUGBOT_PUBLIC_URL:-http://127.0.0.1:8081}}"
+
+  [[ -n "$api_key" ]] || { warn "BUGBOT_API_KEY not set"; return 1; }
+
+  log "queueing scans on all Gitea repositories visible to the configured token"
+  curl -sf -X POST "${public_url%/}/api/v1/analyze/all" \
+    -H "X-Bugbot-API-Key: $api_key" \
+    -H "Content-Type: application/json" \
+    -d '{}'
+  echo
+}
+
+register_webhooks_all() {
+  # shellcheck disable=SC1091
+  set -a && source .env && set +a
+  local gitea_url="${REPOSITORY_DETECTIVE_GITEA_URL:-${BUGBOT_GITEA_URL:-}}"
+  local gitea_token="${REPOSITORY_DETECTIVE_GITEA_TOKEN:-${BUGBOT_GITEA_TOKEN:-}}"
+  local public_url="${REPOSITORY_DETECTIVE_PUBLIC_URL:-${BUGBOT_PUBLIC_URL:-}}"
+  local webhook_secret="${REPOSITORY_DETECTIVE_WEBHOOK_SECRET:-${BUGBOT_WEBHOOK_SECRET:-}}"
+
+  [[ -n "$gitea_url" && -n "$gitea_token" && -n "$public_url" && -n "$webhook_secret" ]] || {
+    warn "skipping webhook registration — set Gitea URL, token, public URL, and webhook secret in .env"
+    return 1
+  }
+
+  local webhook_url="${public_url%/}/webhook"
+  local created=0 failed=0
+
+  log "listing repositories from Gitea"
+  mapfile -t repos < <(
+    GITEA_URL="${gitea_url%/}" GITEA_TOKEN="$gitea_token" python3 <<'PY'
+import json, os, urllib.request
+
+base = os.environ["GITEA_URL"]
+token = os.environ["GITEA_TOKEN"]
+names = []
+page = 1
+while True:
+    req = urllib.request.Request(
+        f"{base}/api/v1/user/repos?limit=50&page={page}",
+        headers={"Authorization": f"token {token}"},
+    )
+    with urllib.request.urlopen(req, timeout=60) as resp:
+        batch = json.load(resp)
+    if not batch:
+        break
+    names.extend(r["full_name"] for r in batch)
+    if len(batch) < 50:
+        break
+    page += 1
+print("\n".join(names))
+PY
+  )
+
+  for full_name in "${repos[@]}"; do
+    [[ -n "$full_name" ]] || continue
+    IFS=/ read -r owner repo <<<"$full_name"
+    if curl -sf -X POST "${gitea_url%/}/api/v1/repos/$owner/$repo/hooks" \
+      -H "Authorization: token $gitea_token" \
+      -H "Content-Type: application/json" \
+      -d "{\"type\":\"gitea\",\"config\":{\"url\":\"$webhook_url\",\"content_type\":\"json\",\"secret\":\"$webhook_secret\"},\"events\":[\"push\",\"pull_request\"],\"active\":true}" \
+      >/dev/null 2>&1; then
+      created=$((created + 1))
+    else
+      failed=$((failed + 1))
+    fi
+  done
+
+  log "webhooks: $created created, $failed failed or already present (of ${#repos[@]} repos)"
+}
+
 cmd="${1:-deploy}"
 
 need_cmd docker
@@ -186,6 +263,12 @@ case "$cmd" in
   --scan)
     trigger_scan
     ;;
+  --scan-all)
+    trigger_scan_all
+    ;;
+  --webhooks-all)
+    register_webhooks_all
+    ;;
   deploy|--deploy|"")
     ensure_dirs
     ensure_env
@@ -198,6 +281,7 @@ case "$cmd" in
     register_webhook
     log "done — UI: http://127.0.0.1:8081/ui  onboard: http://127.0.0.1:8081/onboard"
     log "run ./deploy.sh --scan to dogfood this repository"
+    log "run ./deploy.sh --scan-all to scan every repo your Gitea token can access"
     ;;
   *)
     echo "unknown command: $cmd" >&2

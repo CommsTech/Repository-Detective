@@ -27,7 +27,7 @@ var staticRules = []staticRule{
 		ID: "SEC-HARDCODED-SECRET", Category: "hardcoded_secret", Severity: "high",
 		Title:       "Possible hardcoded secret",
 		Description: "A literal that looks like a password, API key, or token is embedded in source code.",
-		Pattern:     regexp.MustCompile(`(?i)(^|[^A-Z0-9_])(password|api[_-]?key|secret|token|auth)\s*(:=|[=:])\s*["'][^"']{8,}["']`),
+		Pattern:     regexp.MustCompile(`(?i)(password|api[_-]?key|secret|token|auth)\s*(:=|[=:])\s*["'][^"']{8,}["']`),
 	},
 	{
 		ID: "SEC-EVAL", Category: "code_injection", Severity: "critical",
@@ -57,7 +57,10 @@ var staticRules = []staticRule{
 
 var staticLineSkipPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`(?i)REDACTED|EXAMPLE|YOUR[-_ ]?API[-_ ]?KEY|your-api-key|changeme|user_input|userInput|AKIA[0-9A-Z]{16}`),
+	regexp.MustCompile(`\$\{|mapstructure:|` + "`json:" + `|data-api[-_]key|{{\s*\.`),
 }
+
+var safeSQLConcatSuffix = regexp.MustCompile(`(?i)\+\s*` + "`" + `[^` + "`" + `]*\?`)
 
 // FileContent holds fetched source for analysis.
 type FileContent struct {
@@ -68,6 +71,7 @@ type FileContent struct {
 
 func skipStaticAnalysisPath(path string) bool {
 	path = strings.ReplaceAll(path, "\\", "/")
+	lower := strings.ToLower(path)
 	switch {
 	case strings.Contains(path, "/vendor/"), strings.HasPrefix(path, "vendor/"):
 		return true
@@ -76,6 +80,12 @@ func skipStaticAnalysisPath(path string) bool {
 	case strings.Contains(path, "/testdata/"), strings.Contains(path, "/fixtures/"):
 		return true
 	case strings.HasPrefix(path, "web/static/"), strings.HasPrefix(path, "docs/"):
+		return true
+	case strings.HasPrefix(path, "ui/templates/"), strings.HasPrefix(path, "ui/static/"):
+		return true
+	case strings.HasSuffix(lower, ".sh"), strings.HasSuffix(lower, ".bash"):
+		return true
+	case strings.HasPrefix(lower, "scripts/"):
 		return true
 	case path == "ai/client.go":
 		return true
@@ -94,6 +104,84 @@ func skipStaticAnalysisLine(line string) bool {
 		}
 	}
 	return false
+}
+
+func isStaticFalsePositive(rule staticRule, path, line string) bool {
+	switch rule.ID {
+	case "SEC-HARDCODED-SECRET":
+		return isFalsePositiveHardcodedSecret(path, line)
+	case "SEC-SQL-CONCAT":
+		return isFalsePositiveSQLConcat(line)
+	case "QUAL-DEBUG":
+		return isFalsePositiveDebugLine(path, line)
+	default:
+		return false
+	}
+}
+
+func isFalsePositiveHardcodedSecret(path, line string) bool {
+	lower := strings.ToLower(line)
+	// Shell/Python/Go reading secrets from environment, not embedding literals.
+	if strings.Contains(line, "${") || strings.Contains(line, ":-") || strings.Contains(line, "os.Getenv") ||
+		strings.Contains(line, "viper.") || strings.Contains(line, "process.env") {
+		return true
+	}
+	// HTML/JS data attributes and template query params (e.g. data-api-key="{{.APIKey}}").
+	if strings.Contains(lower, "data-api") || strings.Contains(lower, "api_key=") && strings.Contains(line, "{{") {
+		return true
+	}
+	// Struct/config field names without string literal secrets.
+	if strings.Contains(line, "mapstructure:") || strings.Contains(line, "`json:") {
+		return true
+	}
+	// Variable names that mention api_key but assign from another variable.
+	if regexp.MustCompile(`(?i)\b(local\s+)?[a-z_]*api[_-]?key\s*=\s*["']?\$\{`).MatchString(line) {
+		return true
+	}
+	if regexp.MustCompile(`(?i)api[_-]?key\s*=\s*["']\$\{`).MatchString(line) {
+		return true
+	}
+	return false
+}
+
+func isFalsePositiveSQLConcat(line string) bool {
+	trimmed := strings.TrimSpace(line)
+	// Safe pattern: append a constant SQL fragment that only adds placeholders (?, $1).
+	if safeSQLConcatSuffix.MatchString(trimmed) {
+		return true
+	}
+	if strings.Contains(trimmed, "+") && strings.Contains(trimmed, "?") &&
+		!strings.Contains(trimmed, "+ \"") && !strings.Contains(trimmed, "+'") &&
+		!strings.Contains(trimmed, "fmt.Sprintf") && !strings.Contains(trimmed, " + ") {
+		// e.g. query := base + ` WHERE id = ?`
+		if strings.Contains(trimmed, "`") {
+			return true
+		}
+	}
+	// Go/sql comment or test scaffolding.
+	if strings.Contains(trimmed, "sqlmock") || strings.Contains(trimmed, "SELECT 1") {
+		return true
+	}
+	return false
+}
+
+func isFalsePositiveDebugLine(path, line string) bool {
+	lowerPath := strings.ToLower(path)
+	if strings.Contains(lowerPath, "/cmd/") || strings.HasSuffix(lowerPath, "main.go") {
+		return strings.Contains(line, "fmt.Println") && strings.Contains(line, "usage")
+	}
+	return false
+}
+
+func staticRuleConfidence(rule staticRule) float64 {
+	switch rule.ID {
+	case "SEC-EVAL":
+		return 0.95
+	case "SEC-HARDCODED-SECRET", "SEC-SQL-CONCAT", "SEC-CMD-EXEC":
+		return 0.82
+	default:
+		return 0.75
+	}
 }
 
 // RunStaticAnalysis performs deterministic pattern checks without LLM calls.
@@ -119,6 +207,9 @@ func RunStaticAnalysis(files []FileContent, enableSecurity, enableQuality bool) 
 				if !rule.Pattern.MatchString(line) {
 					continue
 				}
+				if isStaticFalsePositive(rule, file.Path, line) {
+					continue
+				}
 				findings = append(findings, models.CandidateFinding{
 					ID:         rule.ID,
 					Hypothesis: rule.Title,
@@ -127,7 +218,7 @@ func RunStaticAnalysis(files []FileContent, enableSecurity, enableQuality bool) 
 						CallChain: []string{file.Path},
 					},
 					Severity:    rule.Severity,
-					Confidence:  0.92,
+					Confidence:  staticRuleConfidence(rule),
 					AuditorType: "static",
 					Category:    rule.Category,
 					File:        file.Path,

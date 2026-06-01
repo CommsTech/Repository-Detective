@@ -51,9 +51,12 @@ type FindingDetail struct {
 type DashboardSummary struct {
 	TotalRepositories      int
 	RecentScans            []ScanWithRepo
-	FailedScansCount       int
-	ScannerFailuresCount   int
-	OpenFindingsBySeverity map[string]int
+	FailedScansCount         int
+	ScannerFailuresCount     int
+	ScannerToolsMissingCount int
+	OpenFindingsCount        int
+	IssuesDetectedInScans    int
+	OpenFindingsBySeverity   map[string]int
 	RecentLifecycleEvents  []LifecycleEvent
 	ScheduledScansCount    int
 	LastScheduledScanAt    *time.Time

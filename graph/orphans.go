@@ -128,7 +128,24 @@ func analyzeOrphans(b *builder) []GraphFinding {
 }
 
 func isLikelyGeneratedOrExample(path string) bool {
-	lower := strings.ToLower(path)
-	return strings.Contains(lower, "/vendor/") || strings.Contains(lower, "/examples/") ||
-		strings.Contains(lower, "/example/") || strings.HasSuffix(lower, "_gen.go")
+	lower := strings.ToLower(strings.ReplaceAll(path, "\\", "/"))
+	if strings.Contains(lower, "/vendor/") || strings.Contains(lower, "/examples/") ||
+		strings.Contains(lower, "/example/") || strings.HasSuffix(lower, "_gen.go") {
+		return true
+	}
+	// Non-Go assets and operator scripts are not import-graph entrypoints.
+	if strings.HasPrefix(lower, "ui/templates/") || strings.HasPrefix(lower, "ui/static/") ||
+		strings.HasPrefix(lower, "web/static/") || strings.HasPrefix(lower, "docs/") ||
+		strings.HasPrefix(lower, "scripts/") {
+		return true
+	}
+	if strings.HasSuffix(lower, ".sh") || strings.HasSuffix(lower, ".bash") ||
+		strings.HasSuffix(lower, ".html") || strings.HasSuffix(lower, ".md") ||
+		strings.HasSuffix(lower, ".yaml") || strings.HasSuffix(lower, ".yml") {
+		return true
+	}
+	if lower == "deploy.sh" || lower == "docker-compose.public.yml" {
+		return true
+	}
+	return false
 }
