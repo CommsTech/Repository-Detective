@@ -419,7 +419,7 @@ func loadConfig() error {
 	viper.SetDefault("runner_max_concurrent_jobs", 2)
 	viper.SetDefault("runner_result_max_size_mb", 50)
 	viper.SetDefault("runner_artifact_retention_days", 14)
-	viper.SetDefault("label_compat_mode", "dual")
+	viper.SetDefault("label_compat_mode", "new_only")
 	viper.SetDefault("notifications_enabled", false)
 	viper.SetDefault("notification_min_severity", "high")
 	viper.SetDefault("notification_cooldown_seconds", 300)
@@ -1326,7 +1326,7 @@ func postAnalysisContext(parent context.Context) (context.Context, context.Cance
 	if parent == nil {
 		parent = context.Background()
 	}
-	return context.WithTimeout(context.WithoutCancel(parent), 15*time.Minute)
+	return context.WithTimeout(context.WithoutCancel(parent), 30*time.Minute)
 }
 
 func createIssuesFromResult(ctx context.Context, owner, repo string, result *analyzers.AnalysisResult, contextLabel, commit string, prNumber int, repositoryID int64, effective store.EffectiveSettings) {

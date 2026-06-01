@@ -60,8 +60,8 @@ ensure_vendor() {
 
 build_image() {
   ensure_vendor
-  log "building Docker image from Dockerfile"
-  "${COMPOSE[@]}" build
+  log "building Docker image from Dockerfile (external scanner tools enabled)"
+  "${COMPOSE[@]}" build --build-arg INSTALL_EXTERNAL_TOOLS=true
 }
 
 ensure_certs() {

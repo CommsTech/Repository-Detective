@@ -36,21 +36,30 @@ RUN if [ -d vendor/modules.txt ]; then \
       CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o repository-detective .; \
     fi
 
+# Go-based scanners are built in the builder stage and copied into the runtime image.
+RUN go install golang.org/x/vuln/cmd/govulncheck@latest && \
+    go install github.com/securego/gosec/v2/cmd/gosec@latest && \
+    go install honnef.co/go/tools/cmd/staticcheck@latest
+
 FROM alpine:3.20
 
 # External scanner binaries are optional because some networks block GitHub/CDNs.
 # Enable at build time with: --build-arg INSTALL_EXTERNAL_TOOLS=true
 ARG INSTALL_EXTERNAL_TOOLS=false
 
-RUN apk --no-cache add ca-certificates tzdata wget su-exec \
+RUN apk --no-cache add ca-certificates tzdata wget su-exec git \
     && if [ "$INSTALL_EXTERNAL_TOOLS" = "true" ]; then \
-         apk --no-cache add curl bash tar; \
+         apk --no-cache add curl bash tar python3 py3-pip; \
          TRIVY_VERSION=0.57.1; \
          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
            | sh -s -- -b /usr/local/bin "v${TRIVY_VERSION}"; \
          GRYPE_VERSION=0.84.0; \
          curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh \
            | sh -s -- -b /usr/local/bin "v${GRYPE_VERSION}"; \
+         GITLEAKS_VERSION=8.21.2; \
+         curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+           | tar xz -C /usr/local/bin gitleaks; \
+         pip3 install --no-cache-dir --break-system-packages semgrep==1.76.0; \
          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh \
            | sh -s -- -b /usr/local/bin v1.55.2; \
          RUFF_VERSION=0.8.4; \
@@ -64,6 +73,7 @@ RUN addgroup -g 1001 -S repositorydetective && \
 WORKDIR /app
 
 COPY --from=builder /app/repository-detective .
+COPY --from=builder /go/bin/govulncheck /go/bin/gosec /go/bin/staticcheck /usr/local/bin/
 COPY --from=builder /app/config ./config
 COPY scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 

@@ -2,7 +2,16 @@ const selectedRepos = new Set();
 
 function apiHeaders() {
   const key = document.getElementById('apiKey').value.trim();
-  return key ? { 'X-Bugbot-API-Key': key, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
+  const headerName = 'X-Repository-Detective-API-Key';
+  const legacyHeader = 'X-Bugbot-API-Key';
+  if (!key) {
+    return { 'Content-Type': 'application/json' };
+  }
+  return {
+    [headerName]: key,
+    [legacyHeader]: key,
+    'Content-Type': 'application/json',
+  };
 }
 
 function setStatus(elId, message, ok) {
@@ -27,18 +36,19 @@ function connectionPayload() {
 function updateEnvExport() {
   const p = connectionPayload();
   const lines = [
-    `BUGBOT_GITEA_URL=${p.gitea_url}`,
-    `BUGBOT_GITEA_TOKEN=${p.gitea_token || 'your-token'}`,
-    `BUGBOT_WEBHOOK_SECRET=${p.webhook_secret || 'your-webhook-secret'}`,
-    `BUGBOT_API_KEY=${document.getElementById('apiKey').value.trim() || '<set-api-key>'}`,
-    `BUGBOT_PUBLIC_URL=${p.public_url}`,
-    `BUGBOT_AI_PROVIDER=${p.ai_provider}`,
-    `BUGBOT_AI_BASE_URL=${p.ai_base_url}`,
-    `BUGBOT_AI_API_KEY=${p.ai_api_key || 'your-ai-key'}`,
-    `BUGBOT_AI_MODEL=${p.ai_model}`,
-    `BUGBOT_ENABLE_SECURITY=true`,
-    `BUGBOT_ENABLE_QUALITY=true`,
-    `BUGBOT_AUTO_CREATE_ISSUES=true`,
+    `REPOSITORY_DETECTIVE_GITEA_URL=${p.gitea_url}`,
+    `REPOSITORY_DETECTIVE_GITEA_TOKEN=${p.gitea_token || 'your-token'}`,
+    `REPOSITORY_DETECTIVE_WEBHOOK_SECRET=${p.webhook_secret || 'your-webhook-secret'}`,
+    `REPOSITORY_DETECTIVE_API_KEY=${document.getElementById('apiKey').value.trim() || '<set-api-key>'}`,
+    `REPOSITORY_DETECTIVE_PUBLIC_URL=${p.public_url}`,
+    `REPOSITORY_DETECTIVE_AI_PROVIDER=${p.ai_provider}`,
+    `REPOSITORY_DETECTIVE_AI_BASE_URL=${p.ai_base_url}`,
+    `REPOSITORY_DETECTIVE_AI_API_KEY=${p.ai_api_key || 'your-ai-key'}`,
+    `REPOSITORY_DETECTIVE_AI_MODEL=${p.ai_model}`,
+    `REPOSITORY_DETECTIVE_ENABLE_SECURITY=true`,
+    `REPOSITORY_DETECTIVE_ENABLE_QUALITY=true`,
+    `REPOSITORY_DETECTIVE_AUTO_CREATE_ISSUES=true`,
+    `REPOSITORY_DETECTIVE_LABEL_COMPAT_MODE=new_only`,
   ];
   document.getElementById('envExport').textContent = lines.join('\n');
 }

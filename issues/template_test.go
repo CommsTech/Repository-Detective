@@ -82,7 +82,7 @@ func TestRenderIssueBodyRedactsSecrets(t *testing.T) {
 }
 
 func TestBuildLabelsIncludesCategoryAndSeverity(t *testing.T) {
-	SetLabelCompatMode(LabelCompatDual)
+	SetLabelCompatMode(LabelCompatNewOnly)
 	issue := &ai.CodeIssue{
 		Severity:   "high",
 		Category:   "secret",
@@ -92,13 +92,10 @@ func TestBuildLabelsIncludesCategoryAndSeverity(t *testing.T) {
 	labels := BuildLabels([]string{"custom"}, issue)
 	want := map[string]bool{
 		"custom":                      true,
-		"bugbot":                      true,
 		"repository-detective":        true,
 		"automated-review":            true,
-		"bugbot/secret":               true,
 		"repository-detective/secret": true,
 		"severity/high":               true,
-		"bugbot/open":                 true,
 		"repository-detective/open":   true,
 	}
 	for _, label := range labels {
@@ -121,13 +118,14 @@ func TestConfidenceNeedsHumanReviewLabel(t *testing.T) {
 	}
 	EnrichIssue("owner/repo", issue, "scan-1")
 	labels := BuildLabels(nil, issue)
+	want := "repository-detective/needs-human-review"
 	found := false
 	for _, label := range labels {
-		if label == LifecycleNeedsHumanReview {
+		if label == want {
 			found = true
 		}
 	}
 	if !found {
-		t.Fatalf("expected needs-human-review label, got %v", labels)
+		t.Fatalf("expected %s label, got %v", want, labels)
 	}
 }

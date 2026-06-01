@@ -13,6 +13,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        INSTALL_EXTERNAL_TOOLS: "true"
     image: repository-detective:latest
     container_name: repository-detective
     network_mode: host

@@ -15,7 +15,7 @@ const (
 	automatedReviewLabel = "automated-review"
 )
 
-var currentLabelCompatMode = LabelCompatDual
+var currentLabelCompatMode = LabelCompatNewOnly
 
 // SetLabelCompatMode configures how issue labels are written.
 func SetLabelCompatMode(mode string) {

@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
+	"strings"
 )
 
 // IssueLabelsOption is the request body for adding/replacing issue labels.
@@ -21,6 +23,14 @@ type IssueLabelsOption struct {
 func (c *Client) AddIssueLabels(ctx context.Context, owner, repo string, issueNumber int, labels []any) ([]Label, error) {
 	if len(labels) == 0 {
 		return nil, nil
+	}
+
+	labels, err := c.filterLabelsNotOnIssue(ctx, owner, repo, issueNumber, labels)
+	if err != nil {
+		return nil, err
+	}
+	if len(labels) == 0 {
+		return c.GetIssueLabels(ctx, owner, repo, issueNumber)
 	}
 
 	url := fmt.Sprintf("%s/api/v1/repos/%s/%s/issues/%d/labels", c.baseURL, owner, repo, issueNumber)
@@ -90,6 +100,50 @@ func (c *Client) GetIssueLabels(ctx context.Context, owner, repo string, issueNu
 		return nil, err
 	}
 	return labels, nil
+}
+
+func (c *Client) filterLabelsNotOnIssue(ctx context.Context, owner, repo string, issueNumber int, labels []any) ([]any, error) {
+	existing, err := c.GetIssueLabels(ctx, owner, repo, issueNumber)
+	if err != nil {
+		// If we cannot read current labels, still attempt attach (create path).
+		return labels, nil
+	}
+	present := make(map[string]struct{}, len(existing))
+	for _, label := range existing {
+		present[strings.ToLower(strings.TrimSpace(label.Name))] = struct{}{}
+	}
+	filtered := make([]any, 0, len(labels))
+	for _, label := range labels {
+		name, ok := labelName(label)
+		if !ok {
+			filtered = append(filtered, label)
+			continue
+		}
+		if _, found := present[strings.ToLower(name)]; found {
+			continue
+		}
+		filtered = append(filtered, label)
+	}
+	return filtered, nil
+}
+
+func labelName(label any) (string, bool) {
+	switch v := label.(type) {
+	case string:
+		v = strings.TrimSpace(v)
+		if v == "" {
+			return "", false
+		}
+		return v, true
+	case int:
+		return strconv.Itoa(v), true
+	case int64:
+		return strconv.FormatInt(v, 10), true
+	case float64:
+		return strconv.FormatInt(int64(v), 10), true
+	default:
+		return "", false
+	}
 }
 
 // CreateIssueComment adds a comment to an issue.

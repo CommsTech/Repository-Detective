@@ -254,15 +254,14 @@ func (m *Manager) createIssueForProblem(ctx context.Context, req *IssueCreationR
 		return fmt.Errorf("failed to create issue: %w", err)
 	}
 
-	if len(labelNames) > 0 {
+	// Labels are set via CreateIssueRequest; only backfill when Gitea ignored label IDs.
+	if len(labelIDs) == 0 && len(labelNames) > 0 {
 		labelPayload := make([]any, 0, len(labelNames))
 		for _, name := range labelNames {
 			labelPayload = append(labelPayload, name)
 		}
-		if attached, err := m.giteaClient.AddIssueLabels(ctx, req.Owner, req.Repository, createdIssue.Number, labelPayload); err != nil {
+		if _, err := m.giteaClient.AddIssueLabels(ctx, req.Owner, req.Repository, createdIssue.Number, labelPayload); err != nil {
 			m.logger.Warnf("Failed to attach labels to issue #%d: %v", createdIssue.Number, err)
-		} else if len(attached) == 0 {
-			m.logger.Warnf("Label attach returned empty for issue #%d — verify labels in Gitea UI", createdIssue.Number)
 		}
 	}
 
@@ -475,7 +474,7 @@ func capitalizeWord(value string) string {
 func GetDefaultConfig() *Config {
 	return &Config{
 		AutoCreateIssues:   true,
-		IssueLabels:        []string{"bugbot", "automated-review"},
+		IssueLabels:        []string{"repository-detective", "automated-review"},
 		MaxIssuesPerRun:    50,
 		SkipLowSeverity:    false,
 		GroupSimilarIssues: true,

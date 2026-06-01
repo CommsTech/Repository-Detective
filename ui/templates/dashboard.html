@@ -77,10 +77,10 @@
 </div>
 {{end}}
 
-{{if gt .ScannerToolsMissingCount 50}}
+{{if gt .ScannerToolsMissingCount 0}}
 <div class="rd-alert info">
-  <strong>Most “scanner failures” are missing CLI tools in the Docker image</strong> (Trivy, Semgrep, etc.).
-  Build with <code>INSTALL_EXTERNAL_TOOLS=true</code> or run scanners on a host with tools installed.
+  <strong>Some configured scanners are not available in this container.</strong>
+  Rebuild with <code>./deploy.sh</code> (enables external tools by default) or install the missing binaries on the host.
 </div>
 {{end}}
 
