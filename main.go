@@ -1071,10 +1071,12 @@ func scannerSummaries(result *analyzers.AnalysisResult) []gitea.ScannerResultSum
 }
 
 func runAnalysis(_ context.Context, fn func(context.Context)) {
-	analysisCtx, cancel := context.WithTimeout(context.Background(), time.Duration(config.AnalysisTimeout)*time.Second)
-	defer cancel()
-
-	if err := analysisLimiter.Run(analysisCtx, func() { fn(analysisCtx) }); err != nil {
+	// Wait for a concurrency slot without a scan timeout — queue wait must not consume analysis time.
+	if err := analysisLimiter.Run(context.Background(), func() {
+		analysisCtx, cancel := context.WithTimeout(context.Background(), time.Duration(config.AnalysisTimeout)*time.Second)
+		defer cancel()
+		fn(analysisCtx)
+	}); err != nil {
 		logger.Warnf("Analysis skipped — concurrency limit reached or timed out waiting for slot: %v", err)
 	}
 }
