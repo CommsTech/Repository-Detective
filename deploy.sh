@@ -175,8 +175,10 @@ trigger_scan_all() {
   local public_url="${REPOSITORY_DETECTIVE_PUBLIC_URL:-${BUGBOT_PUBLIC_URL:-http://127.0.0.1:8081}}"
   [[ -n "$api_key" ]] || { warn "BUGBOT_API_KEY not set"; return 1; }
 
-  local org="${GITEA_SCAN_ORGS:-}"
-  org="${org%%,*}"
+  local org=""
+  if [[ -f .env ]]; then
+    org="$(grep -E '^[[:space:]]*GITEA_SCAN_ORGS=' .env 2>/dev/null | tail -1 | cut -d= -f2- | tr -d ' "'\''\r' | cut -d, -f1)"
+  fi
   local body
   if [[ -n "$org" && -n "$profile" ]]; then
     body=$(printf '{"orgs":["%s"],"scan_profile":"%s"}' "$org" "$profile")
