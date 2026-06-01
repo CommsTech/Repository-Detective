@@ -127,17 +127,15 @@ func TestGitleaksNonzeroExitWithFindingsIsFound(t *testing.T) {
 	dir := t.TempDir()
 	cfg := scanners.DefaultConfig()
 	cfg.EnableGitleaks = true
+	cmd, args := testWriteScript(gitleaksFoundOneLine, 1)
 
-	// PowerShell exits 1 after writing JSON to stdout — mirrors gitleaks leak exit code.
 	result := scanners.RunGitleaksWithCommandForTest(
 		context.Background(),
 		logger,
 		dir,
 		cfg,
-		"powershell",
-		"-NoProfile",
-		"-Command",
-		"[Console]::Out.Write('"+gitleaksFoundOneLine+"'); exit 1",
+		cmd,
+		args...,
 	)
 	if result.Status != scanners.StatusFound {
 		t.Fatalf("expected found, got %s detail=%q", result.Status, result.Detail)
@@ -149,15 +147,14 @@ func TestGitleaksNonzeroExitWithFindingsIsFound(t *testing.T) {
 
 func TestGitleaksParseFailure(t *testing.T) {
 	logger := logrus.New()
+	cmd, args := testWriteScript("not-json", 0)
 	result := scanners.RunGitleaksWithCommandForTest(
 		context.Background(),
 		logger,
 		t.TempDir(),
 		scanners.DefaultConfig(),
-		"powershell",
-		"-NoProfile",
-		"-Command",
-		"[Console]::Out.Write('not-json')",
+		cmd,
+		args...,
 	)
 	if result.Status != scanners.StatusParseFailed {
 		t.Fatalf("expected parse_failed, got %s", result.Status)
@@ -171,16 +168,15 @@ func TestGitleaksTimeout(t *testing.T) {
 
 	cfg := scanners.DefaultConfig()
 	cfg.GitleaksTimeoutSeconds = 1
+	cmd, args := testSleepScript(5)
 
 	result := scanners.RunGitleaksWithCommandForTest(
 		ctx,
 		logger,
 		t.TempDir(),
 		cfg,
-		"powershell",
-		"-NoProfile",
-		"-Command",
-		"Start-Sleep -Seconds 5",
+		cmd,
+		args...,
 	)
 	if result.Status != scanners.StatusTimedOut {
 		t.Fatalf("expected timed_out, got %s detail=%q", result.Status, result.Detail)

@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+	"strings"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -35,12 +37,34 @@ func OpenSQLite(path string) (*SQLiteStore, error) {
 		return nil, fmt.Errorf("ping sqlite database: %w", err)
 	}
 
+	pragmas := []string{
+		"PRAGMA busy_timeout = 5000",
+	}
+	if runningInTestBinary() {
+		// Keep test runs fast and avoid host fsync stalls in CI.
+		pragmas = append(pragmas,
+			"PRAGMA journal_mode = MEMORY",
+			"PRAGMA synchronous = OFF",
+			"PRAGMA temp_store = MEMORY",
+		)
+	}
+	for _, pragma := range pragmas {
+		if _, err := db.Exec(pragma); err != nil {
+			_ = db.Close()
+			return nil, fmt.Errorf("sqlite pragma failed (%s): %w", pragma, err)
+		}
+	}
+
 	if err := applyMigrations(db); err != nil {
 		_ = db.Close()
 		return nil, err
 	}
 
 	return &SQLiteStore{db: db}, nil
+}
+
+func runningInTestBinary() bool {
+	return strings.HasSuffix(os.Args[0], ".test")
 }
 
 func (s *SQLiteStore) Close() error {

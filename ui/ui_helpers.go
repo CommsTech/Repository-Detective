@@ -24,13 +24,17 @@ func templateFuncs() template.FuncMap {
 	}
 }
 
-func joinStrings(items []string) string {
+func joinStrings(items []string, sep ...string) string {
 	if len(items) == 0 {
 		return ""
 	}
+	separator := ", "
+	if len(sep) > 0 && sep[0] != "" {
+		separator = sep[0]
+	}
 	out := items[0]
 	for i := 1; i < len(items); i++ {
-		out += ", " + items[i]
+		out += separator + items[i]
 	}
 	return out
 }

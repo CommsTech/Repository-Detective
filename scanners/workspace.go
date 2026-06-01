@@ -61,6 +61,7 @@ func ValidateWorkspacePath(workspaceRoot, relPath string) (string, error) {
 	}
 
 	normalized := filepath.ToSlash(strings.TrimSpace(relPath))
+	normalized = strings.ReplaceAll(normalized, "\\", "/")
 	if filepath.IsAbs(normalized) || strings.HasPrefix(normalized, "/") {
 		return "", fmt.Errorf("%w: absolute path %q", ErrUnsafeWorkspacePath, relPath)
 	}

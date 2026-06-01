@@ -75,9 +75,10 @@ func TestRunTrivyTimeout(t *testing.T) {
 
 	cfg := scanners.DefaultConfig()
 	cfg.TimeoutSeconds = 1
+	cmd, args := testSleepScript(5)
 
 	// Use a built-in long-running command name substitute via test hook.
-	result := scanners.RunTrivyWithCommandForTest(ctx, logger, t.TempDir(), cfg, "powershell", "-Command", "Start-Sleep -Seconds 5")
+	result := scanners.RunTrivyWithCommandForTest(ctx, logger, t.TempDir(), cfg, cmd, args...)
 	if result.Status != scanners.StatusTimedOut {
 		t.Fatalf("expected timed_out, got %s detail=%q", result.Status, result.Detail)
 	}
