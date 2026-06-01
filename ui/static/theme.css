@@ -326,7 +326,7 @@ body.rd-app {
 
 .rd-split {
   display: grid;
-  grid-template-columns: 1.2fr 0.8fr;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 20px;
   margin-bottom: 20px;
 }
@@ -397,6 +397,73 @@ body.rd-app {
   color: var(--rd-grey);
   text-transform: uppercase;
   letter-spacing: 0.04em;
+}
+
+.rd-pipeline-step.done {
+  background: linear-gradient(135deg, rgba(20, 184, 166, 0.15), rgba(37, 99, 235, 0.1));
+  color: var(--rd-navy);
+  box-shadow: inset 0 0 0 1px rgba(20, 184, 166, 0.35);
+}
+
+.rd-radar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rd-radar-row {
+  display: grid;
+  grid-template-columns: 120px 1fr 36px;
+  align-items: center;
+  gap: 12px;
+}
+
+.rd-radar-bar {
+  height: 10px;
+  background: #e2e8f0;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.rd-radar-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--rd-blue), var(--rd-teal));
+  min-width: 4px;
+}
+
+.rd-report {
+  background: linear-gradient(180deg, #f8fafc 0%, #fff 100%);
+  border: 1px solid var(--rd-grey-light);
+  border-left: 4px solid var(--rd-teal);
+  border-radius: var(--rd-radius-sm);
+  padding: 20px 24px;
+  margin: 12px 0;
+}
+
+.rd-report h3 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+  color: var(--rd-navy);
+}
+
+.rd-report-meta {
+  font-size: 0.82rem;
+  color: var(--rd-grey);
+  margin-bottom: 12px;
+}
+
+.badge, .badges .badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: #f1f5f9;
+  color: var(--rd-grey);
+  margin-right: 6px;
+  margin-bottom: 4px;
 }
 
 .rd-severity-list {

@@ -103,6 +103,9 @@ func skipStaticAnalysisLine(line string) bool {
 			return true
 		}
 	}
+	if strings.Contains(line, "regexp.MustCompile") || strings.Contains(line, "Pattern:") {
+		return true
+	}
 	return false
 }
 
@@ -112,6 +115,8 @@ func isStaticFalsePositive(rule staticRule, path, line string) bool {
 		return isFalsePositiveHardcodedSecret(path, line)
 	case "SEC-SQL-CONCAT":
 		return isFalsePositiveSQLConcat(line)
+	case "SEC-CMD-EXEC":
+		return isFalsePositiveCmdExec(path, line)
 	case "QUAL-DEBUG":
 		return isFalsePositiveDebugLine(path, line)
 	default:
@@ -160,6 +165,22 @@ func isFalsePositiveSQLConcat(line string) bool {
 	}
 	// Go/sql comment or test scaffolding.
 	if strings.Contains(trimmed, "sqlmock") || strings.Contains(trimmed, "SELECT 1") {
+		return true
+	}
+	return false
+}
+
+func isFalsePositiveCmdExec(path, line string) bool {
+	lower := strings.ToLower(path)
+	if strings.Contains(lower, "analyzers/static.go") || strings.Contains(lower, "analyzers/static_test.go") {
+		return true
+	}
+	// Heuristic rules describing exec patterns, not executing commands.
+	if strings.Contains(line, "Pattern:") || strings.Contains(line, "regexp.MustCompile") {
+		return true
+	}
+	// Safe wrappers: exec.Command with static args only (no dynamic fmt.Sprintf on same line).
+	if strings.Contains(line, "exec.CommandContext") && !strings.Contains(line, "fmt.Sprintf") && !strings.Contains(line, "+") {
 		return true
 	}
 	return false

@@ -125,6 +125,26 @@
     <p class="rd-muted">No open findings yet. Completed scans may still show issues on individual scan pages until findings are persisted.</p>
     {{end}}
   </div>
+
+  <div class="rd-card">
+    <div class="rd-card-head">
+      <h2>Category radar</h2>
+      <span class="rd-chip">Open findings by class</span>
+    </div>
+    {{if .OpenFindingsByCategory}}
+    <div class="rd-radar">
+      {{range $cat, $count := .OpenFindingsByCategory}}
+      <div class="rd-radar-row">
+        <span class="rd-badge {{categoryBadge $cat}}">{{$cat}}</span>
+        <div class="rd-radar-bar"><span style="width: {{radarBarWidth $count $.OpenFindingsByCategory}}%"></span></div>
+        <strong>{{$count}}</strong>
+      </div>
+      {{end}}
+    </div>
+    {{else}}
+    <p class="rd-muted">Category scores appear after findings are persisted from completed scans.</p>
+    {{end}}
+  </div>
 </div>
 {{end}}
 

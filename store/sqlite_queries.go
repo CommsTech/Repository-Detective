@@ -343,6 +343,27 @@ func (s *SQLiteStore) DashboardSummary(ctx context.Context, recentLimit int) (Da
 	}
 	rows.Close()
 
+	summary.OpenFindingsByCategory = map[string]int{}
+	catRows, err := s.db.QueryContext(ctx, `
+		SELECT LOWER(category), COUNT(1) FROM findings WHERE status = 'open' GROUP BY LOWER(category)
+	`)
+	if err != nil {
+		return summary, fmt.Errorf("findings by category: %w", err)
+	}
+	for catRows.Next() {
+		var cat string
+		var count int
+		if err := catRows.Scan(&cat, &count); err != nil {
+			catRows.Close()
+			return summary, err
+		}
+		if cat == "" {
+			cat = "unknown"
+		}
+		summary.OpenFindingsByCategory[cat] = count
+	}
+	catRows.Close()
+
 	recentRows, err := s.db.QueryContext(ctx, `
 		SELECT s.id, s.repository_id, s.trigger_type, s.ref, s.commit_sha, s.pr_number,
 			s.workspace_mode_used, s.commit_pinned, s.status, s.started_at, s.finished_at, s.summary_json, s.error,

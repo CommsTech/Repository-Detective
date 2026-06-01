@@ -43,9 +43,7 @@ func TestDedupKeepsHighestConfidence(t *testing.T) {
 	}
 }
 
-func TestDedupMergesDifferentCategoriesSameBlock(t *testing.T) {
-	// Known risk (Phase 7): spatial dedup merges by file + 10-line block, not category/rule.
-	// Different vulnerability classes on the same line block are collapsed intentionally today.
+func TestDedupKeepsSeparateCategoriesSameLine(t *testing.T) {
 	engine := &Engine{}
 
 	validated := []ValidatedFinding{
@@ -76,14 +74,8 @@ func TestDedupMergesDifferentCategoriesSameBlock(t *testing.T) {
 	}
 
 	deduped := engine.Dedup(validated)
-	if len(deduped) != 1 {
-		t.Fatalf("documented behavior: expected 1 merged finding, got %d", len(deduped))
-	}
-	if deduped[0].Category != "sql_injection" {
-		t.Fatalf("expected highest-confidence category to win, got %s", deduped[0].Category)
-	}
-	if len(deduped[0].Related) == 0 {
-		t.Fatal("expected merged hypothesis lineage in Related/description")
+	if len(deduped) != 2 {
+		t.Fatalf("expected 2 findings (one per category), got %d", len(deduped))
 	}
 }
 

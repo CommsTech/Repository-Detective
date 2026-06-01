@@ -91,6 +91,18 @@ func TestSkipStaticAnalysisPath(t *testing.T) {
 	}
 }
 
+func TestRunStaticAnalysisSkipsRuleDefinitionLines(t *testing.T) {
+	findings := RunStaticAnalysis([]FileContent{{
+		Path: "analyzers/static.go",
+		Content: `Pattern:     regexp.MustCompile(` + "`(?i)(exec\\.Command|fmt\\.Sprintf|%s)`" + `),`,
+	}}, true, false)
+	for _, f := range findings {
+		if f.ID == "SEC-CMD-EXEC" {
+			t.Fatalf("expected rule definition line to be skipped, got SEC-CMD-EXEC")
+		}
+	}
+}
+
 func TestStaticRuleConfidenceOrdering(t *testing.T) {
 	eval := staticRuleConfidence(staticRule{ID: "SEC-EVAL"})
 	secret := staticRuleConfidence(staticRule{ID: "SEC-HARDCODED-SECRET"})

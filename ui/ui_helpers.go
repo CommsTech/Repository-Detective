@@ -21,6 +21,7 @@ func templateFuncs() template.FuncMap {
 		"jsonPretty":     jsonPretty,
 		"shortID":        shortID,
 		"mul":            func(a, b float64) float64 { return a * b },
+		"radarBarWidth":  radarBarWidth,
 	}
 }
 
@@ -84,9 +85,9 @@ func severityBadgeClass(severity string) string {
 
 func categoryBadgeClass(category string) string {
 	switch strings.ToLower(strings.TrimSpace(category)) {
-	case "security", "misconfiguration":
+	case "security", "misconfiguration", "command_injection", "injection", "sql_injection", "xss":
 		return "security"
-	case "secret":
+	case "secret", "hardcoded_secret":
 		return "secret"
 	case "dependency":
 		return "dependency"
@@ -222,4 +223,25 @@ func shortID(s string, n int) string {
 		return s
 	}
 	return s[:n] + "…"
+}
+
+// radarBarWidth returns a 0–100 width for category bar charts on the dashboard.
+func radarBarWidth(count int, all map[string]int) int {
+	if count <= 0 || len(all) == 0 {
+		return 0
+	}
+	max := 0
+	for _, v := range all {
+		if v > max {
+			max = v
+		}
+	}
+	if max == 0 {
+		return 0
+	}
+	w := (count * 100) / max
+	if w < 8 && count > 0 {
+		return 8
+	}
+	return w
 }

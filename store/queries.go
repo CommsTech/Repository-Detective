@@ -57,6 +57,7 @@ type DashboardSummary struct {
 	OpenFindingsCount        int
 	IssuesDetectedInScans    int
 	OpenFindingsBySeverity   map[string]int
+	OpenFindingsByCategory   map[string]int
 	RecentLifecycleEvents  []LifecycleEvent
 	ScheduledScansCount    int
 	LastScheduledScanAt    *time.Time

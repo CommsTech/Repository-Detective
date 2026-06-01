@@ -844,7 +844,15 @@ func (e *Engine) Dedup(candidates []ValidatedFinding) []DedupedFinding {
 
 	groups := make(map[string][]ValidatedFinding)
 	for _, c := range candidates {
-		key := fmt.Sprintf("%s:%d", c.File, c.Line/10*10)
+		category := strings.TrimSpace(strings.ToLower(c.Category))
+		if category == "" {
+			category = strings.TrimSpace(strings.ToLower(string(c.AuditorType)))
+		}
+		if category == "" {
+			category = "security"
+		}
+		// Dedup within the same file, line block, and vulnerability class — never merge secrets with SQLi, etc.
+		key := fmt.Sprintf("%s:%d:%s", c.File, c.Line/10*10, category)
 		groups[key] = append(groups[key], c)
 	}
 

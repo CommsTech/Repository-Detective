@@ -1,35 +1,52 @@
 {{define "preinstall_audit.html"}}
 <!DOCTYPE html><html lang="en"><head>{{template "head" .}}</head><body class="rd-app">
-{{template "nav" .}}<main><h1>Pre-install audit</h1>
-<div class="rd-alert">Draft reports require human review before submission. No automatic issue filing or email in Phase 9.</div>
+{{template "nav" .}}
+<div class="rd-alert info">Draft reports require human review before submission. No automatic issue filing in pre-install audits.</div>
 <div class="rd-card">
-<p><strong>Repository:</strong> {{.Data.Audit.NormalizedRepoURL}}</p>
-<p><strong>Commit:</strong> <code>{{.Data.Audit.CommitSHA}}</code></p>
-<p><strong>Status:</strong> <span class="badge">{{.Data.Audit.Status}}</span></p>
-<p><strong>Risk score:</strong> {{.Data.Audit.RiskScore}} / 100</p>
-<p><strong>Recommendation:</strong> {{.Data.Audit.Recommendation}}</p>
-{{if .Data.Audit.Error}}<p class="rd-alert">{{.Data.Audit.Error}}</p>{{end}}
+  <div class="rd-card-head"><h2>Audit summary</h2><span class="rd-chip">{{.Data.Audit.Status}}</span></div>
+  <p><strong>Repository:</strong> {{.Data.Audit.NormalizedRepoURL}}</p>
+  <p><strong>Commit:</strong> <code>{{.Data.Audit.CommitSHA}}</code></p>
+  <p><strong>Risk score:</strong> <span class="rd-badge medium">{{.Data.Audit.RiskScore}} / 100</span></p>
+  <p><strong>Recommendation:</strong> {{.Data.Audit.Recommendation}}</p>
+  {{if .Data.Audit.Error}}<p class="rd-alert">{{.Data.Audit.Error}}</p>{{end}}
 </div>
-<div class="rd-card"><h2>Findings</h2><table>
-<tr><th>Severity</th><th>Category</th><th>Source</th><th>Title</th><th>File</th></tr>
-{{range .Data.Findings}}<tr>
-<td>{{.Severity}}</td><td>{{.Category}}</td><td>{{.Source}}</td><td>{{.Title}}</td><td><code>{{.FilePath}}</code></td>
-</tr>{{else}}<tr><td colspan="5" class="rd-muted">No findings recorded</td></tr>{{end}}
-</table></div>
-<div class="rd-card"><h2>Generated reports</h2>
-{{range .Data.Reports}}
-<h3>{{.Title}} <span class="badge">{{.ReportType}}</span></h3>
-<p class="rd-muted">Sensitivity: {{.Sensitivity}} · Confidence: {{.Confidence}}{{if .ApprovedByUser}} · Reviewed{{end}}</p>
-<pre id="report-{{.ID}}">{{.BodyMarkdown}}</pre>
-<button type="button" onclick="navigator.clipboard.writeText(document.getElementById('report-{{.ID}}').innerText)">Copy markdown</button>
-<form method="post" action="{{$.BasePath}}/preinstall/reports/{{.ID}}/reviewed{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}" style="display-muted">
-<input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
-<button type="submit" {{if .ApprovedByUser}}disabled{{end}}>Mark reviewed</button>
-</form>
-<hr>
-{{else}}<p class="rd-muted">Reports appear when the audit completes.</p>{{end}}
+<div class="rd-card">
+  <div class="rd-card-head"><h2>Findings</h2></div>
+  <table class="rd-table">
+    <tr><th>Severity</th><th>Category</th><th>Source</th><th>Title</th><th>File</th></tr>
+    {{range .Data.Findings}}
+    <tr>
+      <td><span class="rd-badge {{severityBadge .Severity}}">{{.Severity}}</span></td>
+      <td><span class="rd-badge {{categoryBadge .Category}}">{{.Category}}</span></td>
+      <td>{{.Source}}</td>
+      <td>{{.Title}}</td>
+      <td><code>{{.FilePath}}</code></td>
+    </tr>
+    {{else}}
+    <tr><td colspan="5" class="rd-muted">No findings recorded</td></tr>
+    {{end}}
+  </table>
 </div>
-<p><a href="{{.BasePath}}/preinstall{{if .APIKey}}?api_key={{.APIKey}}{{end}}">← Back to pre-install audits</a></p>
+<div class="rd-card">
+  <div class="rd-card-head"><h2>Generated reports</h2><span class="rd-chip">Markdown drafts</span></div>
+  {{range .Data.Reports}}
+  <div class="rd-report">
+    <h3>{{.Title}} <span class="rd-badge code-quality">{{.ReportType}}</span></h3>
+    <p class="rd-report-meta">Sensitivity: {{.Sensitivity}} · Confidence: {{.Confidence}}{{if .ApprovedByUser}} · Reviewed{{end}}</p>
+    <pre class="rd-pre" id="report-{{.ID}}">{{.BodyMarkdown}}</pre>
+    <div class="rd-actions">
+      <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('report-{{.ID}}').innerText)">Copy markdown</button>
+      <form method="post" action="{{$.BasePath}}/preinstall/reports/{{.ID}}/reviewed{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}" style="display:inline">
+        <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+        <button type="submit" class="rd-btn-secondary" {{if .ApprovedByUser}}disabled{{end}}>Mark reviewed</button>
+      </form>
+    </div>
+  </div>
+  {{else}}
+  <p class="rd-muted">Reports appear when the audit completes.</p>
+  {{end}}
+</div>
+<p><a class="rd-link" href="{{.BasePath}}/preinstall{{if .APIKey}}?api_key={{.APIKey}}{{end}}">← Back to pre-install audits</a></p>
 {{template "foot" .}}
 </body></html>
 {{end}}

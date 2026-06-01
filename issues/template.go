@@ -146,7 +146,8 @@ func RenderIssueBody(in IssueRenderInput) string {
 	}
 
 	b.WriteString("\n---\n")
-	b.WriteString("*Automated finding from Repository Detective*\n")
+	b.WriteString("> **Repository Detective** · Inspect · Analyze · Improve\n\n")
+	b.WriteString("*Automated finding — review the report flow above before closing.*\n")
 
 	return b.String()
 }
