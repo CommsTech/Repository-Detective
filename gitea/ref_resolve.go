@@ -15,7 +15,14 @@ func (c *Client) ResolveRef(ctx context.Context, owner, repo, ref string) (strin
 		candidates = append(candidates, ref)
 	}
 
-	if info, err := c.GetRepository(ctx, owner, repo); err == nil {
+	info, err := c.GetRepository(ctx, owner, repo)
+	if err == nil {
+		if info.Empty {
+			if db := strings.TrimSpace(info.DefaultBranch); db != "" {
+				return db, nil
+			}
+			return "main", nil
+		}
 		if db := strings.TrimSpace(info.DefaultBranch); db != "" {
 			candidates = append(candidates, db)
 		}

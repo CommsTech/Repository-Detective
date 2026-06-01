@@ -38,3 +38,26 @@ func TestResolveRefUsesDefaultBranch(t *testing.T) {
 		t.Fatalf("ref = %q, want develop", got)
 	}
 }
+
+func TestResolveRefEmptyRepository(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/repos/o/empty" {
+			http.NotFound(w, r)
+			return
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"default_branch": "main",
+			"empty":          true,
+		})
+	}))
+	defer server.Close()
+
+	client := gitea.NewClient(server.URL, "token", logrus.New())
+	got, err := client.ResolveRef(context.Background(), "o", "empty", "")
+	if err != nil {
+		t.Fatalf("ResolveRef: %v", err)
+	}
+	if got != "main" {
+		t.Fatalf("ref = %q, want main", got)
+	}
+}

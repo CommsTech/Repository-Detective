@@ -173,22 +173,23 @@ trigger_scan_all() {
   set -a && source .env && set +a
   local api_key="${REPOSITORY_DETECTIVE_API_KEY:-${BUGBOT_API_KEY:-}}"
   local public_url="${REPOSITORY_DETECTIVE_PUBLIC_URL:-${BUGBOT_PUBLIC_URL:-http://127.0.0.1:8081}}"
+  local org="${GITEA_SCAN_ORGS:-${BUGBOT_REPO_OWNER:-commstech}}"
+  org="${org%%,*}"
 
   [[ -n "$api_key" ]] || { warn "BUGBOT_API_KEY not set"; return 1; }
 
+  local body
   if [[ -n "$profile" ]]; then
-    log "queueing $profile scans on all Gitea repositories visible to the configured token"
-    curl -sf -X POST "${public_url%/}/api/v1/analyze/all" \
-      -H "X-Bugbot-API-Key: $api_key" \
-      -H "Content-Type: application/json" \
-      -d "{\"scan_profile\":\"$profile\"}"
+    body=$(printf '{"orgs":["%s"],"scan_profile":"%s"}' "$org" "$profile")
+    log "queueing $profile scans on org $org (+ user repos)"
   else
-    log "queueing scans on all Gitea repositories visible to the configured token"
-    curl -sf -X POST "${public_url%/}/api/v1/analyze/all" \
-      -H "X-Bugbot-API-Key: $api_key" \
-      -H "Content-Type: application/json" \
-      -d '{}'
+    body=$(printf '{"orgs":["%s"]}' "$org")
+    log "queueing scans on org $org (+ user repos)"
   fi
+  curl -sf -X POST "${public_url%/}/api/v1/analyze/all" \
+    -H "X-Bugbot-API-Key: $api_key" \
+    -H "Content-Type: application/json" \
+    -d "$body"
   echo
 }
 

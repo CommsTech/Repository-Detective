@@ -148,6 +148,7 @@ type Repository struct {
 	Language      string `json:"language"`
 	DefaultBranch string `json:"default_branch"`
 	Size          int64  `json:"size"`
+	Empty         bool   `json:"empty"`
 	Fork          bool   `json:"fork"`
 	Archived      bool   `json:"archived"`
 }

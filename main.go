@@ -1635,6 +1635,11 @@ func handleBulkAnalysis(c *gin.Context) {
 			}
 		}
 	}
+	if len(orgs) == 0 {
+		if owner := strings.TrimSpace(os.Getenv("BUGBOT_REPO_OWNER")); owner != "" {
+			orgs = []string{owner}
+		}
+	}
 	for _, org := range orgs {
 		orgRepos, err := giteaClient.ListAllOrgRepositories(listCtx, org)
 		if err != nil {

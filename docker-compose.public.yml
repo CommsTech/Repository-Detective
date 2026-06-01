@@ -25,6 +25,8 @@ services:
       BUGBOT_SKIP_STARTUP_CHECKS: "true"
       BUGBOT_STARTUP_CHECK_TIMEOUT: "10"
       BUGBOT_DATABASE_PATH: /app/data/bugbot.db
+      BUGBOT_REPO_OWNER: commstech
+      GITEA_SCAN_ORGS: commstech
     volumes:
       - ./config:/app/config:ro
       - ./data:/app/data
