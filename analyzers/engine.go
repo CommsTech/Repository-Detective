@@ -1222,8 +1222,16 @@ func (e *Engine) analysisResultFromReport(ctx context.Context, owner, repo, ref,
 
 func (e *Engine) resolveAnalyzableFiles(ctx context.Context, owner, repo, ref string, targetFiles []string) ([]gitea.RepositoryContent, error) {
 	if len(targetFiles) == 0 {
+		resolvedRef, err := e.giteaClient.ResolveRef(ctx, owner, repo, ref)
+		if err != nil {
+			return nil, err
+		}
+		ref = resolvedRef
 		allFiles, err := e.giteaClient.ListAllFiles(ctx, owner, repo, ref, "")
 		if err != nil {
+			if strings.Contains(err.Error(), "content not found") {
+				return []gitea.RepositoryContent{}, nil
+			}
 			return nil, err
 		}
 		var filtered []gitea.RepositoryContent

@@ -110,6 +110,7 @@ type QueryStore interface {
 	GetLastScheduledScanFinishedAt(ctx context.Context, repositoryID int64) (*time.Time, error)
 	ListRecentScheduledScans(ctx context.Context, limit int) ([]ScanWithRepo, error)
 	CountScheduledScansSince(ctx context.Context, since time.Time) (int, error)
+	ReapStaleScans(ctx context.Context, olderThan time.Duration) (int, error)
 
 	CreateAuditRequest(ctx context.Context, req AuditRequest) (AuditRequest, error)
 	UpdateAuditRequest(ctx context.Context, req AuditRequest) error

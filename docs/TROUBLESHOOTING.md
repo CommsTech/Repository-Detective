@@ -73,6 +73,18 @@ Or `BUGBOT_AI_INSECURE_SKIP_TLS_VERIFY=true` in `.env`. Prefer installing the CA
 
 ---
 
+## Bulk scan stopped after a few repositories
+
+Earlier versions cancelled queued scans when the `/api/v1/analyze/all` HTTP response returned. Upgrade to the latest build (detached scan context) and re-run:
+
+```bash
+./deploy.sh --scan-all-quick
+```
+
+Use `./deploy.sh --scan` for a full-profile dogfood pass on `commstech/Bugbot` only.
+
+---
+
 ## Too many false-positive Gitea issues
 
 Static heuristics can flag safe patterns (shell env vars, `data-api-key` in templates, SQL fragments with `?` placeholders). See [FALSE_POSITIVES.md](FALSE_POSITIVES.md).

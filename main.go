@@ -42,6 +42,8 @@ var version = "dev"
 
 var componentsReady atomic.Bool
 
+type scanProfileOverrideKey struct{}
+
 var (
 	logger              *logrus.Logger
 	config              *Config
@@ -923,6 +925,18 @@ func initializeComponents() error {
 		logger.Info("Scheduled scans disabled (scheduler_enabled=false or database disabled)")
 	}
 
+	if bugbotStore != nil {
+		staleAge := time.Duration(config.AnalysisTimeout) * time.Second * 2
+		if staleAge < 30*time.Minute {
+			staleAge = 30 * time.Minute
+		}
+		if n, err := bugbotStore.ReapStaleScans(context.Background(), staleAge); err != nil {
+			logger.Warnf("Failed to reap stale scans: %v", err)
+		} else if n > 0 {
+			logger.Infof("Reaped %d stale started scan(s)", n)
+		}
+	}
+
 	logger.Info("All components initialized successfully")
 	return nil
 }
@@ -1181,6 +1195,19 @@ func scanPolicyFromEffective(e store.EffectiveSettings) analyzers.ScanPolicy {
 	}
 }
 
+func withScanProfileOverride(ctx context.Context, profile string) context.Context {
+	profile = store.NormalizeScanProfile(profile)
+	if profile == "" || !store.IsValidScanProfile(profile) {
+		return ctx
+	}
+	return context.WithValue(ctx, scanProfileOverrideKey{}, profile)
+}
+
+func scanProfileOverrideFromContext(ctx context.Context) string {
+	v, _ := ctx.Value(scanProfileOverrideKey{}).(string)
+	return v
+}
+
 func resolveEffectiveSettingsForRepo(ctx context.Context, owner, repo string) (context.Context, store.EffectiveSettings) {
 	repoSettings := store.RepoSettings{}
 	effective, meta := store.ResolveEffectiveSettingsFull(appGlobalSnapshot, repoSettings)
@@ -1194,6 +1221,11 @@ func resolveEffectiveSettingsForRepo(ctx context.Context, owner, repo string) (c
 				effective, meta = store.ResolveEffectiveSettingsFull(appGlobalSnapshot, settings)
 			}
 		}
+	}
+	if override := scanProfileOverrideFromContext(ctx); override != "" && override != store.ScanProfileCustom {
+		effective = store.MergeConfigOverProfile(store.ProfileDefaults(override), effective)
+		meta.ScanProfile = override
+		meta.ProfileSource = "request_override"
 	}
 	if effective.AIPolicy == store.AIPolicyAllowed && aiClient == nil {
 		effective.EnableLLMAuditors = false
@@ -1465,16 +1497,19 @@ func runnerNonceMiddleware() gin.HandlerFunc {
 }
 
 type manualAnalysisRequest struct {
-	Owner      string `json:"owner" binding:"required"`
-	Repository string `json:"repository" binding:"required"`
-	Ref        string `json:"ref"`
-	Type       string `json:"type"` // "repository" or "pull_request"
-	PRNumber   int    `json:"pr_number"`
+	Owner       string `json:"owner" binding:"required"`
+	Repository  string `json:"repository" binding:"required"`
+	Ref         string `json:"ref"`
+	Type        string `json:"type"` // "repository" or "pull_request"
+	PRNumber    int    `json:"pr_number"`
+	ScanProfile string `json:"scan_profile"`
 }
 
 func enqueueManualAnalysis(parentCtx context.Context, req manualAnalysisRequest) {
+	// Detach from HTTP request context so bulk /analyze/all scans are not cancelled when the handler returns.
+	scanCtx := context.WithoutCancel(parentCtx)
 	go func() {
-		runAnalysis(parentCtx, func(ctx context.Context) {
+		runAnalysis(withScanProfileOverride(scanCtx, req.ScanProfile), func(ctx context.Context) {
 			var result *analyzers.AnalysisResult
 			var err error
 			var repositoryID int64
@@ -1489,6 +1524,9 @@ func enqueueManualAnalysis(parentCtx context.Context, req manualAnalysisRequest)
 			ctx, repositoryID = beginPersistedScan(ctx, &scanCtx)
 			ctx, effective := resolveEffectiveSettingsForRepo(ctx, req.Owner, req.Repository)
 			if !effective.Enabled {
+				postCtx, postCancel := postAnalysisContext(ctx)
+				defer postCancel()
+				finishPersistedScan(postCtx, &scanCtx, repositoryID, nil, fmt.Errorf("repository disabled in settings"))
 				logger.Infof("Manual scan skipped — repository %s/%s disabled in settings", req.Owner, req.Repository)
 				return
 			}
@@ -1514,9 +1552,16 @@ func enqueueManualAnalysis(parentCtx context.Context, req manualAnalysisRequest)
 				scanCtx.TriggerType = store.TriggerPR
 				result, err = analysisEngine.AnalyzePullRequest(ctx, req.Owner, req.Repository, req.PRNumber)
 			} else {
-				ref := req.Ref
+				ref := strings.TrimSpace(req.Ref)
 				if ref == "" {
 					ref = "main"
+				}
+				if giteaClient != nil {
+					if resolved, rerr := giteaClient.ResolveRef(ctx, req.Owner, req.Repository, ref); rerr == nil {
+						ref = resolved
+					} else {
+						logger.Warnf("Could not resolve ref for %s/%s: %v", req.Owner, req.Repository, rerr)
+					}
 				}
 				scanCtx.Ref = ref
 				result, err = analysisEngine.AnalyzeRepository(ctx, req.Owner, req.Repository, ref)
@@ -1553,9 +1598,10 @@ func handleManualAnalysis(c *gin.Context) {
 // handleBulkAnalysis queues a full-repository scan for every Gitea repo the token can see.
 func handleBulkAnalysis(c *gin.Context) {
 	var req struct {
-		Orgs   []string `json:"orgs"`
-		Ref    string   `json:"ref"`
-		DryRun bool     `json:"dry_run"`
+		Orgs        []string `json:"orgs"`
+		Ref         string   `json:"ref"`
+		ScanProfile string   `json:"scan_profile"`
+		DryRun      bool     `json:"dry_run"`
 	}
 	_ = c.ShouldBindJSON(&req)
 
@@ -1626,20 +1672,22 @@ func handleBulkAnalysis(c *gin.Context) {
 			continue
 		}
 		enqueueManualAnalysis(c.Request.Context(), manualAnalysisRequest{
-			Owner:      parts[0],
-			Repository: parts[1],
-			Ref:        ref,
-			Type:       "repository",
+			Owner:       parts[0],
+			Repository:  parts[1],
+			Ref:         ref,
+			Type:        "repository",
+			ScanProfile: strings.TrimSpace(req.ScanProfile),
 		})
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"status":       "bulk analysis queued",
-		"queued_count": len(queued),
+		"status":        "bulk analysis queued",
+		"queued_count":  len(queued),
 		"skipped_count": len(skipped),
-		"queued":       queued,
-		"skipped":      skipped,
-		"dry_run":      req.DryRun,
+		"scan_profile":  strings.TrimSpace(req.ScanProfile),
+		"queued":        queued,
+		"skipped":       skipped,
+		"dry_run":       req.DryRun,
 	})
 }
 

@@ -7,7 +7,8 @@
 #   ./deploy.sh --restart    # restart container
 #   ./deploy.sh --status     # health + container status
 #   ./deploy.sh --scan       # trigger self-scan on commstech/Bugbot
-#   ./deploy.sh --scan-all   # queue scans on every Gitea repo the token can see
+#   ./deploy.sh --scan-all        # full scans on every Gitea repo (global profile)
+#   ./deploy.sh --scan-all-quick  # fast profile scans on every repo
 #   ./deploy.sh --webhooks-all  # register push/PR webhooks on all visible repos
 #
 set -euo pipefail
@@ -167,6 +168,7 @@ trigger_scan() {
 }
 
 trigger_scan_all() {
+  local profile="${1:-}"
   # shellcheck disable=SC1091
   set -a && source .env && set +a
   local api_key="${REPOSITORY_DETECTIVE_API_KEY:-${BUGBOT_API_KEY:-}}"
@@ -174,11 +176,19 @@ trigger_scan_all() {
 
   [[ -n "$api_key" ]] || { warn "BUGBOT_API_KEY not set"; return 1; }
 
-  log "queueing scans on all Gitea repositories visible to the configured token"
-  curl -sf -X POST "${public_url%/}/api/v1/analyze/all" \
-    -H "X-Bugbot-API-Key: $api_key" \
-    -H "Content-Type: application/json" \
-    -d '{}'
+  if [[ -n "$profile" ]]; then
+    log "queueing $profile scans on all Gitea repositories visible to the configured token"
+    curl -sf -X POST "${public_url%/}/api/v1/analyze/all" \
+      -H "X-Bugbot-API-Key: $api_key" \
+      -H "Content-Type: application/json" \
+      -d "{\"scan_profile\":\"$profile\"}"
+  else
+    log "queueing scans on all Gitea repositories visible to the configured token"
+    curl -sf -X POST "${public_url%/}/api/v1/analyze/all" \
+      -H "X-Bugbot-API-Key: $api_key" \
+      -H "Content-Type: application/json" \
+      -d '{}'
+  fi
   echo
 }
 
@@ -265,6 +275,9 @@ case "$cmd" in
     ;;
   --scan-all)
     trigger_scan_all
+    ;;
+  --scan-all-quick)
+    trigger_scan_all fast
     ;;
   --webhooks-all)
     register_webhooks_all

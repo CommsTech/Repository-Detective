@@ -643,3 +643,22 @@ func (s *SQLiteStore) CountScheduledScansSince(ctx context.Context, since time.T
 	}
 	return count, nil
 }
+
+// ReapStaleScans marks long-running "started" scans as failed (e.g. after process restart or context cancel).
+func (s *SQLiteStore) ReapStaleScans(ctx context.Context, olderThan time.Duration) (int, error) {
+	if olderThan <= 0 {
+		olderThan = 2 * time.Hour
+	}
+	cutoff := time.Now().UTC().Add(-olderThan).Format(time.RFC3339)
+	res, err := s.db.ExecContext(ctx, `
+		UPDATE scans
+		SET status = ?, finished_at = ?, error = ?
+		WHERE status = ? AND started_at < ?
+	`, ScanStatusFailed, formatTime(time.Now().UTC()),
+		"scan did not complete (stale — reaped on startup)", ScanStatusStarted, cutoff)
+	if err != nil {
+		return 0, fmt.Errorf("reap stale scans: %w", err)
+	}
+	n, _ := res.RowsAffected()
+	return int(n), nil
+}
