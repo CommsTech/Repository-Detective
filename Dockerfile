@@ -37,9 +37,9 @@ RUN if [ -d vendor/modules.txt ]; then \
     fi
 
 # Go-based scanners are built in the builder stage and copied into the runtime image.
-RUN go install golang.org/x/vuln/cmd/govulncheck@latest && \
-    go install github.com/securego/gosec/v2/cmd/gosec@latest && \
-    go install honnef.co/go/tools/cmd/staticcheck@latest
+RUN go install golang.org/x/vuln/cmd/govulncheck@v1.1.3 && \
+    go install github.com/securego/gosec/v2/cmd/gosec@v2.21.4 && \
+    go install honnef.co/go/tools/cmd/staticcheck@v0.5.1
 
 FROM alpine:3.20
 
@@ -47,7 +47,7 @@ FROM alpine:3.20
 # Enable at build time with: --build-arg INSTALL_EXTERNAL_TOOLS=true
 ARG INSTALL_EXTERNAL_TOOLS=false
 
-RUN apk --no-cache add ca-certificates tzdata wget su-exec git \
+RUN apk update && apk --no-cache add ca-certificates tzdata wget su-exec git \
     && if [ "$INSTALL_EXTERNAL_TOOLS" = "true" ]; then \
          apk --no-cache add curl bash tar python3 py3-pip; \
          TRIVY_VERSION=0.57.1; \
@@ -58,8 +58,8 @@ RUN apk --no-cache add ca-certificates tzdata wget su-exec git \
            | sh -s -- -b /usr/local/bin "v${GRYPE_VERSION}"; \
          GITLEAKS_VERSION=8.21.2; \
          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
-           | tar xz -C /usr/local/bin gitleaks; \
-         pip3 install --no-cache-dir --break-system-packages semgrep==1.76.0; \
+           | tar xz -C /usr/local/bin gitleaks || true; \
+         pip3 install --no-cache-dir --break-system-packages semgrep==1.76.0 || true; \
          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh \
            | sh -s -- -b /usr/local/bin v1.55.2; \
          RUFF_VERSION=0.8.4; \
