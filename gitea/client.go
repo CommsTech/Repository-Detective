@@ -222,6 +222,10 @@ func (c *Client) ListRepositoryContents(ctx context.Context, owner, repo, ref, d
 	}
 
 	if len(contents) == 1 && contents[0].Type == "file" {
+		// Some repos expose only a single file at the repository root.
+		if strings.TrimSpace(dirPath) == "" {
+			return contents, nil
+		}
 		return nil, fmt.Errorf("path is not a directory: %s", dirPath)
 	}
 
