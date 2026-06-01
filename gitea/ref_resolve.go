@@ -3,6 +3,7 @@ package gitea
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strings"
 )
 
@@ -47,6 +48,26 @@ func (c *Client) ResolveRef(ctx context.Context, owner, repo, ref string) (strin
 }
 
 func (c *Client) refExists(ctx context.Context, owner, repo, ref string) bool {
-	_, err := c.fetchContentsResponse(ctx, owner, repo, ref, "")
+	ref = strings.TrimSpace(ref)
+	if ref == "" {
+		return false
+	}
+	url := fmt.Sprintf("%s/api/v1/repos/%s/%s/git/refs/heads/%s", c.baseURL, owner, repo, ref)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return false
+	}
+	req.Header.Set("Authorization", "token "+c.token)
+	req.Header.Set("Accept", "application/json")
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return false
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusOK {
+		return true
+	}
+	// Fallback for older Gitea builds that only expose contents at repo root.
+	_, err = c.fetchContentsResponse(ctx, owner, repo, ref, "")
 	return err == nil
 }
