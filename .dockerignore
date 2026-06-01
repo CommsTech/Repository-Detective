@@ -1,0 +1,19 @@
+.git
+.gitignore
+.env
+.env.*
+data/
+build/
+bin/
+dist/
+*.db
+coverage.out
+coverage.html
+docs/dogfood-reports/
+deployment-backups/
+vendor/
+certs/
+status.md
+*.md
+!DEPLOYMENT.md
+Repository Detective Theme and Logo.png
