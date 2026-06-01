@@ -126,15 +126,15 @@ docker-push:
 # Docker Compose targets
 compose-up:
 	@echo "Starting services with Docker Compose..."
-	docker-compose -f docker-compose.public.yml up -d
+	docker-compose -f docker-compose.yml up -d
 
 compose-down:
 	@echo "Stopping services with Docker Compose..."
-	docker-compose -f docker-compose.public.yml down
+	docker-compose -f docker-compose.yml down
 
 compose-logs:
 	@echo "Showing Docker Compose logs..."
-	docker-compose -f docker-compose.public.yml logs -f
+	docker-compose -f docker-compose.yml logs -f
 
 deploy:
 	@./deploy.sh
@@ -180,7 +180,7 @@ release: clean deps test build-all
 	@mkdir -p release
 	@cp $(BUILD_DIR)/* release/
 	@cp config/config.yaml release/
-	@cp docker-compose.public.yml release/
+	@cp docker-compose.yml docker-compose.minimal.yml docker-compose.offline.yml release/
 	@cp docker-compose.offline.yml release/
 	@cp .env.example release/
 	@cp README.md release/

@@ -60,7 +60,7 @@ Repository: https://git.commsnet.org/commstech/Bugbot
 
 **Cause:** Many stale `GITEA-ACTIONS-TASK-*` bridge networks.
 
-**Fix (in repo):** `docker-compose.public.yml` uses `network_mode: host`.
+**Fix (in repo):** `docker-compose.yml` uses `network_mode: host`.
 
 **Workaround:** `docker network prune` periodically.
 

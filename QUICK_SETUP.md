@@ -16,7 +16,7 @@ Open http://localhost:8080/onboard
 
 ```bash
 cp .env.example .env
-docker compose -f docker-compose.public.yml up -d --build
+docker compose up -d --build
 curl -m 5 http://127.0.0.1:8081/health
 ```
 

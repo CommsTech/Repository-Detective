@@ -144,7 +144,7 @@ func isLikelyGeneratedOrExample(path string) bool {
 		strings.HasSuffix(lower, ".yaml") || strings.HasSuffix(lower, ".yml") {
 		return true
 	}
-	if lower == "deploy.sh" || lower == "docker-compose.public.yml" {
+	if lower == "deploy.sh" || lower == "docker-compose.yml" || strings.HasPrefix(lower, "docker-compose.") {
 		return true
 	}
 	return false

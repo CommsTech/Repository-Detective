@@ -18,7 +18,7 @@ git clone https://git.commsnet.org/commstech/Bugbot.git
 cd Bugbot
 cp .env.example .env   # or copy from a legacy install at ~/bugbot/.env
 # edit .env
-docker-compose -f docker-compose.public.yml up -d --build
+docker compose up -d --build
 curl -m 5 http://127.0.0.1:8081/health
 ```
 
@@ -35,12 +35,12 @@ If `docker build` fails on `storage.googleapis.com` (Go module proxy redirects),
 
 ```bash
 ./scripts/vendor-deps.sh
-docker-compose -f docker-compose.public.yml up -d --build
+docker compose up -d --build
 ```
 
 This uses `goproxy.io` as a fallback when Google’s module CDN is blocked. The `vendor/` directory is not committed — generate it before building on filtered networks. Normal networks can build without it.
 
-When Docker bridge IP pools are exhausted, `docker-compose.public.yml` uses `network_mode: host` (listens on port 8081).
+When Docker bridge IP pools are exhausted, the default `docker-compose.yml` uses `network_mode: host` (listens on port 8081).
 
 Disable the legacy systemd unit after Docker is healthy:
 
@@ -53,7 +53,7 @@ sudo systemctl disable --now bugbot.service
 | File | Port | Builds image? |
 |------|------|---------------|
 | `docker-compose.minimal.yml` | 8080 | yes |
-| `docker-compose.public.yml` | 8081 | yes |
+| `docker-compose.yml` | 8081 | yes |
 | `docker-compose.offline.yml` | 8081 | no — load tar first |
 
 ## Pre-built image transfer
@@ -61,10 +61,10 @@ sudo systemctl disable --now bugbot.service
 When the target host cannot build (no internet, no Go proxy):
 
 ```bash
-docker build -t gitea-bugbot:latest .
-docker save gitea-bugbot:latest -o gitea-bugbot-image.tar
+docker compose build
+docker save repository-detective:latest -o repository-detective-image.tar
 # copy tar to target host
-docker load -i gitea-bugbot-image.tar
+docker load -i repository-detective-image.tar
 docker compose -f docker-compose.offline.yml up -d
 ```
 

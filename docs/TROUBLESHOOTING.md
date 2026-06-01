@@ -6,7 +6,7 @@
 
 | Compose file | curl |
 |--------------|------|
-| `docker-compose.public.yml` / `offline` | `http://127.0.0.1:8081/health` |
+| `docker-compose.yml` / `offline` | `http://127.0.0.1:8081/health` |
 | `docker-compose.minimal.yml` | `http://127.0.0.1:8080/health` |
 
 ```bash
@@ -27,7 +27,7 @@ docker logs gitea-bugbot --tail 50
 Run in foreground:
 
 ```bash
-docker compose -f docker-compose.public.yml up --build
+docker compose up --build
 ```
 
 **503 on /health:** Normal for a few seconds while components initialize.

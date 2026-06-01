@@ -1,11 +1,11 @@
 # Multi-stage production image for Bugbot / Repository Detective.
 #
 # Normal networks:
-#   docker-compose -f docker-compose.public.yml up -d --build
+#   docker compose up -d --build
 #
 # DNS-filtered networks (storage.googleapis.com blocked):
 #   ./scripts/vendor-deps.sh
-#   docker-compose -f docker-compose.public.yml up -d --build
+#   docker compose up -d --build
 #
 # Air-gapped hosts: load a CI-built image (see docker-compose.offline.yml).
 

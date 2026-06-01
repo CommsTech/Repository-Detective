@@ -16,7 +16,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT"
 
-COMPOSE_FILE="docker-compose.public.yml"
+COMPOSE_FILE="docker-compose.yml"
 COMPOSE=(docker-compose -f "$COMPOSE_FILE")
 CONTAINER="repository-detective"
 HEALTH_URL="http://127.0.0.1:8081/health"
@@ -91,7 +91,7 @@ install_systemd_wrapper() {
   if [[ ! -f "$run_sh" ]]; then
     return
   fi
-  if grep -q 'docker-compose.public.yml' "$run_sh" 2>/dev/null; then
+  if grep -q 'docker-compose.yml' "$run_sh" 2>/dev/null; then
     return
   fi
   log "updating $run_sh to manage Docker (disables legacy binary on systemd restart)"
@@ -99,7 +99,7 @@ install_systemd_wrapper() {
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$ROOT"
-exec docker-compose -f docker-compose.public.yml up -d --remove-orphans
+exec docker-compose -f docker-compose.yml up -d --remove-orphans
 EOF
   chmod +x "$run_sh"
   warn "run 'sudo systemctl disable bugbot.service' (legacy unit) when ready and rely on Docker restart policy instead"

@@ -1,31 +1,41 @@
-version: '3.7'
+version: '3.8'
 
-# Pre-built image only — no `build:` section.
-# Use when the runtime host cannot run `docker build` (e.g. no outbound network).
+# Pre-built image only — no build step on the target host.
 #
 # On a machine with network access:
-#   docker build -t gitea-bugbot:latest .
-#   docker save gitea-bugbot:latest -o gitea-bugbot-image.tar
+#   docker compose build
+#   docker save repository-detective:latest -o repository-detective-image.tar
 #
 # On the target host:
-#   docker load -i gitea-bugbot-image.tar
+#   docker load -i repository-detective-image.tar
 #   docker compose -f docker-compose.offline.yml up -d
-#   # legacy: docker-compose -f docker-compose.offline.yml up -d
 
 services:
-  gitea-bugbot:
-    image: gitea-bugbot:latest
-    container_name: gitea-bugbot
-    ports:
-      - "8081:8080"
+  repository-detective:
+    image: repository-detective:latest
+    container_name: repository-detective
+    network_mode: host
     env_file:
       - .env
     environment:
-      BUGBOT_PORT: "8080"
+      REPOSITORY_DETECTIVE_PORT: "8081"
+      REPOSITORY_DETECTIVE_LISTEN_HOST: "0.0.0.0"
+      REPOSITORY_DETECTIVE_LOG_LEVEL: info
+      REPOSITORY_DETECTIVE_SKIP_STARTUP_CHECKS: "true"
+      REPOSITORY_DETECTIVE_DATABASE_PATH: /app/data/bugbot.db
+      BUGBOT_PORT: "8081"
       BUGBOT_LISTEN_HOST: "0.0.0.0"
       BUGBOT_LOG_LEVEL: info
       BUGBOT_SKIP_STARTUP_CHECKS: "true"
-      BUGBOT_STARTUP_CHECK_TIMEOUT: "10"
+      BUGBOT_DATABASE_PATH: /app/data/bugbot.db
     volumes:
       - ./config:/app/config:ro
+      - ./data:/app/data
+      - ./certs:/app/certs:ro
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8081/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
     restart: unless-stopped

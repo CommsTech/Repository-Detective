@@ -37,7 +37,7 @@ Leave `BUGBOT_PUBLIC_URL` empty until Step 4.
 **Server / LAN (port 8081):**
 
 ```bash
-docker compose -f docker-compose.public.yml up -d --build
+docker compose up -d --build
 ```
 
 **Local dev (port 8080):**
@@ -51,7 +51,7 @@ Older installs with standalone `docker-compose` (no plugin): use `docker-compose
 Logs:
 
 ```bash
-docker logs gitea-bugbot --tail 50
+docker logs repository-detective --tail 50
 ```
 
 ---
@@ -81,7 +81,7 @@ After exposure:
 
 ```bash
 BUGBOT_PUBLIC_URL=https://bugbot.example.com   # in .env
-docker compose -f docker-compose.public.yml up -d
+docker compose up -d
 curl https://bugbot.example.com/health
 ```
 
@@ -104,18 +104,18 @@ Manual alternative (per repo → Settings → Webhooks):
 
 1. Test webhook delivery in Gitea (expect HTTP 200).
 2. Push a commit to a watched repo.
-3. `docker logs gitea-bugbot --tail 100`
+3. `docker logs repository-detective --tail 100`
 
 Look for deterministic scanner output:
 
 ```bash
-docker logs gitea-bugbot 2>&1 | grep -E 'SCANNER|CAH:SCAN'
+docker logs repository-detective 2>&1 | grep -E 'SCANNER|CAH:SCAN'
 ```
 
 4. Confirm scanner binaries in the image (after rebuild):
 
 ```bash
-docker exec gitea-bugbot sh -c 'trivy --version && grype version && golangci-lint version'
+docker exec repository-detective sh -c 'trivy --version && grype version && golangci-lint version'
 ```
 
 5. Run unit tests locally — see [TESTING.md](TESTING.md).
@@ -126,13 +126,10 @@ docker exec gitea-bugbot sh -c 'trivy --version && grype version && golangci-lin
 
 | File | Use when |
 |------|----------|
-| `docker-compose.minimal.yml` | Local dev, port 8080 |
-| `docker-compose.public.yml` | Server deploy, port 8081, builds image locally |
+| `docker-compose.yml` | **Default** — production deploy, port 8081, host networking |
+| `docker-compose.minimal.yml` | Local dev, port 8080, bridge networking |
 | `docker-compose.offline.yml` | Pre-built image only (no `docker build` on host) |
-| `docker-compose.host-network.yml` | Linux, `network_mode: host` |
-| `docker-compose.proxy-network.yml` | Existing Traefik network |
-
-Do not use `docker-compose.yml` or `docker-compose.simple.yml` — outdated env var names.
+| `docker-compose.traefik.yml` | Optional overlay with `docker-compose.yml` for Traefik |
 
 ### Deploy without building on the target host
 
@@ -140,11 +137,11 @@ When the runtime host has no outbound access (cannot run `go mod download`):
 
 ```bash
 # Machine with network
-docker build -t gitea-bugbot:latest .
-docker save gitea-bugbot:latest -o gitea-bugbot-image.tar
+docker compose build
+docker save repository-detective:latest -o repository-detective-image.tar
 
 # Target host
-docker load -i gitea-bugbot-image.tar
+docker load -i repository-detective-image.tar
 docker compose -f docker-compose.offline.yml up -d
 ```
 

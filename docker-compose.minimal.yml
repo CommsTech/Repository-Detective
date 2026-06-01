@@ -1,47 +1,43 @@
 version: '3.8'
 
+# Local development — bridge networking, port 8080 on the host.
+#
+#   cp .env.example .env && edit .env
+#   docker compose -f docker-compose.minimal.yml up -d --build
+#
+# Set REPOSITORY_DETECTIVE_PUBLIC_URL=http://localhost:8080 in .env
+
 services:
-  gitea-bugbot:
-    build: .
-    image: gitea-bugbot:latest
+  repository-detective:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        INSTALL_EXTERNAL_TOOLS: "false"
+    image: repository-detective:latest
+    container_name: repository-detective-dev
     ports:
       - "8080:8080"
+    env_file:
+      - .env
     environment:
-      # Server
-      - BUGBOT_PORT=8080
-      - BUGBOT_API_KEY=change-me-to-a-secure-random-string
-      - BUGBOT_PUBLIC_URL=http://localhost:8080
-      - BUGBOT_LOG_LEVEL=info
-      - BUGBOT_SKIP_STARTUP_CHECKS=false
-
-      # Gitea
-      - BUGBOT_GITEA_URL=https://your-gitea-server.com
-      - BUGBOT_GITEA_TOKEN=your-gitea-access-token-here
-      - BUGBOT_WEBHOOK_SECRET=your-webhook-secret-here
-
-      # AI provider (see docs/AI_PROVIDERS.md)
-      - BUGBOT_AI_PROVIDER=openwebui
-      - BUGBOT_AI_BASE_URL=https://your-openwebui-server.com
-      - BUGBOT_AI_API_KEY=your-openwebui-api-key-here
-      - BUGBOT_AI_MODEL=your-preferred-model
-
-      # Analysis
-      - BUGBOT_ENABLE_SECURITY=true
-      - BUGBOT_ENABLE_QUALITY=true
-      - BUGBOT_MAX_FILE_SIZE=1048576
-      - BUGBOT_ANALYSIS_DEPTH=3
-
-      # Issues
-      - BUGBOT_AUTO_CREATE_ISSUES=true
-      - BUGBOT_MAX_ISSUES_PER_RUN=50
-      - BUGBOT_SKIP_LOW_SEVERITY=false
-      - BUGBOT_GROUP_SIMILAR_ISSUES=true
-
-      # Performance
-      - BUGBOT_MAX_CONCURRENT_ANALYSES=5
-      - BUGBOT_ANALYSIS_TIMEOUT=300
-      - BUGBOT_RATE_LIMIT_PER_MINUTE=60
-
+      REPOSITORY_DETECTIVE_PORT: "8080"
+      REPOSITORY_DETECTIVE_LISTEN_HOST: "0.0.0.0"
+      REPOSITORY_DETECTIVE_LOG_LEVEL: info
+      REPOSITORY_DETECTIVE_SKIP_STARTUP_CHECKS: "false"
+      REPOSITORY_DETECTIVE_DATABASE_PATH: /app/data/bugbot.db
+      BUGBOT_PORT: "8080"
+      BUGBOT_LISTEN_HOST: "0.0.0.0"
+      BUGBOT_LOG_LEVEL: info
+      BUGBOT_SKIP_STARTUP_CHECKS: "false"
+      BUGBOT_DATABASE_PATH: /app/data/bugbot.db
     volumes:
       - ./config:/app/config:ro
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
     restart: unless-stopped

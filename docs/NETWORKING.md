@@ -20,7 +20,7 @@ Set `BUGBOT_PUBLIC_URL` to that URL. Webhooks go to `{BUGBOT_PUBLIC_URL}/webhook
 
 ```bash
 cp .env.example .env
-docker compose -f docker-compose.public.yml up -d --build
+docker compose up -d --build
 curl http://127.0.0.1:8081/health
 ```
 
@@ -56,11 +56,13 @@ Test webhook delivery in Gitea.
 
 ## B. Docker host network (Linux)
 
+The default `docker-compose.yml` already uses `network_mode: host` and listens on port **8081**.
+
 ```bash
-docker compose -f docker-compose.host-network.yml up -d --build
+docker compose up -d --build
 ```
 
-Set `BUGBOT_PORT=8081` in `.env`. Container listens on the host network directly — no port mapping.
+Set `REPOSITORY_DETECTIVE_PORT=8081` (or legacy `BUGBOT_PORT=8081`) in `.env`.
 
 Not supported the same way on Docker Desktop for Windows/Mac.
 
@@ -100,10 +102,10 @@ bugbot.example.com {
 
 ```bash
 docker network create traefik-public   # if needed
-docker compose -f docker-compose.proxy-network.yml up -d --build
+docker compose -f docker-compose.yml -f docker-compose.traefik.yml up -d --build
 ```
 
-Edit domain labels in the compose file to match your hostname.
+Edit the `Host(...)` label in `docker-compose.traefik.yml` to match your hostname.
 
 ---
 
@@ -117,11 +119,10 @@ See [TUNNEL.md](TUNNEL.md). No inbound firewall rules required.
 
 | File | Purpose |
 |------|---------|
+| `docker-compose.yml` | Default production (host network, port 8081) |
 | `docker-compose.minimal.yml` | Dev, port 8080 |
-| `docker-compose.public.yml` | Server, port 8081 |
 | `docker-compose.offline.yml` | Pre-loaded image, no build |
-| `docker-compose.host-network.yml` | Linux host networking |
-| `docker-compose.proxy-network.yml` | Traefik attachment |
+| `docker-compose.traefik.yml` | Optional Traefik overlay |
 
 ---
 

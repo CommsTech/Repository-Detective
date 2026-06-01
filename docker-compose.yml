@@ -1,5 +1,48 @@
-# DEPRECATED — use docker-compose.minimal.yml or docker-compose.public.yml
+version: '3.8'
 
-This file contains outdated environment variable names that Bugbot does not read.
+# Default production deploy — builds from Dockerfile, host networking, port 8081.
+#
+#   cp .env.example .env && edit .env
+#   docker compose up -d --build
+#   # or: ./deploy.sh
+#
+# On DNS-filtered networks, run ./scripts/vendor-deps.sh first.
+# See DEPLOYMENT.md and docs/SETUP.md
 
-See [docs/SETUP.md](docs/SETUP.md).
+services:
+  repository-detective:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        INSTALL_EXTERNAL_TOOLS: "true"
+    image: repository-detective:latest
+    container_name: repository-detective
+    network_mode: host
+    env_file:
+      - .env
+    environment:
+      REPOSITORY_DETECTIVE_PORT: "8081"
+      REPOSITORY_DETECTIVE_LISTEN_HOST: "0.0.0.0"
+      REPOSITORY_DETECTIVE_LOG_LEVEL: info
+      REPOSITORY_DETECTIVE_SKIP_STARTUP_CHECKS: "true"
+      REPOSITORY_DETECTIVE_STARTUP_CHECK_TIMEOUT: "10"
+      REPOSITORY_DETECTIVE_DATABASE_PATH: /app/data/bugbot.db
+      # Legacy aliases (still read by envcompat)
+      BUGBOT_PORT: "8081"
+      BUGBOT_LISTEN_HOST: "0.0.0.0"
+      BUGBOT_LOG_LEVEL: info
+      BUGBOT_SKIP_STARTUP_CHECKS: "true"
+      BUGBOT_STARTUP_CHECK_TIMEOUT: "10"
+      BUGBOT_DATABASE_PATH: /app/data/bugbot.db
+    volumes:
+      - ./config:/app/config:ro
+      - ./data:/app/data
+      - ./certs:/app/certs:ro
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8081/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+    restart: unless-stopped
