@@ -20,17 +20,15 @@ ENV GOPROXY=${GOPROXY}
 ENV GOSUMDB=sum.golang.org
 
 COPY go.mod go.sum ./
-COPY vendor/ vendor/
+COPY . .
 
-# Use vendored modules when present; otherwise download (normal networks only).
+# Use vendored modules when vendor/ is in the build context; otherwise download.
 RUN if [ -d vendor/modules.txt ]; then \
       echo "building with vendored modules (offline-friendly)"; \
     else \
-      echo "vendor/ missing — downloading modules (requires module proxy)"; \
+      echo "downloading modules (requires module proxy)"; \
       go mod download; \
     fi
-
-COPY . .
 
 RUN if [ -d vendor/modules.txt ]; then \
       CGO_ENABLED=0 GOOS=linux go build -mod=vendor -ldflags="-s -w" -o gitea-bugbot .; \
@@ -40,17 +38,25 @@ RUN if [ -d vendor/modules.txt ]; then \
 
 FROM alpine:3.20
 
-RUN apk --no-cache add ca-certificates tzdata wget curl bash su-exec \
-    && TRIVY_VERSION=0.57.1 \
-    && curl -sfL "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" \
-       | tar xz -C /usr/local/bin trivy \
-    && GRYPE_VERSION=0.84.0 \
-    && curl -sSfL "https://github.com/anchore/grype/releases/download/v${GRYPE_VERSION}/grype_${GRYPE_VERSION}_linux_amd64.tar.gz" \
-       | tar xz -C /usr/local/bin grype \
-    && curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b /usr/local/bin v1.55.2 \
-    && RUFF_VERSION=0.8.4 \
-    && curl -sSL "https://github.com/astral-sh/ruff/releases/download/${RUFF_VERSION}/ruff-x86_64-unknown-linux-musl.tar.gz" \
-       | tar xz -C /usr/local/bin --strip-components=1 "ruff-x86_64-unknown-linux-musl/ruff"
+# External scanner binaries are optional because some networks block GitHub/CDNs.
+# Enable at build time with: --build-arg INSTALL_EXTERNAL_TOOLS=true
+ARG INSTALL_EXTERNAL_TOOLS=false
+
+RUN apk --no-cache add ca-certificates tzdata wget su-exec \
+    && if [ "$INSTALL_EXTERNAL_TOOLS" = "true" ]; then \
+         apk --no-cache add curl bash tar; \
+         TRIVY_VERSION=0.57.1; \
+         curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+           | sh -s -- -b /usr/local/bin "v${TRIVY_VERSION}"; \
+         GRYPE_VERSION=0.84.0; \
+         curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh \
+           | sh -s -- -b /usr/local/bin "v${GRYPE_VERSION}"; \
+         curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh \
+           | sh -s -- -b /usr/local/bin v1.55.2; \
+         RUFF_VERSION=0.8.4; \
+         curl -sSL "https://github.com/astral-sh/ruff/releases/download/${RUFF_VERSION}/ruff-x86_64-unknown-linux-musl.tar.gz" \
+           | tar xz -C /usr/local/bin --strip-components=1 "ruff-x86_64-unknown-linux-musl/ruff"; \
+       fi
 
 RUN addgroup -g 1001 -S bugbot && \
     adduser -u 1001 -S bugbot -G bugbot
