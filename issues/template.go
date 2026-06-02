@@ -56,6 +56,18 @@ func RenderIssueBody(in IssueRenderInput) string {
 	b.WriteString(fmt.Sprintf("- Severity: %s\n", strings.ToLower(issue.Severity)))
 	b.WriteString(fmt.Sprintf("- Confidence: %.2f\n", issue.Confidence))
 	b.WriteString(fmt.Sprintf("- Source: %s\n", displaySource(issue)))
+	if issue.SourceType != "" {
+		b.WriteString(fmt.Sprintf("- Source type: %s\n", issue.SourceType))
+	}
+	if issue.ReportingAction != "" {
+		b.WriteString(fmt.Sprintf("- Reporting action: %s\n", issue.ReportingAction))
+	}
+	if issue.FalsePositiveRisk != "" {
+		b.WriteString(fmt.Sprintf("- False-positive risk: %s\n", issue.FalsePositiveRisk))
+	}
+	if issue.RepoProfileSummary != "" {
+		b.WriteString(fmt.Sprintf("- Repo profile: %s\n", issue.RepoProfileSummary))
+	}
 	if issue.RuleID != "" {
 		b.WriteString(fmt.Sprintf("- Rule ID: %s\n", issue.RuleID))
 	}
@@ -125,6 +137,9 @@ func RenderIssueBody(in IssueRenderInput) string {
 
 	b.WriteString("## Tracking\n\n")
 	b.WriteString(fmt.Sprintf("- %s %s\n", FingerprintBodyMarker, issue.Fingerprint))
+	if issue.SuppressionReason != "" {
+		b.WriteString(fmt.Sprintf("- Suppression note: %s\n", issue.SuppressionReason))
+	}
 	b.WriteString(fmt.Sprintf("- First seen: %s\n", in.Now.Format(time.RFC3339)))
 	b.WriteString(fmt.Sprintf("- Last seen: %s\n", in.Now.Format(time.RFC3339)))
 	b.WriteString(fmt.Sprintf("- Status: %s\n", lifecycleStatusLabel(issue)))

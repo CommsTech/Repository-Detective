@@ -15,12 +15,14 @@ type ScanCompletion struct {
 	GraphNodeCount    int
 	GraphEdgeCount    int
 	GraphJSON         []byte
+	RepoProfile       any
 }
 
 // ScanCompletionScanner is a scanner outcome for persistence.
 type ScanCompletionScanner struct {
-	Scanner       string
-	Status        string
-	FindingsCount int
-	Detail        string
+	Scanner             string
+	Status              string
+	FindingsCount       int
+	Detail              string
+	ApplicabilityReason string
 }

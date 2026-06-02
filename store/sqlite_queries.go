@@ -349,19 +349,6 @@ func (s *SQLiteStore) DashboardSummary(ctx context.Context, recentLimit int) (Da
 	}
 
 	if err := s.db.QueryRowContext(ctx, `
-		SELECT COUNT(1) FROM scanner_results
-		WHERE status IN ('failed', 'timed_out', 'parse_failed', 'error')
-	`).Scan(&summary.ScannerFailuresCount); err != nil {
-		return summary, fmt.Errorf("count scanner failures: %w", err)
-	}
-
-	if err := s.db.QueryRowContext(ctx, `
-		SELECT COUNT(1) FROM scanner_results WHERE status = 'binary_missing'
-	`).Scan(&summary.ScannerToolsMissingCount); err != nil {
-		return summary, fmt.Errorf("count missing scanner tools: %w", err)
-	}
-
-	if err := s.db.QueryRowContext(ctx, `
 		SELECT COUNT(1) FROM findings WHERE status = 'open'
 	`).Scan(&summary.OpenFindingsCount); err != nil {
 		return summary, fmt.Errorf("count open findings: %w", err)
@@ -517,6 +504,10 @@ func (s *SQLiteStore) DashboardSummary(ctx context.Context, recentLimit int) (Da
 	summary.Remediation, _ = s.RemediationSummary(ctx)
 	summary.Closure, _ = s.ClosureSummary(ctx)
 	summary.Lifecycle, _ = s.LifecycleSummary(ctx)
+
+	if err := s.enrichOperatorDashboard(ctx, &summary); err != nil {
+		return summary, err
+	}
 
 	return summary, nil
 }

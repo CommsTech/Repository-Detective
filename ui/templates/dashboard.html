@@ -5,167 +5,223 @@
 <body class="rd-app">
 {{template "nav" .}}
 
+{{with .Data.Summary}}
 <section class="rd-hero rd-hero-dashboard">
   <div class="rd-hero-copy">
-    <p class="rd-hero-kicker">Repository Detective</p>
-    <h2>Security and quality intelligence for your entire forge.</h2>
-    <p class="rd-muted">Unified scans, findings, and remediation — built for operators who need signal, not noise.</p>
+    <p class="rd-hero-kicker">Operator overview</p>
+    <h2>{{.Backlog.OpenUnique}} open unique findings across {{.TotalRepositories}} repositories.</h2>
+    <p class="rd-muted">Actionable backlog is deduplicated and persisted. Raw detector hits are shown separately below — they are not your primary security queue.</p>
   </div>
   <div class="rd-hero-metrics">
-    {{with .Data.Summary}}
     <div class="rd-hero-metric">
-      <span class="rd-hero-metric-value">{{.OpenFindingsCount}}</span>
-      <span class="rd-hero-metric-label">Open findings</span>
+      <span class="rd-hero-metric-value">{{add .Backlog.CriticalOpen .Backlog.HighOpen}}</span>
+      <span class="rd-hero-metric-label">Critical + high open</span>
     </div>
-    {{else}}
     <div class="rd-hero-metric">
-      <span class="rd-hero-metric-value">—</span>
-      <span class="rd-hero-metric-label">No data yet</span>
+      <span class="rd-hero-metric-value">{{.FailedScansCount}}</span>
+      <span class="rd-hero-metric-label">Failed scans</span>
     </div>
-    {{end}}
-    {{if gt .Data.ActiveScans 0}}
+    {{if gt $.Data.ActiveScans 0}}
     <div class="rd-hero-metric">
-      <span class="rd-hero-metric-value">{{.Data.ActiveScans}}</span>
+      <span class="rd-hero-metric-value">{{$.Data.ActiveScans}}</span>
       <span class="rd-hero-metric-label">Active scans</span>
     </div>
     {{end}}
   </div>
   <div class="rd-hero-actions">
-    <a class="rd-btn rd-btn-light" href="{{.BasePath}}/findings{{apiKeyQS .APIKey}}">Review findings</a>
-    <a class="rd-btn rd-btn-ghost" href="{{.BasePath}}/repos{{apiKeyQS .APIKey}}">Repositories</a>
+    <a class="rd-btn rd-btn-light" href="{{$.BasePath}}/findings?severity=critical&amp;status=open{{if $.APIKey}}&amp;api_key={{$.APIKey}}{{end}}">Triage critical/high</a>
+    <a class="rd-btn rd-btn-ghost" href="{{$.BasePath}}/health{{apiKeyQS $.APIKey}}">Platform health</a>
   </div>
 </section>
+{{end}}
 
 {{if .Notice}}<div class="rd-alert info" role="status">{{.Notice}}</div>{{end}}
 
+{{if .Data.Actions}}
+<div class="rd-card rd-actions-panel">
+  <div class="rd-card-head">
+    <h2>Top actions</h2>
+    <span class="rd-chip">Do this first</span>
+  </div>
+  <ul class="rd-action-list">
+    {{range .Data.Actions}}
+    <li class="rd-action-item rd-action-{{.Priority}}">
+      <div>
+        <strong>{{.Title}}</strong>
+        <p class="rd-muted">{{.Detail}}</p>
+        {{if .Command}}<p class="rd-muted"><code>{{.Command}}</code></p>{{end}}
+      </div>
+      <div class="rd-actions">
+        {{if .LinkPath}}<a class="rd-btn rd-btn-sm" href="{{$.BasePath}}{{.LinkPath}}{{apiKeyQS $.APIKey}}">Open</a>{{end}}
+      </div>
+    </li>
+    {{end}}
+  </ul>
+</div>
+{{end}}
+
 {{with .Data.Summary}}
-<div class="rd-grid rd-grid-stats">
-  <div class="rd-stat info">
-    <div class="rd-stat-value">{{.TotalRepositories}}</div>
-    <div class="rd-stat-label">Repositories monitored</div>
-    <p class="rd-stat-hint">Connected repos with scan history</p>
+<div class="rd-card">
+  <div class="rd-card-head"><h2>Finding backlog</h2><span class="rd-chip">Deduplicated</span></div>
+  <div class="rd-grid rd-grid-stats">
+    <div class="rd-stat success">
+      <div class="rd-stat-value">{{.Backlog.OpenUnique}}</div>
+      <div class="rd-stat-label">Open unique findings</div>
+      <p class="rd-stat-hint">Primary security backlog (fingerprint-deduped)</p>
+    </div>
+    <div class="rd-stat info">
+      <div class="rd-stat-value">{{.Backlog.NewLast7Days}}</div>
+      <div class="rd-stat-label">New (7d)</div>
+      <p class="rd-stat-hint">First seen in the last week</p>
+    </div>
+    <div class="rd-stat {{if gt .Backlog.RegressionsLast7Days 0}}warn{{end}}">
+      <div class="rd-stat-value">{{.Backlog.RegressionsLast7Days}}</div>
+      <div class="rd-stat-label">Regressions (7d)</div>
+      <p class="rd-stat-hint">Older findings re-detected recently</p>
+    </div>
+    <div class="rd-stat success">
+      <div class="rd-stat-value">{{.Backlog.ResolvedVerified}}</div>
+      <div class="rd-stat-label">Verified resolved</div>
+    </div>
+    <div class="rd-stat {{if gt .Backlog.CriticalOpen 0}}danger{{else if gt .Backlog.HighOpen 0}}warn{{end}}">
+      <div class="rd-stat-value">{{.Backlog.CriticalOpen}} / {{.Backlog.HighOpen}}</div>
+      <div class="rd-stat-label">Critical / high open</div>
+    </div>
+    <div class="rd-stat neutral">
+      <div class="rd-stat-value">{{.Backlog.LowOpen}}</div>
+      <div class="rd-stat-label">Low severity backlog</div>
+      <p class="rd-stat-hint">Rolled up — triage from findings list</p>
+    </div>
   </div>
-  <div class="rd-stat success">
-    <div class="rd-stat-value">{{.OpenFindingsCount}}</div>
-    <div class="rd-stat-label">Open findings</div>
-    <p class="rd-stat-hint">Persisted in control plane</p>
-  </div>
-  <div class="rd-stat success">
-    <div class="rd-stat-value">{{.Lifecycle.ResolvedVerified}}</div>
-    <div class="rd-stat-label">Verified resolved</div>
-    <p class="rd-stat-hint">Evidence-based closure</p>
-  </div>
-  <div class="rd-stat {{if gt .IssuesDetectedInScans 0}}info{{else}}neutral{{end}}">
-    <div class="rd-stat-value">{{.IssuesDetectedInScans}}</div>
-    <div class="rd-stat-label">Issues detected (7d)</div>
-    <p class="rd-stat-hint">Raw detector output across runs</p>
-  </div>
-  <div class="rd-stat {{if gt $.Data.ActiveScans 0}}warn{{else}}neutral{{end}}">
-    <div class="rd-stat-value">{{$.Data.ActiveScans}}</div>
-    <div class="rd-stat-label">Active scans</div>
-    <p class="rd-stat-hint">Currently running or started</p>
-  </div>
-  <div class="rd-stat {{if gt .FailedScansCount 0}}warn{{end}}">
-    <div class="rd-stat-value">{{.FailedScansCount}}</div>
-    <div class="rd-stat-label">Failed repository scans</div>
-    <p class="rd-stat-hint">Timeout, clone, or prepare errors</p>
-  </div>
-  <div class="rd-stat {{if gt .ScannerFailuresCount 0}}warn{{end}}">
-    <div class="rd-stat-value">{{.ScannerFailuresCount}}</div>
-    <div class="rd-stat-label">Scanner run failures</div>
-    <p class="rd-stat-hint">Timeouts, parse errors — not missing tools</p>
-  </div>
-  <div class="rd-stat {{if gt .ScannerToolsMissingCount 0}}neutral{{end}}">
-    <div class="rd-stat-value">{{.ScannerToolsMissingCount}}</div>
-    <div class="rd-stat-label">Tools not in container</div>
-    <p class="rd-stat-hint">Install via Docker rebuild with external tools</p>
-  </div>
+  <details class="rd-secondary-metrics">
+    <summary>Raw detector output (secondary — not the primary backlog)</summary>
+    <div class="rd-kpi-row">
+      <div class="rd-kpi"><strong>{{.Backlog.RawDetectorHits7d}}</strong><span>Raw hits in scans (7d)</span></div>
+      <div class="rd-kpi"><strong>{{.Backlog.RawInstances7d}}</strong><span>Raw instances recorded (7d)</span></div>
+      <div class="rd-kpi"><strong>{{.Backlog.ClosedOther}}</strong><span>Closed / other status</span></div>
+    </div>
+    <p class="rd-muted">Raw counts include duplicate detector hits across runs. Open unique findings are the operator queue.</p>
+  </details>
 </div>
 
-{{if and (eq .OpenFindingsCount 0) (gt .IssuesDetectedInScans 0)}}
-<div class="rd-alert info">
-  <strong>Findings list is empty but scans reported issues.</strong>
-  Re-run scans after the latest update — earlier runs may not have persisted findings when post-scan work timed out.
+{{if $.Data.RecentSevereFindings}}
+<div class="rd-card">
+  <div class="rd-card-head">
+    <h2>Critical &amp; high — triage now</h2>
+    <a class="rd-link" href="{{$.BasePath}}/findings?severity=critical&amp;status=open{{if $.APIKey}}&amp;api_key={{$.APIKey}}{{end}}">Full queue →</a>
+  </div>
+  <table class="rd-table rd-table-compact">
+    <tr><th scope="col">Severity</th><th scope="col">Finding</th><th scope="col">Repository</th><th scope="col">Scanner</th><th scope="col">Confidence</th><th scope="col">Age</th><th scope="col"></th></tr>
+    {{range $.Data.RecentSevereFindings}}
+    <tr>
+      <td><span class="rd-badge {{severityBadge .Severity}}">{{.Severity}}</span></td>
+      <td>
+        <strong>{{.Title}}</strong>
+        {{if .FilePath}}<br><span class="rd-muted">{{.FilePath}}{{if .Line}}:{{.Line}}{{end}}</span>{{end}}
+      </td>
+      <td>{{.RepoFullName}}</td>
+      <td><span class="rd-badge skipped">{{.Source}}</span></td>
+      <td>{{printf "%.0f%%" (mul .Confidence 100)}}</td>
+      <td class="rd-muted">{{.LastSeenAt.Format "2006-01-02"}}</td>
+      <td><a class="rd-btn rd-btn-sm rd-btn-ghost" href="{{$.BasePath}}/findings/{{.ID}}{{apiKeyQS $.APIKey}}">Triage</a></td>
+    </tr>
+    {{end}}
+  </table>
 </div>
 {{end}}
 
 <div class="rd-split">
   <div class="rd-card">
-    <div class="rd-card-head">
-      <h2>Severity distribution</h2>
-      <span class="rd-chip">Open findings</span>
+    <div class="rd-card-head"><h2>Scan health</h2><a class="rd-link" href="{{$.BasePath}}/scans{{apiKeyQS $.APIKey}}">History →</a></div>
+    <div class="rd-kpi-row">
+      <div class="rd-kpi"><strong>{{.ScanHealth.CompletedScans}}</strong><span>Completed</span></div>
+      <div class="rd-kpi"><strong>{{.ScanHealth.FailedScans}}</strong><span>Failed</span></div>
+      <div class="rd-kpi"><strong>{{$.Data.ActiveScans}}</strong><span>Active</span></div>
     </div>
-    {{if .OpenFindingsBySeverity}}
-    <ul class="rd-severity-list">
-      {{range $sev, $count := .OpenFindingsBySeverity}}
-      <li><span class="rd-badge {{severityBadge $sev}}">{{$sev}}</span><strong>{{$count}}</strong></li>
+    {{if .ScanHealth.FailureBuckets}}
+    <table class="rd-table rd-table-compact">
+      <tr><th scope="col">Failure reason</th><th scope="col">Recent failed scans</th></tr>
+      {{range .ScanHealth.FailureBuckets}}
+      <tr><td>{{.Label}}</td><td><strong>{{.Count}}</strong></td></tr>
+      {{end}}
+    </table>
+    {{end}}
+    {{if .ScanHealth.RecentFailedScans}}
+    <h3>Latest failures</h3>
+    <table class="rd-table rd-table-compact">
+      {{range .ScanHealth.RecentFailedScans}}
+      <tr>
+        <td><a class="rd-link" href="{{$.BasePath}}/scans/{{.ScanID}}{{apiKeyQS $.APIKey}}">{{.RepoFullName}}</a></td>
+        <td><span class="rd-badge failed">{{.Bucket}}</span></td>
+        <td class="rd-muted">{{.Error}}</td>
+      </tr>
+      {{end}}
+    </table>
+    {{else}}<p class="rd-muted">No failed scans recorded.</p>{{end}}
+    {{if .ScanHealth.ReposNeedingAttention}}
+    <h3>Repositories needing attention</h3>
+    <ul class="rd-muted">
+      {{range .ScanHealth.ReposNeedingAttention}}
+      <li><a class="rd-link" href="{{$.BasePath}}/repos/{{.RepositoryID}}{{apiKeyQS $.APIKey}}">{{.FullName}}</a> — {{.Reason}}</li>
       {{end}}
     </ul>
-    {{else}}
-    <div class="rd-empty"><div class="rd-empty-icon">◎</div><h3>No open findings</h3><p class="rd-muted">Completed scans will populate severity data here.</p></div>
     {{end}}
   </div>
 
   <div class="rd-card">
-    <div class="rd-card-head">
-      <h2>Category radar</h2>
-      <span class="rd-chip">Finding classes</span>
-    </div>
-    {{if .OpenFindingsByCategory}}
-    <div class="rd-radar">
-      {{range $cat, $count := .OpenFindingsByCategory}}
-      <div class="rd-radar-row">
-        <span class="rd-badge {{categoryBadge $cat}}">{{$cat}}</span>
-        <div class="rd-radar-bar"><span style="width: {{radarBarWidth $count $.OpenFindingsByCategory}}%"></span></div>
-        <strong>{{$count}}</strong>
-      </div>
-      {{end}}
-    </div>
-    {{else}}
-    <div class="rd-empty"><p class="rd-muted">Category scores appear after findings are persisted.</p></div>
+    <div class="rd-card-head"><h2>Remediation lifecycle</h2></div>
+    <p class="rd-muted"><strong>{{.RemediationInsight.Summary}}</strong></p>
+    {{if .RemediationInsight.Reasons}}
+    <ul class="rd-muted">{{range .RemediationInsight.Reasons}}<li>{{.}}</li>{{end}}</ul>
     {{end}}
-  </div>
-
-  <div class="rd-card">
-    <div class="rd-card-head">
-      <h2>Remediation lifecycle</h2>
-      <span class="rd-chip">Workflow</span>
-    </div>
-    <div class="rd-pipeline">
-      <span class="rd-pipeline-step done">Detect</span>
-      <span class="rd-pipeline-step">Issue</span>
-      <span class="rd-pipeline-step">Plan</span>
-      <span class="rd-pipeline-step">Approve</span>
-      <span class="rd-pipeline-step">Patch PR</span>
-      <span class="rd-pipeline-step">Merge</span>
-      <span class="rd-pipeline-step">Rescan</span>
-      <span class="rd-pipeline-step">Verified</span>
-    </div>
+    <p class="rd-muted">{{.RemediationInsight.SettingsHint}}</p>
     <table class="rd-table rd-table-compact">
-      <tr><th scope="col">Stage</th><th scope="col">Count</th></tr>
       <tr><td>Open findings</td><td><strong>{{.Lifecycle.OpenFindings}}</strong></td></tr>
-      <tr><td>Remediation candidates</td><td>{{.Lifecycle.RemediationCandidates}}</td></tr>
+      <tr><td>Auto-remediation candidates</td><td>{{.Lifecycle.RemediationCandidates}}</td></tr>
       <tr><td>Approved plans</td><td>{{.Lifecycle.ApprovedPlans}}</td></tr>
       <tr><td>PRs opened</td><td>{{.Lifecycle.PROpened}}</td></tr>
-      <tr><td>Resolved verified</td><td>{{.Lifecycle.ResolvedVerified}}</td></tr>
+      <tr><td>Verified resolved</td><td>{{.Lifecycle.ResolvedVerified}}</td></tr>
     </table>
   </div>
 </div>
-{{end}}
 
-{{if .Data.TopRiskyRepos}}
 <div class="rd-card">
   <div class="rd-card-head">
-    <h2>Top risky repositories</h2>
-    <a class="rd-link" href="{{$.BasePath}}/repos{{apiKeyQS $.APIKey}}">View all →</a>
+    <h2>Platform readiness</h2>
+    {{with $.Data.Readiness}}<span class="rd-chip">{{.ProductName}} v{{.Version}} · {{.Features.ScanProfile}}</span>{{end}}
+  </div>
+  <p class="rd-muted">Scanner warnings are platform readiness signals — not repository findings. Disabled optional tools are not errors.</p>
+  {{if gt .Platform.UniqueMissingTools 0}}
+  <div class="rd-alert">{{.Platform.UniqueMissingTools}} configured scanner(s) unavailable in this runtime{{if gt .Platform.RawMissingEvents 0}} ({{.Platform.RawMissingEvents}} raw missing-tool events across scans — not counted as findings){{end}}.</div>
+  {{end}}
+  <table class="rd-table rd-table-compact">
+    <tr><th scope="col">Scanner</th><th scope="col">Status</th><th scope="col">Configured</th><th scope="col">Runtime</th><th scope="col">Affected repos</th><th scope="col">Recommended fix</th></tr>
+    {{range .Platform.Rollups}}
+    <tr>
+      <td><strong>{{.Name}}</strong></td>
+      <td>{{.StatusLabel}}</td>
+      <td>{{if .Configured}}<span class="rd-badge completed">yes</span>{{else}}<span class="rd-badge skipped">no</span>{{end}}</td>
+      <td>{{if .Available}}<span class="rd-badge found">installed</span>{{else if .Configured}}<span class="rd-badge binary_missing">missing</span>{{else}}<span class="rd-muted">—</span>{{end}}</td>
+      <td>{{if gt .AffectedRepos 0}}{{.AffectedRepos}}{{else}}<span class="rd-muted">—</span>{{end}}</td>
+      <td class="rd-muted">{{if .RecommendedFix}}{{.RecommendedFix}}{{else}}—{{end}}</td>
+    </tr>
+    {{end}}
+  </table>
+</div>
+
+{{if $.Data.TopRiskyRepos}}
+<div class="rd-card">
+  <div class="rd-card-head">
+    <h2>Repositories needing attention</h2>
+    <a class="rd-link" href="{{$.BasePath}}/repos{{apiKeyQS $.APIKey}}">All repos →</a>
   </div>
   <table class="rd-table rd-table-compact">
-    <tr><th scope="col">Repository</th><th scope="col">Open findings</th><th scope="col">Last scan</th><th scope="col">Actions</th></tr>
-    {{range .Data.TopRiskyRepos}}{{if gt .OpenFindingsCount 0}}
+    <tr><th scope="col">Repository</th><th scope="col">Open findings</th><th scope="col">Last scan</th><th scope="col"></th></tr>
+    {{range $.Data.TopRiskyRepos}}{{if gt .OpenFindingsCount 0}}
     <tr>
       <td><a class="rd-link" href="{{$.BasePath}}/repos/{{.ID}}{{apiKeyQS $.APIKey}}">{{.FullName}}</a></td>
       <td><strong>{{.OpenFindingsCount}}</strong></td>
-      <td>{{if .LastScanAt}}<span class="rd-badge {{scanBadge .LastScanStatus}}">{{.LastScanStatus}}</span>{{else}}<span class="rd-muted">—</span>{{end}}</td>
+      <td>{{if .LastScanStatus}}<span class="rd-badge {{scanBadge .LastScanStatus}}">{{.LastScanStatus}}</span>{{else}}<span class="rd-muted">never</span>{{end}}</td>
       <td><a class="rd-btn rd-btn-sm rd-btn-ghost" href="{{$.BasePath}}/repos/{{.ID}}/report{{apiKeyQS $.APIKey}}">Report</a></td>
     </tr>
     {{end}}{{end}}
@@ -173,85 +229,21 @@
 </div>
 {{end}}
 
-{{if .Data.RecentSevereFindings}}
 <div class="rd-card">
-  <div class="rd-card-head">
-    <h2>Recent critical &amp; high findings</h2>
-    <a class="rd-link" href="{{$.BasePath}}/findings?severity=critical{{if $.APIKey}}&amp;api_key={{$.APIKey}}{{end}}">Triage →</a>
-  </div>
+  <div class="rd-card-head"><h2>Recent scans</h2></div>
   <table class="rd-table rd-table-compact">
-    <tr><th scope="col">Severity</th><th scope="col">Finding</th><th scope="col">Repository</th><th scope="col">Last seen</th></tr>
-    {{range .Data.RecentSevereFindings}}
-    <tr>
-      <td><span class="rd-badge {{severityBadge .Severity}}">{{.Severity}}</span></td>
-      <td><a class="rd-link" href="{{$.BasePath}}/findings/{{.ID}}{{apiKeyQS $.APIKey}}">{{.Title}}</a></td>
-      <td>{{.RepoFullName}}</td>
-      <td class="rd-muted">{{.LastSeenAt.Format "2006-01-02"}}</td>
-    </tr>
-    {{end}}
-  </table>
-</div>
-{{end}}
-
-{{with .Data.Readiness}}
-<div class="rd-card">
-  <div class="rd-card-head">
-    <h2>Scanner availability</h2>
-    <span class="rd-chip">{{.ProductName}} v{{.Version}}</span>
-  </div>
-  <p class="rd-muted">{{.Tagline}} · Profile <span class="rd-badge medium">{{.Features.ScanProfile}}</span></p>
-  <table class="rd-table">
-    <tr><th scope="col">Scanner</th><th scope="col">Configured</th><th scope="col">Runtime</th><th scope="col">Version</th></tr>
-    {{range .Tools}}
-    <tr>
-      <td>{{.Name}}</td>
-      <td>{{if .Configured}}<span class="rd-badge completed">yes</span>{{else}}<span class="rd-badge skipped">no</span>{{end}}</td>
-      <td>{{if .Available}}<span class="rd-badge found">installed</span>{{else}}<span class="rd-badge binary_missing">not in image</span>{{end}}</td>
-      <td class="rd-muted">{{if .Version}}{{.Version}}{{else}}—{{end}}</td>
-    </tr>
-    {{end}}
-  </table>
-</div>
-{{end}}
-
-{{with .Data.Summary}}
-<div class="rd-card">
-  <div class="rd-card-head">
-    <h2>Recent scans</h2>
-    <a class="rd-link" href="{{$.BasePath}}/scans{{apiKeyQS $.APIKey}}">Scan history →</a>
-  </div>
-  <table class="rd-table">
-    <tr><th scope="col">Scan</th><th scope="col">Repository</th><th scope="col">Trigger</th><th scope="col">Status</th><th scope="col">Findings</th><th scope="col">Started</th></tr>
+    <tr><th scope="col">Scan</th><th scope="col">Repository</th><th scope="col">Status</th><th scope="col">Raw hits</th><th scope="col">Started</th></tr>
     {{range .RecentScans}}
     <tr>
       <td><a class="rd-link" href="{{$.BasePath}}/scans/{{.ID}}{{apiKeyQS $.APIKey}}">{{shortID .ID 8}}</a></td>
       <td>{{.RepoFullName}}</td>
-      <td>{{.TriggerType}}</td>
       <td><span class="rd-badge {{scanBadge .Status}}">{{.Status}}</span></td>
-      <td>{{issuesFromScan .SummaryJSON}}</td>
+      <td class="rd-muted">{{issuesFromScan .SummaryJSON}}</td>
       <td class="rd-muted">{{.StartedAt.Format "2006-01-02 15:04"}}</td>
     </tr>
-    {{else}}
-    <tr><td colspan="6"><div class="rd-empty"><h3>No scans yet</h3><p class="rd-muted">Trigger a scan via webhook, API, or deploy script.</p></div></td></tr>
-    {{end}}
+    {{else}}<tr><td colspan="5" class="rd-muted">No scans yet.</td></tr>{{end}}
   </table>
 </div>
-
-{{if .RecentLifecycleEvents}}
-<div class="rd-card">
-  <div class="rd-card-head"><h2>Recent lifecycle activity</h2></div>
-  <table class="rd-table rd-table-compact">
-    <tr><th scope="col">Event</th><th scope="col">Message</th><th scope="col">When</th></tr>
-    {{range .RecentLifecycleEvents}}
-    <tr>
-      <td><span class="rd-badge {{statusBadge .EventType}}">{{.EventType}}</span></td>
-      <td>{{.Message}}</td>
-      <td class="rd-muted">{{.CreatedAt.Format "2006-01-02 15:04"}}</td>
-    </tr>
-    {{end}}
-  </table>
-</div>
-{{end}}
 {{end}}
 
 {{template "foot" .}}

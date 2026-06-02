@@ -58,6 +58,60 @@ rate_limit_per_minute: 60
 skip_startup_checks: true
 label_compat_mode: new_only
 
+reporting:
+  mode: high_signal
+  default_issue_min_severity: high
+  default_issue_min_confidence: medium
+  create_issues_for_low: false
+  create_issues_for_tests: false
+  create_issues_for_docs: false
+  create_issues_for_examples: false
+  create_issues_for_generated: false
+  create_issues_for_vendor: false
+  include_raw_scanner_output_in_issue: false
+  max_issues_per_scan: 25
+  group_similar_findings: true
+  allow_all_categories: true
+  preserve_all_findings: true
+  manual_review_can_create_issue: true
+  suppressed_findings_are_auditable: true
+  default_action_by_severity:
+    critical: auto_issue
+    high: auto_issue
+    medium: manual_review
+    low: report_only
+    info: report_only
+  category_overrides:
+    secrets: auto_issue
+    dependency_vulnerability: auto_issue
+    license: manual_review
+    code_quality: report_only
+    documentation: report_only
+    test_gap: report_only
+    ai_risk: manual_review
+  source_type_overrides:
+    source: auto_issue
+    config: manual_review
+    dependency: auto_issue
+    test: report_only
+    docs: report_only
+    example: report_only
+    generated: suppressed_with_reason
+    vendor: suppressed_with_reason
+
+false_positive_reduction:
+  enabled: true
+  suppress_generated: true
+  suppress_vendor: true
+  suppress_minified: true
+  suppress_test_fixtures: true
+  suppress_docs_examples: true
+  require_file_exists: true
+  require_line_match: false
+  lower_confidence_for_dev_dependencies: true
+  lower_confidence_for_unreachable_code: true
+  raise_confidence_when_multiple_scanners_agree: true
+
 remediation_planner_enabled: true
 remediation_pr_enabled: false
 evidence_closure_enabled: true

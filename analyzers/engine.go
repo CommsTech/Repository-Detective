@@ -13,7 +13,9 @@ import (
 	"git.commsnet.org/commstech/bugbot/graph"
 	"git.commsnet.org/commstech/bugbot/health"
 	"git.commsnet.org/commstech/bugbot/internal/scanid"
+	"git.commsnet.org/commstech/bugbot/issues"
 	"git.commsnet.org/commstech/bugbot/models"
+	"git.commsnet.org/commstech/bugbot/profile"
 	"git.commsnet.org/commstech/bugbot/scanners"
 	"github.com/sirupsen/logrus"
 )
@@ -35,6 +37,8 @@ type Config struct {
 	Workspace         scanners.WorkspaceConfig
 	Health            health.Config
 	Graph             graph.Config
+	Reporting         profile.ReportingConfig
+	FalsePositive     profile.FalsePositiveReductionConfig
 }
 
 // CodeSuggestion represents a code improvement suggestion
@@ -63,6 +67,7 @@ type AnalysisResult struct {
 	PolicySnapshot    *PolicySnapshot
 	WorkspaceModeUsed string
 	Graph             *graph.Graph
+	RepoProfile       profile.RepoProfile
 }
 
 // ============================================================================
@@ -100,6 +105,7 @@ type FinalReport struct {
 	ScannerResults []scanners.RunResult
 	Workspace      models.WorkspaceMeta
 	Graph          *graph.Graph
+	RepoProfile    profile.RepoProfile
 
 	Stats ReportStats
 }
@@ -194,6 +200,7 @@ func (e *Engine) RunCAHPipelineWithOptions(ctx context.Context, owner, repo, ref
 	}
 	prepareReport.ScanTime = time.Since(pStart)
 	report.Prepare = prepareReport
+	report.RepoProfile = detectRepoProfile(ctx, e, owner, repo, ref, filePaths, prepareReport)
 	report.Stages = append(report.Stages, "prepare")
 	log.Infof("[CAH:PREPARE] Done in %v — found %d entry points, %d attack surface entries",
 		prepareReport.ScanTime, len(prepareReport.EntryPoints), len(prepareReport.AttackSurface))
@@ -207,7 +214,7 @@ func (e *Engine) RunCAHPipelineWithOptions(ctx context.Context, owner, repo, ref
 		return nil, fmt.Errorf("scan failed: %w", err)
 	}
 	report.Candidates = candidates
-	report.ScannerResults = scanSummary.Results
+	report.ScannerResults = profile.AnnotateScannerResults(scanSummary.Results, report.RepoProfile)
 	report.Workspace = workspaceMeta
 	report.Graph = repoGraph
 	report.Stages = append(report.Stages, "scan")
@@ -1225,7 +1232,59 @@ func (e *Engine) analysisResultFromReport(ctx context.Context, owner, repo, ref,
 			PackageName:    packageNameFromFinding(f),
 		})
 	}
+
+	knownPaths := buildKnownPathSet(report)
+	result.RepoProfile = report.RepoProfile
+	issues.EnrichIssues(result.Repository, result.ScanID, result.Issues)
+	result.Issues = profile.NormalizeIssues(result.Issues, profile.NormalizeInput{
+		Repository:    result.Repository,
+		CommitSHA:     result.CommitSHA,
+		ScanID:        result.ScanID,
+		Profile:       report.RepoProfile,
+		Reporting:     e.config.Reporting,
+		FalsePositive: e.config.FalsePositive,
+		KnownPaths:    knownPaths,
+	})
 	return result, nil
+}
+
+func buildKnownPathSet(report *FinalReport) map[string]struct{} {
+	paths := map[string]struct{}{}
+	if report == nil || report.Prepare == nil {
+		return paths
+	}
+	for _, c := range report.Candidates {
+		if c.File != "" {
+			paths[profile.NormalizePath(c.File)] = struct{}{}
+		}
+	}
+	for _, sr := range report.ScannerResults {
+		for _, f := range sr.Findings {
+			if f.File != "" {
+				paths[profile.NormalizePath(f.File)] = struct{}{}
+			}
+		}
+	}
+	return paths
+}
+
+func detectRepoProfile(ctx context.Context, e *Engine, owner, repo, ref string, targetFiles []string, prepare *PrepareReport) profile.RepoProfile {
+	var paths []string
+	if len(targetFiles) > 0 {
+		paths = append(paths, targetFiles...)
+	} else if e.giteaClient != nil {
+		resolvedRef, err := e.giteaClient.ResolveRef(ctx, owner, repo, ref)
+		if err == nil {
+			ref = resolvedRef
+		}
+		allFiles, err := e.giteaClient.ListAllFiles(ctx, owner, repo, ref, "")
+		if err == nil {
+			for _, f := range allFiles {
+				paths = append(paths, f.Path)
+			}
+		}
+	}
+	return profile.DetectProfile(paths)
 }
 
 func (e *Engine) resolveAnalyzableFiles(ctx context.Context, owner, repo, ref string, targetFiles []string) ([]gitea.RepositoryContent, error) {

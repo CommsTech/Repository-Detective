@@ -119,6 +119,9 @@ func (r *Recorder) FinishScan(ctx context.Context, scanID string, data *ScanComp
 		summary["analysis_time_ms"] = data.AnalysisTime.Milliseconds()
 		summary["overall_score"] = data.OverallScore
 		commitSHA = data.CommitSHA
+		if data.RepoProfile != nil {
+			summary["repo_profile"] = data.RepoProfile
+		}
 		if data.GraphNodeCount > 0 {
 			summary["graph_nodes"] = data.GraphNodeCount
 			summary["graph_edges"] = data.GraphEdgeCount

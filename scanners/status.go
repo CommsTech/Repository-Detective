@@ -22,10 +22,11 @@ const (
 
 // RunResult is the normalized outcome for one scanner.
 type RunResult struct {
-	Scanner  string
-	Status   Status
-	Findings []Finding
-	Detail   string
+	Scanner             string
+	Status              Status
+	Findings            []Finding
+	Detail              string
+	ApplicabilityReason string
 }
 
 // RunSummary aggregates scanner outcomes for one workspace scan.

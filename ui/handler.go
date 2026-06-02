@@ -254,12 +254,38 @@ func (h *Handler) Dashboard(c *gin.Context) {
 		c.String(http.StatusInternalServerError, "failed to load dashboard")
 		return
 	}
-	data := map[string]any{"Summary": summary}
+
+	var readiness operator.Readiness
 	if h.readinessFn != nil {
-		data["Readiness"] = h.readinessFn()
+		readiness = h.readinessFn()
+		store.ApplyPlatformReadiness(&summary, readiness.Tools)
 	}
+	summary.RemediationInsight = store.BuildRemediationInsight(
+		summary.OpenFindingsCount,
+		summary.Remediation.Candidates,
+		readiness.Features.RemediationPlannerEnabled,
+		readiness.Features.RemediationPREnabled,
+		h.global.RemediationPolicy,
+	)
+
 	activeScans, _ := h.store.CountActiveScans(c.Request.Context())
-	data["ActiveScans"] = activeScans
+	summary.ScanHealth.ActiveScans = activeScans
+
+	var missingScanners []store.ScannerPlatformRollup
+	for _, r := range summary.Platform.Rollups {
+		if r.Configured && !r.Available {
+			missingScanners = append(missingScanners, r)
+		}
+	}
+	actions := store.BuildDashboardActions(
+		summary.Backlog.CriticalOpen,
+		summary.Backlog.HighOpen,
+		summary.FailedScansCount,
+		summary.ScanHealth.RecentFailedScans,
+		missingScanners,
+		summary.ScanHealth.ReposNeedingAttention,
+	)
+
 	repos, _ := h.store.ListRepositoriesWithSummary(c.Request.Context(), store.ListOptions{Limit: 200})
 	sort.Slice(repos, func(i, j int) bool {
 		return repos[i].OpenFindingsCount > repos[j].OpenFindingsCount
@@ -268,10 +294,19 @@ func (h *Handler) Dashboard(c *gin.Context) {
 	if len(topRisk) > 5 {
 		topRisk = topRisk[:5]
 	}
-	data["TopRiskyRepos"] = topRisk
-	critical, _ := h.store.ListFindings(c.Request.Context(), store.FindingFilter{Severity: "critical", Status: "open", Limit: 8})
-	high, _ := h.store.ListFindings(c.Request.Context(), store.FindingFilter{Severity: "high", Status: "open", Limit: 8})
-	data["RecentSevereFindings"] = append(critical, high...)
+
+	critical, _ := h.store.ListFindings(c.Request.Context(), store.FindingFilter{Severity: "critical", Status: "open", Limit: 10})
+	high, _ := h.store.ListFindings(c.Request.Context(), store.FindingFilter{Severity: "high", Status: "open", Limit: 10})
+	severe := append(critical, high...)
+
+	data := map[string]any{
+		"Summary":              summary,
+		"Readiness":            readiness,
+		"ActiveScans":          activeScans,
+		"TopRiskyRepos":        topRisk,
+		"RecentSevereFindings": severe,
+		"Actions":              actions,
+	}
 	h.renderNav(c, "dashboard.html", "Dashboard", "dashboard", data)
 }
 

@@ -109,6 +109,27 @@ curl -X PUT -H "X-Bugbot-API-Key: $KEY" -H "Content-Type: application/json" \
 
 See [PREINSTALL_AUDIT.md](PREINSTALL_AUDIT.md) for pre-install audit behavior.
 
+## Dashboard metrics (operator signal)
+
+The dashboard separates **actionable backlog** from **raw detector noise** and **platform readiness warnings**:
+
+| Metric | Meaning |
+|--------|---------|
+| **Open unique findings** | Deduplicated fingerprints in `findings` with status `open` — primary triage queue |
+| **New (7d)** | Open findings first seen in the last 7 days |
+| **Regressions (7d)** | Open findings first seen earlier but re-detected in the last 7 days |
+| **Verified resolved** | Findings with evidence-based closure |
+| **Critical / high open** | Actionable severity backlog (shown first) |
+| **Low severity backlog** | Rolled up count — not promoted to hero metrics |
+| **Raw hits in scans (7d)** | Sum of `issues_found` from completed scans — secondary, includes duplicates |
+| **Raw instances (7d)** | Rows in `finding_instances` — not the same as unique findings |
+| **Failed scans** | Repository scans with `status=failed`, grouped by reason bucket |
+| **Scanner platform warnings** | Per-scanner readiness (configured / installed / affected repos) — **not** counted as findings |
+
+`scanner_tools_missing_count` in the API now counts **distinct scanner names** with `binary_missing` status, not every repeated scan event. Raw missing-tool event totals are exposed separately as `platform.raw_missing_events`.
+
+Remediation candidates explain why auto-remediation may be zero (planner disabled, no safe plans, gates, etc.).
+
 ## Finding categories (Phase 10)
 
 Findings and dashboard counts include health check categories alongside security categories:

@@ -8,6 +8,7 @@ import (
 
 	"git.commsnet.org/commstech/bugbot/ai"
 	"git.commsnet.org/commstech/bugbot/gitea"
+	"git.commsnet.org/commstech/bugbot/profile"
 	"github.com/sirupsen/logrus"
 )
 
@@ -121,6 +122,12 @@ func (m *Manager) CreateIssuesFromAnalysis(ctx context.Context, req *IssueCreati
 
 			if m.config.SkipLowSeverity && strings.EqualFold(issue.Severity, "low") {
 				m.logger.Debugf("Skipping low severity issue: %s", issue.Title)
+				result.IssuesSkipped++
+				continue
+			}
+
+			if issue.ReportingAction != "" && !profile.IsForgeAction(issue.ReportingAction) {
+				m.logger.Debugf("Skipping non-auto issue action=%s: %s", issue.ReportingAction, issue.Title)
 				result.IssuesSkipped++
 				continue
 			}

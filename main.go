@@ -29,6 +29,7 @@ import (
 	"git.commsnet.org/commstech/bugbot/operator"
 	"git.commsnet.org/commstech/bugbot/orch"
 	"git.commsnet.org/commstech/bugbot/preinstall"
+	"git.commsnet.org/commstech/bugbot/profile"
 	"git.commsnet.org/commstech/bugbot/runner"
 	"git.commsnet.org/commstech/bugbot/scanners"
 	"git.commsnet.org/commstech/bugbot/store"
@@ -223,6 +224,8 @@ type Config struct {
 	EvidenceClosureCloseIssues        bool              `mapstructure:"evidence_closure_close_issues"`
 	EvidenceClosureComment            bool              `mapstructure:"evidence_closure_comment"`
 	EvidenceClosureRequireScannerSuccess bool           `mapstructure:"evidence_closure_require_scanner_success"`
+	Reporting                         profile.ReportingConfig              `mapstructure:"reporting"`
+	FalsePositiveReduction            profile.FalsePositiveReductionConfig `mapstructure:"false_positive_reduction"`
 }
 
 func main() {
@@ -443,6 +446,32 @@ func loadConfig() error {
 	viper.SetDefault("evidence_closure_comment", true)
 	viper.SetDefault("evidence_closure_require_scanner_success", true)
 
+	reportingDefaults := profile.DefaultReportingConfig()
+	viper.SetDefault("reporting.mode", reportingDefaults.Mode)
+	viper.SetDefault("reporting.default_issue_min_severity", reportingDefaults.DefaultIssueMinSeverity)
+	viper.SetDefault("reporting.default_issue_min_confidence", reportingDefaults.DefaultIssueMinConfidence)
+	viper.SetDefault("reporting.create_issues_for_low", reportingDefaults.CreateIssuesForLow)
+	viper.SetDefault("reporting.create_issues_for_tests", reportingDefaults.CreateIssuesForTests)
+	viper.SetDefault("reporting.create_issues_for_docs", reportingDefaults.CreateIssuesForDocs)
+	viper.SetDefault("reporting.create_issues_for_examples", reportingDefaults.CreateIssuesForExamples)
+	viper.SetDefault("reporting.create_issues_for_generated", reportingDefaults.CreateIssuesForGenerated)
+	viper.SetDefault("reporting.create_issues_for_vendor", reportingDefaults.CreateIssuesForVendor)
+	viper.SetDefault("reporting.max_issues_per_scan", reportingDefaults.MaxIssuesPerScan)
+	viper.SetDefault("reporting.group_similar_findings", reportingDefaults.GroupSimilarFindings)
+	viper.SetDefault("reporting.allow_all_categories", reportingDefaults.AllowAllCategories)
+	viper.SetDefault("reporting.preserve_all_findings", reportingDefaults.PreserveAllFindings)
+	viper.SetDefault("reporting.manual_review_can_create_issue", reportingDefaults.ManualReviewCanCreateIssue)
+	viper.SetDefault("reporting.suppressed_findings_are_auditable", reportingDefaults.SuppressedFindingsAuditable)
+	fpDefaults := profile.DefaultFalsePositiveReductionConfig()
+	viper.SetDefault("false_positive_reduction.enabled", fpDefaults.Enabled)
+	viper.SetDefault("false_positive_reduction.suppress_generated", fpDefaults.SuppressGenerated)
+	viper.SetDefault("false_positive_reduction.suppress_vendor", fpDefaults.SuppressVendor)
+	viper.SetDefault("false_positive_reduction.suppress_minified", fpDefaults.SuppressMinified)
+	viper.SetDefault("false_positive_reduction.suppress_test_fixtures", fpDefaults.SuppressTestFixtures)
+	viper.SetDefault("false_positive_reduction.suppress_docs_examples", fpDefaults.SuppressDocsExamples)
+	viper.SetDefault("false_positive_reduction.require_file_exists", fpDefaults.RequireFileExists)
+	viper.SetDefault("false_positive_reduction.require_line_match", fpDefaults.RequireLineMatch)
+
 	// Environment variables — legacy BUGBOT_* plus REPOSITORY_DETECTIVE_* aliases.
 	viper.AutomaticEnv()
 	viper.SetEnvPrefix("BUGBOT")
@@ -461,6 +490,7 @@ func loadConfig() error {
 	if err := viper.Unmarshal(config); err != nil {
 		return fmt.Errorf("failed to unmarshal config: %w", err)
 	}
+	applyReportingDefaults(config)
 
 	if err := viper.UnmarshalKey("skip_patterns", &config.SkipPatterns); err != nil {
 		return fmt.Errorf("failed to unmarshal skip_patterns: %w", err)
@@ -848,6 +878,8 @@ func initializeComponents() error {
 		Scanners: mainScannerConfig(),
 		Health:   mainHealthConfig(),
 		Graph:    mainGraphConfig(),
+		Reporting:         config.Reporting,
+		FalsePositive:     config.FalsePositiveReduction,
 		Workspace: scanners.WorkspaceConfig{
 			Mode:                   config.WorkspaceMode,
 			MaxSizeMB:              config.WorkspaceMaxSizeMB,
@@ -1245,11 +1277,48 @@ func filterIssuesForForge(issues []ai.CodeIssue, effective store.EffectiveSettin
 	}
 	out := make([]ai.CodeIssue, 0, len(issues))
 	for _, issue := range issues {
+		if issue.ReportingAction != "" {
+			if profile.IsForgeAction(issue.ReportingAction) {
+				out = append(out, issue)
+			}
+			continue
+		}
 		if store.PassesIssueGates(issue.Severity, issue.Confidence, effective) {
 			out = append(out, issue)
 		}
 	}
 	return out
+}
+
+func applyReportingDefaults(cfg *Config) {
+	if cfg == nil {
+		return
+	}
+	defaults := profile.DefaultReportingConfig()
+	if cfg.Reporting.Mode == "" {
+		cfg.Reporting.Mode = defaults.Mode
+	}
+	if cfg.Reporting.DefaultIssueMinSeverity == "" {
+		cfg.Reporting.DefaultIssueMinSeverity = defaults.DefaultIssueMinSeverity
+	}
+	if cfg.Reporting.DefaultIssueMinConfidence == "" {
+		cfg.Reporting.DefaultIssueMinConfidence = defaults.DefaultIssueMinConfidence
+	}
+	if cfg.Reporting.MaxIssuesPerScan <= 0 {
+		cfg.Reporting.MaxIssuesPerScan = defaults.MaxIssuesPerScan
+	}
+	if cfg.Reporting.DefaultActionBySeverity == nil {
+		cfg.Reporting.DefaultActionBySeverity = defaults.DefaultActionBySeverity
+	}
+	if cfg.Reporting.CategoryOverrides == nil {
+		cfg.Reporting.CategoryOverrides = defaults.CategoryOverrides
+	}
+	if cfg.Reporting.SourceTypeOverrides == nil {
+		cfg.Reporting.SourceTypeOverrides = defaults.SourceTypeOverrides
+	}
+	if cfg.MaxIssuesPerRun <= 0 && cfg.Reporting.MaxIssuesPerScan > 0 {
+		cfg.MaxIssuesPerRun = cfg.Reporting.MaxIssuesPerScan
+	}
 }
 
 func severitiesForStatus(result *analyzers.AnalysisResult, effective store.EffectiveSettings) []string {
@@ -1288,14 +1357,15 @@ func finishPersistedScan(ctx context.Context, scanCtx *store.ScanContext, reposi
 	}
 	scanID := scanCtx.ScanID
 	var data *store.ScanCompletion
-	if result != nil {
+		if result != nil {
 		scanners := make([]store.ScanCompletionScanner, 0, len(result.ScannerResults))
 		for _, sr := range result.ScannerResults {
 			scanners = append(scanners, store.ScanCompletionScanner{
-				Scanner:       sr.Scanner,
-				Status:        string(sr.Status),
-				FindingsCount: len(sr.Findings),
-				Detail:        sr.Detail,
+				Scanner:             sr.Scanner,
+				Status:              string(sr.Status),
+				FindingsCount:       len(sr.Findings),
+				Detail:              sr.Detail,
+				ApplicabilityReason: sr.ApplicabilityReason,
 			})
 		}
 		data = &store.ScanCompletion{
@@ -1307,6 +1377,7 @@ func finishPersistedScan(ctx context.Context, scanCtx *store.ScanContext, reposi
 			WorkspaceModeUsed: result.WorkspaceModeUsed,
 			PolicySnapshot:    result.PolicySnapshot,
 			ScannerResults:    scanners,
+			RepoProfile:       result.RepoProfile,
 		}
 		if result.Graph != nil {
 			if raw, err := json.Marshal(result.Graph); err == nil {

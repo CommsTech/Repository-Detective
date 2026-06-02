@@ -66,6 +66,11 @@ type DashboardSummary struct {
 	Remediation            RemediationSummary
 	Closure                ClosureSummary
 	Lifecycle              LifecycleSummary
+	Backlog                FindingBacklogSummary
+	Platform               ScannerPlatformSummary
+	ScanHealth             ScanHealthSummary
+	RemediationInsight       RemediationInsight
+	platformRollups        map[string]scannerDBRollup
 }
 
 // ListOptions bounds list query size.

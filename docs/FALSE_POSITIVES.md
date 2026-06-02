@@ -2,6 +2,8 @@
 
 Repository Detective combines **static heuristics**, **external scanners**, **repo health checks**, and optional **LLM auditors**. Heuristic rules are fast but can mis-classify safe patterns.
 
+**Repo-structure awareness** (see [REPORTING.md](REPORTING.md)) runs before scanners and normalizes findings before Gitea issue creation. Generated, vendor, test, docs, and example paths are downgraded or suppressed by default while remaining auditable in scan data.
+
 ## Common false positives (fixed in static analyzer)
 
 | Pattern | Example | Why it is usually safe |
@@ -15,14 +17,32 @@ Repository Detective combines **static heuristics**, **external scanners**, **re
 
 | Setting | Effect |
 |---------|--------|
-| `min_issue_confidence` | Raise (e.g. `0.7`) to drop low-confidence findings before Gitea filing |
-| `max_issues_per_run` | Cap issues created per scan (default `50`) |
+| `reporting.mode` | `high_signal` (default), `monitor_only`, `standard`, `strict`, `compliance` |
+| `reporting.default_issue_min_confidence` | Minimum confidence for auto-issue (`medium` ≈ 0.7) |
+| `reporting.default_issue_min_severity` | Minimum severity for auto-issue (default `high`) |
+| `false_positive_reduction.enabled` | Master switch for path-based confidence adjustments |
+| `false_positive_reduction.suppress_vendor` | Suppress vendor-path findings by default |
+| `min_issue_confidence` | Legacy gate; also applied at issue manager |
+| `max_issues_per_run` / `reporting.max_issues_per_scan` | Cap issues created per scan (default `25`) |
 | `skip_low_severity` | Omit `low` findings from forge issues |
 | `repository_exclude_patterns` | Skip noisy repos (see `handlers/repo_filter.go`) |
 
+## Source-type defaults
+
+| Source type | Default action |
+|-------------|----------------|
+| `source` | `auto_issue` (when severity/confidence pass gates) |
+| `test`, `docs`, `example` | `report_only` |
+| `generated`, `vendor` | `suppressed_with_reason` |
+| `config`, `dependency` | `manual_review` / `auto_issue` for CVEs |
+
+Override per repo via `reporting.source_type_overrides` and `reporting.create_issues_for_*` flags.
+
 ## Scanner tools in Docker
 
-The default image sets `INSTALL_EXTERNAL_TOOLS=false`. Dashboard **“Tools not in container”** counts are expected — not failed scans. Build with tools when you need Trivy/Semgrep/Gitleaks in-container:
+The default image sets `INSTALL_EXTERNAL_TOOLS=false`. Dashboard **“Tools not in container”** counts are expected — not failed scans. Missing scanners are recorded as platform warnings with applicability `skipped_tool_unavailable`, not as repository findings.
+
+Build with tools when you need Trivy/Semgrep/Gitleaks in-container:
 
 ```bash
 INSTALL_EXTERNAL_TOOLS=true ./deploy.sh

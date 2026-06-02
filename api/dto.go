@@ -228,6 +228,13 @@ type dashboardSummaryResponse struct {
 	RemediationCandidates  int                      `json:"remediation_candidates,omitempty"`
 	RemediationHumanReview int                    `json:"remediation_human_review,omitempty"`
 	RemediationApproved    int                      `json:"remediation_approved,omitempty"`
+	OpenUniqueFindings     int                      `json:"open_unique_findings,omitempty"`
+	NewFindingsLast7Days   int                      `json:"new_findings_last_7_days,omitempty"`
+	RegressionsLast7Days   int                      `json:"regressions_last_7_days,omitempty"`
+	RawDetectorHits7d      int                      `json:"raw_detector_hits_7d,omitempty"`
+	RawInstances7d         int                      `json:"raw_instances_7d,omitempty"`
+	UniqueMissingScanners  int                      `json:"unique_missing_scanners,omitempty"`
+	RawMissingToolEvents   int                      `json:"raw_missing_tool_events,omitempty"`
 }
 
 func toRepositoryResponse(repo store.Repository) repositoryResponse {
@@ -498,6 +505,13 @@ func toDashboardSummaryResponse(s store.DashboardSummary) dashboardSummaryRespon
 		RemediationCandidates: s.Remediation.Candidates,
 		RemediationHumanReview: s.Remediation.HumanReview,
 		RemediationApproved: s.Remediation.ApprovedWaiting,
+		OpenUniqueFindings:     s.Backlog.OpenUnique,
+		NewFindingsLast7Days:   s.Backlog.NewLast7Days,
+		RegressionsLast7Days:   s.Backlog.RegressionsLast7Days,
+		RawDetectorHits7d:      s.Backlog.RawDetectorHits7d,
+		RawInstances7d:         s.Backlog.RawInstances7d,
+		UniqueMissingScanners:  s.Platform.UniqueMissingTools,
+		RawMissingToolEvents:   s.Platform.RawMissingEvents,
 	}
 	for _, scan := range s.RecentScans {
 		resp.RecentScans = append(resp.RecentScans, toScanWithRepoResponse(scan))
