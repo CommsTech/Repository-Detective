@@ -87,7 +87,7 @@ func runSemgrepWithCommand(ctx context.Context, logger *logrus.Logger, dir strin
 		}
 		result.Detail = fmt.Sprintf("truncated to %d findings (%d total)", max, parsed.Total)
 	}
-	logger.Infof("[SCANNER:semgrep] status=%s findings=%d detail=%q", result.Status, len(parsed.Findings), result.Detail)
+	logResultInfo(logger, "semgrep", result.Status, len(parsed.Findings), result.Detail)
 	return result
 }
 

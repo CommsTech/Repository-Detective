@@ -49,16 +49,19 @@
 </div>
 
 <div class="rd-card">
-  <div class="rd-card-head"><h2>Scanner availability</h2></div>
+  <div class="rd-card-head"><h2>Scanner availability</h2><span class="rd-chip">Runtime probe · 2s timeout per binary</span></div>
+  <p class="rd-muted">Configured = enabled in effective profile. Installed = binary on PATH. Missing configured scanners reduce coverage but do not stop the service.</p>
   <table class="rd-table">
-    <tr><th scope="col">Scanner</th><th scope="col">Configured</th><th scope="col">Installed</th><th scope="col">Version</th></tr>
+    <tr><th scope="col">Scanner</th><th scope="col">Configured</th><th scope="col">Installed</th><th scope="col">Version</th><th scope="col">Role</th></tr>
     {{range .Tools}}
     <tr>
-      <td>{{.Name}}</td>
+      <td><strong>{{.Name}}</strong></td>
       <td>{{if .Configured}}<span class="rd-badge completed">yes</span>{{else}}<span class="rd-badge skipped">no</span>{{end}}</td>
-      <td>{{if .Available}}<span class="rd-badge found">available</span>{{else}}<span class="rd-badge binary_missing">missing</span>{{end}}</td>
-      <td class="rd-muted">{{if .Version}}{{.Version}}{{else}}—{{end}}</td>
+      <td>{{if eq .InstallState "available"}}<span class="rd-badge found">available</span>{{else if eq .InstallState "missing"}}<span class="rd-badge binary_missing">missing</span>{{else if eq .InstallState "disabled"}}<span class="rd-muted">n/a</span>{{else}}<span class="rd-badge skipped">unknown</span>{{end}}</td>
+      <td class="rd-muted">{{.VersionDisplay}}</td>
+      <td>{{if .IsOptional}}<span class="rd-badge skipped">optional</span>{{else}}<span class="rd-badge medium">required</span>{{end}}</td>
     </tr>
+    {{if .RemediationHint}}<tr><td colspan="5" class="rd-muted rd-scanner-hint">{{.RemediationHint}}</td></tr>{{end}}
     {{end}}
   </table>
 </div>

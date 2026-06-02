@@ -372,20 +372,53 @@ func (h *Handler) RepoReport(c *gin.Context) {
 		c.String(http.StatusNotFound, "repository not found")
 		return
 	}
+	const findingsPageSize = 200
+	offset, _ := strconv.Atoi(c.Query("offset"))
+	if offset < 0 {
+		offset = 0
+	}
+	findingsFilter := store.FindingFilter{
+		RepositoryID: id,
+		Severity:     c.Query("severity"),
+		Category:     c.Query("category"),
+		Status:       c.Query("status"),
+		Source:       c.Query("source"),
+		Limit:        findingsPageSize,
+		Offset:       offset,
+	}
 	scans, _ := h.store.ListScansByRepository(c.Request.Context(), id, store.ListOptions{Limit: 10})
-	findings, _ := h.store.ListFindings(c.Request.Context(), store.FindingFilter{RepositoryID: id, Limit: 50})
-	external, _ := h.store.ListExternalIssuesByRepository(c.Request.Context(), id, store.ListOptions{Limit: 20})
+	findings, _ := h.store.ListFindings(c.Request.Context(), findingsFilter)
+	findingsTotal, _ := h.store.CountFindings(c.Request.Context(), findingsFilter)
+	sortFindingsBySeverity(findings)
+	external, _ := h.store.ListExternalIssuesByRepository(c.Request.Context(), id, store.ListOptions{Limit: 100})
 	settings, _ := h.store.GetRepoSettings(c.Request.Context(), id)
 	effective, meta := store.ResolveEffectiveSettingsFull(h.global, settings)
-	severityCounts := map[string]int{}
-	for _, f := range findings {
-		if f.Status == "open" {
-			severityCounts[strings.ToLower(f.Severity)]++
-		}
+	severityCounts, _ := h.store.OpenFindingsBySeverityForRepository(c.Request.Context(), id)
+	if severityCounts == nil {
+		severityCounts = map[string]int{}
 	}
 	h.renderNav(c, "repo_report.html", "Report — "+repo.FullName, "reports", map[string]any{
 		"Repo": repo, "Scans": scans, "Findings": findings, "ExternalIssues": external,
 		"Effective": effective, "ProfileMeta": meta, "SeverityCounts": severityCounts,
+		"FindingsFilter": findingsFilter, "FindingsTotal": findingsTotal, "FindingsPageSize": findingsPageSize,
+	})
+}
+
+func sortFindingsBySeverity(findings []store.FindingListItem) {
+	order := map[string]int{
+		"critical": 0,
+		"high":     1,
+		"medium":   2,
+		"low":      3,
+		"info":     4,
+	}
+	sort.Slice(findings, func(i, j int) bool {
+		si := order[strings.ToLower(findings[i].Severity)]
+		sj := order[strings.ToLower(findings[j].Severity)]
+		if si != sj {
+			return si < sj
+		}
+		return findings[i].LastSeenAt.After(findings[j].LastSeenAt)
 	})
 }
 

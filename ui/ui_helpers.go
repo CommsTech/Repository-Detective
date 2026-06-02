@@ -28,9 +28,34 @@ func templateFuncs() template.FuncMap {
 		"apiKeySuffix":   apiKeyQuerySuffix,
 		"issuesFromScan": issuesFromScanSummary,
 		"add":            func(a, b int) int { return a + b },
+		"sub":            func(a, b int) int { return a - b },
+		"min":            func(a, b int) int { if a < b { return a }; return b },
 		"gt":             func(a, b int) bool { return a > b },
+		"lt":             func(a, b int) bool { return a < b },
 		"eq":             func(a, b interface{}) bool { return a == b },
+		"dict":           templateDict,
+		"jsonScript":     jsonScriptContent,
 	}
+}
+
+// jsonScriptContent marks pre-encoded JSON safe for embedding in application/json script tags.
+func jsonScriptContent(raw string) template.JS {
+	return template.JS(raw)
+}
+
+func templateDict(kv ...any) (map[string]any, error) {
+	if len(kv)%2 != 0 {
+		return nil, fmt.Errorf("dict: expected key/value pairs")
+	}
+	out := make(map[string]any, len(kv)/2)
+	for i := 0; i < len(kv); i += 2 {
+		key, ok := kv[i].(string)
+		if !ok {
+			return nil, fmt.Errorf("dict: key at %d is not a string", i)
+		}
+		out[key] = kv[i+1]
+	}
+	return out, nil
 }
 
 func joinStrings(items []string, sep ...string) string {

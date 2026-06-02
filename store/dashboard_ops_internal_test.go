@@ -19,11 +19,17 @@ func TestMergeScannerRollupsLabels(t *testing.T) {
 	if merged.UniqueMissingTools != 1 {
 		t.Fatalf("unique missing = %d", merged.UniqueMissingTools)
 	}
+	if merged.ConfiguredMissingRuntime != 1 || !merged.DegradedCoverage {
+		t.Fatalf("degraded coverage: missing=%d degraded=%v", merged.ConfiguredMissingRuntime, merged.DegradedCoverage)
+	}
 	for _, r := range merged.Rollups {
 		switch r.Name {
 		case "hadolint":
-			if r.StatusLabel != "disabled, not required" {
+			if r.StatusLabel != "optional, inactive" {
 				t.Fatalf("hadolint: %q", r.StatusLabel)
+			}
+			if !r.Optional || r.CoverageImpact != "inactive" {
+				t.Fatalf("hadolint optional/inactive: optional=%v impact=%q", r.Optional, r.CoverageImpact)
 			}
 		case "trivy":
 			if r.AffectedRepos != 12 || r.RecommendedFix == "" {

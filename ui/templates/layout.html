@@ -10,6 +10,7 @@
 {{end}}
 
 {{define "nav"}}
+<a class="rd-skip-link" href="#main-content">Skip to main content</a>
 <div class="rd-layout">
   <aside class="rd-sidebar" aria-label="Main navigation">
     <a class="rd-brand" href="{{.BasePath}}{{apiKeyQS .APIKey}}">
@@ -19,7 +20,7 @@
         <span>Inspect · Analyze · Improve</span>
       </div>
     </a>
-    <nav class="rd-nav">
+    <nav class="rd-nav" aria-label="Primary">
       <span class="rd-nav-label">Operations</span>
       <a href="{{.BasePath}}{{apiKeyQS .APIKey}}" class="{{navActive "dashboard" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">◉</span> Dashboard</a>
       <a href="{{.BasePath}}/repos{{apiKeyQS .APIKey}}" class="{{navActive "repos" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">▣</span> Repositories</a>
@@ -47,7 +48,7 @@
       <div class="rd-topbar-meta">
         <span class="rd-status-pill" title="Platform operational">
           <span class="rd-status-dot" aria-hidden="true"></span>
-          Live
+          <span class="rd-status-text">Live</span>
         </span>
       </div>
     </header>

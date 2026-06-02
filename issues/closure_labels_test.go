@@ -4,10 +4,10 @@ import "testing"
 
 func TestClosureLifecycleLabelsDualMode(t *testing.T) {
 	SetLabelCompatMode(LabelCompatDual)
-	t.Cleanup(func() { SetLabelCompatMode(LabelCompatDual) })
+	t.Cleanup(func() { SetLabelCompatMode(LabelCompatNewOnly) })
 	labels := ExpandLifecycleLabels(LifecycleResolvedVerified)
-	if len(labels) != 2 {
-		t.Fatalf("expected dual labels, got %v", labels)
+	if len(labels) != 1 || labels[0] != "repository-detective/resolved-verified" {
+		t.Fatalf("dual mode should write only Repository Detective labels, got %v", labels)
 	}
 }
 

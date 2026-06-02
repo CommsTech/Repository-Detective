@@ -18,6 +18,18 @@ detect → issue → plan → approve → patch PR → merge → rescan → veri
 | [DOGFOODING.md](DOGFOODING.md) | **Track A** — scan Repository Detective itself first |
 | [DOGFOOD_REPORT_TEMPLATE.md](DOGFOOD_REPORT_TEMPLATE.md) | Report template after first self-scan |
 | [TROUBLESHOOTING.md](TROUBLESHOOTING.md) | Common operator issues |
+| [DASHBOARD_GUIDE.md](DASHBOARD_GUIDE.md) | Operator dashboard and charts |
+| [SCANNER_HEALTH.md](SCANNER_HEALTH.md) | Scanner availability and degraded coverage |
+| [PRIVACY_AND_DATA_PROTECTION.md](PRIVACY_AND_DATA_PROTECTION.md) | Privacy-aware handling (not compliance certification) |
+| [ADMIN_HARDENING.md](ADMIN_HARDENING.md) | Operator security checklist |
+| [DATA_RETENTION.md](DATA_RETENTION.md) | Retention and deletion responsibilities |
+| [ACCESSIBILITY.md](ACCESSIBILITY.md) | WCAG-aligned UI practices (not certification) |
+| [ISSUE_TRACKING.md](ISSUE_TRACKING.md) | Gitea backlog, templates, labels |
+| [RELEASE_READINESS.md](RELEASE_READINESS.md) | Pre-release checklist |
+| [COMPLIANCE_READINESS.md](COMPLIANCE_READINESS.md) | Compliance evidence index |
+| [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) | Honest product limits |
+| [SECURITY_MODEL.md](SECURITY_MODEL.md) | Trust boundaries overview |
+| [WIKI_PUBLISHING.md](WIKI_PUBLISHING.md) | Gitea wiki sync (`docs/wiki/` copies) |
 
 ## Product and policy
 
@@ -33,7 +45,9 @@ detect → issue → plan → approve → patch PR → merge → rescan → veri
 | Document | Description |
 |----------|-------------|
 | [SCANNERS.md](SCANNERS.md) | Deterministic scanner tools and configuration |
+| [REPORTING.md](REPORTING.md) | Repo profiling, reporting modes, and forge issue gating |
 | [FALSE_POSITIVES.md](FALSE_POSITIVES.md) | Tuning heuristics and avoiding noisy Gitea issues |
+| [SBOM.md](SBOM.md) | Pinned versions and software bill of materials |
 | [HEALTH_CHECKS.md](HEALTH_CHECKS.md) | Repository health checks (tech debt, reliability, etc.) |
 | [CODE_GRAPH.md](CODE_GRAPH.md) | Optional code graph analysis |
 | [PREINSTALL_AUDIT.md](PREINSTALL_AUDIT.md) | Third-party repo audit before install (no scripts/deps) |
@@ -47,6 +61,7 @@ detect → issue → plan → approve → patch PR → merge → rescan → veri
 | [RUNNERS.md](RUNNERS.md) | Remote runner delegation |
 | [NOTIFICATIONS.md](NOTIFICATIONS.md) | Webhook notifications (redacted payloads) |
 | [GITEA_STATUS.md](GITEA_STATUS.md) | Gitea commit status integration |
+| [ISSUE_BACKLOG.md](ISSUE_BACKLOG.md) | Feature issue tracking vs shipped work |
 
 ## Safe remediation loop
 
@@ -87,6 +102,8 @@ See [examples/](examples/) for copy-paste YAML profiles:
 ## Testing
 
 See [TESTING.md](TESTING.md) for unit/integration test commands.
+
+For a full integration and scan-readiness checklist, see [INTEGRATION_AUDIT.md](INTEGRATION_AUDIT.md). Run `./scripts/verify-all.sh` locally (mirrors CI + govulncheck).
 
 ```bash
 go test ./...

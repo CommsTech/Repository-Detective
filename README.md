@@ -12,6 +12,8 @@ Repo: https://git.commsnet.org/commstech/Bugbot.git
 
 **Start here:** [docs/SETUP.md](docs/SETUP.md) — step-by-step from clone to working webhooks.
 
+**Operator docs:** [docs/README.md](docs/README.md) · [Dashboard](docs/DASHBOARD_GUIDE.md) · [Scanner health](docs/SCANNER_HEALTH.md) · [Privacy](docs/PRIVACY_AND_DATA_PROTECTION.md)
+
 Quick local trial:
 
 ```bash

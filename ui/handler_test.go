@@ -33,6 +33,22 @@ func testUI(t *testing.T, s store.QueryStore) (*gin.Engine, *ui.Handler) {
 	return r, h
 }
 
+func extractDashboardChartJSON(t *testing.T, body string) string {
+	t.Helper()
+	const start = `id="rd-dashboard-data">`
+	const end = `</script>`
+	i := strings.Index(body, start)
+	if i < 0 {
+		t.Fatal("missing rd-dashboard-data script")
+	}
+	i += len(start)
+	j := strings.Index(body[i:], end)
+	if j < 0 {
+		t.Fatal("missing closing script tag for chart data")
+	}
+	return strings.TrimSpace(body[i : i+j])
+}
+
 func TestDashboardRenders(t *testing.T) {
 	dir := t.TempDir()
 	s, _ := store.Open(store.Config{Enabled: true, Path: filepath.Join(dir, "ui.db")})
@@ -63,6 +79,105 @@ func TestDashboardRenders(t *testing.T) {
 	}
 	if !strings.Contains(body, "Executive report") {
 		t.Fatal("expected executive report section on dashboard")
+	}
+	if strings.Contains(body, "template error") {
+		t.Fatal("dashboard template error")
+	}
+}
+
+func TestDashboardChartJSONParses(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	s, _ := store.Open(store.Config{Enabled: true, Path: filepath.Join(dir, "chart-parse.db")})
+	defer s.Close()
+	repo, _ := s.UpsertRepository(ctx, store.Repository{Owner: "o", Name: "r", FullName: "o/r"})
+	now := time.Now().UTC()
+	_, _ = s.UpsertFinding(ctx, store.Finding{
+		RepositoryID: repo.ID, Fingerprint: "fp1", Title: "Test finding",
+		Severity: "high", Category: "security", Source: "semgrep", Status: "open",
+		FirstSeenAt: now, LastSeenAt: now,
+	})
+
+	r, _ := testUI(t, s)
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, "/ui/", nil)
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status %d", w.Code)
+	}
+	raw := extractDashboardChartJSON(t, w.Body.String())
+	if strings.HasPrefix(raw, `"`) {
+		t.Fatalf("chart JSON must not be double-encoded, got prefix: %.40q", raw)
+	}
+	var payload map[string]any
+	if err := json.Unmarshal([]byte(raw), &payload); err != nil {
+		t.Fatalf("invalid chart JSON: %v\nraw=%.120s", err, raw)
+	}
+	if _, ok := payload["severityLabels"]; !ok {
+		t.Fatalf("expected severityLabels in chart payload: %v", payload)
+	}
+}
+
+func TestUIRoutesSmoke(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	s, _ := store.Open(store.Config{Enabled: true, Path: filepath.Join(dir, "smoke.db")})
+	defer s.Close()
+	repo, _ := s.UpsertRepository(ctx, store.Repository{Owner: "o", Name: "r", FullName: "o/r"})
+	now := time.Now().UTC()
+	_, _ = s.UpsertFinding(ctx, store.Finding{
+		RepositoryID: repo.ID, Fingerprint: "fp-smoke", Title: "Smoke test finding",
+		Severity: "medium", Category: "security", Source: "semgrep", Status: "open",
+		FirstSeenAt: now, LastSeenAt: now,
+	})
+
+	r, _ := testUI(t, s)
+	routes := []struct {
+		path    string
+		contain string
+	}{
+		{"/ui/", "rd-chart-severity"},
+		{"/ui/repos", "o/r"},
+		{"/ui/repos/" + strconv.FormatInt(repo.ID, 10), "o/r"},
+		{"/ui/repos/" + strconv.FormatInt(repo.ID, 10) + "/report", "Technical findings"},
+		{"/ui/findings", "Findings queue"},
+		{"/ui/scans", "Scan history"},
+		{"/ui/reports", "Executive summary"},
+		{"/ui/health", "System Health"},
+	}
+	for _, rt := range routes {
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest(http.MethodGet, rt.path, nil)
+		r.ServeHTTP(w, req)
+		body := w.Body.String()
+		if w.Code != http.StatusOK {
+			t.Fatalf("%s status %d", rt.path, w.Code)
+		}
+		if !strings.Contains(body, rt.contain) {
+			t.Fatalf("%s missing %q", rt.path, rt.contain)
+		}
+		if strings.Contains(body, "template error") || strings.Contains(body, "can't evaluate field") {
+			t.Fatalf("%s template failure: %.200s", rt.path, body)
+		}
+	}
+}
+
+func TestStaticAssetsPublic(t *testing.T) {
+	r, _ := testUI(t, nil)
+	assets := []string{
+		"/ui/static/theme.css",
+		"/ui/static/chart.umd.min.js",
+		"/ui/static/dashboard-charts.js",
+		"/ui/static/logo.svg",
+		"/ui/static/app.js",
+	}
+	for _, path := range assets {
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest(http.MethodGet, path, nil)
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			t.Fatalf("%s status %d", path, w.Code)
+		}
 	}
 }
 
@@ -351,6 +466,40 @@ func TestHealthPageRenders(t *testing.T) {
 	r.ServeHTTP(w, req)
 	if w.Code != http.StatusOK || !strings.Contains(w.Body.String(), "System Health") {
 		t.Fatalf("health page failed: %d", w.Code)
+	}
+}
+
+func TestRepoReportFindingsTracker(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	s, _ := store.Open(store.Config{Enabled: true, Path: filepath.Join(dir, "repo-report.db")})
+	defer s.Close()
+
+	repo, _ := s.UpsertRepository(ctx, store.Repository{Owner: "o", Name: "r", FullName: "o/r"})
+	now := time.Now().UTC()
+	_, _ = s.UpsertFinding(ctx, store.Finding{
+		RepositoryID: repo.ID, Fingerprint: "fp1", Title: "SQL injection risk",
+		Severity: "high", Category: "security", Source: "semgrep", Status: "open",
+		FilePath: "main.go", Line: 42, Confidence: 0.92,
+		FirstSeenAt: now, LastSeenAt: now,
+	})
+
+	r, _ := testUI(t, s)
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, "/ui/repos/"+strconv.FormatInt(repo.ID, 10)+"/report", nil)
+	r.ServeHTTP(w, req)
+	body := w.Body.String()
+	if w.Code != http.StatusOK {
+		t.Fatalf("repo report status %d", w.Code)
+	}
+	if strings.Contains(body, "(sample)") {
+		t.Fatal("report must not label findings as sample")
+	}
+	if !strings.Contains(body, "Technical findings") || !strings.Contains(body, "SQL injection risk") {
+		t.Fatal("expected structured findings table with data")
+	}
+	if !strings.Contains(body, "rd-table-triage") {
+		t.Fatal("expected triage table styling")
 	}
 }
 

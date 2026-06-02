@@ -1,0 +1,29 @@
+name: Scanner false positive
+about: Report a finding that should be suppressed or reclassified
+labels:
+  - type/scanner
+  - type/false-positive
+  - status/needs-triage
+body:
+  - type: input
+    id: scanner
+    attributes:
+      label: Scanner
+      placeholder: semgrep, trivy, gitleaks, ...
+    validations:
+      required: true
+  - type: input
+    id: rule
+    attributes:
+      label: Rule ID (if known)
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Redacted evidence snippet
+      description: No secrets or customer data
+  - type: textarea
+    id: why_fp
+    attributes:
+      label: Why is this a false positive?
+    validations:
+      required: true

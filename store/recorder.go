@@ -284,7 +284,7 @@ func mapLifecycleToStatus(lifecycle string) string {
 }
 
 func redactSnippet(value string) string {
-	value = strings.TrimSpace(value)
+	value = issues.SanitizeSecretEvidence(value)
 	if len(value) > 2000 {
 		return value[:2000] + "…"
 	}

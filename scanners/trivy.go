@@ -91,7 +91,7 @@ func RunTrivy(ctx context.Context, logger *logrus.Logger, dir string, cfg Config
 	}
 
 	result = resultWithFindings("trivy", findings)
-	logger.Infof("[SCANNER:trivy] status=%s findings=%d", result.Status, len(findings))
+	logResultInfo(logger, "trivy", result.Status, len(findings), result.Detail)
 	return result
 }
 

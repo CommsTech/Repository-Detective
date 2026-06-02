@@ -192,10 +192,10 @@ func downgradeRisk(current string) string {
 }
 
 // FilterForgeIssues returns only findings eligible for automatic Gitea issue creation.
-func FilterForgeIssues(issues []ai.CodeIssue) []ai.CodeIssue {
+func FilterForgeIssues(issues []ai.CodeIssue, cfg ReportingConfig) []ai.CodeIssue {
 	out := make([]ai.CodeIssue, 0, len(issues))
 	for _, issue := range issues {
-		if IsForgeAction(issue.ReportingAction) {
+		if IsForgeAction(issue.ReportingAction, cfg) {
 			out = append(out, issue)
 		}
 	}

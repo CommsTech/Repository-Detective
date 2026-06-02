@@ -918,6 +918,7 @@ func initializeComponents() error {
 	// Initialize issue manager
 	issueConfig := &issues.Config{
 		AutoCreateIssues:   config.AutoCreateIssues,
+		Reporting:          config.Reporting,
 		GiteaBaseURL:       config.GiteaURL,
 		IssueLabels:        issues.DefaultIssueBaseLabels(),
 		MaxIssuesPerRun:    config.MaxIssuesPerRun,
@@ -1271,14 +1272,14 @@ func resolveEffectiveSettingsForRepo(ctx context.Context, owner, repo string) (c
 	return analyzers.WithScanPolicy(ctx, policy), effective
 }
 
-func filterIssuesForForge(issues []ai.CodeIssue, effective store.EffectiveSettings) []ai.CodeIssue {
+func filterIssuesForForge(issues []ai.CodeIssue, effective store.EffectiveSettings, reporting profile.ReportingConfig) []ai.CodeIssue {
 	if !store.ShouldCreateForgeIssues(effective) {
 		return nil
 	}
 	out := make([]ai.CodeIssue, 0, len(issues))
 	for _, issue := range issues {
 		if issue.ReportingAction != "" {
-			if profile.IsForgeAction(issue.ReportingAction) {
+			if profile.IsForgeAction(issue.ReportingAction, reporting) {
 				out = append(out, issue)
 			}
 			continue
@@ -1419,7 +1420,7 @@ func createIssuesFromResult(ctx context.Context, owner, repo string, result *ana
 	var processed []issues.ProcessedIssueRecord
 
 	if store.ShouldCreateForgeIssues(effective) {
-		forgeIssues := filterIssuesForForge(result.Issues, effective)
+		forgeIssues := filterIssuesForForge(result.Issues, effective, config.Reporting)
 		if len(forgeIssues) > 0 {
 			issueReq := &issues.IssueCreationRequest{
 				Owner:      owner,

@@ -113,7 +113,7 @@ func (s *SemanticStore) Remember(ctx context.Context, repository string, issue *
 func DuplicateCommentBody(issue *ai.CodeIssue, score float64) string {
 	snippet := SanitizeSecretEvidence(issue.CodeSnippet)
 	body := fmt.Sprintf(
-		"Bugbot detected a semantically similar finding (score %.2f).\n\n**%s**\n\nSeverity: %s\nCategory: %s\nConfidence: %.2f\nSource: %s\nFingerprint: %s\nFile: `%s` line %d\n\n%s",
+		"Repository Detective detected a semantically similar finding (score %.2f).\n\n**%s**\n\nSeverity: %s\nCategory: %s\nConfidence: %.2f\nSource: %s\nFingerprint: %s\nFile: `%s` line %d\n\n%s",
 		score,
 		issue.Title,
 		issue.Severity,

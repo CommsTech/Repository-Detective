@@ -140,14 +140,21 @@ func TestDecideActionLowSeverityReportOnly(t *testing.T) {
 }
 
 func TestFilterForgeIssues(t *testing.T) {
+	cfg := profile.DefaultReportingConfig()
 	issues := []ai.CodeIssue{
 		{ReportingAction: profile.ActionAutoIssue, Title: "a"},
+		{ReportingAction: profile.ActionManualReview, Title: "m"},
 		{ReportingAction: profile.ActionReportOnly, Title: "b"},
 		{ReportingAction: profile.ActionSuppressedWithReason, Title: "c"},
 	}
-	out := profile.FilterForgeIssues(issues)
+	out := profile.FilterForgeIssues(issues, cfg)
+	if len(out) != 2 {
+		t.Fatalf("expected auto_issue and manual_review when enabled, got %+v", out)
+	}
+	cfg.ManualReviewCanCreateIssue = false
+	out = profile.FilterForgeIssues(issues, cfg)
 	if len(out) != 1 || out[0].Title != "a" {
-		t.Fatalf("expected only auto_issue findings, got %+v", out)
+		t.Fatalf("expected only auto_issue when manual review disabled, got %+v", out)
 	}
 }
 

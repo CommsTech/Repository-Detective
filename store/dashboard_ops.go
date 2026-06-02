@@ -24,24 +24,31 @@ type FindingBacklogSummary struct {
 
 // ScannerPlatformRollup summarizes one scanner's runtime readiness (not a finding).
 type ScannerPlatformRollup struct {
-	Name           string
-	Configured     bool
-	Available      bool
-	Required       bool
-	StatusLabel    string
-	AffectedScans  int
-	AffectedRepos  int
-	FailureScans   int
-	RecommendedFix string
+	Name            string
+	Configured      bool
+	Available       bool
+	Optional        bool
+	Required        bool
+	InstallState    string
+	Version         string
+	VersionDisplay  string
+	CoverageImpact  string
+	StatusLabel     string
+	AffectedScans   int
+	AffectedRepos   int
+	FailureScans    int
+	RecommendedFix  string
 }
 
 // ScannerPlatformSummary groups platform warnings separately from repo findings.
 type ScannerPlatformSummary struct {
-	UniqueMissingTools   int
-	UniqueFailedScanners int
-	RawMissingEvents     int
-	RawFailureEvents     int
-	Rollups              []ScannerPlatformRollup
+	UniqueMissingTools          int
+	UniqueFailedScanners        int
+	ConfiguredMissingRuntime    int
+	DegradedCoverage            bool
+	RawMissingEvents            int
+	RawFailureEvents            int
+	Rollups                     []ScannerPlatformRollup
 }
 
 // ScanFailureBucket groups failed repository scans by coarse reason.
@@ -183,12 +190,20 @@ func MergeScannerRollups(dbRollups map[string]scannerDBRollup, tools []operator.
 	for _, tool := range tools {
 		db := dbRollups[tool.Name]
 		r := ScannerPlatformRollup{
-			Name:          tool.Name,
-			Configured:    tool.Configured,
-			Available:     tool.Available,
-			Required:      tool.Configured,
-			AffectedScans: db.MissingScans + db.FailureScans,
-			FailureScans:  db.FailureScans,
+			Name:           tool.Name,
+			Configured:     tool.Configured,
+			Available:      tool.Available,
+			Optional:       tool.IsOptional(),
+			Required:       tool.IsRequiredInProfile(),
+			InstallState:   tool.InstallState(),
+			Version:        tool.Version,
+			VersionDisplay: tool.VersionDisplay(),
+			CoverageImpact: tool.CoverageImpact(),
+			AffectedScans:  db.MissingScans + db.FailureScans,
+			FailureScans:   db.FailureScans,
+		}
+		if tool.Configured && !tool.Available {
+			summary.ConfiguredMissingRuntime++
 		}
 		if db.MissingScans > 0 {
 			r.AffectedRepos = db.MissingRepos
@@ -199,12 +214,13 @@ func MergeScannerRollups(dbRollups map[string]scannerDBRollup, tools []operator.
 		}
 		summary.RawMissingEvents += db.MissingScans
 		summary.RawFailureEvents += db.FailureScans
-		r.StatusLabel, r.RecommendedFix = scannerStatusLabel(r)
+		r.StatusLabel, r.RecommendedFix = scannerStatusLabel(r, tool)
 		out = append(out, r)
 	}
 	summary.Rollups = out
 	summary.UniqueMissingTools = len(seenMissing)
 	summary.UniqueFailedScanners = len(seenFailed)
+	summary.DegradedCoverage = summary.ConfiguredMissingRuntime > 0
 	return summary
 }
 
@@ -215,20 +231,24 @@ type scannerDBRollup struct {
 	FailureRepos  int
 }
 
-func scannerStatusLabel(r ScannerPlatformRollup) (status, fix string) {
+func scannerStatusLabel(r ScannerPlatformRollup, tool operator.ToolStatus) (status, fix string) {
+	fix = tool.RemediationHint()
 	if !r.Configured {
-		return "disabled, not required", "No action — scanner disabled in effective profile."
+		return "optional, inactive", fix
 	}
 	if r.Available {
 		if r.FailureScans > 0 {
 			return "installed, recent run failures", "Review scan logs for parse/timeouts; re-run scan after fixing scanner output."
 		}
-		return "installed", ""
+		if strings.TrimSpace(r.Version) == "" {
+			return "installed, version unknown", fix
+		}
+		return "installed", fix
 	}
 	if r.AffectedRepos > 0 {
-		return "configured, unavailable in runtime", "Rebuild image with ./deploy.sh (INSTALL_EXTERNAL_TOOLS=true) or install " + r.Name + " in PATH."
+		return "configured, missing (degraded coverage)", fix
 	}
-	return "configured, unavailable in runtime", "Rebuild image with ./deploy.sh (INSTALL_EXTERNAL_TOOLS=true) or install " + r.Name + " in PATH."
+	return "configured, missing (degraded coverage)", fix
 }
 
 // BuildDashboardActions assembles prioritized operator next steps.

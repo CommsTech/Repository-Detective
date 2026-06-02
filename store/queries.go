@@ -104,6 +104,8 @@ type QueryStore interface {
 	ListScannerResultsByScan(ctx context.Context, scanID string) ([]ScannerResultRecord, error)
 
 	ListFindings(ctx context.Context, filter FindingFilter) ([]FindingListItem, error)
+	CountFindings(ctx context.Context, filter FindingFilter) (int, error)
+	OpenFindingsBySeverityForRepository(ctx context.Context, repositoryID int64) (map[string]int, error)
 	GetFindingDetail(ctx context.Context, id int64) (FindingDetail, error)
 	ListLifecycleEventsByFinding(ctx context.Context, findingID int64) ([]LifecycleEvent, error)
 

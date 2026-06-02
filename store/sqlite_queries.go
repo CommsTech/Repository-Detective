@@ -173,6 +173,61 @@ func (s *SQLiteStore) ListFindings(ctx context.Context, filter FindingFilter) ([
 	return out, rows.Err()
 }
 
+func (s *SQLiteStore) CountFindings(ctx context.Context, filter FindingFilter) (int, error) {
+	query := `SELECT COUNT(1) FROM findings f WHERE 1=1`
+	args := []any{}
+
+	if filter.RepositoryID > 0 {
+		query += ` AND f.repository_id = ?`
+		args = append(args, filter.RepositoryID)
+	}
+	if filter.Severity != "" {
+		query += ` AND LOWER(f.severity) = LOWER(?)`
+		args = append(args, filter.Severity)
+	}
+	if filter.Category != "" {
+		query += ` AND LOWER(f.category) = LOWER(?)`
+		args = append(args, filter.Category)
+	}
+	if filter.Status != "" {
+		query += ` AND LOWER(f.status) = LOWER(?)`
+		args = append(args, filter.Status)
+	}
+	if filter.Source != "" {
+		query += ` AND LOWER(f.source) = LOWER(?)`
+		args = append(args, filter.Source)
+	}
+
+	var n int
+	if err := s.db.QueryRowContext(ctx, query, args...).Scan(&n); err != nil {
+		return 0, fmt.Errorf("count findings: %w", err)
+	}
+	return n, nil
+}
+
+func (s *SQLiteStore) OpenFindingsBySeverityForRepository(ctx context.Context, repositoryID int64) (map[string]int, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT LOWER(severity), COUNT(1) FROM findings
+		WHERE repository_id = ? AND status = 'open'
+		GROUP BY LOWER(severity)
+	`, repositoryID)
+	if err != nil {
+		return nil, fmt.Errorf("open findings by severity: %w", err)
+	}
+	defer rows.Close()
+
+	out := map[string]int{}
+	for rows.Next() {
+		var sev string
+		var count int
+		if err := rows.Scan(&sev, &count); err != nil {
+			return nil, err
+		}
+		out[sev] = count
+	}
+	return out, rows.Err()
+}
+
 func (s *SQLiteStore) GetFindingDetail(ctx context.Context, id int64) (FindingDetail, error) {
 	row := s.db.QueryRowContext(ctx, `
 		SELECT f.id, f.repository_id, f.fingerprint, f.category, f.severity, f.confidence,

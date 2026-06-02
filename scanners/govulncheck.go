@@ -50,7 +50,7 @@ func runGovulncheckWithCommand(ctx context.Context, logger *logrus.Logger, dir s
 		result.Detail = truncateDetailForScanner("findings", max, parsed.Total)
 	}
 	if logger != nil {
-		logger.Infof("[SCANNER:govulncheck] status=%s findings=%d detail=%q", result.Status, len(parsed.Findings), result.Detail)
+		logResultInfo(logger, "govulncheck", result.Status, len(parsed.Findings), result.Detail)
 	}
 	return result
 }

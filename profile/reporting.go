@@ -273,8 +273,15 @@ func stringsToLowerTrim(s string) string {
 }
 
 // IsForgeAction reports whether the action should create/update Gitea issues.
-func IsForgeAction(action string) bool {
-	return action == ActionAutoIssue
+func IsForgeAction(action string, cfg ReportingConfig) bool {
+	switch action {
+	case ActionAutoIssue:
+		return true
+	case ActionManualReview:
+		return cfg.ManualReviewCanCreateIssue
+	default:
+		return false
+	}
 }
 
 // ShouldShowInDashboard reports whether a finding remains visible in dashboard views.

@@ -64,6 +64,34 @@ func TestListFindingsFilters(t *testing.T) {
 	}
 }
 
+func TestCountFindingsAndSeverityByRepo(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	s, err := store.Open(store.Config{Enabled: true, Path: filepath.Join(dir, "count.db")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+
+	repo, _ := s.UpsertRepository(ctx, store.Repository{Owner: "o", Name: "r", FullName: "o/r"})
+	now := time.Now().UTC()
+	_, _ = s.UpsertFinding(ctx, store.Finding{RepositoryID: repo.ID, Fingerprint: "f1", Severity: "high", Status: "open", Category: "security", Source: "semgrep", FirstSeenAt: now, LastSeenAt: now})
+	_, _ = s.UpsertFinding(ctx, store.Finding{RepositoryID: repo.ID, Fingerprint: "f2", Severity: "low", Status: "resolved", Category: "quality", Source: "ruff", FirstSeenAt: now, LastSeenAt: now})
+
+	total, err := s.CountFindings(ctx, store.FindingFilter{RepositoryID: repo.ID})
+	if err != nil || total != 2 {
+		t.Fatalf("count all: got %d err=%v", total, err)
+	}
+	open, err := s.CountFindings(ctx, store.FindingFilter{RepositoryID: repo.ID, Status: "open"})
+	if err != nil || open != 1 {
+		t.Fatalf("count open: got %d err=%v", open, err)
+	}
+	bySev, err := s.OpenFindingsBySeverityForRepository(ctx, repo.ID)
+	if err != nil || bySev["high"] != 1 {
+		t.Fatalf("severity map: %#v err=%v", bySev, err)
+	}
+}
+
 func TestListFindingsIgnoresSQLInjectionPayloads(t *testing.T) {
 	ctx := context.Background()
 	dir := t.TempDir()

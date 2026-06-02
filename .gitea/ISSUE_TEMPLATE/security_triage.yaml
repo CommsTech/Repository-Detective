@@ -1,0 +1,34 @@
+name: Security finding triage
+about: Triage a Repository Detective security finding (not a product bug)
+labels:
+  - type/security
+  - status/needs-triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for findings **in scanned repositories**. For product bugs, use Bug report.
+  - type: input
+    id: fingerprint
+    attributes:
+      label: Finding fingerprint
+  - type: input
+    id: repo
+    attributes:
+      label: Repository
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - critical
+        - high
+        - medium
+        - low
+  - type: textarea
+    id: disposition
+    attributes:
+      label: Disposition
+      description: true positive / false positive / accepted risk / fixed
+    validations:
+      required: true

@@ -65,7 +65,7 @@ func runHadolintWithCommand(ctx context.Context, logger *logrus.Logger, dir stri
 		result.Detail = truncateDetailForScanner("findings", max, parsed.Total)
 	}
 	if logger != nil {
-		logger.Infof("[SCANNER:hadolint] status=%s findings=%d detail=%q", result.Status, len(parsed.Findings), result.Detail)
+		logResultInfo(logger, "hadolint", result.Status, len(parsed.Findings), result.Detail)
 	}
 	return result
 }

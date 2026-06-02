@@ -1,132 +1,35 @@
-package store_test
+package store
 
 import (
-	"context"
 	"testing"
-	"time"
 
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/bugbot/operator"
 )
 
-func TestClassifyScanFailure(t *testing.T) {
-	tests := map[string]string{
-		"clone failed: authentication required": "clone_auth",
-		"context deadline exceeded":             "timeout",
-		"prepare workspace: content not found":  "prepare",
-		"scanner trivy binary_missing":          "scanner",
-		"invalid config profile":                "config",
-		"something else":                        "other",
+func TestMergeScannerRollupsDegradedCoverage(t *testing.T) {
+	tools := []operator.ToolStatus{
+		{Name: "git", Configured: true, Available: true, Version: "git version 2.45.4", LastChecked: "t"},
+		{Name: "trivy", Configured: true, Available: false, LastChecked: "t"},
+		{Name: "hadolint", Configured: false, Available: false, LastChecked: "t"},
 	}
-	for msg, want := range tests {
-		if got := store.ClassifyScanFailure(msg); got != want {
-			t.Fatalf("ClassifyScanFailure(%q) = %q, want %q", msg, got, want)
+	summary := MergeScannerRollups(nil, tools)
+	if summary.ConfiguredMissingRuntime != 1 {
+		t.Fatalf("expected 1 configured missing runtime, got %d", summary.ConfiguredMissingRuntime)
+	}
+	if !summary.DegradedCoverage {
+		t.Fatal("expected degraded coverage flag")
+	}
+	var trivy *ScannerPlatformRollup
+	for i := range summary.Rollups {
+		if summary.Rollups[i].Name == "trivy" {
+			trivy = &summary.Rollups[i]
+			break
 		}
 	}
-}
-
-func TestBuildRemediationInsightPlannerDisabled(t *testing.T) {
-	insight := store.BuildRemediationInsight(10, 0, false, false, "off")
-	if insight.Summary == "" || len(insight.Reasons) == 0 {
-		t.Fatal("expected explanation when planner disabled")
+	if trivy == nil || trivy.CoverageImpact != "degraded" {
+		t.Fatal("expected trivy degraded impact")
 	}
-}
-
-func TestDashboardScannerCountsAreUnique(t *testing.T) {
-	ctx := context.Background()
-	s := openTestStore(t)
-	repo, _ := s.UpsertRepository(ctx, store.Repository{Owner: "o", Name: "r", FullName: "o/r"})
-	scan1, _ := s.CreateScan(ctx, store.Scan{ID: "scancount01", RepositoryID: repo.ID, TriggerType: store.TriggerManual, Status: store.ScanStatusCompleted})
-	scan2, _ := s.CreateScan(ctx, store.Scan{ID: "scancount02", RepositoryID: repo.ID, TriggerType: store.TriggerManual, Status: store.ScanStatusCompleted})
-	_ = s.AddScannerResults(ctx, []store.ScannerResultRecord{
-		{ScanID: scan1.ID, ScannerName: "trivy", Status: "binary_missing"},
-		{ScanID: scan2.ID, ScannerName: "trivy", Status: "binary_missing"},
-		{ScanID: scan1.ID, ScannerName: "hadolint", Status: "binary_missing"},
-	})
-
-	summary, err := s.DashboardSummary(ctx, 5)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if summary.ScannerToolsMissingCount != 2 {
-		t.Fatalf("ScannerToolsMissingCount = %d, want 2 distinct scanners (not 3 events)", summary.ScannerToolsMissingCount)
-	}
-	if summary.Platform.RawMissingEvents != 3 {
-		t.Fatalf("RawMissingEvents = %d, want 3 raw events preserved", summary.Platform.RawMissingEvents)
-	}
-}
-
-func TestDashboardBacklogAggregation(t *testing.T) {
-	ctx := context.Background()
-	s := openTestStore(t)
-	repo, _ := s.UpsertRepository(ctx, store.Repository{Owner: "o", Name: "b", FullName: "o/b"})
-	now := time.Now().UTC()
-	old := now.Add(-14 * 24 * time.Hour)
-	_, _ = s.UpsertFinding(ctx, store.Finding{
-		RepositoryID: repo.ID, Fingerprint: "new7d", Severity: "high", Status: store.FindingStatusOpen,
-		FirstSeenAt: now.Add(-2 * 24 * time.Hour), LastSeenAt: now,
-	})
-	_, _ = s.UpsertFinding(ctx, store.Finding{
-		RepositoryID: repo.ID, Fingerprint: "regress", Severity: "medium", Status: store.FindingStatusOpen,
-		FirstSeenAt: old, LastSeenAt: now,
-	})
-
-	summary, err := s.DashboardSummary(ctx, 5)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if summary.Backlog.NewLast7Days < 1 {
-		t.Fatalf("NewLast7Days = %d", summary.Backlog.NewLast7Days)
-	}
-	if summary.Backlog.RegressionsLast7Days < 1 {
-		t.Fatalf("RegressionsLast7Days = %d", summary.Backlog.RegressionsLast7Days)
-	}
-}
-
-func TestDashboardFailedScanBuckets(t *testing.T) {
-	ctx := context.Background()
-	s := openTestStore(t)
-	repo, _ := s.UpsertRepository(ctx, store.Repository{Owner: "o", Name: "f", FullName: "o/f"})
-	_, _ = s.CreateScan(ctx, store.Scan{
-		ID: "failscan01", RepositoryID: repo.ID, TriggerType: store.TriggerManual,
-		Status: store.ScanStatusFailed, Error: "context deadline exceeded",
-	})
-
-	summary, err := s.DashboardSummary(ctx, 5)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if summary.FailedScansCount < 1 {
-		t.Fatal("expected failed scan count")
-	}
-	found := false
-	for _, b := range summary.ScanHealth.FailureBuckets {
-		if b.Bucket == "timeout" {
-			found = true
-		}
-	}
-	if !found {
-		t.Fatalf("expected timeout bucket in %+v", summary.ScanHealth.FailureBuckets)
-	}
-}
-
-func TestMissingToolsNotCountedAsFindings(t *testing.T) {
-	ctx := context.Background()
-	s := openTestStore(t)
-	repo, _ := s.UpsertRepository(ctx, store.Repository{Owner: "o", Name: "r", FullName: "o/r"})
-	scan, _ := s.CreateScan(ctx, store.Scan{ID: "missing001", RepositoryID: repo.ID, Status: store.ScanStatusCompleted})
-	for i := 0; i < 5; i++ {
-		_ = s.AddScannerResults(ctx, []store.ScannerResultRecord{
-			{ScanID: scan.ID, ScannerName: "trivy", Status: "binary_missing"},
-		})
-	}
-	summary, err := s.DashboardSummary(ctx, 5)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if summary.OpenFindingsCount != 0 {
-		t.Fatalf("open findings should not include scanner missing events, got %d", summary.OpenFindingsCount)
-	}
-	if summary.ScannerToolsMissingCount != 1 {
-		t.Fatalf("expected 1 unique missing scanner, got %d", summary.ScannerToolsMissingCount)
+	if trivy.Optional {
+		t.Fatal("trivy should not be optional when configured")
 	}
 }

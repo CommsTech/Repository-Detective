@@ -37,6 +37,13 @@
   </div>
 </section>
 
+<section class="rd-chart-text-summary" aria-labelledby="rd-chart-summary-heading">
+  <h2 id="rd-chart-summary-heading" class="rd-visually-hidden">Chart data text summary</h2>
+  <p class="rd-muted">Numeric summary (charts are supplementary): {{.Backlog.OpenUnique}} open unique findings;
+    {{.Backlog.CriticalOpen}} critical, {{.Backlog.HighOpen}} high, {{.Backlog.MediumOpen}} medium, {{.Backlog.LowOpen}} low;
+    {{.TotalRepositories}} repositories monitored.</p>
+</section>
+
 <section class="rd-charts-grid" aria-label="Security intelligence charts">
   <div class="rd-chart-card">
     <div class="rd-card-head"><h2>Severity mix</h2><span class="rd-chip">Open backlog</span></div>
@@ -219,18 +226,23 @@
 </div>
 
 <div class="rd-card">
-  <div class="rd-card-head"><h2>Platform readiness</h2></div>
-  {{if gt .Platform.UniqueMissingTools 0}}
-  <div class="rd-alert">{{.Platform.UniqueMissingTools}} scanner(s) unavailable in this runtime (platform signal, not repo findings).</div>
+  <div class="rd-card-head"><h2>Scanner coverage</h2><a class="rd-link" href="{{$.BasePath}}/health{{apiKeyQS $.APIKey}}">Full health →</a></div>
+  {{if .Platform.DegradedCoverage}}
+  <div class="rd-alert warn" role="status"><strong>Degraded coverage</strong> — {{.Platform.ConfiguredMissingRuntime}} configured scanner(s) missing from this runtime. The app is healthy; install tools or disable scanners in config.</div>
+  {{else if gt .Platform.UniqueMissingTools 0}}
+  <div class="rd-alert info" role="status">{{.Platform.UniqueMissingTools}} scanner(s) reported missing in recent scan results (historical signal).</div>
   {{end}}
   <table class="rd-table rd-table-compact">
-    <tr><th scope="col">Scanner</th><th scope="col">Status</th><th scope="col">Runtime</th></tr>
+    <tr><th scope="col">Scanner</th><th scope="col">Profile</th><th scope="col">Installed</th><th scope="col">Version</th><th scope="col">Impact</th></tr>
     {{range .Platform.Rollups}}
     <tr>
       <td><strong>{{.Name}}</strong></td>
-      <td>{{.StatusLabel}}</td>
-      <td>{{if .Available}}<span class="rd-badge found">installed</span>{{else if .Configured}}<span class="rd-badge binary_missing">missing</span>{{else}}—{{end}}</td>
+      <td>{{if .Configured}}<span class="rd-badge completed">configured</span>{{else}}<span class="rd-badge skipped">optional</span>{{end}}</td>
+      <td>{{if eq .InstallState "available"}}<span class="rd-badge found">available</span>{{else if eq .InstallState "missing"}}<span class="rd-badge binary_missing">missing</span>{{else if eq .InstallState "disabled"}}<span class="rd-muted">not configured</span>{{else}}<span class="rd-badge skipped">unknown</span>{{end}}</td>
+      <td class="rd-muted">{{.VersionDisplay}}</td>
+      <td class="rd-muted">{{if eq .CoverageImpact "degraded"}}degraded{{else if eq .CoverageImpact "inactive"}}inactive{{else}}ok{{end}}</td>
     </tr>
+    {{if .RecommendedFix}}<tr><td colspan="5" class="rd-muted rd-scanner-hint">{{.RecommendedFix}}</td></tr>{{end}}
     {{end}}
   </table>
 </div>
@@ -272,7 +284,7 @@
 </div>
 {{end}}
 
-<script type="application/json" id="rd-dashboard-data">{{.Data.ChartJSON}}</script>
+<script type="application/json" id="rd-dashboard-data">{{jsonScript .Data.ChartJSON}}</script>
 <script src="{{.BasePath}}/static/chart.umd.min.js" defer></script>
 <script src="{{.BasePath}}/static/dashboard-charts.js" defer></script>
 {{template "foot" .}}

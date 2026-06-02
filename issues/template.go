@@ -26,7 +26,7 @@ type IssueRenderInput struct {
 	Now         time.Time
 }
 
-// RenderIssueBody renders the structured Bugbot issue template.
+// RenderIssueBody renders the structured Repository Detective issue template.
 func RenderIssueBody(in IssueRenderInput) string {
 	issue := in.Issue
 	if issue == nil {

@@ -9,7 +9,7 @@ import (
 
 func TestBuildLabelsDualMode(t *testing.T) {
 	SetLabelCompatMode(LabelCompatDual)
-	t.Cleanup(func() { SetLabelCompatMode(LabelCompatDual) })
+	t.Cleanup(func() { SetLabelCompatMode(LabelCompatNewOnly) })
 
 	issue := &ai.CodeIssue{
 		Severity:   "high",
@@ -20,17 +20,17 @@ func TestBuildLabelsDualMode(t *testing.T) {
 	labels := BuildLabels([]string{"custom"}, issue)
 
 	want := map[string]bool{
-		"custom":                            true,
-		"bugbot":                            true,
-		"repository-detective":              true,
-		"automated-review":                  true,
-		"bugbot/secret":                     true,
-		"repository-detective/secret":       true,
-		"severity/high":                     true,
-		"bugbot/open":                       true,
-		"repository-detective/open":         true,
+		"custom":                      true,
+		"repository-detective":        true,
+		"automated-review":            true,
+		"repository-detective/secret": true,
+		"severity/high":               true,
+		"repository-detective/open":   true,
 	}
 	for _, label := range labels {
+		if strings.HasPrefix(label, "bugbot") {
+			t.Fatalf("dual mode must not write legacy bugbot labels, got %q", label)
+		}
 		if !want[label] {
 			t.Fatalf("unexpected label %q in %v", label, labels)
 		}

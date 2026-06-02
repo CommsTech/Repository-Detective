@@ -48,40 +48,7 @@
     <h2>Findings queue</h2>
     <p class="rd-muted" style="margin:0">Triage → reproduce → fix → test → verify</p>
   </div>
-  <table class="rd-table">
-    <thead>
-      <tr>
-        <th scope="col">Severity</th>
-        <th scope="col">Category</th>
-        <th scope="col">Finding</th>
-        <th scope="col">Repository</th>
-        <th scope="col">Source</th>
-        <th scope="col">Status</th>
-        <th scope="col">Last seen</th>
-        <th scope="col">Issue</th>
-      </tr>
-    </thead>
-    <tbody>
-    {{range .Data.Findings}}
-    <tr>
-      <td><span class="rd-badge {{severityBadge .Severity}}">{{.Severity}}</span></td>
-      <td><span class="rd-badge {{categoryBadge .Category}}">{{.Category}}</span></td>
-      <td>
-        <a class="rd-link" href="{{$.BasePath}}/findings/{{.ID}}{{apiKeyQS $.APIKey}}"><strong>{{.Title}}</strong></a>
-        {{if .FilePath}}<br><span class="rd-muted">{{.FilePath}}{{if .Line}}:{{.Line}}{{end}}</span>{{end}}
-        <br><span class="rd-muted">{{shortID .Fingerprint 16}}</span>
-      </td>
-      <td>{{.RepoFullName}}</td>
-      <td><span class="rd-badge skipped">{{.Source}}</span></td>
-      <td><span class="rd-badge {{statusBadge .Status}}">{{.Status}}</span></td>
-      <td class="rd-muted">{{.LastSeenAt.Format "2006-01-02"}}</td>
-      <td>{{if .ExternalIssueURL}}<a class="rd-link" href="{{.ExternalIssueURL}}" target="_blank" rel="noopener">#{{.ExternalIssueNumber}}</a>{{else}}<span class="rd-muted">—</span>{{end}}</td>
-    </tr>
-    {{else}}
-    <tr><td colspan="8"><div class="rd-empty"><h3>No findings match filters</h3><p class="rd-muted">Adjust filters or run a scan to detect issues.</p></div></td></tr>
-    {{end}}
-    </tbody>
-  </table>
+  {{template "findings_table" (dict "BasePath" .BasePath "APIKey" .APIKey "Findings" .Data.Findings "ShowRepo" true)}}
   <p class="rd-muted">Showing up to 100 findings. Use API pagination for larger exports.</p>
 </div>
 {{template "foot" .}}

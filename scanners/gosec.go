@@ -64,7 +64,7 @@ func runGosecWithCommand(ctx context.Context, logger *logrus.Logger, dir string,
 		result.Detail = truncateDetailForScanner("findings", max, parsed.Total)
 	}
 	if logger != nil {
-		logger.Infof("[SCANNER:gosec] status=%s findings=%d detail=%q", result.Status, len(parsed.Findings), result.Detail)
+		logResultInfo(logger, "gosec", result.Status, len(parsed.Findings), result.Detail)
 	}
 	return result
 }

@@ -17,11 +17,23 @@
     var el = document.getElementById("rd-dashboard-data");
     if (!el || !el.textContent) return null;
     try {
-      return JSON.parse(el.textContent);
+      var data = JSON.parse(el.textContent.trim());
+      if (typeof data === "string") {
+        data = JSON.parse(data);
+      }
+      return data;
     } catch (e) {
       console.warn("Repository Detective: invalid dashboard chart data", e);
       return null;
     }
+  }
+
+  function hasPositiveValues(values) {
+    if (!values || !values.length) return false;
+    for (var i = 0; i < values.length; i++) {
+      if (Number(values[i]) > 0) return true;
+    }
+    return false;
   }
 
   function severityColors(labels) {
@@ -46,7 +58,7 @@
           grid: { color: palette.grid },
         },
         y: {
-          ticks: { color: palette.text },
+          ticks: { color: palette.text, precision: 0 },
           grid: { color: palette.grid },
           beginAtZero: true,
         },
@@ -55,7 +67,6 @@
   }
 
   function initSeverityChart(ctx, data) {
-    if (!data.severityLabels || !data.severityLabels.length) return;
     new Chart(ctx, {
       type: "doughnut",
       data: {
@@ -80,7 +91,6 @@
   }
 
   function initCategoryChart(ctx, data) {
-    if (!data.categoryLabels || !data.categoryLabels.length) return;
     new Chart(ctx, {
       type: "bar",
       data: {
@@ -99,7 +109,6 @@
   }
 
   function initRadarChart(ctx, data) {
-    if (!data.categoryLabels || !data.categoryLabels.length) return;
     var max = Math.max.apply(null, data.categoryValues.concat([1]));
     new Chart(ctx, {
       type: "radar",
@@ -134,7 +143,6 @@
   }
 
   function initTrendChart(ctx, data) {
-    if (!data.scanTrendLabels) return;
     new Chart(ctx, {
       type: "line",
       data: {
@@ -155,7 +163,6 @@
   }
 
   function initRepoMap(ctx, data) {
-    if (!data.repoMapLabels || !data.repoMapLabels.length) return;
     var colors = data.repoMapLabels.map(function (_, i) {
       return data.repoMapFailed && data.repoMapFailed[i]
         ? "rgba(239, 68, 68, 0.75)"
@@ -192,7 +199,7 @@
         },
         scales: {
           x: {
-            ticks: { color: palette.text },
+            ticks: { color: palette.text, precision: 0 },
             grid: { color: palette.grid },
             beginAtZero: true,
           },
@@ -205,10 +212,39 @@
     });
   }
 
-  function init() {
-    if (typeof Chart === "undefined") return;
+  function showEmptyChart(canvas, message) {
+    if (!canvas || !canvas.parentElement) return;
+    var wrap = canvas.parentElement;
+    if (wrap.querySelector(".rd-chart-empty")) return;
+    canvas.style.display = "none";
+    var note = document.createElement("p");
+    note.className = "rd-chart-empty rd-muted";
+    note.textContent = message;
+    wrap.appendChild(note);
+  }
+
+  function showChartError(message) {
+    var grid = document.querySelector(".rd-charts-grid");
+    if (!grid || grid.querySelector(".rd-chart-error")) return;
+    var alert = document.createElement("div");
+    alert.className = "rd-alert rd-chart-error";
+    alert.setAttribute("role", "alert");
+    alert.textContent = message;
+    grid.parentNode.insertBefore(alert, grid);
+  }
+
+  function mountCharts() {
+    if (typeof Chart === "undefined") {
+      console.warn("Repository Detective: Chart.js not loaded");
+      showChartError("Charts could not load (Chart.js missing). Other dashboard data is still available.");
+      return;
+    }
+
     var data = readPayload();
-    if (!data) return;
+    if (!data) {
+      showChartError("Chart data is unavailable. Other dashboard metrics are still shown below.");
+      return;
+    }
 
     Chart.defaults.color = palette.text;
     Chart.defaults.borderColor = palette.grid;
@@ -220,12 +256,46 @@
     var trend = document.getElementById("rd-chart-trend");
     var repoMap = document.getElementById("rd-chart-repos");
 
-    if (severity) initSeverityChart(severity, data);
-    if (category) initCategoryChart(category, data);
-    if (radar) initRadarChart(radar, data);
-    if (trend) initTrendChart(trend, data);
-    if (repoMap) initRepoMap(repoMap, data);
+    if (severity) {
+      if (data.severityLabels && data.severityLabels.length) {
+        initSeverityChart(severity, data);
+      } else {
+        showEmptyChart(severity, "No open findings by severity.");
+      }
+    }
+    if (category) {
+      if (data.categoryLabels && data.categoryLabels.length) {
+        initCategoryChart(category, data);
+      } else {
+        showEmptyChart(category, "No category breakdown yet.");
+      }
+    }
+    if (radar) {
+      if (data.categoryLabels && data.categoryLabels.length) {
+        initRadarChart(radar, data);
+      } else {
+        showEmptyChart(radar, "No category data for radar.");
+      }
+    }
+    if (trend) {
+      if (data.scanTrendLabels && data.scanTrendLabels.length && hasPositiveValues(data.scanTrendValues)) {
+        initTrendChart(trend, data);
+      } else {
+        showEmptyChart(trend, "No completed scan activity in the last 14 days.");
+      }
+    }
+    if (repoMap) {
+      if (data.repoMapLabels && data.repoMapLabels.length && hasPositiveValues(data.repoMapValues)) {
+        initRepoMap(repoMap, data);
+      } else {
+        showEmptyChart(repoMap, "No repository risk data yet.");
+      }
+    }
   }
 
-  document.addEventListener("DOMContentLoaded", init);
+  if (document.readyState === "complete") {
+    mountCharts();
+  } else {
+    window.addEventListener("load", mountCharts);
+  }
 })();

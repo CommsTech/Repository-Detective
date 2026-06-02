@@ -46,6 +46,8 @@ logs/
 .env
 .env.local
 .env.*.local
+# Local operator config may contain secrets; use config.yaml.example + .env instead.
+config/config.yaml
 
 # Local SQLite databases
 data/

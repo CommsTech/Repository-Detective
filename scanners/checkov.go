@@ -73,7 +73,7 @@ func runCheckovWithCommand(ctx context.Context, logger *logrus.Logger, dir strin
 		result.Detail = truncateDetailForScanner("findings", max, parsed.Total)
 	}
 	if logger != nil {
-		logger.Infof("[SCANNER:checkov] status=%s findings=%d detail=%q", result.Status, len(parsed.Findings), result.Detail)
+		logResultInfo(logger, "checkov", result.Status, len(parsed.Findings), result.Detail)
 	}
 	return result
 }

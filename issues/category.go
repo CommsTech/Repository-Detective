@@ -101,10 +101,15 @@ func MapSemgrepCategory(metadataCategory string) string {
 	}
 }
 
-// CategoryLabel returns the Gitea label for a formal category.
+// CategoryLabel returns the Gitea category label for writes (Repository Detective namespace).
 func CategoryLabel(category string) string {
+	return CategoryLabelNew(category)
+}
+
+// CategoryLabelLegacy returns legacy bugbot/* category labels (legacy_only compat mode).
+func CategoryLabelLegacy(category string) string {
 	switch NormalizeCategory(category, "") {
-	case CategorySecurity:
+	case CategorySecurity, CategoryMisconfiguration:
 		return "bugbot/security"
 	case CategorySecret:
 		return "bugbot/secret"
@@ -118,8 +123,6 @@ func CategoryLabel(category string) string {
 		return "bugbot/ai-generated-risk"
 	case CategoryArchitecture:
 		return "bugbot/architecture"
-	case CategoryMisconfiguration:
-		return "bugbot/security"
 	default:
 		return "bugbot/code-quality"
 	}

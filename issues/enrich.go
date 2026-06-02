@@ -6,14 +6,13 @@ import (
 	"git.commsnet.org/commstech/bugbot/ai"
 )
 
-// BuildLabels returns Repository Detective / Bugbot labels for an issue without removing configured base labels.
+// BuildLabels returns Repository Detective labels for Gitea issue submission.
 func BuildLabels(base []string, issue *ai.CodeIssue) []string {
-	labels := append([]string{}, base...)
-	labels = append(labels, BaseLabelsForWrite()...)
-	labels = append(labels, automatedReviewLabel)
+	labels := append([]string{}, DefaultIssueBaseLabels()...)
+	labels = append(labels, base...)
 
 	category := NormalizeCategory(issue.Category, issue.Source)
-	labels = append(labels, ExpandBrandLabel(CategoryLabel(category), CategoryLabelNew(category))...)
+	labels = append(labels, CategoryLabelForWrite(category))
 
 	if severityLabel := SeverityLabel(issue.Severity); severityLabel != "" {
 		labels = append(labels, severityLabel)

@@ -30,7 +30,9 @@ Branding compatibility migration is **implemented**. See [BRANDING_MIGRATION.md]
 
 ## Issue labels
 
-Default write mode: **`dual`** — new issues receive both `bugbot/*` and `repository-detective/*` labels.
+Default write mode: **`new_only`** — new issues receive `repository-detective`, `repository-detective/*` category and lifecycle labels, `severity/*`, and `automated-review`.
+
+Legacy `bugbot/*` labels are no longer written in `dual` mode (lookup still searches both for existing issues). Use `label_compat_mode: legacy_only` only for rollback.
 
 Configure with `label_compat_mode` in `config.yaml` or `REPOSITORY_DETECTIVE_LABEL_COMPAT_MODE`.
 

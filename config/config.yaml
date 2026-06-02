@@ -2,16 +2,17 @@ port: "8081"
 listen_host: "0.0.0.0"
 log_level: "info"
 startup_check_timeout: 10
-api_key: "bugbot-secure-key-1780150243"
+# Secrets: set in .env (REPOSITORY_DETECTIVE_* / BUGBOT_*). Do not commit real tokens here.
+api_key: ""
 public_url: "http://192.168.255.10:8081"
 
 gitea_url: "https://git.commsnet.org"
-gitea_token: "ff7e1bdba0d2cb14e1f110f44f51b8c39d428a1a"
-webhook_secret: "gFApUzEGX0DDK9SDB3oLyzJekScBc6mdV42pe55ma-w"
+gitea_token: ""
+webhook_secret: ""
 
 ai_provider: "openclaw"
 ai_base_url: "https://192.168.255.11:18789/v1"
-ai_api_key: "6fb709944fe22e3c98cdcde607ed15bae797ffa058630527"
+ai_api_key: ""
 ai_model: "openclaw/software-engineer"
 # Homelab OpenClaw often uses a private CA — enable only on trusted networks.
 ai_insecure_skip_tls_verify: true

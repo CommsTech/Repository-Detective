@@ -39,16 +39,12 @@ func DefaultIssueBaseLabels() []string {
 	return uniqueStrings(append(BaseLabelsForWrite(), automatedReviewLabel))
 }
 
-// BaseLabelsForWrite returns product base labels according to compat mode.
+// BaseLabelsForWrite returns product base labels for new issue submissions.
 func BaseLabelsForWrite() []string {
-	switch currentLabelCompatMode {
-	case LabelCompatLegacyOnly:
+	if currentLabelCompatMode == LabelCompatLegacyOnly {
 		return []string{legacyBaseLabel}
-	case LabelCompatNewOnly:
-		return []string{newBaseLabel}
-	default:
-		return []string{legacyBaseLabel, newBaseLabel}
 	}
+	return []string{newBaseLabel}
 }
 
 // IssueLookupBaseLabels returns base labels searched when locating existing issues.
@@ -56,16 +52,21 @@ func IssueLookupBaseLabels() []string {
 	return []string{legacyBaseLabel, newBaseLabel}
 }
 
-// ExpandBrandLabel returns legacy and/or new labels for write mode.
+// ExpandBrandLabel returns category (or other paired) labels for write mode.
+// Dual mode no longer writes legacy bugbot/* labels — only repository-detective/*.
 func ExpandBrandLabel(legacyLabel, newLabel string) []string {
-	switch currentLabelCompatMode {
-	case LabelCompatLegacyOnly:
+	if currentLabelCompatMode == LabelCompatLegacyOnly {
 		return []string{legacyLabel}
-	case LabelCompatNewOnly:
-		return []string{newLabel}
-	default:
-		return uniqueStrings([]string{legacyLabel, newLabel})
 	}
+	return []string{newLabel}
+}
+
+// CategoryLabelForWrite returns the category label applied when filing Gitea issues.
+func CategoryLabelForWrite(category string) string {
+	if currentLabelCompatMode == LabelCompatLegacyOnly {
+		return CategoryLabelLegacy(category)
+	}
+	return CategoryLabelNew(category)
 }
 
 // ExpandLifecycleLabel expands a legacy lifecycle constant for Gitea label APIs.
@@ -78,13 +79,16 @@ func ExpandLifecycleLabel(lifecycleLabel string) []any {
 	return out
 }
 
-// ExpandLifecycleLabels expands lifecycle labels for write mode.
+// ExpandLifecycleLabels expands lifecycle labels for write mode (Repository Detective by default).
 func ExpandLifecycleLabels(lifecycleLabel string) []string {
 	suffix := lifecycleSuffix(lifecycleLabel)
 	if suffix == "" {
 		suffix = "open"
 	}
-	return ExpandBrandLabel(legacyLifecycleLabel(suffix), newLifecycleLabel(suffix))
+	if currentLabelCompatMode == LabelCompatLegacyOnly {
+		return []string{legacyLifecycleLabel(suffix)}
+	}
+	return []string{newLifecycleLabel(suffix)}
 }
 
 func lifecycleSuffix(label string) string {

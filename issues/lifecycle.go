@@ -8,20 +8,20 @@ import (
 	"git.commsnet.org/commstech/bugbot/ai"
 )
 
-// Lifecycle label constants.
+// Lifecycle label constants (Repository Detective namespace; legacy bugbot/* recognized in lookup).
 const (
-	LifecycleOpen                = "bugbot/open"
-	LifecycleStillPresent        = "bugbot/still-present"
-	LifecycleNotReproduced       = "bugbot/not-reproduced"
-	LifecycleFixed               = "bugbot/fixed"
-	LifecycleFalsePositive       = "bugbot/false-positive"
-	LifecycleNeedsHumanReview    = "bugbot/needs-human-review"
-	LifecycleRemediationCandidate = "bugbot/remediation-candidate"
-	LifecycleFixPROpened         = "bugbot/fix-pr-opened"
-	LifecycleFixPRMerged         = "bugbot/fix-pr-merged"
-	LifecyclePendingRescan       = "bugbot/pending-rescan"
-	LifecycleResolvedVerified    = "bugbot/resolved-verified"
-	LifecycleClosureBlocked      = "bugbot/closure-blocked"
+	LifecycleOpen                 = "repository-detective/open"
+	LifecycleStillPresent         = "repository-detective/still-present"
+	LifecycleNotReproduced        = "repository-detective/not-reproduced"
+	LifecycleFixed                = "repository-detective/fixed"
+	LifecycleFalsePositive        = "repository-detective/false-positive"
+	LifecycleNeedsHumanReview     = "repository-detective/needs-human-review"
+	LifecycleRemediationCandidate = "repository-detective/remediation-candidate"
+	LifecycleFixPROpened          = "repository-detective/fix-pr-opened"
+	LifecycleFixPRMerged          = "repository-detective/fix-pr-merged"
+	LifecyclePendingRescan        = "repository-detective/pending-rescan"
+	LifecycleResolvedVerified     = "repository-detective/resolved-verified"
+	LifecycleClosureBlocked       = "repository-detective/closure-blocked"
 )
 
 // StillPresentCommentBody formats an update when a fingerprint is detected again.
