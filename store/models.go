@@ -6,7 +6,8 @@ import (
 )
 
 const (
-	ForgeTypeGitea = "gitea"
+	ForgeTypeGitea   = "gitea"
+	ForgeTypeGitHub  = "github"
 
 	ScanStatusStarted   = "started"
 	ScanStatusCompleted = "completed"

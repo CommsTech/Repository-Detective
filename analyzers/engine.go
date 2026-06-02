@@ -9,7 +9,9 @@ import (
 	"time"
 
 	"git.commsnet.org/commstech/bugbot/ai"
+	"git.commsnet.org/commstech/bugbot/forge"
 	"git.commsnet.org/commstech/bugbot/gitea"
+	"git.commsnet.org/commstech/bugbot/store"
 	"git.commsnet.org/commstech/bugbot/graph"
 	"git.commsnet.org/commstech/bugbot/health"
 	"git.commsnet.org/commstech/bugbot/internal/scanid"
@@ -130,20 +132,32 @@ type ReportStats struct {
 
 // Engine coordinates the CAH multi-stage analysis pipeline
 type Engine struct {
-	giteaClient *gitea.Client
-	aiClient    *ai.Client
-	logger      *logrus.Logger
-	config      *Config
+	giteaClient  *gitea.Client
+	githubClient forge.RepoClient
+	aiClient     *ai.Client
+	logger       *logrus.Logger
+	config       *Config
 }
 
-// NewEngine creates a new CAH-pipeline analysis engine
-func NewEngine(giteaClient *gitea.Client, aiClient *ai.Client, config *Config, logger *logrus.Logger) *Engine {
+// NewEngine creates a new CAH-pipeline analysis engine.
+func NewEngine(giteaClient *gitea.Client, githubClient forge.RepoClient, aiClient *ai.Client, config *Config, logger *logrus.Logger) *Engine {
 	return &Engine{
-		giteaClient: giteaClient,
-		aiClient:    aiClient,
-		logger:      logger,
-		config:      config,
+		giteaClient:  giteaClient,
+		githubClient: githubClient,
+		aiClient:     aiClient,
+		logger:       logger,
+		config:       config,
 	}
+}
+
+func (e *Engine) repoClient(ctx context.Context) forge.RepoClient {
+	if ForgeTypeFrom(ctx) == store.ForgeTypeGitHub && e.githubClient != nil {
+		return e.githubClient
+	}
+	if e.giteaClient != nil {
+		return e.giteaClient.AsForgeClient()
+	}
+	return e.githubClient
 }
 
 // AnalysisOptions controls scoped vs full-repository analysis.
@@ -463,7 +477,7 @@ func (e *Engine) Scan(ctx context.Context, prepare *PrepareReport) ([]CandidateF
 		prepared, err := scanners.PrepareWorkspace(
 			ctx,
 			cfg.Workspace,
-			e.giteaClient,
+			e.repoClient(ctx),
 			owner,
 			repo,
 			prepare.Commit,
@@ -561,7 +575,7 @@ func (e *Engine) selectLLMTargetFiles(allFiles []FileContent, candidates []Candi
 func (e *Engine) fetchManifestContents(ctx context.Context, owner, repo, ref string) ([]FileContent, error) {
 	var manifests []FileContent
 	for _, path := range scanners.ManifestPaths() {
-		content, err := e.giteaClient.GetFileContent(ctx, owner, repo, ref, path)
+		content, err := e.repoClient(ctx).GetFileContent(ctx, owner, repo, ref, path)
 		if err != nil || content == "" {
 			continue
 		}
@@ -624,7 +638,7 @@ func (e *Engine) fetchFileContents(ctx context.Context, owner, repo, ref string,
 			continue
 		}
 
-		content, err := e.giteaClient.GetFileContent(ctx, owner, repo, ref, file.Path)
+		content, err := e.repoClient(ctx).GetFileContent(ctx, owner, repo, ref, file.Path)
 		if err != nil {
 			e.logger.Warnf("Failed to fetch %s: %v", file.Path, err)
 			continue
@@ -1273,12 +1287,12 @@ func detectRepoProfile(ctx context.Context, e *Engine, owner, repo, ref string, 
 	var paths []string
 	if len(targetFiles) > 0 {
 		paths = append(paths, targetFiles...)
-	} else if e.giteaClient != nil {
-		resolvedRef, err := e.giteaClient.ResolveRef(ctx, owner, repo, ref)
+	} else if client := e.repoClient(ctx); client != nil {
+		resolvedRef, err := client.ResolveRef(ctx, owner, repo, ref)
 		if err == nil {
 			ref = resolvedRef
 		}
-		allFiles, err := e.giteaClient.ListAllFiles(ctx, owner, repo, ref, "")
+		allFiles, err := client.ListAllFiles(ctx, owner, repo, ref, "")
 		if err == nil {
 			for _, f := range allFiles {
 				paths = append(paths, f.Path)
@@ -1289,40 +1303,46 @@ func detectRepoProfile(ctx context.Context, e *Engine, owner, repo, ref string, 
 }
 
 func (e *Engine) resolveAnalyzableFiles(ctx context.Context, owner, repo, ref string, targetFiles []string) ([]gitea.RepositoryContent, error) {
-	if len(targetFiles) == 0 {
-		resolvedRef, err := e.giteaClient.ResolveRef(ctx, owner, repo, ref)
+	if len(targetFiles) > 0 {
+		var scoped []gitea.RepositoryContent
+		for _, path := range targetFiles {
+			if !e.shouldAnalyzeFile(path) {
+				continue
+			}
+			scoped = append(scoped, gitea.RepositoryContent{
+				Name: filepath.Base(path),
+				Path: path,
+				Type: "file",
+			})
+		}
+		return scoped, nil
+	}
+
+	client := e.repoClient(ctx)
+	if client == nil {
+		return nil, fmt.Errorf("no repository client configured for forge %s", ForgeTypeFrom(ctx))
+	}
+	{
+		resolvedRef, err := client.ResolveRef(ctx, owner, repo, ref)
 		if err != nil {
 			return nil, err
 		}
 		ref = resolvedRef
-		allFiles, err := e.giteaClient.ListAllFiles(ctx, owner, repo, ref, "")
+		allFiles, err := client.ListAllFiles(ctx, owner, repo, ref, "")
 		if err != nil {
 			if strings.Contains(err.Error(), "content not found") {
 				return []gitea.RepositoryContent{}, nil
 			}
 			return nil, err
 		}
-		var filtered []gitea.RepositoryContent
+		var filtered []forge.RepositoryContent
 		for _, f := range allFiles {
 			if e.shouldAnalyzeFile(f.Path) {
 				filtered = append(filtered, f)
 			}
 		}
-		return filtered, nil
+		return forgeToGiteaFiles(filtered), nil
 	}
-
-	var scoped []gitea.RepositoryContent
-	for _, path := range targetFiles {
-		if !e.shouldAnalyzeFile(path) {
-			continue
-		}
-		scoped = append(scoped, gitea.RepositoryContent{
-			Name: filepath.Base(path),
-			Path: path,
-			Type: "file",
-		})
-	}
-	return scoped, nil
 }
 
 func splitRepository(fullName string) (owner, repo string) {
@@ -1338,6 +1358,19 @@ func (e *Engine) scanLogger(ctx context.Context) *logrus.Entry {
 		return e.logger.WithField("scan_id", id)
 	}
 	return logrus.NewEntry(e.logger)
+}
+
+func forgeToGiteaFiles(files []forge.RepositoryContent) []gitea.RepositoryContent {
+	out := make([]gitea.RepositoryContent, len(files))
+	for i, f := range files {
+		out[i] = gitea.RepositoryContent{
+			Name: f.Name, Path: f.Path, SHA: f.SHA, Size: f.Size,
+			URL: f.URL, HTMLURL: f.HTMLURL, GitURL: f.GitURL,
+			DownloadURL: f.DownloadURL, Type: f.Type,
+			Content: f.Content, Encoding: f.Encoding,
+		}
+	}
+	return out
 }
 
 func graphOverlaysFromCandidates(candidates []CandidateFinding) []graph.FindingOverlay {

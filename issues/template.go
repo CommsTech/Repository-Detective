@@ -280,7 +280,12 @@ func fileSourceLink(in IssueRenderInput) string {
 		ref = "main"
 	}
 	base := strings.TrimRight(in.GiteaBaseURL, "/")
-	link := fmt.Sprintf("%s/%s/%s/src/branch/%s/%s", base, in.Owner, in.RepoName, ref, in.Issue.File)
+	var link string
+	if strings.Contains(base, "github.com") {
+		link = fmt.Sprintf("%s/%s/%s/blob/%s/%s", base, in.Owner, in.RepoName, ref, in.Issue.File)
+	} else {
+		link = fmt.Sprintf("%s/%s/%s/src/branch/%s/%s", base, in.Owner, in.RepoName, ref, in.Issue.File)
+	}
 	if in.Issue.LineNumber > 0 {
 		link += fmt.Sprintf("#L%d", in.Issue.LineNumber)
 	}

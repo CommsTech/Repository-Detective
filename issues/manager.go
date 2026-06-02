@@ -8,13 +8,15 @@ import (
 
 	"git.commsnet.org/commstech/bugbot/ai"
 	"git.commsnet.org/commstech/bugbot/gitea"
+	"git.commsnet.org/commstech/bugbot/github"
 	"git.commsnet.org/commstech/bugbot/profile"
 	"github.com/sirupsen/logrus"
 )
 
-// Manager handles issue creation and management
+// Manager handles issue creation and management on Gitea and GitHub.
 type Manager struct {
-	giteaClient   *gitea.Client
+	giteaForge    IssueForge
+	githubForge   IssueForge
 	logger        *logrus.Logger
 	config        *Config
 	semanticStore *SemanticStore
@@ -25,6 +27,7 @@ type Config struct {
 	AutoCreateIssues   bool
 	Reporting          profile.ReportingConfig
 	GiteaBaseURL       string
+	GitHubBaseURL      string
 	IssueLabels        []string
 	IssueTemplate      string
 	CommentTemplate    string
@@ -38,6 +41,7 @@ type Config struct {
 
 // IssueCreationRequest represents a request to create issues
 type IssueCreationRequest struct {
+	ForgeType          string // gitea (default) or github
 	Owner              string
 	Repository         string
 	AnalysisResult     *ai.CodeAnalysisResult
@@ -53,6 +57,7 @@ type IssueCreationRequest struct {
 // ProcessedIssueRecord links a finding fingerprint to a forge issue action.
 type ProcessedIssueRecord struct {
 	Fingerprint string
+	ForgeType   string
 	IssueNumber int
 	IssueURL    string
 	Action      string // created, updated
@@ -68,14 +73,39 @@ type IssueCreationResult struct {
 	ProcessedIssues []ProcessedIssueRecord
 }
 
-// NewManager creates a new issue manager
-func NewManager(giteaClient *gitea.Client, config *Config, logger *logrus.Logger, semanticStore *SemanticStore) *Manager {
-	return &Manager{
-		giteaClient:   giteaClient,
+// NewManager creates a new issue manager.
+func NewManager(giteaClient *gitea.Client, githubClient *github.Client, config *Config, logger *logrus.Logger, semanticStore *SemanticStore) *Manager {
+	if config != nil && config.GitHubBaseURL == "" {
+		config.GitHubBaseURL = "https://github.com"
+	}
+	m := &Manager{
 		logger:        logger,
 		config:        config,
 		semanticStore: semanticStore,
 	}
+	if giteaClient != nil {
+		m.giteaForge = &GiteaForge{Client: giteaClient}
+	}
+	if githubClient != nil {
+		m.githubForge = &GitHubForge{Client: githubClient}
+	}
+	return m
+}
+
+func (m *Manager) forgeFor(forgeType string) IssueForge {
+	forgeType = strings.ToLower(strings.TrimSpace(forgeType))
+	if forgeType == "github" && m.githubForge != nil {
+		return m.githubForge
+	}
+	return m.giteaForge
+}
+
+func (m *Manager) normalizeForgeType(forgeType string) string {
+	forgeType = strings.ToLower(strings.TrimSpace(forgeType))
+	if forgeType == "github" {
+		return "github"
+	}
+	return "gitea"
 }
 
 // CreateIssuesFromAnalysis creates or updates Gitea issues based on analysis results
@@ -150,7 +180,8 @@ func (m *Manager) CreateIssuesFromAnalysis(ctx context.Context, req *IssueCreati
 	}
 
 	if req.ScanID != "" && len(seenFingerprints) > 0 {
-		if err := ReportNotReproduced(ctx, m.giteaClient, req.Owner, req.Repository, req.ScanID, seenFingerprints); err != nil {
+		forge := m.forgeFor(req.ForgeType)
+		if err := ReportNotReproduced(ctx, forge, req.Owner, req.Repository, req.ScanID, seenFingerprints); err != nil {
 			m.logger.Warnf("Failed to report not-reproduced findings: %v", err)
 		}
 	}
@@ -175,10 +206,14 @@ func shouldCreateSummaryIssue(issues []ai.CodeIssue) bool {
 }
 
 func (m *Manager) createOrUpdateIssue(ctx context.Context, req *IssueCreationRequest, repository string, issue *ai.CodeIssue, result *IssueCreationResult) (string, error) {
-	if match, err := FindIssueByFingerprint(ctx, m.giteaClient, req.Owner, req.Repository, issue.Fingerprint); err != nil {
+	forge := m.forgeFor(req.ForgeType)
+	if forge == nil {
+		return "", fmt.Errorf("no issue forge configured for %s", m.normalizeForgeType(req.ForgeType))
+	}
+	if match, err := FindIssueByFingerprint(ctx, forge, req.Owner, req.Repository, issue.Fingerprint); err != nil {
 		m.logger.Warnf("Fingerprint lookup failed: %v", err)
 	} else if match != nil {
-		if err := m.updateExistingIssue(ctx, req, issue, match, result); err != nil {
+		if err := m.updateExistingIssue(ctx, forge, req, issue, match, result); err != nil {
 			return "", err
 		}
 		return "updated", nil
@@ -190,7 +225,7 @@ func (m *Manager) createOrUpdateIssue(ctx context.Context, req *IssueCreationReq
 			m.logger.Warnf("Semantic dedup lookup failed: %v", err)
 		} else if dup != nil && dup.IssueNumber > 0 {
 			comment := DuplicateCommentBody(issue, dup.Score)
-			if err := m.giteaClient.CreateIssueComment(ctx, req.Owner, req.Repository, dup.IssueNumber, comment); err != nil {
+			if err := forge.CreateIssueComment(ctx, req.Owner, req.Repository, dup.IssueNumber, comment); err != nil {
 				m.logger.Warnf("Failed to comment on duplicate issue #%d: %v", dup.IssueNumber, err)
 			} else {
 				m.logger.Infof("Updated existing issue #%d via semantic dedup (score %.2f)", dup.IssueNumber, dup.Score)
@@ -201,29 +236,29 @@ func (m *Manager) createOrUpdateIssue(ctx context.Context, req *IssueCreationReq
 		}
 	}
 
-	if err := m.createIssueForProblem(ctx, req, issue, result); err != nil {
+	if err := m.createIssueForProblem(ctx, forge, req, issue, result); err != nil {
 		return "", err
 	}
 	return "created", nil
 }
 
-func (m *Manager) updateExistingIssue(ctx context.Context, req *IssueCreationRequest, issue *ai.CodeIssue, match *ExistingIssueMatch, result *IssueCreationResult) error {
+func (m *Manager) updateExistingIssue(ctx context.Context, forge IssueForge, req *IssueCreationRequest, issue *ai.CodeIssue, match *ExistingIssueMatch, result *IssueCreationResult) error {
 	var comment string
-	var labels []any
+	var labels []string
 
 	if ConfidenceNeedsHumanReview(issue.Confidence) {
 		comment = NeedsHumanReviewCommentBody(issue, req.ScanID)
-		labels = ExpandLifecycleLabel(LifecycleNeedsHumanReview)
+		labels = ExpandLifecycleLabels(LifecycleNeedsHumanReview)
 	} else {
 		comment = StillPresentCommentBody(issue, req.ScanID)
-		labels = ExpandLifecycleLabel(LifecycleStillPresent)
+		labels = ExpandLifecycleLabels(LifecycleStillPresent)
 	}
 
-	if err := m.giteaClient.CreateIssueComment(ctx, req.Owner, req.Repository, match.IssueNumber, comment); err != nil {
+	if err := forge.CreateIssueComment(ctx, req.Owner, req.Repository, match.IssueNumber, comment); err != nil {
 		return fmt.Errorf("comment on existing issue #%d: %w", match.IssueNumber, err)
 	}
 
-	if _, err := m.giteaClient.AddIssueLabels(ctx, req.Owner, req.Repository, match.IssueNumber, labels); err != nil {
+	if err := forge.AddIssueLabels(ctx, req.Owner, req.Repository, match.IssueNumber, labels); err != nil {
 		m.logger.Warnf("Failed to attach lifecycle labels to issue #%d: %v", match.IssueNumber, err)
 	}
 
@@ -231,6 +266,7 @@ func (m *Manager) updateExistingIssue(ctx context.Context, req *IssueCreationReq
 	result.IssueURLs = append(result.IssueURLs, match.IssueURL)
 	result.ProcessedIssues = append(result.ProcessedIssues, ProcessedIssueRecord{
 		Fingerprint: issue.Fingerprint,
+		ForgeType:   m.normalizeForgeType(req.ForgeType),
 		IssueNumber: match.IssueNumber,
 		IssueURL:    match.IssueURL,
 		Action:      "updated",
@@ -239,38 +275,16 @@ func (m *Manager) updateExistingIssue(ctx context.Context, req *IssueCreationReq
 	return nil
 }
 
-func (m *Manager) createIssueForProblem(ctx context.Context, req *IssueCreationRequest, issue *ai.CodeIssue, result *IssueCreationResult) error {
+func (m *Manager) createIssueForProblem(ctx context.Context, forge IssueForge, req *IssueCreationRequest, issue *ai.CodeIssue, result *IssueCreationResult) error {
 	repository := fmt.Sprintf("%s/%s", req.Owner, req.Repository)
 
 	title := m.createIssueTitle(issue, req)
 	body := m.createIssueBody(issue, req)
-
 	labelNames := BuildLabels(m.config.IssueLabels, issue)
-	labelIDs, err := m.giteaClient.ResolveLabelIDs(ctx, req.Owner, req.Repository, labelNames)
-	if err != nil {
-		m.logger.Warnf("Failed to resolve labels: %v", err)
-	}
 
-	issueReq := &gitea.CreateIssueRequest{
-		Title:  title,
-		Body:   body,
-		Labels: labelIDs,
-	}
-
-	createdIssue, err := m.giteaClient.CreateIssue(ctx, req.Owner, req.Repository, issueReq)
+	createdIssue, err := forge.CreateIssue(ctx, req.Owner, req.Repository, title, body, labelNames)
 	if err != nil {
 		return fmt.Errorf("failed to create issue: %w", err)
-	}
-
-	// Labels are set via CreateIssueRequest; only backfill when Gitea ignored label IDs.
-	if len(labelIDs) == 0 && len(labelNames) > 0 {
-		labelPayload := make([]any, 0, len(labelNames))
-		for _, name := range labelNames {
-			labelPayload = append(labelPayload, name)
-		}
-		if _, err := m.giteaClient.AddIssueLabels(ctx, req.Owner, req.Repository, createdIssue.Number, labelPayload); err != nil {
-			m.logger.Warnf("Failed to attach labels to issue #%d: %v", createdIssue.Number, err)
-		}
 	}
 
 	if m.semanticStore != nil && m.semanticStore.Enabled() {
@@ -283,6 +297,7 @@ func (m *Manager) createIssueForProblem(ctx context.Context, req *IssueCreationR
 	result.IssueURLs = append(result.IssueURLs, createdIssue.HTMLURL)
 	result.ProcessedIssues = append(result.ProcessedIssues, ProcessedIssueRecord{
 		Fingerprint: issue.Fingerprint,
+		ForgeType:   m.normalizeForgeType(req.ForgeType),
 		IssueNumber: createdIssue.Number,
 		IssueURL:    createdIssue.HTMLURL,
 		Action:      "created",
@@ -306,33 +321,16 @@ func uniqueStrings(values []string) []string {
 }
 
 func (m *Manager) createSummaryIssue(ctx context.Context, req *IssueCreationRequest, result *IssueCreationResult) error {
+	forge := m.forgeFor(req.ForgeType)
+	if forge == nil {
+		return fmt.Errorf("no issue forge configured for %s", m.normalizeForgeType(req.ForgeType))
+	}
 	title := fmt.Sprintf("Code Review Summary - %d Issues Found", len(req.AnalysisResult.Issues))
 	body := m.createSummaryIssueBody(req)
 
-	labelIDs, err := m.giteaClient.ResolveLabelIDs(ctx, req.Owner, req.Repository, m.config.IssueLabels)
-	if err != nil {
-		m.logger.Warnf("Failed to resolve labels for summary issue: %v", err)
-	}
-
-	issueReq := &gitea.CreateIssueRequest{
-		Title:  title,
-		Body:   body,
-		Labels: labelIDs,
-	}
-
-	createdIssue, err := m.giteaClient.CreateIssue(ctx, req.Owner, req.Repository, issueReq)
+	createdIssue, err := forge.CreateIssue(ctx, req.Owner, req.Repository, title, body, m.config.IssueLabels)
 	if err != nil {
 		return fmt.Errorf("failed to create summary issue: %w", err)
-	}
-
-	if len(labelIDs) > 0 {
-		payload := make([]any, 0, len(labelIDs))
-		for _, id := range labelIDs {
-			payload = append(payload, id)
-		}
-		if _, err := m.giteaClient.AddIssueLabels(ctx, req.Owner, req.Repository, createdIssue.Number, payload); err != nil {
-			m.logger.Warnf("Failed to attach summary labels: %v", err)
-		}
 	}
 
 	result.IssuesCreated++
@@ -369,12 +367,16 @@ func (m *Manager) createIssueBody(issue *ai.CodeIssue, req *IssueCreationRequest
 		return body
 	}
 
+	webBase := m.config.GiteaBaseURL
+	if m.normalizeForgeType(req.ForgeType) == "github" {
+		webBase = m.config.GitHubBaseURL
+	}
 	return RenderIssueBody(IssueRenderInput{
 		Issue:        issue,
 		Repository:   repository,
 		Owner:        req.Owner,
 		RepoName:     req.Repository,
-		GiteaBaseURL: m.config.GiteaBaseURL,
+		GiteaBaseURL: webBase,
 		Context:      req.Context,
 		Commit:       req.Commit,
 		Ref:          req.Commit,

@@ -2,11 +2,9 @@ package issues
 
 import (
 	"context"
-
-	"git.commsnet.org/commstech/bugbot/gitea"
 )
 
-// ExistingIssueMatch describes a prior Bugbot issue located by fingerprint.
+// ExistingIssueMatch describes a prior Repository Detective issue located by fingerprint.
 type ExistingIssueMatch struct {
 	IssueNumber int
 	IssueURL    string
@@ -14,18 +12,14 @@ type ExistingIssueMatch struct {
 }
 
 // FindIssueByFingerprint searches open labeled issues for a fingerprint marker.
-func FindIssueByFingerprint(ctx context.Context, client *gitea.Client, owner, repo, fingerprint string) (*ExistingIssueMatch, error) {
-	if client == nil || fingerprint == "" {
+func FindIssueByFingerprint(ctx context.Context, forge IssueForge, owner, repo, fingerprint string) (*ExistingIssueMatch, error) {
+	if forge == nil || fingerprint == "" {
 		return nil, nil
 	}
 
 	seen := make(map[int]struct{})
 	for _, baseLabel := range IssueLookupBaseLabels() {
-		issues, err := client.ListIssues(ctx, owner, repo, gitea.ListIssuesOptions{
-			State:  "open",
-			Labels: []string{baseLabel},
-			Limit:  100,
-		})
+		issues, err := forge.ListOpenLabeledIssues(ctx, owner, repo, []string{baseLabel}, 100)
 		if err != nil {
 			return nil, err
 		}
@@ -48,18 +42,14 @@ func FindIssueByFingerprint(ctx context.Context, client *gitea.Client, owner, re
 }
 
 // ReportNotReproduced comments on open labeled issues absent from the current scan.
-func ReportNotReproduced(ctx context.Context, client *gitea.Client, owner, repo, scanID string, seenFingerprints map[string]struct{}) error {
-	if client == nil || scanID == "" || len(seenFingerprints) == 0 {
+func ReportNotReproduced(ctx context.Context, forge IssueForge, owner, repo, scanID string, seenFingerprints map[string]struct{}) error {
+	if forge == nil || scanID == "" || len(seenFingerprints) == 0 {
 		return nil
 	}
 
 	seenIssues := make(map[int]struct{})
 	for _, baseLabel := range IssueLookupBaseLabels() {
-		issues, err := client.ListIssues(ctx, owner, repo, gitea.ListIssuesOptions{
-			State:  "open",
-			Labels: []string{baseLabel},
-			Limit:  100,
-		})
+		issues, err := forge.ListOpenLabeledIssues(ctx, owner, repo, []string{baseLabel}, 100)
 		if err != nil {
 			return err
 		}
@@ -78,10 +68,10 @@ func ReportNotReproduced(ctx context.Context, client *gitea.Client, owner, repo,
 				continue
 			}
 			comment := NotReproducedCommentBody(scanID)
-			if err := client.CreateIssueComment(ctx, owner, repo, issue.Number, comment); err != nil {
+			if err := forge.CreateIssueComment(ctx, owner, repo, issue.Number, comment); err != nil {
 				return err
 			}
-			_, _ = client.AddIssueLabels(ctx, owner, repo, issue.Number, ExpandLifecycleLabel(LifecycleNotReproduced))
+			_ = forge.AddIssueLabels(ctx, owner, repo, issue.Number, ExpandLifecycleLabels(LifecycleNotReproduced))
 		}
 	}
 	return nil

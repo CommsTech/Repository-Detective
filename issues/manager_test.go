@@ -30,7 +30,7 @@ func TestFindIssueByFingerprint(t *testing.T) {
 	defer server.Close()
 
 	client := gitea.NewClient(server.URL, "token", logrus.New())
-	match, err := FindIssueByFingerprint(context.Background(), client, "owner", "repo", "bugbot-matchme")
+	match, err := FindIssueByFingerprint(context.Background(), &GiteaForge{Client: client}, "owner", "repo", "bugbot-matchme")
 	if err != nil {
 		t.Fatalf("FindIssueByFingerprint: %v", err)
 	}
@@ -64,7 +64,7 @@ func TestCreateIssuesUpdatesExistingFingerprint(t *testing.T) {
 	defer server.Close()
 
 	client := gitea.NewClient(server.URL, "token", logrus.New())
-	manager := NewManager(client, GetDefaultConfig(), logrus.New(), nil)
+	manager := NewManager(client, nil, GetDefaultConfig(), logrus.New(), nil)
 
 	issue := ai.CodeIssue{
 		Title:       "Secret finding",

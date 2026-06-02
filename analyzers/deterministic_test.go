@@ -39,7 +39,7 @@ func (c *countingTransport) Complete(ctx context.Context, req ai.ChatRequest) (*
 func TestPrepareDeterministicOnlyNoAICalls(t *testing.T) {
 	transport := &countingTransport{}
 	client := ai.NewClientWithTransport(transport, "test-model", testLogger)
-	engine := NewEngine(nil, client, &Config{
+	engine := NewEngine(nil, nil, client, &Config{
 		AnalysisDepth:     1,
 		EnableLLMAuditors: false,
 		EnableSecurity:    true,
@@ -57,7 +57,7 @@ func TestPrepareDeterministicOnlyNoAICalls(t *testing.T) {
 func TestValidateStaticFindingNoAICalls(t *testing.T) {
 	transport := &countingTransport{}
 	client := ai.NewClientWithTransport(transport, "test-model", testLogger)
-	engine := NewEngine(nil, client, &Config{
+	engine := NewEngine(nil, nil, client, &Config{
 		AnalysisDepth:     1,
 		EnableLLMAuditors: false,
 	}, testLogger)
@@ -85,7 +85,7 @@ func TestValidateStaticFindingNoAICalls(t *testing.T) {
 func TestValidateHealthFindingNoAICalls(t *testing.T) {
 	transport := &countingTransport{}
 	client := ai.NewClientWithTransport(transport, "test-model", testLogger)
-	engine := NewEngine(nil, client, &Config{
+	engine := NewEngine(nil, nil, client, &Config{
 		AnalysisDepth:     3,
 		EnableLLMAuditors: true,
 	}, testLogger)
@@ -114,7 +114,7 @@ func TestValidateHealthFindingNoAICalls(t *testing.T) {
 func TestProveDeterministicNoAICalls(t *testing.T) {
 	transport := &countingTransport{}
 	client := ai.NewClientWithTransport(transport, "test-model", testLogger)
-	engine := NewEngine(nil, client, &Config{
+	engine := NewEngine(nil, nil, client, &Config{
 		AnalysisDepth:     1,
 		EnableLLMAuditors: false,
 	}, testLogger)

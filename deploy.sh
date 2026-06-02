@@ -7,8 +7,9 @@
 #   ./deploy.sh --restart    # restart container
 #   ./deploy.sh --status     # health + container status
 #   ./deploy.sh --scan       # trigger self-scan on commstech/Bugbot
-#   ./deploy.sh --scan-all        # full scans on every Gitea repo (global profile)
+#   ./deploy.sh --scan-all        # full scans on every Gitea + GitHub repo (global profile)
 #   ./deploy.sh --scan-all-quick  # fast profile scans on every repo
+#   FORGE=github ./deploy.sh --scan-all   # GitHub repos only
 #   ./deploy.sh --webhooks-all  # register push/PR webhooks on all visible repos
 #
 set -euo pipefail
@@ -191,7 +192,14 @@ trigger_scan_all() {
     log "queueing $profile scans on all user-visible Gitea repositories"
   else
     body='{}'
-    log "queueing scans on all user-visible Gitea repositories"
+    log "queueing scans on all user-visible Gitea and GitHub repositories"
+  fi
+  if [[ -n "${FORGE:-}" ]]; then
+    if [[ -n "$profile" ]]; then
+      body=$(printf '{"forge":"%s","scan_profile":"%s"}' "$FORGE" "$profile")
+    else
+      body=$(printf '{"forge":"%s"}' "$FORGE")
+    fi
   fi
   curl -sf -X POST "${public_url%/}/api/v1/analyze/all" \
     -H "X-Bugbot-API-Key: $api_key" \
@@ -302,7 +310,7 @@ case "$cmd" in
     register_webhook
     log "done — UI: http://127.0.0.1:8081/ui  onboard: http://127.0.0.1:8081/onboard"
     log "run ./deploy.sh --scan to dogfood this repository"
-    log "run ./deploy.sh --scan-all to scan every repo your Gitea token can access"
+    log "run ./deploy.sh --scan-all to scan every repo your Gitea/GitHub tokens can access"
     ;;
   *)
     echo "unknown command: $cmd" >&2

@@ -16,7 +16,9 @@ import (
 	"git.commsnet.org/commstech/bugbot/ai"
 	"git.commsnet.org/commstech/bugbot/analyzers"
 	"git.commsnet.org/commstech/bugbot/api"
+	"git.commsnet.org/commstech/bugbot/forge"
 	"git.commsnet.org/commstech/bugbot/gitea"
+	"git.commsnet.org/commstech/bugbot/github"
 	"git.commsnet.org/commstech/bugbot/graph"
 	"git.commsnet.org/commstech/bugbot/handlers"
 	"git.commsnet.org/commstech/bugbot/health"
@@ -49,6 +51,7 @@ var (
 	logger              *logrus.Logger
 	config              *Config
 	giteaClient         *gitea.Client
+	githubClient        forge.RepoClient
 	aiClient            *ai.Client
 	analysisEngine      *analyzers.Engine
 	issueManager        *issues.Manager
@@ -78,6 +81,8 @@ type Config struct {
 	APIKey                            string            `mapstructure:"api_key"` // API key for manual analysis endpoints
 	GiteaURL                          string            `mapstructure:"gitea_url"`
 	GiteaToken                        string            `mapstructure:"gitea_token"`
+	GitHubURL                         string            `mapstructure:"github_url"`
+	GitHubToken                       string            `mapstructure:"github_token"`
 	WebhookSecret                     string            `mapstructure:"webhook_secret"`
 	AllowInsecureWebhooks             bool              `mapstructure:"allow_insecure_webhooks"`
 	AIProvider                        string            `mapstructure:"ai_provider"`
@@ -373,6 +378,7 @@ func loadConfig() error {
 	viper.SetDefault("ai_model", "")
 	viper.SetDefault("ai_insecure_skip_tls_verify", false)
 	viper.SetDefault("skip_startup_checks", false)
+	viper.SetDefault("github_url", "https://api.github.com")
 	viper.SetDefault("workspace_mode", "api")
 	viper.SetDefault("workspace_max_size_mb", 500)
 	viper.SetDefault("workspace_max_files", 5000)
@@ -513,12 +519,12 @@ func loadConfig() error {
 		return fmt.Errorf("runner configuration invalid: %w", err)
 	}
 
-	// Validate required fields
-	if config.GiteaURL == "" {
-		return fmt.Errorf("gitea_url is required")
+	// Validate required fields — at least one forge token must be configured.
+	if strings.TrimSpace(config.GiteaToken) == "" && strings.TrimSpace(config.GitHubToken) == "" {
+		return fmt.Errorf("configure gitea_token and/or github_token")
 	}
-	if config.GiteaToken == "" {
-		return fmt.Errorf("gitea_token is required")
+	if strings.TrimSpace(config.GiteaToken) != "" && config.GiteaURL == "" {
+		return fmt.Errorf("gitea_url is required when gitea_token is set")
 	}
 	if config.needsAIProvider() {
 		if config.effectiveAIProvider() == "" && config.OpenWebUIURL == "" && config.AIBaseURL == "" {
@@ -801,18 +807,36 @@ func initializeComponents() error {
 	ctx, cancel := context.WithTimeout(context.Background(), checkTimeout)
 	defer cancel()
 
-	// Initialize Gitea client
-	giteaClient = gitea.NewClient(config.GiteaURL, config.GiteaToken, logger)
-
-	logger.Infof("Testing Gitea connection (timeout %s)...", checkTimeout)
-	if err := giteaClient.TestConnection(ctx); err != nil {
-		if config.SkipStartupChecks {
-			logger.Warnf("Gitea connection check failed (skipped): %v", err)
+	// Initialize Gitea client when configured.
+	if strings.TrimSpace(config.GiteaToken) != "" {
+		giteaClient = gitea.NewClient(config.GiteaURL, config.GiteaToken, logger)
+		logger.Infof("Testing Gitea connection (timeout %s)...", checkTimeout)
+		if err := giteaClient.TestConnection(ctx); err != nil {
+			if config.SkipStartupChecks {
+				logger.Warnf("Gitea connection check failed (skipped): %v", err)
+			} else {
+				return fmt.Errorf("failed to connect to Gitea: %w", err)
+			}
 		} else {
-			return fmt.Errorf("failed to connect to Gitea: %w", err)
+			logger.Info("Gitea connection established")
 		}
 	} else {
-		logger.Info("Gitea connection established")
+		giteaClient = nil
+		logger.Info("Gitea client not configured")
+	}
+
+	if strings.TrimSpace(config.GitHubToken) != "" {
+		githubClient = github.NewClient(config.GitHubURL, config.GitHubToken, logger)
+		logger.Infof("Testing GitHub connection (timeout %s)...", checkTimeout)
+		if err := githubClient.TestConnection(ctx); err != nil {
+			if config.SkipStartupChecks {
+				logger.Warnf("GitHub connection check failed (skipped): %v", err)
+			} else {
+				return fmt.Errorf("failed to connect to GitHub: %w", err)
+			}
+		} else {
+			logger.Info("GitHub connection established")
+		}
 	}
 
 	statusReporter = gitea.NewStatusReporter(
@@ -885,7 +909,7 @@ func initializeComponents() error {
 			DefaultAnalysisTimeout: config.AnalysisTimeout,
 		},
 	}
-	analysisEngine = analyzers.NewEngine(giteaClient, aiClient, analysisConfig, logger)
+	analysisEngine = analyzers.NewEngine(giteaClient, githubClient, aiClient, analysisConfig, logger)
 
 	// Initialize semantic dedup (optional Qdrant)
 	qdrantCfg := qdrant.Config{
@@ -930,7 +954,15 @@ func initializeComponents() error {
 		IssueTitleTemplate: "[{{severity}}] {{title}}",
 		IssueBodyTemplate:  "",
 	}
-	issueManager = issues.NewManager(giteaClient, issueConfig, logger, semanticStore)
+	var githubIssueClient *github.Client
+	if githubClient != nil {
+		githubIssueClient, _ = githubClient.(*github.Client)
+	}
+	issueConfig.GitHubBaseURL = strings.TrimSpace(config.GitHubURL)
+	if issueConfig.GitHubBaseURL == "" || strings.Contains(issueConfig.GitHubBaseURL, "api.github.com") {
+		issueConfig.GitHubBaseURL = "https://github.com"
+	}
+	issueManager = issues.NewManager(giteaClient, githubIssueClient, issueConfig, logger, semanticStore)
 
 	webhookHandler = handlers.NewWebhookHandler(logger, &handlers.Config{
 		WebhookSecret:         config.WebhookSecret,
@@ -989,6 +1021,7 @@ func (p *webhookProcessor) ProcessPush(ctx context.Context, payload *handlers.Gi
 		scanCtx := store.ScanContext{
 			Owner:         owner,
 			Repo:          repo,
+			ForgeType:     store.ForgeTypeGitea,
 			TriggerType:   store.TriggerPush,
 			Ref:           payload.Ref,
 			CommitSHA:     commitSHA,
@@ -996,7 +1029,8 @@ func (p *webhookProcessor) ProcessPush(ctx context.Context, payload *handlers.Gi
 			ConnectedRepo: true,
 		}
 		analysisCtx, repositoryID := beginPersistedScan(analysisCtx, &scanCtx)
-		analysisCtx, effective := resolveEffectiveSettingsForRepo(analysisCtx, owner, repo)
+		analysisCtx = analyzers.WithForgeType(analysisCtx, store.ForgeTypeGitea)
+		analysisCtx, effective := resolveEffectiveSettingsForRepo(analysisCtx, store.ForgeTypeGitea, owner, repo)
 		if !effective.Enabled {
 			logger.Infof("Push scan skipped — repository %s/%s disabled in settings", owner, repo)
 			return
@@ -1025,7 +1059,7 @@ func (p *webhookProcessor) ProcessPush(ctx context.Context, payload *handlers.Gi
 			effective.SeverityGate,
 		)
 		notifyPRGateFailed(postCtx, repositoryID, owner, repo, scanCtx.ScanID, eval)
-		createIssuesFromResult(postCtx, owner, repo, result, fmt.Sprintf("Push to %s", payload.Ref), ref, 0, repositoryID, effective)
+		createIssuesFromResult(postCtx, store.ForgeTypeGitea, owner, repo, result, fmt.Sprintf("Push to %s", payload.Ref), ref, 0, repositoryID, effective)
 	})
 }
 
@@ -1039,6 +1073,7 @@ func (p *webhookProcessor) ProcessPullRequest(ctx context.Context, payload *hand
 		scanCtx := store.ScanContext{
 			Owner:         owner,
 			Repo:          repo,
+			ForgeType:     store.ForgeTypeGitea,
 			TriggerType:   store.TriggerPR,
 			Ref:           payload.PullRequest.Head.Ref,
 			CommitSHA:     commitSHA,
@@ -1047,7 +1082,8 @@ func (p *webhookProcessor) ProcessPullRequest(ctx context.Context, payload *hand
 			ConnectedRepo: true,
 		}
 		analysisCtx, repositoryID := beginPersistedScan(analysisCtx, &scanCtx)
-		analysisCtx, effective := resolveEffectiveSettingsForRepo(analysisCtx, owner, repo)
+		analysisCtx = analyzers.WithForgeType(analysisCtx, store.ForgeTypeGitea)
+		analysisCtx, effective := resolveEffectiveSettingsForRepo(analysisCtx, store.ForgeTypeGitea, owner, repo)
 		if !effective.Enabled {
 			logger.Infof("PR scan skipped — repository %s/%s disabled in settings", owner, repo)
 			return
@@ -1076,7 +1112,7 @@ func (p *webhookProcessor) ProcessPullRequest(ctx context.Context, payload *hand
 			effective.SeverityGate,
 		)
 		notifyPRGateFailed(postCtx, repositoryID, owner, repo, scanCtx.ScanID, eval)
-		createIssuesFromResult(postCtx, owner, repo, result, fmt.Sprintf("Pull Request #%d", prNumber), "", prNumber, repositoryID, effective)
+		createIssuesFromResult(postCtx, store.ForgeTypeGitea, owner, repo, result, fmt.Sprintf("Pull Request #%d", prNumber), "", prNumber, repositoryID, effective)
 	})
 }
 
@@ -1138,7 +1174,9 @@ func runScheduledRepositoryScan(ctx context.Context, repo store.ScheduledReposit
 			ConnectedRepo: true,
 		}
 		scanCtxInner, repositoryID := beginPersistedScan(analysisCtx, &scanCtx)
-		scanCtxInner, effective := resolveEffectiveSettingsForRepo(scanCtxInner, repo.Owner, repo.Name)
+		forgeType := normalizeForgeType(repo.ForgeType)
+		scanCtxInner = analyzers.WithForgeType(scanCtxInner, forgeType)
+		scanCtxInner, effective := resolveEffectiveSettingsForRepo(scanCtxInner, forgeType, repo.Owner, repo.Name)
 		if !effective.Enabled {
 			logger.Infof("Scheduled scan skipped — repository %s disabled in settings", repo.FullName)
 			return
@@ -1159,7 +1197,7 @@ func runScheduledRepositoryScan(ctx context.Context, repo store.ScheduledReposit
 			}
 		}
 
-		result, err := analysisEngine.AnalyzeRepository(scanCtxInner, repo.Owner, repo.Name, ref)
+		result, err := analysisEngine.AnalyzeRepository(analyzers.WithForgeType(scanCtxInner, repo.ForgeType), repo.Owner, repo.Name, ref)
 		postCtx, postCancel := postAnalysisContext(scanCtxInner)
 		defer postCancel()
 		finishPersistedScan(postCtx, &scanCtx, repositoryID, result, err)
@@ -1174,7 +1212,7 @@ func runScheduledRepositoryScan(ctx context.Context, repo store.ScheduledReposit
 			return
 		}
 
-		createIssuesFromResult(postCtx, repo.Owner, repo.Name, result,
+		createIssuesFromResult(postCtx, forgeType, repo.Owner, repo.Name, result,
 			fmt.Sprintf("Scheduled scan (%s)", repo.ScheduleCron), ref, 0, repositoryID, effective)
 	}); err != nil {
 		return fmt.Errorf("scheduled scan skipped: %w", err)
@@ -1245,12 +1283,13 @@ func scanProfileOverrideFromContext(ctx context.Context) string {
 	return v
 }
 
-func resolveEffectiveSettingsForRepo(ctx context.Context, owner, repo string) (context.Context, store.EffectiveSettings) {
+func resolveEffectiveSettingsForRepo(ctx context.Context, forgeType, owner, repo string) (context.Context, store.EffectiveSettings) {
+	forgeType = normalizeForgeType(forgeType)
 	repoSettings := store.RepoSettings{}
 	effective, meta := store.ResolveEffectiveSettingsFull(appGlobalSnapshot, repoSettings)
 	if bugbotStore != nil {
 		fullName := owner + "/" + repo
-		dbRepo, err := bugbotStore.GetRepositoryByFullName(ctx, store.ForgeTypeGitea, fullName)
+		dbRepo, err := bugbotStore.GetRepositoryByFullName(ctx, forgeType, fullName)
 		if err == nil {
 			settings, serr := bugbotStore.GetRepoSettings(ctx, dbRepo.ID)
 			if serr == nil {
@@ -1403,7 +1442,17 @@ func postAnalysisContext(parent context.Context) (context.Context, context.Cance
 	return context.WithTimeout(context.WithoutCancel(parent), 30*time.Minute)
 }
 
-func createIssuesFromResult(ctx context.Context, owner, repo string, result *analyzers.AnalysisResult, contextLabel, commit string, prNumber int, repositoryID int64, effective store.EffectiveSettings) {
+func repoClientForForge(forgeType string) forge.RepoClient {
+	if normalizeForgeType(forgeType) == store.ForgeTypeGitHub {
+		return githubClient
+	}
+	if giteaClient != nil {
+		return giteaClient.AsForgeClient()
+	}
+	return nil
+}
+
+func createIssuesFromResult(ctx context.Context, forgeType, owner, repo string, result *analyzers.AnalysisResult, contextLabel, commit string, prNumber int, repositoryID int64, effective store.EffectiveSettings) {
 	if result == nil {
 		return
 	}
@@ -1421,10 +1470,14 @@ func createIssuesFromResult(ctx context.Context, owner, repo string, result *ana
 
 	var processed []issues.ProcessedIssueRecord
 
-	if store.ShouldCreateForgeIssues(effective) {
+	forgeType = normalizeForgeType(forgeType)
+	forgeReady := (forgeType == store.ForgeTypeGitHub && githubClient != nil) ||
+		(forgeType == store.ForgeTypeGitea && giteaClient != nil)
+	if store.ShouldCreateForgeIssues(effective) && forgeReady && issueManager != nil {
 		forgeIssues := filterIssuesForForge(result.Issues, effective, config.Reporting)
 		if len(forgeIssues) > 0 {
 			issueReq := &issues.IssueCreationRequest{
+				ForgeType:  forgeType,
 				Owner:      owner,
 				Repository: repo,
 				AnalysisResult: &ai.CodeAnalysisResult{
@@ -1454,7 +1507,7 @@ func createIssuesFromResult(ctx context.Context, owner, repo string, result *ana
 	}
 
 	if scanRecorder != nil && scanRecorder.Enabled() && repositoryID > 0 && result.ScanID != "" {
-		if err := scanRecorder.RecordIssues(postCtx, repositoryID, result.ScanID, result.Issues, processed); err != nil {
+		if err := scanRecorder.RecordIssues(postCtx, repositoryID, result.ScanID, forgeType, result.Issues, processed); err != nil {
 			logger.Warnf("Failed to persist findings: %v", err)
 		} else {
 			maybeGenerateRemediationPlans(postCtx, repositoryID, result.Issues, processed)
@@ -1524,7 +1577,9 @@ func tryDelegateScan(ctx context.Context, scanCtx *store.ScanContext, repo store
 
 func ingestRunnerResult(ctx context.Context, job store.RunnerJob, result runner.JobResult, repo store.Repository, _ store.EffectiveSettings) error {
 	ctx = scanid.With(ctx, job.ScanID)
-	ctx, effective := resolveEffectiveSettingsForRepo(ctx, repo.Owner, repo.Name)
+	forgeType := normalizeForgeType(repo.ForgeType)
+	ctx = analyzers.WithForgeType(ctx, forgeType)
+	ctx, effective := resolveEffectiveSettingsForRepo(ctx, forgeType, repo.Owner, repo.Name)
 
 	var policy analyzers.PolicySnapshot
 	_ = json.Unmarshal(job.PolicySnapshotJSON, &policy)
@@ -1552,7 +1607,7 @@ func ingestRunnerResult(ctx context.Context, job store.RunnerJob, result runner.
 		TriggerType: store.TriggerScheduled, Ref: job.Ref, CommitSHA: job.CommitSHA, PRNumber: job.PRNumber,
 	}
 	finishPersistedScan(ctx, runnerScanCtx, repo.ID, analysisResult, nil)
-	createIssuesFromResult(ctx, repo.Owner, repo.Name, analysisResult,
+	createIssuesFromResult(ctx, forgeType, repo.Owner, repo.Name, analysisResult,
 		fmt.Sprintf("Runner scan (%s)", job.JobType), job.Ref, job.PRNumber, repo.ID, effective)
 	return nil
 }
@@ -1573,6 +1628,7 @@ func runnerNonceMiddleware() gin.HandlerFunc {
 }
 
 type manualAnalysisRequest struct {
+	ForgeType   string `json:"forge_type"` // gitea (default) or github
 	Owner       string `json:"owner" binding:"required"`
 	Repository  string `json:"repository" binding:"required"`
 	Ref         string `json:"ref"`
@@ -1581,10 +1637,22 @@ type manualAnalysisRequest struct {
 	ScanProfile string `json:"scan_profile"`
 }
 
+func normalizeForgeType(forgeType string) string {
+	forgeType = strings.ToLower(strings.TrimSpace(forgeType))
+	if forgeType == "" {
+		return store.ForgeTypeGitea
+	}
+	if forgeType == store.ForgeTypeGitHub {
+		return store.ForgeTypeGitHub
+	}
+	return store.ForgeTypeGitea
+}
+
 func enqueueManualAnalysis(parentCtx context.Context, req manualAnalysisRequest) {
 	// Detach from HTTP request context so bulk /analyze/all scans are not cancelled when the handler returns.
 	scanCtx := context.WithoutCancel(parentCtx)
-	go func() {
+		go func() {
+		forgeType := normalizeForgeType(req.ForgeType)
 		runAnalysis(withScanProfileOverride(scanCtx, req.ScanProfile), func(ctx context.Context) {
 			var result *analyzers.AnalysisResult
 			var err error
@@ -1593,12 +1661,14 @@ func enqueueManualAnalysis(parentCtx context.Context, req manualAnalysisRequest)
 			scanCtx := store.ScanContext{
 				Owner:         req.Owner,
 				Repo:          req.Repository,
+				ForgeType:     forgeType,
 				TriggerType:   store.TriggerManual,
 				Ref:           req.Ref,
 				ConnectedRepo: true,
 			}
 			ctx, repositoryID = beginPersistedScan(ctx, &scanCtx)
-			ctx, effective := resolveEffectiveSettingsForRepo(ctx, req.Owner, req.Repository)
+			ctx = analyzers.WithForgeType(ctx, forgeType)
+			ctx, effective := resolveEffectiveSettingsForRepo(ctx, forgeType, req.Owner, req.Repository)
 			if !effective.Enabled {
 				postCtx, postCancel := postAnalysisContext(ctx)
 				defer postCancel()
@@ -1624,6 +1694,14 @@ func enqueueManualAnalysis(parentCtx context.Context, req manualAnalysisRequest)
 			}
 
 			if req.Type == "pull_request" && req.PRNumber > 0 {
+				if forgeType == store.ForgeTypeGitHub {
+					err = fmt.Errorf("pull request analysis is not supported for GitHub yet")
+					postCtx, postCancel := postAnalysisContext(ctx)
+					defer postCancel()
+					finishPersistedScan(postCtx, &scanCtx, repositoryID, nil, err)
+					logger.Warnf("Manual analysis: %v", err)
+					return
+				}
 				scanCtx.PRNumber = req.PRNumber
 				scanCtx.TriggerType = store.TriggerPR
 				result, err = analysisEngine.AnalyzePullRequest(ctx, req.Owner, req.Repository, req.PRNumber)
@@ -1632,8 +1710,8 @@ func enqueueManualAnalysis(parentCtx context.Context, req manualAnalysisRequest)
 				if ref == "" {
 					ref = "main"
 				}
-				if giteaClient != nil {
-					if resolved, rerr := giteaClient.ResolveRef(ctx, req.Owner, req.Repository, ref); rerr == nil {
+				if client := repoClientForForge(forgeType); client != nil {
+					if resolved, rerr := client.ResolveRef(ctx, req.Owner, req.Repository, ref); rerr == nil {
 						ref = resolved
 					} else {
 						logger.Warnf("Could not resolve ref for %s/%s: %v", req.Owner, req.Repository, rerr)
@@ -1652,7 +1730,7 @@ func enqueueManualAnalysis(parentCtx context.Context, req manualAnalysisRequest)
 			}
 
 			if len(result.Issues) > 0 || scanRecorder != nil && scanRecorder.Enabled() {
-				createIssuesFromResult(postCtx, req.Owner, req.Repository, result,
+				createIssuesFromResult(postCtx, forgeType, req.Owner, req.Repository, result,
 					fmt.Sprintf("Manual analysis - %s", req.Type), req.Ref, req.PRNumber, repositoryID, effective)
 			}
 		})
@@ -1671,37 +1749,29 @@ func handleManualAnalysis(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "analysis started"})
 }
 
-// handleBulkAnalysis queues a full-repository scan for every Gitea repo the token can see.
-func handleBulkAnalysis(c *gin.Context) {
-	var req struct {
-		Orgs        []string `json:"orgs"`
-		Ref         string   `json:"ref"`
-		ScanProfile string   `json:"scan_profile"`
-		DryRun      bool     `json:"dry_run"`
+type bulkForgeResult struct {
+	Queued  []string `json:"queued"`
+	Skipped []string `json:"skipped"`
+	Error   string   `json:"error,omitempty"`
+}
+
+// collectBulkRepos lists user + org repos from a forge client, deduped by full name.
+func collectBulkRepos(ctx context.Context, client forge.RepoClient, orgs []string, envOrgKey string) (map[string]forge.RepositorySummary, error) {
+	if client == nil {
+		return nil, nil
 	}
-	_ = c.ShouldBindJSON(&req)
-
-	if giteaClient == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Gitea client not configured"})
-		return
-	}
-
-	listCtx, cancel := context.WithTimeout(c.Request.Context(), 2*time.Minute)
-	defer cancel()
-
-	reposByID := make(map[int64]gitea.RepositorySummary)
-	userRepos, err := giteaClient.ListAllUserRepositories(listCtx)
+	reposByName := make(map[string]forge.RepositorySummary)
+	userRepos, err := client.ListAllUserRepositories(ctx)
 	if err != nil {
-		c.JSON(http.StatusBadGateway, gin.H{"error": fmt.Sprintf("list user repositories: %v", err)})
-		return
+		return nil, fmt.Errorf("list user repositories: %w", err)
 	}
 	for _, repo := range userRepos {
-		reposByID[repo.ID] = repo
+		if name := strings.TrimSpace(repo.FullName); name != "" {
+			reposByName[name] = repo
+		}
 	}
-
-	orgs := req.Orgs
 	if len(orgs) == 0 {
-		if envOrgs := strings.TrimSpace(os.Getenv("GITEA_SCAN_ORGS")); envOrgs != "" {
+		if envOrgs := strings.TrimSpace(os.Getenv(envOrgKey)); envOrgs != "" {
 			for _, org := range strings.Split(envOrgs, ",") {
 				if o := strings.TrimSpace(org); o != "" {
 					orgs = append(orgs, o)
@@ -1710,60 +1780,126 @@ func handleBulkAnalysis(c *gin.Context) {
 		}
 	}
 	for _, org := range orgs {
-		orgRepos, err := giteaClient.ListAllOrgRepositories(listCtx, org)
+		orgRepos, err := client.ListAllOrgRepositories(ctx, org)
 		if err != nil {
-			c.JSON(http.StatusBadGateway, gin.H{"error": fmt.Sprintf("list org %s repositories: %v", org, err)})
-			return
+			return nil, fmt.Errorf("list org %s repositories: %w", org, err)
 		}
 		for _, repo := range orgRepos {
-			reposByID[repo.ID] = repo
+			if name := strings.TrimSpace(repo.FullName); name != "" {
+				reposByName[name] = repo
+			}
 		}
 	}
+	return reposByName, nil
+}
 
-	var queued, skipped []string
-	defaultRef := strings.TrimSpace(req.Ref)
-	for _, repo := range reposByID {
+func queueBulkForgeRepos(parentCtx context.Context, forgeType string, repos map[string]forge.RepositorySummary, defaultRef, scanProfile string, dryRun bool) (queued, skipped []string) {
+	prefix := normalizeForgeType(forgeType) + ":"
+	for _, repo := range repos {
 		fullName := strings.TrimSpace(repo.FullName)
 		if fullName == "" {
 			continue
 		}
 		if !handlers.RepoAllowed(fullName, config.RepositoryIncludePatterns, config.RepositoryExcludePatterns) {
-			skipped = append(skipped, fullName)
+			skipped = append(skipped, prefix+fullName)
 			continue
 		}
 		parts := strings.SplitN(fullName, "/", 2)
 		if len(parts) != 2 {
-			skipped = append(skipped, fullName)
+			skipped = append(skipped, prefix+fullName)
 			continue
 		}
-		ref := defaultRef
+		ref := strings.TrimSpace(defaultRef)
 		if ref == "" {
 			ref = strings.TrimSpace(repo.DefaultBranch)
 		}
 		if ref == "" {
 			ref = "main"
 		}
-		queued = append(queued, fullName)
-		if req.DryRun {
+		queued = append(queued, prefix+fullName)
+		if dryRun {
 			continue
 		}
-		enqueueManualAnalysis(c.Request.Context(), manualAnalysisRequest{
+		enqueueManualAnalysis(parentCtx, manualAnalysisRequest{
+			ForgeType:   forgeType,
 			Owner:       parts[0],
 			Repository:  parts[1],
 			Ref:         ref,
 			Type:        "repository",
-			ScanProfile: strings.TrimSpace(req.ScanProfile),
+			ScanProfile: strings.TrimSpace(scanProfile),
 		})
 	}
+	return queued, skipped
+}
+
+// handleBulkAnalysis queues full-repository scans for every repo visible to configured forge tokens.
+func handleBulkAnalysis(c *gin.Context) {
+	var req struct {
+		Orgs        []string `json:"orgs"`
+		Ref         string   `json:"ref"`
+		ScanProfile string   `json:"scan_profile"`
+		DryRun      bool     `json:"dry_run"`
+		Forge       string   `json:"forge"` // gitea, github, or all (default)
+	}
+	_ = c.ShouldBindJSON(&req)
+
+	if giteaClient == nil && githubClient == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "no forge client configured (set gitea_token and/or github_token)"})
+		return
+	}
+
+	listCtx, cancel := context.WithTimeout(c.Request.Context(), 2*time.Minute)
+	defer cancel()
+
+	forgeFilter := strings.ToLower(strings.TrimSpace(req.Forge))
+	if forgeFilter == "" {
+		forgeFilter = "all"
+	}
+
+	var giteaResult, githubResult bulkForgeResult
+	defaultRef := strings.TrimSpace(req.Ref)
+	scanProfile := strings.TrimSpace(req.ScanProfile)
+
+	if forgeFilter == "all" || forgeFilter == "gitea" {
+		if giteaClient != nil {
+			repos, err := collectBulkRepos(listCtx, giteaClient.AsForgeClient(), req.Orgs, "GITEA_SCAN_ORGS")
+			if err != nil {
+				giteaResult.Error = err.Error()
+			} else {
+				giteaResult.Queued, giteaResult.Skipped = queueBulkForgeRepos(c.Request.Context(), store.ForgeTypeGitea, repos, defaultRef, scanProfile, req.DryRun)
+			}
+		} else if forgeFilter == "gitea" {
+			giteaResult.Error = "Gitea client not configured"
+		}
+	}
+
+	if forgeFilter == "all" || forgeFilter == "github" {
+		if githubClient != nil {
+			repos, err := collectBulkRepos(listCtx, githubClient, req.Orgs, "GITHUB_SCAN_ORGS")
+			if err != nil {
+				githubResult.Error = err.Error()
+			} else {
+				githubResult.Queued, githubResult.Skipped = queueBulkForgeRepos(c.Request.Context(), store.ForgeTypeGitHub, repos, defaultRef, scanProfile, req.DryRun)
+			}
+		} else if forgeFilter == "github" {
+			githubResult.Error = "GitHub client not configured"
+		}
+	}
+
+	allQueued := append(append([]string{}, giteaResult.Queued...), githubResult.Queued...)
+	allSkipped := append(append([]string{}, giteaResult.Skipped...), githubResult.Skipped...)
 
 	c.JSON(http.StatusOK, gin.H{
 		"status":        "bulk analysis queued",
-		"queued_count":  len(queued),
-		"skipped_count": len(skipped),
-		"scan_profile":  strings.TrimSpace(req.ScanProfile),
-		"queued":        queued,
-		"skipped":       skipped,
+		"forge":         forgeFilter,
+		"queued_count":  len(allQueued),
+		"skipped_count": len(allSkipped),
+		"scan_profile":  scanProfile,
+		"queued":        allQueued,
+		"skipped":       allSkipped,
 		"dry_run":       req.DryRun,
+		"gitea":         giteaResult,
+		"github":        githubResult,
 	})
 }
 

@@ -50,7 +50,7 @@ func TestConfigFromPolicyOverridesScanners(t *testing.T) {
 }
 
 func TestEngineConfigForUsesContext(t *testing.T) {
-	engine := analyzers.NewEngine(nil, nil, &analyzers.Config{
+	engine := analyzers.NewEngine(nil, nil, nil, &analyzers.Config{
 		AnalysisDepth: 3,
 	}, nil)
 	policy := analyzers.ScanPolicy{AnalysisDepth: 1, WorkspaceMode: "api", AIPolicy: "disabled"}

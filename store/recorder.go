@@ -173,7 +173,7 @@ func (r *Recorder) FinishScan(ctx context.Context, scanID string, data *ScanComp
 }
 
 // RecordIssues persists findings, instances, external issue links, and lifecycle events.
-func (r *Recorder) RecordIssues(ctx context.Context, repositoryID int64, scanID string, codeIssues []ai.CodeIssue, processed []issues.ProcessedIssueRecord) error {
+func (r *Recorder) RecordIssues(ctx context.Context, repositoryID int64, scanID string, forgeType string, codeIssues []ai.CodeIssue, processed []issues.ProcessedIssueRecord) error {
 	if !r.Enabled() || repositoryID == 0 || scanID == "" {
 		return nil
 	}
@@ -239,9 +239,16 @@ func (r *Recorder) RecordIssues(ctx context.Context, repositoryID int64, scanID 
 		}
 
 		if processedItem, ok := processedByFingerprint[issue.Fingerprint]; ok && processedItem.IssueNumber > 0 {
+			ft := strings.TrimSpace(forgeType)
+			if ft == "" {
+				ft = strings.TrimSpace(processedItem.ForgeType)
+			}
+			if ft == "" {
+				ft = ForgeTypeGitea
+			}
 			if _, err := r.store.UpsertExternalIssue(ctx, ExternalIssue{
 				FindingID:   stored.ID,
-				ForgeType:   ForgeTypeGitea,
+				ForgeType:   ft,
 				IssueNumber: processedItem.IssueNumber,
 				IssueURL:    processedItem.IssueURL,
 				State:       "open",

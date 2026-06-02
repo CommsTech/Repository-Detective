@@ -405,7 +405,7 @@ func TestRecorderPersistsIssues(t *testing.T) {
 		Action:      "created",
 	}}
 
-	if err := rec.RecordIssues(ctx, repo.ID, "scanrec001", issuesList, processed); err != nil {
+	if err := rec.RecordIssues(ctx, repo.ID, "scanrec001", "gitea", issuesList, processed); err != nil {
 		t.Fatalf("record issues: %v", err)
 	}
 
