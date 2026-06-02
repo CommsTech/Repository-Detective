@@ -67,6 +67,23 @@ func TestMaintainerDeepEnablesDeepChecks(t *testing.T) {
 	if !effective.GraphIncludeFunctions {
 		t.Fatal("maintainer_deep should include graph functions")
 	}
+	if !effective.EnableLLMAuditors || effective.AIPolicy != store.AIPolicyAllowed || effective.AnalysisDepth < 3 {
+		t.Fatalf("maintainer_deep should enable full LLM pipeline: llm=%v ai=%s depth=%d",
+			effective.EnableLLMAuditors, effective.AIPolicy, effective.AnalysisDepth)
+	}
+}
+
+func TestGlobalLLMConfigOverridesDeterministicProfile(t *testing.T) {
+	global := store.DefaultGlobalSettings()
+	global.ScanProfile = store.ScanProfileStandardDeterministic
+	global.EnableLLMAuditors = true
+	global.AnalysisDepth = 3
+	global.AIPolicy = store.AIPolicyAllowed
+	effective := store.ResolveEffectiveSettings(global, store.RepoSettings{})
+	if !effective.EnableLLMAuditors || effective.AIPolicy != store.AIPolicyAllowed || effective.AnalysisDepth != 3 {
+		t.Fatalf("global LLM config should override deterministic profile defaults: llm=%v ai=%s depth=%d",
+			effective.EnableLLMAuditors, effective.AIPolicy, effective.AnalysisDepth)
+	}
 }
 
 func TestPreinstallCautiousDisablesIssuesAndAI(t *testing.T) {

@@ -29,7 +29,7 @@ var ProfileDescriptions = map[string]string{
 	ScanProfileFast:                  "Quick feedback, low noise — gitleaks + trivy, minimal health, no AI",
 	ScanProfileStandardDeterministic: "Default deterministic scan — security, Go, IaC, health, and graph",
 	ScanProfileStrictSecurity:        "Strong PR/security gate — all scanners, medium severity gate, status gate",
-	ScanProfileMaintainerDeep:        "Scheduled deep maintenance — full workspace, all checks, runner-friendly",
+	ScanProfileMaintainerDeep:        "Deep maintenance — full workspace, scanners, health, graph, and LLM auditors",
 	ScanProfilePreinstallCautious:    "Third-party trust assessment — no issues/AI, conservative scanners",
 	ScanProfileCustom:                "Manual control — explicit repo toggles only, no profile overrides",
 }
@@ -155,7 +155,7 @@ func ProfileDefaults(profile string) EffectiveSettings {
 	case ScanProfileMaintainerDeep:
 		base.WorkspaceMode = "auto"
 		base.AnalysisDepth = 3
-		base.EnableLLMAuditors = false
+		base.EnableLLMAuditors = true
 		base.AIPolicy = AIPolicyAllowed
 		base.EnableTrivy = true
 		base.EnableGrype = true

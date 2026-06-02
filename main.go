@@ -1299,7 +1299,9 @@ func resolveEffectiveSettingsForRepo(ctx context.Context, forgeType, owner, repo
 		}
 	}
 	if override := scanProfileOverrideFromContext(ctx); override != "" && override != store.ScanProfileCustom {
-		effective = store.MergeConfigOverProfile(store.ProfileDefaults(override), effective)
+		globalCfg := store.EffectiveFromGlobalSnapshot(appGlobalSnapshot)
+		effective = store.MergeConfigOverProfile(store.ProfileDefaults(override), globalCfg)
+		effective = store.ApplyRepoOverridesToEffective(effective, repoSettings)
 		meta.ScanProfile = override
 		meta.ProfileSource = "request_override"
 	}

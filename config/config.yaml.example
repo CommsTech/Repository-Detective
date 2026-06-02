@@ -21,7 +21,8 @@ ai_api_key: ""
 ai_model: "gpt-4o-mini"
 ai_insecure_skip_tls_verify: false
 
-scan_profile: standard_deterministic
+# maintainer_deep = scanners + health + graph + LLM (depth 3). standard_deterministic = no LLM.
+scan_profile: maintainer_deep
 analysis_depth: 3
 max_file_size: 1048576
 enable_security: true

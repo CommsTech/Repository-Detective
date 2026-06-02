@@ -24,9 +24,35 @@ func ResolveEffectiveSettingsWithMeta(global GlobalSettingsSnapshot, repoSetting
 		}
 	}
 
+	merged = preserveGlobalAIPreferences(merged, global)
 	effective := applyRepoOverrides(merged, repoSettings)
 	meta := buildSettingsMeta(global, repoSettings, effective)
 	return effective, meta
+}
+
+// preserveGlobalAIPreferences keeps explicit global AI settings when config enables LLM auditors.
+// Scan profiles may default to deterministic-only, but enable_llm_auditors + analysis_depth in
+// config.yaml should still activate the full CAH pipeline for homelab and dogfood deployments.
+func preserveGlobalAIPreferences(merged EffectiveSettings, global GlobalSettingsSnapshot) EffectiveSettings {
+	raw := effectiveFromGlobalSnapshot(global)
+	if !raw.EnableLLMAuditors {
+		return merged
+	}
+	switch normalizedGlobalProfile(global.ScanProfile) {
+	case ScanProfileFast, ScanProfilePreinstallCautious:
+		return merged
+	}
+	merged.EnableLLMAuditors = true
+	if raw.AIPolicy != "" {
+		merged.AIPolicy = raw.AIPolicy
+	}
+	if raw.AnalysisDepth >= 3 {
+		merged.AnalysisDepth = raw.AnalysisDepth
+	}
+	if raw.EnableAIRiskChecks {
+		merged.EnableAIRiskChecks = true
+	}
+	return merged
 }
 
 // MergeConfigOverProfile applies explicit config values over profile defaults.
@@ -85,6 +111,11 @@ func mergeEffectiveSettings(base, overlay EffectiveSettings) EffectiveSettings {
 	base.GraphIncludeFunctions = overlay.GraphIncludeFunctions
 	base.GraphIncludeFindings = overlay.GraphIncludeFindings
 	return base
+}
+
+// ApplyRepoOverridesToEffective applies stored per-repo overrides onto resolved settings.
+func ApplyRepoOverridesToEffective(base EffectiveSettings, repo RepoSettings) EffectiveSettings {
+	return applyRepoOverrides(base, repo)
 }
 
 func applyRepoOverrides(base EffectiveSettings, repo RepoSettings) EffectiveSettings {
