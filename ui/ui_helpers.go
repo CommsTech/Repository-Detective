@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -22,6 +23,12 @@ func templateFuncs() template.FuncMap {
 		"shortID":        shortID,
 		"mul":            func(a, b float64) float64 { return a * b },
 		"radarBarWidth":  radarBarWidth,
+		"navActive":      navActiveClass,
+		"apiKeyQS":       apiKeyQueryString,
+		"issuesFromScan": issuesFromScanSummary,
+		"add":            func(a, b int) int { return a + b },
+		"gt":             func(a, b int) bool { return a > b },
+		"eq":             func(a, b interface{}) bool { return a == b },
 	}
 }
 
@@ -244,4 +251,23 @@ func radarBarWidth(count int, all map[string]int) int {
 		return 8
 	}
 	return w
+}
+
+func navActiveClass(section, current string) string {
+	if section != "" && section == current {
+		return "active"
+	}
+	return ""
+}
+
+func apiKeyQueryString(apiKey string) string {
+	if apiKey == "" {
+		return ""
+	}
+	return "?api_key=" + url.QueryEscape(apiKey)
+}
+
+func issuesFromScanSummary(raw json.RawMessage) int {
+	view := buildScanDetailView(raw)
+	return view.IssuesFound
 }

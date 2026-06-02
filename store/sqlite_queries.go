@@ -281,6 +281,56 @@ func (s *SQLiteStore) ListExternalIssuesByFinding(ctx context.Context, findingID
 	return scanExternalIssueRows(rows)
 }
 
+func (s *SQLiteStore) ListRecentScans(ctx context.Context, opts ListOptions) ([]ScanWithRepo, error) {
+	opts = NormalizeListOptions(opts)
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT s.id, s.repository_id, s.trigger_type, s.ref, s.commit_sha, s.pr_number,
+			s.workspace_mode_used, s.commit_pinned, s.status, s.started_at, s.finished_at, s.summary_json, s.error,
+			r.full_name
+		FROM scans s
+		JOIN repositories r ON r.id = s.repository_id
+		ORDER BY s.started_at DESC
+		LIMIT ? OFFSET ?
+	`, opts.Limit, opts.Offset)
+	if err != nil {
+		return nil, fmt.Errorf("list recent scans: %w", err)
+	}
+	defer rows.Close()
+
+	var out []ScanWithRepo
+	for rows.Next() {
+		var item ScanWithRepo
+		var commitPinned int
+		var startedAt string
+		var finishedAt sql.NullString
+		var summaryJSON string
+		if err := rows.Scan(
+			&item.ID, &item.RepositoryID, &item.TriggerType, &item.Ref, &item.CommitSHA, &item.PRNumber,
+			&item.WorkspaceModeUsed, &commitPinned, &item.Status, &startedAt, &finishedAt, &summaryJSON, &item.Error,
+			&item.RepoFullName,
+		); err != nil {
+			return nil, fmt.Errorf("scan recent scan row: %w", err)
+		}
+		item.CommitPinned = intToBool(commitPinned)
+		item.StartedAt = parseTime(startedAt)
+		item.FinishedAt = parseTimePtr(finishedAt)
+		item.SummaryJSON = json.RawMessage(summaryJSON)
+		out = append(out, item)
+	}
+	return out, rows.Err()
+}
+
+func (s *SQLiteStore) CountActiveScans(ctx context.Context) (int, error) {
+	var count int
+	err := s.db.QueryRowContext(ctx, `
+		SELECT COUNT(1) FROM scans WHERE status IN ('running', 'started')
+	`).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("count active scans: %w", err)
+	}
+	return count, nil
+}
+
 func (s *SQLiteStore) DashboardSummary(ctx context.Context, recentLimit int) (DashboardSummary, error) {
 	if recentLimit <= 0 {
 		recentLimit = 10

@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"net/http"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -141,6 +142,10 @@ func (h *Handler) RegisterRoutes(g *gin.RouterGroup) {
 	g.GET("/repos/:id/settings", h.RepoSettings)
 	g.POST("/repos/:id/settings", h.SaveRepoSettings)
 	g.GET("/repos/:id/graph", h.RepoGraph)
+	g.GET("/repos/:id/report", h.RepoReport)
+	g.GET("/scans", h.Scans)
+	g.GET("/reports", h.Reports)
+	g.GET("/health", h.SystemHealth)
 	g.GET("/scans/:scan_id", h.ScanDetail)
 	g.GET("/scans/:scan_id/graph", h.ScanGraph)
 	g.GET("/findings", h.Findings)
@@ -176,12 +181,13 @@ func (h *Handler) requireStore(c *gin.Context) bool {
 }
 
 type pageData struct {
-	Title     string
-	BasePath  string
-	APIKey    string
-	CSRFToken string
-	Notice    string
-	Data      map[string]any
+	Title      string
+	BasePath   string
+	APIKey     string
+	CSRFToken  string
+	Notice     string
+	NavSection string
+	Data       map[string]any
 }
 
 func clientAPIKeyFromRequest(c *gin.Context) string {
@@ -223,11 +229,17 @@ func (h *Handler) requireCSRF(c *gin.Context) bool {
 }
 
 func (h *Handler) render(c *gin.Context, name string, title string, data map[string]any) {
+	h.renderNav(c, name, title, "", data)
+}
+
+func (h *Handler) renderNav(c *gin.Context, name, title, navSection string, data map[string]any) {
 	if c.Writer.Status() == 0 {
 		c.Status(http.StatusOK)
 	}
 	c.Header("Content-Type", "text/html; charset=utf-8")
-	if err := h.tmpl.ExecuteTemplate(c.Writer, name, h.page(c, title, data)); err != nil {
+	pd := h.page(c, title, data)
+	pd.NavSection = navSection
+	if err := h.tmpl.ExecuteTemplate(c.Writer, name, pd); err != nil {
 		h.logger.Errorf("render %s: %v", name, err)
 		c.String(http.StatusInternalServerError, "template error")
 	}
@@ -246,7 +258,112 @@ func (h *Handler) Dashboard(c *gin.Context) {
 	if h.readinessFn != nil {
 		data["Readiness"] = h.readinessFn()
 	}
-	h.render(c, "dashboard.html", "Dashboard", data)
+	activeScans, _ := h.store.CountActiveScans(c.Request.Context())
+	data["ActiveScans"] = activeScans
+	repos, _ := h.store.ListRepositoriesWithSummary(c.Request.Context(), store.ListOptions{Limit: 200})
+	sort.Slice(repos, func(i, j int) bool {
+		return repos[i].OpenFindingsCount > repos[j].OpenFindingsCount
+	})
+	topRisk := repos
+	if len(topRisk) > 5 {
+		topRisk = topRisk[:5]
+	}
+	data["TopRiskyRepos"] = topRisk
+	critical, _ := h.store.ListFindings(c.Request.Context(), store.FindingFilter{Severity: "critical", Status: "open", Limit: 8})
+	high, _ := h.store.ListFindings(c.Request.Context(), store.FindingFilter{Severity: "high", Status: "open", Limit: 8})
+	data["RecentSevereFindings"] = append(critical, high...)
+	h.renderNav(c, "dashboard.html", "Dashboard", "dashboard", data)
+}
+
+func (h *Handler) Scans(c *gin.Context) {
+	if !h.requireStore(c) {
+		return
+	}
+	scans, err := h.store.ListRecentScans(c.Request.Context(), store.ListOptions{Limit: 100})
+	if err != nil {
+		c.String(http.StatusInternalServerError, "failed to list scans")
+		return
+	}
+	statusFilter := strings.TrimSpace(c.Query("status"))
+	if statusFilter != "" {
+		filtered := scans[:0]
+		for _, s := range scans {
+			if strings.EqualFold(s.Status, statusFilter) {
+				filtered = append(filtered, s)
+			}
+		}
+		scans = filtered
+	}
+	active, _ := h.store.CountActiveScans(c.Request.Context())
+	h.renderNav(c, "scans.html", "Scans", "scans", map[string]any{
+		"Scans": scans, "StatusFilter": statusFilter, "ActiveScans": active,
+	})
+}
+
+func (h *Handler) Reports(c *gin.Context) {
+	if !h.requireStore(c) {
+		return
+	}
+	summary, err := h.store.DashboardSummary(c.Request.Context(), 20)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "failed to load report data")
+		return
+	}
+	repos, _ := h.store.ListRepositoriesWithSummary(c.Request.Context(), store.ListOptions{Limit: 200})
+	sort.Slice(repos, func(i, j int) bool {
+		return repos[i].OpenFindingsCount > repos[j].OpenFindingsCount
+	})
+	h.renderNav(c, "reports.html", "Reports", "reports", map[string]any{
+		"Summary": summary, "Repositories": repos,
+	})
+}
+
+func (h *Handler) RepoReport(c *gin.Context) {
+	if !h.requireStore(c) {
+		return
+	}
+	id, ok := parseID(c, "id")
+	if !ok {
+		return
+	}
+	repo, err := h.store.GetRepository(c.Request.Context(), id)
+	if err != nil {
+		c.String(http.StatusNotFound, "repository not found")
+		return
+	}
+	scans, _ := h.store.ListScansByRepository(c.Request.Context(), id, store.ListOptions{Limit: 10})
+	findings, _ := h.store.ListFindings(c.Request.Context(), store.FindingFilter{RepositoryID: id, Limit: 50})
+	external, _ := h.store.ListExternalIssuesByRepository(c.Request.Context(), id, store.ListOptions{Limit: 20})
+	settings, _ := h.store.GetRepoSettings(c.Request.Context(), id)
+	effective, meta := store.ResolveEffectiveSettingsFull(h.global, settings)
+	severityCounts := map[string]int{}
+	for _, f := range findings {
+		if f.Status == "open" {
+			severityCounts[strings.ToLower(f.Severity)]++
+		}
+	}
+	h.renderNav(c, "repo_report.html", "Report — "+repo.FullName, "reports", map[string]any{
+		"Repo": repo, "Scans": scans, "Findings": findings, "ExternalIssues": external,
+		"Effective": effective, "ProfileMeta": meta, "SeverityCounts": severityCounts,
+	})
+}
+
+func (h *Handler) SystemHealth(c *gin.Context) {
+	if !h.requireStore(c) {
+		return
+	}
+	summary, err := h.store.DashboardSummary(c.Request.Context(), 5)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "failed to load health data")
+		return
+	}
+	data := map[string]any{"Summary": summary}
+	if h.readinessFn != nil {
+		data["Readiness"] = h.readinessFn()
+	}
+	active, _ := h.store.CountActiveScans(c.Request.Context())
+	data["ActiveScans"] = active
+	h.renderNav(c, "health.html", "System Health", "health", data)
 }
 
 func (h *Handler) Repositories(c *gin.Context) {
@@ -258,7 +375,7 @@ func (h *Handler) Repositories(c *gin.Context) {
 		c.String(http.StatusInternalServerError, "failed to list repositories")
 		return
 	}
-	h.render(c, "repos.html", "Repositories", map[string]any{"Repositories": repos})
+	h.renderNav(c, "repos.html", "Repositories", "repos", map[string]any{"Repositories": repos})
 }
 
 func (h *Handler) RepoDetail(c *gin.Context) {
@@ -278,7 +395,7 @@ func (h *Handler) RepoDetail(c *gin.Context) {
 	findings, _ := h.store.ListFindings(c.Request.Context(), store.FindingFilter{RepositoryID: id, Limit: 20})
 	external, _ := h.store.ListExternalIssuesByRepository(c.Request.Context(), id, store.ListOptions{Limit: 20})
 	settings, _ := h.store.GetRepoSettings(c.Request.Context(), id)
-	effective, _ := store.ResolveEffectiveSettingsFull(h.global, settings)
+	effective, meta := store.ResolveEffectiveSettingsFull(h.global, settings)
 	var cronInfo store.CronDescription
 	if effective.ScheduleEnabled && effective.ScheduleCron != "" {
 		last, _ := h.store.GetLastScheduledScanFinishedAt(c.Request.Context(), id)
@@ -289,9 +406,9 @@ func (h *Handler) RepoDetail(c *gin.Context) {
 		cronInfo = store.DescribeCron(effective.ScheduleCron, baseline)
 	}
 	scheduledScans, _ := h.store.ListRecentScheduledScans(c.Request.Context(), 5)
-	h.render(c, "repo_detail.html", repo.FullName, map[string]any{
+	h.renderNav(c, "repo_detail.html", repo.FullName, "repos", map[string]any{
 		"Repo": repo, "Scans": scans, "Findings": findings,
-		"ExternalIssues": external, "Effective": effective,
+		"ExternalIssues": external, "Effective": effective, "ProfileMeta": meta,
 		"CronInfo": cronInfo, "ScheduledScans": scheduledScans,
 	})
 }
@@ -325,7 +442,7 @@ func (h *Handler) RepoSettings(c *gin.Context) {
 		selectedProfile = *settings.ScanProfile
 	}
 	notifyEff := notify.ResolveEffective(h.notifyGlobal, settings)
-	h.render(c, "repo_settings.html", "Settings — "+repo.FullName, map[string]any{
+	h.renderNav(c, "repo_settings.html", "Settings — "+repo.FullName, "policies", map[string]any{
 		"Repo": repo, "Settings": settings, "Effective": effective, "ProfileMeta": meta,
 		"SelectedProfile": selectedProfile,
 		"Profiles": store.AllowedScanProfiles, "ProfileDescriptions": store.ProfileDescriptions,
@@ -466,7 +583,7 @@ func (h *Handler) ScanDetail(c *gin.Context) {
 	if repo.FullName != "" {
 		repoName = repo.FullName
 	}
-	h.render(c, "scan_detail.html", "Scan "+scanID[:8], map[string]any{
+	h.renderNav(c, "scan_detail.html", "Scan "+scanID[:8], "scans", map[string]any{
 		"Scan":           scan,
 		"ScannerResults": results,
 		"Repo":           repo,
@@ -545,7 +662,10 @@ func (h *Handler) Findings(c *gin.Context) {
 		c.String(http.StatusInternalServerError, "failed to list findings")
 		return
 	}
-	h.render(c, "findings.html", "Findings", map[string]any{"Findings": findings, "Filter": filter})
+	repos, _ := h.store.ListRepositoriesWithSummary(c.Request.Context(), store.ListOptions{Limit: 200})
+	h.renderNav(c, "findings.html", "Findings", "findings", map[string]any{
+		"Findings": findings, "Filter": filter, "Repositories": repos,
+	})
 }
 
 func (h *Handler) FindingDetail(c *gin.Context) {
@@ -575,7 +695,7 @@ func (h *Handler) FindingDetail(c *gin.Context) {
 			}
 		}
 	}
-	h.render(c, "finding_detail.html", detail.Title, map[string]any{
+	h.renderNav(c, "finding_detail.html", detail.Title, "findings", map[string]any{
 		"Finding": detail, "RemediationPlan": plan, "PlannerEnabled": h.remediationEnabled,
 		"PREnabled": h.remediationPREnabled, "PREligibility": prEligibility, "PatchAttempts": patchAttempts,
 		"ClosureEnabled": h.closureEnabled, "ClosureEvidence": h.closureEvidenceForUI(c.Request.Context(), id),

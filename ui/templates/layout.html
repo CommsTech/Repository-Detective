@@ -1,6 +1,7 @@
 {{define "head"}}
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0d1b2a">
 <title>{{.Title}} — Repository Detective</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -10,21 +11,32 @@
 
 {{define "nav"}}
 <div class="rd-layout">
-  <aside class="rd-sidebar">
-    <a class="rd-brand" href="{{.BasePath}}{{if .APIKey}}?api_key={{.APIKey}}{{end}}">
-      <img src="{{.BasePath}}/static/logo.svg" alt="Repository Detective" width="48" height="48">
+  <aside class="rd-sidebar" aria-label="Main navigation">
+    <a class="rd-brand" href="{{.BasePath}}{{apiKeyQS .APIKey}}">
+      <img src="{{.BasePath}}/static/logo.png" alt="Repository Detective logo" width="52" height="52">
       <div class="rd-brand-text">
         <strong>Repository<br>Detective</strong>
         <span>Inspect · Analyze · Improve</span>
       </div>
     </a>
     <nav class="rd-nav">
-      <a href="{{.BasePath}}{{if .APIKey}}?api_key={{.APIKey}}{{end}}"><span class="rd-nav-icon">◉</span> Dashboard</a>
-      <a href="{{.BasePath}}/repos{{if .APIKey}}?api_key={{.APIKey}}{{end}}"><span class="rd-nav-icon">📁</span> Repositories</a>
-      <a href="{{.BasePath}}/findings{{if .APIKey}}?api_key={{.APIKey}}{{end}}"><span class="rd-nav-icon">⚠</span> Findings</a>
-      <a href="{{.BasePath}}/preinstall{{if .APIKey}}?api_key={{.APIKey}}{{end}}"><span class="rd-nav-icon">🔍</span> Pre-install audit</a>
-      <a href="/onboard/" target="_blank"><span class="rd-nav-icon">⚙</span> Setup wizard</a>
+      <span class="rd-nav-label">Operations</span>
+      <a href="{{.BasePath}}{{apiKeyQS .APIKey}}" class="{{navActive "dashboard" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">◉</span> Dashboard</a>
+      <a href="{{.BasePath}}/repos{{apiKeyQS .APIKey}}" class="{{navActive "repos" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">▣</span> Repositories</a>
+      <a href="{{.BasePath}}/scans{{apiKeyQS .APIKey}}" class="{{navActive "scans" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">◎</span> Scans</a>
+      <a href="{{.BasePath}}/findings{{apiKeyQS .APIKey}}" class="{{navActive "findings" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">⚠</span> Findings</a>
+      <span class="rd-nav-label">Intelligence</span>
+      <a href="{{.BasePath}}/reports{{apiKeyQS .APIKey}}" class="{{navActive "reports" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">▤</span> Reports</a>
+      <a href="{{.BasePath}}/repos{{apiKeyQS .APIKey}}" class="{{navActive "policies" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">⚙</span> Policies</a>
+      <span class="rd-nav-label">Platform</span>
+      <a href="{{.BasePath}}/health{{apiKeyQS .APIKey}}" class="{{navActive "health" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">♥</span> System Health</a>
+      <a href="{{.BasePath}}/preinstall{{apiKeyQS .APIKey}}"><span class="rd-nav-icon" aria-hidden="true">🔍</span> Pre-install audit</a>
+      <a href="/onboard/" target="_blank" rel="noopener"><span class="rd-nav-icon" aria-hidden="true">↗</span> Setup wizard</a>
     </nav>
+    <div class="rd-sidebar-foot">
+      Repository Detective<br>
+      Enterprise code audit &amp; vulnerability management
+    </div>
   </aside>
   <div class="rd-main">
     <header class="rd-topbar">
@@ -32,12 +44,19 @@
         <p class="rd-topbar-kicker">Control center</p>
         <h1>{{.Title}}</h1>
       </div>
+      <div class="rd-topbar-meta">
+        <span class="rd-status-pill" title="Platform operational">
+          <span class="rd-status-dot" aria-hidden="true"></span>
+          Live
+        </span>
+      </div>
     </header>
-    <div class="rd-content">
+    <main class="rd-content" id="main-content">
 {{end}}
 
 {{define "foot"}}
-    </div>
+    </main>
   </div>
 </div>
+<script src="{{.BasePath}}/static/app.js" defer></script>
 {{end}}

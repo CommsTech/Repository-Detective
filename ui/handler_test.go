@@ -295,3 +295,60 @@ func TestUIDisabledStoreReturns503(t *testing.T) {
 		t.Fatalf("expected 503, got %d", w.Code)
 	}
 }
+
+func TestScansPageRenders(t *testing.T) {
+	dir := t.TempDir()
+	s, _ := store.Open(store.Config{Enabled: true, Path: filepath.Join(dir, "scans-ui.db")})
+	defer s.Close()
+	r, _ := testUI(t, s)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, "/ui/scans", nil)
+	r.ServeHTTP(w, req)
+	body := w.Body.String()
+	if w.Code != http.StatusOK || !strings.Contains(body, "Scan history") {
+		t.Fatalf("scans page failed: %d %s", w.Code, body[:min(200, len(body))])
+	}
+	if !strings.Contains(body, "logo.png") {
+		t.Fatal("expected branded logo.png in layout")
+	}
+}
+
+func TestHealthPageRenders(t *testing.T) {
+	dir := t.TempDir()
+	s, _ := store.Open(store.Config{Enabled: true, Path: filepath.Join(dir, "health-ui.db")})
+	defer s.Close()
+	r, _ := testUI(t, s)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, "/ui/health", nil)
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK || !strings.Contains(w.Body.String(), "System Health") {
+		t.Fatalf("health page failed: %d", w.Code)
+	}
+}
+
+func TestReportsPageRenders(t *testing.T) {
+	dir := t.TempDir()
+	s, _ := store.Open(store.Config{Enabled: true, Path: filepath.Join(dir, "reports-ui.db")})
+	defer s.Close()
+	r, _ := testUI(t, s)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, "/ui/reports", nil)
+	r.ServeHTTP(w, req)
+	body := w.Body.String()
+	if w.Code != http.StatusOK || !strings.Contains(body, "Executive summary") {
+		t.Fatalf("reports page failed: %d", w.Code)
+	}
+	if !strings.Contains(body, "app.js") {
+		t.Fatal("expected app.js in layout")
+	}
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}

@@ -1,15 +1,52 @@
 {{define "repos.html"}}
-<!DOCTYPE html><html lang="en"><head>{{template "head" .}}</head><body class="rd-app">
+<!DOCTYPE html>
+<html lang="en">
+<head>{{template "head" .}}</head>
+<body class="rd-app">
 {{template "nav" .}}
-{{if .Notice}}<div class="rd-alert">{{.Notice}}</div>{{end}}
-<div class="rd-card"><table class="rd-table">
-<tr><th>Repository</th><th>Forge</th><th>Last scan</th><th>Open findings</th></tr>
-{{range .Data.Repositories}}<tr>
-<td><a href="{{$.BasePath}}/repos/{{.ID}}{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}">{{.FullName}}</a></td>
-<td>{{.ForgeType}}</td>
-<td>{{if .LastScanAt}}<span class="rd-badge {{scanBadge .LastScanStatus}}">{{.LastScanStatus}}</span>{{else}}—{{end}}</td>
-<td>{{.OpenFindingsCount}}</td></tr>
-{{else}}<tr><td colspan="4" class="rd-muted">No repositories yet</td></tr>{{end}}
-</table></div>
-{{template "foot" .}}</body></html>
+{{if .Notice}}<div class="rd-alert info">{{.Notice}}</div>{{end}}
+
+<div class="rd-card">
+  <div class="rd-card-head">
+    <h2>Repository inventory</h2>
+    <span class="rd-chip">{{len .Data.Repositories}} tracked</span>
+  </div>
+  <div class="rd-toolbar">
+    <div class="rd-search">
+      <label for="rd-table-search" class="rd-muted" style="margin:0;font-weight:500">Search repositories</label>
+      <input type="search" id="rd-table-search" placeholder="Filter by name, forge, status…" aria-label="Search repositories">
+    </div>
+  </div>
+  <table class="rd-table" id="rd-searchable-table">
+    <thead>
+      <tr>
+        <th scope="col">Repository</th>
+        <th scope="col">Forge</th>
+        <th scope="col">Last scan</th>
+        <th scope="col">Status</th>
+        <th scope="col">Open findings</th>
+        <th scope="col">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+    {{range .Data.Repositories}}
+    <tr data-search="{{.FullName}} {{.ForgeType}} {{.LastScanStatus}}">
+      <td><a class="rd-link" href="{{$.BasePath}}/repos/{{.ID}}{{apiKeyQS $.APIKey}}"><strong>{{.FullName}}</strong></a></td>
+      <td><span class="rd-badge skipped">{{.ForgeType}}</span></td>
+      <td class="rd-muted">{{if .LastScanAt}}{{.LastScanAt.Format "2006-01-02 15:04"}}{{else}}—{{end}}</td>
+      <td>{{if .LastScanStatus}}<span class="rd-badge {{scanBadge .LastScanStatus}}">{{.LastScanStatus}}</span>{{else}}<span class="rd-muted">never scanned</span>{{end}}</td>
+      <td>{{if gt .OpenFindingsCount 0}}<strong>{{.OpenFindingsCount}}</strong>{{else}}<span class="rd-muted">0</span>{{end}}</td>
+      <td>
+        <a class="rd-btn rd-btn-sm rd-btn-ghost" href="{{$.BasePath}}/repos/{{.ID}}/settings{{apiKeyQS $.APIKey}}">Policy</a>
+        <a class="rd-btn rd-btn-sm rd-btn-ghost" href="{{$.BasePath}}/repos/{{.ID}}/report{{apiKeyQS $.APIKey}}">Report</a>
+      </td>
+    </tr>
+    {{else}}
+    <tr><td colspan="6"><div class="rd-empty"><div class="rd-empty-icon">▣</div><h3>No repositories yet</h3><p class="rd-muted">Repositories appear after the first webhook or manual scan.</p></div></td></tr>
+    {{end}}
+    </tbody>
+  </table>
+</div>
+{{template "foot" .}}
+</body></html>
 {{end}}

@@ -7,6 +7,11 @@
 
 {{with .Data}}
 {{with .Scan}}
+<nav class="rd-breadcrumb" aria-label="Breadcrumb">
+  <a href="{{$.BasePath}}/scans{{apiKeyQS $.APIKey}}">Scans</a>
+  <span>/</span>
+  <span>{{shortID .ID 12}}</span>
+</nav>
 <div class="rd-grid">
   <div class="rd-stat {{scanBadge .Status}}">
     <div class="rd-stat-value"><span class="rd-badge {{scanBadge .Status}}">{{.Status}}</span></div>

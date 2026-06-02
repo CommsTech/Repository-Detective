@@ -1,0 +1,102 @@
+{{define "health.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>{{template "head" .}}</head>
+<body class="rd-app">
+{{template "nav" .}}
+
+{{with .Data.Readiness}}
+<div class="rd-grid rd-grid-stats">
+  <div class="rd-stat success">
+    <div class="rd-stat-value"><span class="rd-badge completed">{{.Status}}</span></div>
+    <div class="rd-stat-label">Service status</div>
+    <p class="rd-stat-hint">{{.ProductName}} v{{.Version}}</p>
+  </div>
+  <div class="rd-stat {{if .Features.DatabaseHealthy}}success{{else}}danger{{end}}">
+    <div class="rd-stat-value">{{if .Features.DatabaseHealthy}}OK{{else}}Degraded{{end}}</div>
+    <div class="rd-stat-label">Database</div>
+    <p class="rd-stat-hint">{{if .Features.DatabaseEnabled}}SQLite enabled{{else}}Disabled{{end}}</p>
+  </div>
+  <div class="rd-stat {{if .Features.SchedulerEnabled}}info{{else}}neutral{{end}}">
+    <div class="rd-stat-value">{{if .Features.SchedulerEnabled}}On{{else}}Off{{end}}</div>
+    <div class="rd-stat-label">Scheduler</div>
+  </div>
+  <div class="rd-stat">
+    <div class="rd-stat-value">{{$.Data.ActiveScans}}</div>
+    <div class="rd-stat-label">Active scans</div>
+  </div>
+</div>
+
+<div class="rd-card">
+  <div class="rd-card-head">
+    <h2>Feature flags</h2>
+    <span class="rd-chip">{{.Tagline}}</span>
+  </div>
+  <table class="rd-table">
+    <tr><th scope="col">Feature</th><th scope="col">Status</th></tr>
+    <tr><td>Database</td><td>{{if .Features.DatabaseEnabled}}<span class="rd-badge completed">enabled</span>{{else}}<span class="rd-badge skipped">disabled</span>{{end}}</td></tr>
+    <tr><td>Scheduler</td><td>{{if .Features.SchedulerEnabled}}<span class="rd-badge completed">enabled</span>{{else}}<span class="rd-badge skipped">disabled</span>{{end}}</td></tr>
+    <tr><td>Runner delegation</td><td>{{if .Features.RunnerDelegationEnabled}}<span class="rd-badge completed">enabled</span>{{else}}<span class="rd-badge skipped">disabled</span>{{end}}</td></tr>
+    <tr><td>Notifications</td><td>{{if .Features.NotificationsEnabled}}<span class="rd-badge completed">enabled</span>{{else}}<span class="rd-badge skipped">disabled</span>{{end}}</td></tr>
+    <tr><td>Pre-install audit</td><td>{{if .Features.PreinstallAuditEnabled}}<span class="rd-badge completed">enabled</span>{{else}}<span class="rd-badge skipped">disabled</span>{{end}}</td></tr>
+    <tr><td>Remediation planner</td><td>{{if .Features.RemediationPlannerEnabled}}<span class="rd-badge completed">enabled</span>{{else}}<span class="rd-badge skipped">disabled</span>{{end}}</td></tr>
+    <tr><td>Remediation PR</td><td>{{if .Features.RemediationPREnabled}}<span class="rd-badge completed">enabled</span>{{else}}<span class="rd-badge skipped">disabled</span>{{end}}</td></tr>
+    <tr><td>Evidence closure</td><td>{{if .Features.EvidenceClosureEnabled}}<span class="rd-badge completed">enabled</span>{{else}}<span class="rd-badge skipped">disabled</span>{{end}}</td></tr>
+    <tr><td>Operator UI</td><td>{{if .Features.UIEnabled}}<span class="rd-badge completed">enabled</span>{{else}}<span class="rd-badge skipped">disabled</span>{{end}}</td></tr>
+    <tr><td>Scan profile</td><td><span class="rd-badge medium">{{.Features.ScanProfile}}</span></td></tr>
+  </table>
+  {{if .AIProvider}}<p class="rd-muted">AI provider: {{.AIProvider}}{{if .AIModel}} · model {{.AIModel}}{{end}}</p>{{end}}
+</div>
+
+<div class="rd-card">
+  <div class="rd-card-head"><h2>Scanner availability</h2></div>
+  <table class="rd-table">
+    <tr><th scope="col">Scanner</th><th scope="col">Configured</th><th scope="col">Installed</th><th scope="col">Version</th></tr>
+    {{range .Tools}}
+    <tr>
+      <td>{{.Name}}</td>
+      <td>{{if .Configured}}<span class="rd-badge completed">yes</span>{{else}}<span class="rd-badge skipped">no</span>{{end}}</td>
+      <td>{{if .Available}}<span class="rd-badge found">available</span>{{else}}<span class="rd-badge binary_missing">missing</span>{{end}}</td>
+      <td class="rd-muted">{{if .Version}}{{.Version}}{{else}}—{{end}}</td>
+    </tr>
+    {{end}}
+  </table>
+</div>
+{{else}}
+<div class="rd-alert info">Readiness telemetry is not available from this instance. Check <code>/health</code> API for basic status.</div>
+{{end}}
+
+{{with .Data.Summary}}
+<div class="rd-card">
+  <div class="rd-card-head"><h2>Operational metrics</h2></div>
+  <table class="rd-table rd-table-compact">
+    <tr><td>Failed repository scans</td><td><strong>{{.FailedScansCount}}</strong></td></tr>
+    <tr><td>Scanner run failures</td><td><strong>{{.ScannerFailuresCount}}</strong></td></tr>
+    <tr><td>Tools not in container</td><td><strong>{{.ScannerToolsMissingCount}}</strong></td></tr>
+    <tr><td>Scheduled scans (7d)</td><td><strong>{{.ScheduledScansCount}}</strong></td></tr>
+  </table>
+</div>
+
+<div class="rd-card">
+  <div class="rd-card-head"><h2>Runner job queue</h2></div>
+  {{if .RunnerJobsByStatus}}
+  <table class="rd-table rd-table-compact">
+    {{range $status, $count := .RunnerJobsByStatus}}
+    <tr><td>{{$status}}</td><td><strong>{{$count}}</strong></td></tr>
+    {{end}}
+  </table>
+  {{else}}
+  <div class="rd-empty"><p class="rd-muted">No runner job telemetry recorded yet.</p></div>
+  {{end}}
+</div>
+{{end}}
+
+<div class="rd-card">
+  <div class="rd-card-head"><h2>API health</h2></div>
+  <p class="rd-muted">Live health endpoint: <a class="rd-link" href="/health" target="_blank" rel="noopener">/health</a></p>
+  <p class="rd-muted">No dedicated queue telemetry endpoint is currently available beyond runner job counts above.</p>
+</div>
+
+{{template "foot" .}}
+</body></html>
+{{end}}

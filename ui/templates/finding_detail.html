@@ -2,6 +2,11 @@
 <!DOCTYPE html><html lang="en"><head>{{template "head" .}}</head><body class="rd-app">
 {{template "nav" .}}
 {{with .Data.Finding}}
+<nav class="rd-breadcrumb" aria-label="Breadcrumb">
+  <a href="{{$.BasePath}}/findings{{apiKeyQS $.APIKey}}">Findings</a>
+  <span>/</span>
+  <span>{{.Title}}</span>
+</nav>
 <div class="rd-grid">
   <div class="rd-stat {{severityBadge .Severity}}">
     <div class="rd-stat-value"><span class="rd-badge {{severityBadge .Severity}}">{{.Severity}}</span></div>
@@ -23,9 +28,16 @@
 
 <div class="rd-card">
   <h2>{{.Title}}</h2>
-  <p class="rd-muted"><strong>Lifecycle:</strong> {{$.Data.LifecycleLabel}} · <strong>Source:</strong> {{.Source}} · <strong>Fingerprint:</strong> {{.Fingerprint}}</p>
-  <p><strong>Repository:</strong> {{.RepoFullName}}</p>
-  {{if .ExternalIssueURL}}<p><a class="rd-btn rd-btn-secondary" href="{{.ExternalIssueURL}}" target="_blank">Open Gitea issue #{{.ExternalIssueNumber}}</a></p>{{end}}
+  <dl class="rd-dl">
+    <dt>Lifecycle</dt><dd>{{$.Data.LifecycleLabel}}</dd>
+    <dt>Source</dt><dd><span class="rd-badge skipped">{{.Source}}</span></dd>
+    <dt>Fingerprint</dt><dd><code>{{.Fingerprint}}</code></dd>
+    <dt>Repository</dt><dd>{{.RepoFullName}}</dd>
+    <dt>First seen</dt><dd>{{.FirstSeenAt.Format "2006-01-02 15:04 UTC"}}</dd>
+    <dt>Last seen</dt><dd>{{.LastSeenAt.Format "2006-01-02 15:04 UTC"}}</dd>
+    {{if .FilePath}}<dt>Location</dt><dd><code>{{.FilePath}}{{if .Line}}:{{.Line}}{{end}}</code></dd>{{end}}
+  </dl>
+  {{if .ExternalIssueURL}}<div class="rd-actions"><a class="rd-btn rd-btn-secondary" href="{{.ExternalIssueURL}}" target="_blank" rel="noopener">Open Gitea issue #{{.ExternalIssueNumber}}</a></div>{{end}}
 </div>
 
 <div class="rd-card">

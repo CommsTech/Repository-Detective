@@ -1,8 +1,18 @@
 {{define "repo_settings.html"}}
 <!DOCTYPE html><html lang="en"><head>{{template "head" .}}</head><body class="rd-app">
 {{template "nav" .}}
-<div class="rd-alert">{{.Notice}}</div>
+{{with .Data.Repo}}
+<nav class="rd-breadcrumb" aria-label="Breadcrumb">
+  <a href="{{$.BasePath}}/repos{{apiKeyQS $.APIKey}}">Repositories</a>
+  <span>/</span>
+  <a href="{{$.BasePath}}/repos/{{.ID}}{{apiKeyQS $.APIKey}}">{{.FullName}}</a>
+  <span>/</span>
+  <span>Policy settings</span>
+</nav>
+{{end}}
+<div class="rd-alert info">{{.Notice}}</div>
 <div class="rd-alert">Profiles are deterministic-first. AI is advisory unless explicitly enabled.</div>
+<div class="rd-settings-warn rd-alert">Lowering severity gates or disabling scanners reduces detection coverage. Changes apply on the next scan.</div>
 {{if .Data.Error}}<div class="rd-alert">{{.Data.Error}}</div>{{end}}
 <form method="post" action="{{.BasePath}}/repos/{{.Data.Repo.ID}}/settings{{if .APIKey}}?api_key={{.APIKey}}{{end}}">
 <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
@@ -45,8 +55,10 @@
 {{with .Data.CronInfo}}{{if .Valid}}<p class="rd-muted">Next run (approx): {{.NextRun}}</p>{{else if .Error}}<p class="rd-alert">Cron: {{.Error}}</p>{{end}}{{end}}
 <h2>Policy (stored — enforced on scans)</h2>
 <label>Repo enabled<select name="enabled"><option value="">inherit</option><option value="true">true</option><option value="false">false</option></select></label>
-<label>Policy level<select name="policy_level"><option value="">inherit</option>
-{{range index .Data.Allowed "policy_level"}}<option value="{{.}}">{{.}}</option>{{end}}</select></label>
+<label>Policy level<select name="policy_level" data-risk-warn aria-label="Policy level">
+<option value="">inherit</option>
+{{range index .Data.Allowed "policy_level"}}<option value="{{.}}">{{.}}</option>{{end}}</select>
+<span class="rd-risk-hint rd-muted" hidden>Monitor-only mode will not enforce blocking gates.</span></label>
 <label>Workspace mode<select name="workspace_mode"><option value="">inherit</option>
 {{range index .Data.Allowed "workspace_mode"}}<option value="{{.}}">{{.}}</option>{{end}}</select></label>
 <label>Analysis depth<select name="analysis_depth"><option value="">inherit</option><option>1</option><option>2</option><option>3</option></select></label>

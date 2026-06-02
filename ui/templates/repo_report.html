@@ -1,0 +1,103 @@
+{{define "repo_report.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>{{template "head" .}}</head>
+<body class="rd-app">
+{{template "nav" .}}
+
+{{with .Data.Repo}}
+<nav class="rd-breadcrumb" aria-label="Breadcrumb">
+  <a href="{{$.BasePath}}/reports{{apiKeyQS $.APIKey}}">Reports</a>
+  <span>/</span>
+  <span>{{.FullName}}</span>
+</nav>
+
+<div class="rd-report">
+  <h2>Repository audit report — {{.FullName}}</h2>
+  <p class="rd-report-meta">{{.ForgeType}} · Policy: {{$.Data.Effective.PolicyLevel}} · Profile: {{$.Data.ProfileMeta.ScanProfile}}</p>
+  <p class="rd-report-exec">
+    This report summarizes the security and quality posture of <strong>{{.FullName}}</strong> based on
+    persisted findings and recent scan activity in Repository Detective.
+  </p>
+  <div class="rd-kpi-row">
+    {{range $sev, $count := $.Data.SeverityCounts}}
+    <div class="rd-kpi"><strong>{{$count}}</strong><span>{{$sev}} open</span></div>
+    {{end}}
+    <div class="rd-kpi"><strong>{{len $.Data.Scans}}</strong><span>Recent scans</span></div>
+    <div class="rd-kpi"><strong>{{len $.Data.ExternalIssues}}</strong><span>Gitea issues</span></div>
+  </div>
+</div>
+
+<div class="rd-split">
+  <div class="rd-card">
+    <div class="rd-card-head"><h2>Scanner coverage (effective)</h2></div>
+    <div class="rd-badge-row">
+      <span class="rd-badge {{if $.Data.Effective.EnableTrivy}}found{{else}}skipped{{end}}">Trivy</span>
+      <span class="rd-badge {{if $.Data.Effective.EnableGrype}}found{{else}}skipped{{end}}">Grype</span>
+      <span class="rd-badge {{if $.Data.Effective.EnableGitleaks}}found{{else}}skipped{{end}}">Gitleaks</span>
+      <span class="rd-badge {{if $.Data.Effective.EnableSemgrep}}found{{else}}skipped{{end}}">Semgrep</span>
+      <span class="rd-badge {{if $.Data.Effective.EnableGovulncheck}}found{{else}}skipped{{end}}">govulncheck</span>
+      <span class="rd-badge {{if $.Data.Effective.EnableGosec}}found{{else}}skipped{{end}}">gosec</span>
+      <span class="rd-badge {{if $.Data.Effective.EnableStaticcheck}}found{{else}}skipped{{end}}">staticcheck</span>
+    </div>
+    <dl class="rd-dl">
+      <dt>Workspace mode</dt><dd>{{$.Data.Effective.WorkspaceMode}}</dd>
+      <dt>Analysis depth</dt><dd>{{$.Data.Effective.AnalysisDepth}}</dd>
+      <dt>Severity gate</dt><dd>{{$.Data.Effective.SeverityGate}}</dd>
+      <dt>Confidence gate</dt><dd>{{printf "%.2f" $.Data.Effective.ConfidenceGate}}</dd>
+    </dl>
+  </div>
+  <div class="rd-card">
+    <div class="rd-card-head"><h2>Remediation plan</h2></div>
+    <ol class="rd-muted">
+      <li>Prioritize critical and high severity open findings</li>
+      <li>Review linked Gitea issues for assignment and tracking</li>
+      <li>Apply approved remediation plans via safe PR workflow</li>
+      <li>Verify closure with post-merge rescan evidence</li>
+    </ol>
+    <div class="rd-actions">
+      <a class="rd-btn" href="{{$.BasePath}}/findings?repo_id={{.ID}}{{if $.APIKey}}&amp;api_key={{$.APIKey}}{{end}}">Triage findings</a>
+      <a class="rd-btn rd-btn-secondary" href="{{$.BasePath}}/repos/{{.ID}}/settings{{apiKeyQS $.APIKey}}">Adjust policy</a>
+    </div>
+  </div>
+</div>
+
+<div class="rd-card">
+  <div class="rd-card-head"><h2>Technical findings (sample)</h2></div>
+  <table class="rd-table">
+    <tr><th scope="col">Severity</th><th scope="col">Category</th><th scope="col">Finding</th><th scope="col">Location</th><th scope="col">Status</th></tr>
+    {{range $.Data.Findings}}
+    <tr>
+      <td><span class="rd-badge {{severityBadge .Severity}}">{{.Severity}}</span></td>
+      <td><span class="rd-badge {{categoryBadge .Category}}">{{.Category}}</span></td>
+      <td><a class="rd-link" href="{{$.BasePath}}/findings/{{.ID}}{{apiKeyQS $.APIKey}}">{{.Title}}</a></td>
+      <td class="rd-muted">{{if .FilePath}}{{.FilePath}}{{if .Line}}:{{.Line}}{{end}}{{else}}—{{end}}</td>
+      <td><span class="rd-badge {{statusBadge .Status}}">{{.Status}}</span></td>
+    </tr>
+    {{else}}<tr><td colspan="5" class="rd-muted">No findings recorded</td></tr>{{end}}
+  </table>
+</div>
+
+<div class="rd-card">
+  <div class="rd-card-head"><h2>Recent scans</h2></div>
+  <table class="rd-table rd-table-compact">
+    <tr><th scope="col">Scan</th><th scope="col">Status</th><th scope="col">Findings</th><th scope="col">Date</th></tr>
+    {{range $.Data.Scans}}
+    <tr>
+      <td><a class="rd-link" href="{{$.BasePath}}/scans/{{.ID}}{{apiKeyQS $.APIKey}}">{{shortID .ID 8}}</a></td>
+      <td><span class="rd-badge {{scanBadge .Status}}">{{.Status}}</span></td>
+      <td>{{issuesFromScan .SummaryJSON}}</td>
+      <td class="rd-muted">{{.StartedAt.Format "2006-01-02"}}</td>
+    </tr>
+    {{end}}
+  </table>
+</div>
+
+<div class="rd-actions">
+  <button type="button" class="rd-btn rd-btn-ghost" onclick="window.print()">Print report</button>
+</div>
+{{end}}
+
+{{template "foot" .}}
+</body></html>
+{{end}}

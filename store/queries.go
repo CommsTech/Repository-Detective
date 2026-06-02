@@ -103,6 +103,8 @@ type QueryStore interface {
 	ListLifecycleEventsByFinding(ctx context.Context, findingID int64) ([]LifecycleEvent, error)
 
 	DashboardSummary(ctx context.Context, recentLimit int) (DashboardSummary, error)
+	ListRecentScans(ctx context.Context, opts ListOptions) ([]ScanWithRepo, error)
+	CountActiveScans(ctx context.Context) (int, error)
 	ListExternalIssuesByRepository(ctx context.Context, repositoryID int64, opts ListOptions) ([]ExternalIssue, error)
 	ListExternalIssuesByFinding(ctx context.Context, findingID int64) ([]ExternalIssue, error)
 
