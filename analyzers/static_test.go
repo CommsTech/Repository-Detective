@@ -43,7 +43,7 @@ local api_key="${REPOSITORY_DETECTIVE_API_KEY:-${BUGBOT_API_KEY:-}}"
 
 func TestRunStaticAnalysisSkipsHTMLDataAPIKey(t *testing.T) {
 	findings := RunStaticAnalysis([]FileContent{{
-		Path: "ui/templates/graph.html",
+		Path:    "ui/templates/graph.html",
 		Content: `<div data-api-key="{{.APIKey}}"></div>`,
 	}}, true, false)
 	if len(findings) != 0 {
@@ -53,7 +53,7 @@ func TestRunStaticAnalysisSkipsHTMLDataAPIKey(t *testing.T) {
 
 func TestRunStaticAnalysisSkipsSafeSQLConcat(t *testing.T) {
 	findings := RunStaticAnalysis([]FileContent{{
-		Path: "store/closure_sqlite.go",
+		Path:    "store/closure_sqlite.go",
 		Content: `query := patchAttemptSelect + ` + "` WHERE status = ?`",
 	}}, true, false)
 	if len(findings) != 0 {
@@ -93,7 +93,7 @@ func TestSkipStaticAnalysisPath(t *testing.T) {
 
 func TestRunStaticAnalysisSkipsRuleDefinitionLines(t *testing.T) {
 	findings := RunStaticAnalysis([]FileContent{{
-		Path: "analyzers/static.go",
+		Path:    "analyzers/static.go",
 		Content: `Pattern:     regexp.MustCompile(` + "`(?i)(exec\\.Command|fmt\\.Sprintf|%s)`" + `),`,
 	}}, true, false)
 	for _, f := range findings {
@@ -108,5 +108,19 @@ func TestStaticRuleConfidenceOrdering(t *testing.T) {
 	secret := staticRuleConfidence(staticRule{ID: "SEC-HARDCODED-SECRET"})
 	if eval <= secret {
 		t.Fatalf("eval confidence should exceed heuristic secret: eval=%v secret=%v", eval, secret)
+	}
+}
+
+func TestRunStaticAnalysisFindsPipelineFloatingActionRef(t *testing.T) {
+	findings := RunStaticAnalysis([]FileContent{{
+		Path:    ".gitea/workflows/build.yml",
+		Content: "steps:\n  - uses: actions/checkout@v4",
+	}}, true, false)
+
+	if len(findings) != 1 {
+		t.Fatalf("expected pipeline governance finding, got %d", len(findings))
+	}
+	if findings[0].ID != "GOV-ACTION-FLOATING-REF" {
+		t.Fatalf("expected GOV-ACTION-FLOATING-REF, got %s", findings[0].ID)
 	}
 }

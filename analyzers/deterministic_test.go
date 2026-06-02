@@ -118,4 +118,10 @@ func TestProveDeterministicNoAICalls(t *testing.T) {
 	if transport.calls.Load() != 0 {
 		t.Fatalf("expected zero AI calls, got %d", transport.calls.Load())
 	}
+	if proven[0].ID != "trivy-1" {
+		t.Fatalf("expected original finding ID to pass through, got %q", proven[0].ID)
+	}
+	if proven[0].ProofOfConcept.Type != "scanner" {
+		t.Fatalf("expected scanner proof type, got %q", proven[0].ProofOfConcept.Type)
+	}
 }

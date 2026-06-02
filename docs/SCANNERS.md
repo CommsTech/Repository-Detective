@@ -2,6 +2,8 @@
 
 Bugbot runs **external security and lint tools** before (and instead of) LLM analysis where possible. Findings are reported as Gitea issues with the same severity, file, and line metadata as AI findings.
 
+See [RUBRICS.md](RUBRICS.md) for the security, pipeline governance, public-release, and advisory optimization scoring rubrics.
+
 ## Pipeline order
 
 ```
@@ -39,6 +41,7 @@ High-confidence deterministic findings **skip LLM debate and PoC generation**. H
 | golangci-lint | Go static analysis (includes many linters) | Included in Bugbot Docker image |
 | ruff | Python lint | Included in Bugbot Docker image |
 | shellcheck | Shell script analysis | Included in Bugbot Docker image |
+| OpenSCAP | Self-hosted runner/server hardening evidence | Run outside Bugbot on the runner host |
 
 If a binary is missing, Bugbot logs a warning and continues with the other scanners.
 
@@ -265,3 +268,4 @@ Bare-metal / custom installs: install the binaries above and ensure they are on 
 ## Issue labels
 
 Scanner findings use categories such as `dependency_vulnerability`, `secret`, `sast`, `hardcoded_secret`, `misconfiguration`, and `lint` in issue bodies.
+Built-in static rules may also emit advisory `optimization`, `pipeline_governance`, and `public_release` findings when source text contains detectable patterns.

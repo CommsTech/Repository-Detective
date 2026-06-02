@@ -14,6 +14,7 @@ type staticRule struct {
 	Title       string
 	Description string
 	Pattern     *regexp.Regexp
+	Advisory    bool
 }
 
 var staticRules = []staticRule{
@@ -52,6 +53,40 @@ var staticRules = []staticRule{
 		Title:       "Debug logging left in code",
 		Description: "Debug print statements should be removed or gated before production.",
 		Pattern:     regexp.MustCompile(`(?i)\b(console\.log|fmt\.Println|print\(|debugger)\b`),
+	},
+	{
+		ID: "OPT-NESTED-LOOP", Category: "optimization", Severity: "low",
+		Title:       "Possible inefficient nested loop",
+		Description: "Nested loops can become an O(n^2) hotspot on large inputs. Treat as advisory and verify with profiling before optimizing.",
+		Pattern:     regexp.MustCompile(`(?i)\b(for|foreach|while)\b.*\b(for|foreach|while)\b`),
+		Advisory:    true,
+	},
+	{
+		ID: "OPT-HTTP-CLIENT-PER-CALL", Category: "optimization", Severity: "low",
+		Title:       "HTTP client may be created per call",
+		Description: "Creating HTTP clients in hot paths prevents connection reuse. Prefer a shared client or pool when this path is performance sensitive.",
+		Pattern:     regexp.MustCompile(`(?i)new\s+HttpClient\s*\(|http\.Client\s*\{`),
+		Advisory:    true,
+	},
+	{
+		ID: "GOV-ACTION-FLOATING-REF", Category: "pipeline_governance", Severity: "medium",
+		Title:       "Workflow action uses a floating reference",
+		Description: "Third-party workflow actions should be pinned to an immutable commit SHA so upstream tag changes cannot alter pipeline behavior.",
+		Pattern:     regexp.MustCompile(`(?i)uses:\s*[\w./-]+@(?:main|master|v?\d+(?:\.\d+){0,2})\b`),
+		Advisory:    true,
+	},
+	{
+		ID: "GOV-PIPELINE-SECRET-ECHO", Category: "pipeline_governance", Severity: "high",
+		Title:       "Pipeline may print secret material",
+		Description: "Pipeline steps must not echo tokens, passwords, or secrets into build logs.",
+		Pattern:     regexp.MustCompile(`(?i)\b(echo|printf)\b.*\$\{?\{?(?:.*secret|.*token|.*password|.*api[_-]?key)`),
+	},
+	{
+		ID: "REL-INTERNAL-INFRA-REF", Category: "public_release", Severity: "medium",
+		Title:       "Possible internal infrastructure reference",
+		Description: "Public-release review should remove internal hostnames, private IPs, and environment-specific endpoints from code, tests, and docs.",
+		Pattern:     regexp.MustCompile(`(?i)\b(10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|localhost|\.local|\.internal)\b`),
+		Advisory:    true,
 	},
 }
 
