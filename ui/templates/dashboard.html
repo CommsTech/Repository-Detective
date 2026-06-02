@@ -119,7 +119,7 @@
         {{if .Command}}<p class="rd-muted"><code>{{.Command}}</code></p>{{end}}
       </div>
       <div class="rd-actions">
-        {{if .LinkPath}}<a class="rd-btn rd-btn-sm" href="{{$.BasePath}}{{.LinkPath}}{{apiKeyQS $.APIKey}}">Open</a>{{end}}
+        {{if .LinkPath}}<a class="rd-btn rd-btn-sm" href="{{$.BasePath}}{{.LinkPath}}{{apiKeySuffix .LinkPath $.APIKey}}">Open</a>{{end}}
       </div>
     </li>
     {{end}}

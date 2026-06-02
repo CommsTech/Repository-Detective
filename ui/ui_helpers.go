@@ -25,6 +25,7 @@ func templateFuncs() template.FuncMap {
 		"radarBarWidth":  radarBarWidth,
 		"navActive":      navActiveClass,
 		"apiKeyQS":       apiKeyQueryString,
+		"apiKeySuffix":   apiKeyQuerySuffix,
 		"issuesFromScan": issuesFromScanSummary,
 		"add":            func(a, b int) int { return a + b },
 		"gt":             func(a, b int) bool { return a > b },
@@ -261,10 +262,19 @@ func navActiveClass(section, current string) string {
 }
 
 func apiKeyQueryString(apiKey string) string {
+	return apiKeyQuerySuffix("", apiKey)
+}
+
+// apiKeyQuerySuffix appends api_key using ? or & depending on whether path already has a query string.
+func apiKeyQuerySuffix(path, apiKey string) string {
 	if apiKey == "" {
 		return ""
 	}
-	return "?api_key=" + url.QueryEscape(apiKey)
+	sep := "?"
+	if strings.Contains(path, "?") {
+		sep = "&"
+	}
+	return sep + "api_key=" + url.QueryEscape(apiKey)
 }
 
 func issuesFromScanSummary(raw json.RawMessage) int {

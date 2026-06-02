@@ -87,13 +87,18 @@ func gitleaksTimeout(cfg Config) time.Duration {
 }
 
 func parseGitleaksOutput(output []byte, dir string) ([]Finding, error) {
-	trimmed := strings.TrimSpace(string(output))
+	trimmed := strings.TrimSpace(string(stripANSI(output)))
 	if trimmed == "" {
 		return nil, nil
 	}
 
+	payload, err := extractJSONArray(output)
+	if err != nil {
+		return nil, err
+	}
+
 	var report []gitleaksFinding
-	if err := json.Unmarshal(output, &report); err != nil {
+	if err := json.Unmarshal(payload, &report); err != nil {
 		return nil, err
 	}
 

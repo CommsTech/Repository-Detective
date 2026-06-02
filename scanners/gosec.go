@@ -70,8 +70,12 @@ func runGosecWithCommand(ctx context.Context, logger *logrus.Logger, dir string,
 }
 
 func parseGosecOutput(output []byte, dir string, cfg Config) (cappedFindings, error) {
+	payload, err := extractJSONObject(output)
+	if err != nil {
+		return cappedFindings{}, err
+	}
 	var report gosecReport
-	if err := json.Unmarshal(output, &report); err != nil {
+	if err := json.Unmarshal(payload, &report); err != nil {
 		return cappedFindings{}, fmt.Errorf("parse gosec json: %w", err)
 	}
 	findings := make([]Finding, 0, len(report.Issues))
