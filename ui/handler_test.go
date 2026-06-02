@@ -28,6 +28,7 @@ func testUI(t *testing.T, s store.QueryStore) (*gin.Engine, *ui.Handler) {
 	}
 	r := gin.New()
 	g := r.Group("/ui")
+	h.RegisterPublicRoutes(g)
 	h.RegisterRoutes(g)
 	return r, h
 }
@@ -50,6 +51,18 @@ func TestDashboardRenders(t *testing.T) {
 	}
 	if !strings.Contains(body, "theme.css") {
 		t.Fatal("expected branded theme stylesheet")
+	}
+	if !strings.Contains(body, "logo.svg") {
+		t.Fatal("expected branded logo.svg in layout")
+	}
+	if !strings.Contains(body, "rd-chart-severity") {
+		t.Fatal("expected dashboard severity chart canvas")
+	}
+	if !strings.Contains(body, "dashboard-charts.js") {
+		t.Fatal("expected dashboard charts script")
+	}
+	if !strings.Contains(body, "Executive report") {
+		t.Fatal("expected executive report section on dashboard")
 	}
 }
 
@@ -309,8 +322,21 @@ func TestScansPageRenders(t *testing.T) {
 	if w.Code != http.StatusOK || !strings.Contains(body, "Scan history") {
 		t.Fatalf("scans page failed: %d %s", w.Code, body[:min(200, len(body))])
 	}
-	if !strings.Contains(body, "logo.png") {
-		t.Fatal("expected branded logo.png in layout")
+	if !strings.Contains(body, "logo.svg") {
+		t.Fatal("expected branded logo.svg in layout")
+	}
+}
+
+func TestThemeCSSServedWithoutAPIKey(t *testing.T) {
+	r, _ := testUI(t, nil)
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, "/ui/static/theme.css", nil)
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("theme.css must be public, got %d", w.Code)
+	}
+	if !strings.Contains(w.Header().Get("Content-Type"), "text/css") {
+		t.Fatalf("unexpected content type: %s", w.Header().Get("Content-Type"))
 	}
 }
 

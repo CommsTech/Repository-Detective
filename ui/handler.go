@@ -130,11 +130,15 @@ func normalizeBasePath(path string) string {
 	return strings.TrimSuffix(path, "/")
 }
 
-// RegisterRoutes mounts UI routes on the group (caller applies auth middleware).
-func (h *Handler) RegisterRoutes(g *gin.RouterGroup) {
+// RegisterPublicRoutes mounts static assets without API-key auth (CSS/JS must load in the browser).
+func (h *Handler) RegisterPublicRoutes(g *gin.RouterGroup) {
 	if sub, err := fs.Sub(staticFS, "static"); err == nil {
 		g.StaticFS("/static", http.FS(sub))
 	}
+}
+
+// RegisterRoutes mounts protected UI routes (caller applies auth middleware).
+func (h *Handler) RegisterRoutes(g *gin.RouterGroup) {
 	g.GET("", h.Dashboard)
 	g.GET("/", h.Dashboard)
 	g.GET("/repos", h.Repositories)
@@ -304,8 +308,10 @@ func (h *Handler) Dashboard(c *gin.Context) {
 		"Readiness":            readiness,
 		"ActiveScans":          activeScans,
 		"TopRiskyRepos":        topRisk,
+		"AllRepos":             repos,
 		"RecentSevereFindings": severe,
 		"Actions":              actions,
+		"ChartJSON":            buildDashboardChartJSON(summary, repos),
 	}
 	h.renderNav(c, "dashboard.html", "Dashboard", "dashboard", data)
 }

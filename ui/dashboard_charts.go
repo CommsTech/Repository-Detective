@@ -1,0 +1,152 @@
+package ui
+
+import (
+	"encoding/json"
+	"sort"
+	"strings"
+	"time"
+
+	"git.commsnet.org/commstech/bugbot/store"
+)
+
+// dashboardChartPayload is embedded in the dashboard for Chart.js initialization.
+type dashboardChartPayload struct {
+	SeverityLabels   []string `json:"severityLabels"`
+	SeverityValues   []int    `json:"severityValues"`
+	CategoryLabels   []string `json:"categoryLabels"`
+	CategoryValues   []int    `json:"categoryValues"`
+	ScanTrendLabels  []string `json:"scanTrendLabels"`
+	ScanTrendValues  []int    `json:"scanTrendValues"`
+	RepoMapLabels    []string `json:"repoMapLabels"`
+	RepoMapValues    []int    `json:"repoMapValues"`
+	RepoMapFailed    []bool   `json:"repoMapFailed"`
+	BacklogOpen      int      `json:"backlogOpen"`
+	BacklogCritical  int      `json:"backlogCritical"`
+	BacklogHigh      int      `json:"backlogHigh"`
+}
+
+func buildDashboardChartJSON(summary store.DashboardSummary, repos []store.RepositorySummary) string {
+	payload := dashboardChartPayload{
+		BacklogOpen:     summary.Backlog.OpenUnique,
+		BacklogCritical: summary.Backlog.CriticalOpen,
+		BacklogHigh:     summary.Backlog.HighOpen,
+	}
+
+	order := []string{"critical", "high", "medium", "low", "info"}
+	for _, sev := range order {
+		if n := summary.OpenFindingsBySeverity[sev]; n > 0 {
+			payload.SeverityLabels = append(payload.SeverityLabels, titleCase(sev))
+			payload.SeverityValues = append(payload.SeverityValues, n)
+		}
+	}
+	for sev, n := range summary.OpenFindingsBySeverity {
+		if n > 0 && !containsString(order, sev) {
+			payload.SeverityLabels = append(payload.SeverityLabels, sev)
+			payload.SeverityValues = append(payload.SeverityValues, n)
+		}
+	}
+
+	type catPair struct {
+		name  string
+		count int
+	}
+	var cats []catPair
+	for cat, n := range summary.OpenFindingsByCategory {
+		cats = append(cats, catPair{cat, n})
+	}
+	sort.Slice(cats, func(i, j int) bool { return cats[i].count > cats[j].count })
+	if len(cats) > 10 {
+		cats = cats[:10]
+	}
+	for _, c := range cats {
+		payload.CategoryLabels = append(payload.CategoryLabels, humanCategory(c.name))
+		payload.CategoryValues = append(payload.CategoryValues, c.count)
+	}
+
+	trend := scanTrendFromRecent(summary.RecentScans, 14)
+	for _, t := range trend {
+		payload.ScanTrendLabels = append(payload.ScanTrendLabels, t.label)
+		payload.ScanTrendValues = append(payload.ScanTrendValues, t.value)
+	}
+
+	sort.Slice(repos, func(i, j int) bool {
+		return repos[i].OpenFindingsCount > repos[j].OpenFindingsCount
+	})
+	limit := 12
+	if len(repos) > limit {
+		repos = repos[:limit]
+	}
+	for _, r := range repos {
+		short := r.FullName
+		if idx := strings.LastIndex(short, "/"); idx >= 0 {
+			short = short[idx+1:]
+		}
+		payload.RepoMapLabels = append(payload.RepoMapLabels, short)
+		payload.RepoMapValues = append(payload.RepoMapValues, r.OpenFindingsCount)
+		payload.RepoMapFailed = append(payload.RepoMapFailed, strings.EqualFold(r.LastScanStatus, "failed"))
+	}
+
+	raw, _ := json.Marshal(payload)
+	return string(raw)
+}
+
+type trendPoint struct {
+	label string
+	value int
+}
+
+func scanTrendFromRecent(scans []store.ScanWithRepo, days int) []trendPoint {
+	if days <= 0 {
+		days = 14
+	}
+	byDay := map[string]int{}
+	now := time.Now().UTC()
+	for i := days - 1; i >= 0; i-- {
+		d := now.AddDate(0, 0, -i).Format("2006-01-02")
+		byDay[d] = 0
+	}
+	for _, s := range scans {
+		if !strings.EqualFold(s.Status, "completed") {
+			continue
+		}
+		day := s.StartedAt.UTC().Format("2006-01-02")
+		if _, ok := byDay[day]; !ok {
+			continue
+		}
+		byDay[day] += issuesFromScanSummary(s.SummaryJSON)
+	}
+	var out []trendPoint
+	for i := days - 1; i >= 0; i-- {
+		d := now.AddDate(0, 0, -i)
+		key := d.Format("2006-01-02")
+		out = append(out, trendPoint{
+			label: d.Format("Jan 2"),
+			value: byDay[key],
+		})
+	}
+	return out
+}
+
+func humanCategory(cat string) string {
+	cat = strings.ReplaceAll(cat, "_", " ")
+	if cat == "" {
+		return "Unknown"
+	}
+	return strings.ToUpper(cat[:1]) + cat[1:]
+}
+
+func titleCase(s string) string {
+	if s == "" {
+		return s
+	}
+	return strings.ToUpper(s[:1]) + s[1:]
+}
+
+func containsString(slice []string, target string) bool {
+	for _, s := range slice {
+		if s == target {
+			return true
+		}
+	}
+	return false
+}

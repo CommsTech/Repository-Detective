@@ -1927,7 +1927,10 @@ func registerControlPlaneRoutes(router *gin.Engine) {
 		return
 	}
 	uiGroup := router.Group(operatorUI.BasePath())
-	uiGroup.Use(requireComponentsReady(), requireAPIKeyAuth())
-	operatorUI.RegisterRoutes(uiGroup)
+	uiGroup.Use(requireComponentsReady())
+	operatorUI.RegisterPublicRoutes(uiGroup)
+	uiAuth := uiGroup.Group("")
+	uiAuth.Use(requireAPIKeyAuth())
+	operatorUI.RegisterRoutes(uiAuth)
 	logger.Infof("Control plane API and UI routes registered")
 }
