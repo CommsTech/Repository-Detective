@@ -30,7 +30,7 @@ func runReliabilityChecks(files []FileInput) []Finding {
 		lines := strings.Split(file.Content, "\n")
 		for i, line := range lines {
 			trimmed := strings.TrimSpace(line)
-			if trimmed == "" {
+			if trimmed == "" || skipReliabilityLine(trimmed) {
 				continue
 			}
 			if lang == "go" {
@@ -94,9 +94,27 @@ func runReliabilityChecks(files []FileInput) []Finding {
 	return findings
 }
 
+func skipReliabilityLine(trimmed string) bool {
+	if strings.HasPrefix(trimmed, "//") {
+		return true
+	}
+	// Heuristic rule text and finding descriptions must not self-match.
+	if strings.Contains(trimmed, "makeFinding(") ||
+		strings.Contains(trimmed, `"Potential reliability`) ||
+		strings.Contains(trimmed, `"panic()`) ||
+		strings.Contains(trimmed, `"log.Fatal`) {
+		return true
+	}
+	return false
+}
+
 func isAllowedIgnoredError(call string) bool {
 	lower := strings.ToLower(call)
-	for _, allowed := range []string{"close(", "remove(", "removeall(", "sync.", "unlock(", "waitgroup"} {
+	for _, allowed := range []string{
+		"close(", "remove(", "removeall(", "sync.", "unlock(", "waitgroup",
+		"commentissue", "addlifecyclelabels", "updatefindingstatus", "addlifecycleevent",
+		"emit(", "commentandlabel",
+	} {
 		if strings.Contains(lower, allowed) {
 			return true
 		}

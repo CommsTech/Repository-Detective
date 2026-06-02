@@ -14,6 +14,9 @@ var (
 func runTechDebtChecks(files []FileInput) []Finding {
 	var findings []Finding
 	for _, file := range files {
+		if strings.HasSuffix(file.Path, "_test.go") || strings.Contains(file.Path, "/testdata/") {
+			continue
+		}
 		lines := strings.Split(file.Content, "\n")
 		markerCount := 0
 		for i, line := range lines {

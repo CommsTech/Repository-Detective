@@ -10,12 +10,11 @@ import (
 // InsecureSkipTLSVerify is for homelab endpoints with private CAs only.
 func NewHTTPClient(insecureSkipTLSVerify bool) *http.Client {
 	transport := http.DefaultTransport.(*http.Transport).Clone()
+	tlsCfg := &tls.Config{MinVersion: tls.VersionTLS12}
 	if insecureSkipTLSVerify {
-		if transport.TLSClientConfig == nil {
-			transport.TLSClientConfig = &tls.Config{}
-		}
-		transport.TLSClientConfig.InsecureSkipVerify = true
+		tlsCfg.InsecureSkipVerify = true
 	}
+	transport.TLSClientConfig = tlsCfg
 	return &http.Client{
 		Timeout:   120 * time.Second,
 		Transport: transport,

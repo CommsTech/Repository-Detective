@@ -71,7 +71,9 @@ func ReportNotReproduced(ctx context.Context, forge IssueForge, owner, repo, sca
 			if err := forge.CreateIssueComment(ctx, owner, repo, issue.Number, comment); err != nil {
 				return err
 			}
-			_ = forge.AddIssueLabels(ctx, owner, repo, issue.Number, ExpandLifecycleLabels(LifecycleNotReproduced))
+			if err := forge.AddIssueLabels(ctx, owner, repo, issue.Number, ExpandLifecycleLabels(LifecycleNotReproduced)); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

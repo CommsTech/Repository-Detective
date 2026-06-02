@@ -53,6 +53,10 @@ func analyzeOrphans(b *builder) []GraphFinding {
 			if info.isTest {
 				continue
 			}
+			fileID := nodeIDFile(path)
+			if !b.nodes[fileID].Disconnected {
+				continue
+			}
 			for _, fn := range info.functions {
 				if fn.exported || fn.name == "init" || fn.name == "main" || fn.name == "TestMain" {
 					continue
