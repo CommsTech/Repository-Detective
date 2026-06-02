@@ -22,11 +22,12 @@ type Embedder struct {
 
 // EmbedderConfig configures the embedding HTTP client.
 type EmbedderConfig struct {
-	BaseURL    string
-	APIKey     string
-	Model      string
-	Dimensions int
-	Timeout    time.Duration
+	BaseURL               string
+	APIKey                string
+	Model                 string
+	Dimensions            int
+	Timeout               time.Duration
+	InsecureSkipTLSVerify bool
 }
 
 // NewEmbedder creates an OpenAI-compatible embedding client.
@@ -46,7 +47,7 @@ func NewEmbedder(cfg EmbedderConfig) *Embedder {
 		apiKey:     cfg.APIKey,
 		model:      cfg.Model,
 		dimensions: cfg.Dimensions,
-		httpClient: &http.Client{Timeout: cfg.Timeout},
+		httpClient: NewHTTPClient(cfg.InsecureSkipTLSVerify),
 	}
 }
 

@@ -189,12 +189,13 @@ func MergeScannerRollups(dbRollups map[string]scannerDBRollup, tools []operator.
 
 	for _, tool := range tools {
 		db := dbRollups[tool.Name]
+		bypassed := operator.TrivyBypassedByGrype(tool, tools)
 		r := ScannerPlatformRollup{
 			Name:           tool.Name,
 			Configured:     tool.Configured,
 			Available:      tool.Available,
-			Optional:       tool.IsOptional(),
-			Required:       tool.IsRequiredInProfile(),
+			Optional:       tool.IsOptional() || bypassed,
+			Required:       tool.IsRequiredInProfile() && !bypassed,
 			InstallState:   tool.InstallState(),
 			Version:        tool.Version,
 			VersionDisplay: tool.VersionDisplay(),
@@ -202,7 +203,12 @@ func MergeScannerRollups(dbRollups map[string]scannerDBRollup, tools []operator.
 			AffectedScans:  db.MissingScans + db.FailureScans,
 			FailureScans:   db.FailureScans,
 		}
-		if tool.Configured && !tool.Available {
+		if bypassed {
+			r.CoverageImpact = "inactive"
+			r.StatusLabel = "bypassed (grype active)"
+			r.RecommendedFix = "Dependency scanning uses grype; install trivy only if you need its misconfig/secret scanners."
+		}
+		if tool.Configured && !tool.Available && !bypassed {
 			summary.ConfiguredMissingRuntime++
 		}
 		if db.MissingScans > 0 {
@@ -214,7 +220,9 @@ func MergeScannerRollups(dbRollups map[string]scannerDBRollup, tools []operator.
 		}
 		summary.RawMissingEvents += db.MissingScans
 		summary.RawFailureEvents += db.FailureScans
-		r.StatusLabel, r.RecommendedFix = scannerStatusLabel(r, tool)
+		if !bypassed {
+			r.StatusLabel, r.RecommendedFix = scannerStatusLabel(r, tool)
+		}
 		out = append(out, r)
 	}
 	summary.Rollups = out

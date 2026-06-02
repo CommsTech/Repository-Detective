@@ -52,8 +52,9 @@ type trivySecret struct {
 func RunTrivy(ctx context.Context, logger *logrus.Logger, dir string, cfg Config) RunResult {
 	result := RunResult{Scanner: "trivy"}
 	if !commandAvailable("trivy") {
-		logger.Warn("[SCANNER:trivy] binary not found — install trivy or use the official Bugbot Docker image")
+		logger.Debug("[SCANNER:trivy] binary not found — skipped (optional when grype is installed)")
 		result.Status = StatusBinaryMissing
+		result.Detail = "trivy not installed; use grype or install trivy in PATH"
 		return result
 	}
 

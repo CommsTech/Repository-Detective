@@ -90,6 +90,11 @@ tmp/
 # Local development
 .local/
 
+# Staged scanner binaries (large; optional for offline Docker builds)
+deploy/bin/trivy
+deploy/bin/grype
+deploy/bin/gitleaks
+
 # Production configuration files (contain secrets)
 docker-compose.prod.yml
 docker-compose.override.yml

@@ -60,7 +60,7 @@ web/                 → Embedded onboarding assets
 ## Configuration (key settings)
 
 ```yaml
-api_key: "..."
+api_key: ""   # set via .env only — never commit secrets
 public_url: "https://bugbot.example.com"
 ai_provider: openai
 enable_security: true

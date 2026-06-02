@@ -22,6 +22,21 @@ func (t ToolStatus) IsOptional() bool {
 	return !t.Configured && t.Name != "git"
 }
 
+// GrypeAvailable reports whether grype is installed (used to bypass missing trivy).
+func GrypeAvailable(tools []ToolStatus) bool {
+	for _, tool := range tools {
+		if tool.Name == "grype" && tool.Available {
+			return true
+		}
+	}
+	return false
+}
+
+// TrivyBypassedByGrype reports configured trivy that is skipped because grype is available.
+func TrivyBypassedByGrype(tool ToolStatus, tools []ToolStatus) bool {
+	return tool.Name == "trivy" && tool.Configured && !tool.Available && GrypeAvailable(tools)
+}
+
 // IsRequiredInProfile reports scanners expected for scans per configuration.
 func (t ToolStatus) IsRequiredInProfile() bool {
 	return t.Configured
@@ -71,7 +86,7 @@ func (t ToolStatus) RemediationHint() string {
 		}
 		return ""
 	case t.Name == "trivy":
-		return "trivy is configured but not installed. Install trivy or disable enable_trivy in config."
+		return "trivy is not installed. Optional when grype is available; otherwise install trivy or set enable_trivy: false."
 	default:
 		return t.Name + " is configured but not installed. Install " + t.Name + " in PATH or disable it in scanner settings."
 	}

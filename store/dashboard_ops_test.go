@@ -30,6 +30,32 @@ func TestMergeScannerRollupsDegradedCoverage(t *testing.T) {
 		t.Fatal("expected trivy degraded impact")
 	}
 	if trivy.Optional {
-		t.Fatal("trivy should not be optional when configured")
+		t.Fatal("trivy should not be optional when grype is unavailable")
 	}
+}
+
+func TestMergeScannerRollupsTrivyBypassedWhenGrypeAvailable(t *testing.T) {
+	tools := []operator.ToolStatus{
+		{Name: "trivy", Configured: true, Available: false, LastChecked: "t"},
+		{Name: "grype", Configured: true, Available: true, Version: "grype", LastChecked: "t"},
+	}
+	summary := MergeScannerRollups(nil, tools)
+	if summary.ConfiguredMissingRuntime != 0 {
+		t.Fatalf("expected no degraded missing runtime when grype bypasses trivy, got %d", summary.ConfiguredMissingRuntime)
+	}
+	if summary.DegradedCoverage {
+		t.Fatal("expected no degraded coverage when grype bypasses trivy")
+	}
+	for i := range summary.Rollups {
+		if summary.Rollups[i].Name == "trivy" {
+			if !summary.Rollups[i].Optional {
+				t.Fatal("expected trivy marked optional when bypassed")
+			}
+			if summary.Rollups[i].CoverageImpact != "inactive" {
+				t.Fatalf("expected inactive impact, got %s", summary.Rollups[i].CoverageImpact)
+			}
+			return
+		}
+	}
+	t.Fatal("trivy rollup not found")
 }

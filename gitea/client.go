@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -13,6 +14,10 @@ import (
 
 	"github.com/sirupsen/logrus"
 )
+
+// errNotDirectory is returned when the Gitea contents API returns a file for a path
+// that was listed as a directory (submodules, gitlinks, or inconsistent tree entries).
+var errNotDirectory = errors.New("path is not a directory")
 
 // Client handles communication with Gitea API
 type Client struct {
@@ -226,7 +231,7 @@ func (c *Client) ListRepositoryContents(ctx context.Context, owner, repo, ref, d
 		if strings.TrimSpace(dirPath) == "" {
 			return contents, nil
 		}
-		return nil, fmt.Errorf("path is not a directory: %s", dirPath)
+		return nil, fmt.Errorf("%w: %s", errNotDirectory, dirPath)
 	}
 
 	return contents, nil
@@ -479,7 +484,12 @@ func (c *Client) ListAllFiles(ctx context.Context, owner, repo, ref, dirPath str
 			// Recursively fetch subdirectory
 			subFiles, err := c.ListAllFiles(ctx, owner, repo, ref, item.Path)
 			if err != nil {
-				c.logger.Warnf("Failed to list directory %s: %v", item.Path, err)
+				if errors.Is(err, errNotDirectory) {
+					// Tree listed type=dir but contents API returned a file (submodule/gitlink).
+					allFiles = append(allFiles, item)
+					continue
+				}
+				c.logger.Debugf("Skipping path %s during file listing: %v", item.Path, err)
 				continue
 			}
 			allFiles = append(allFiles, subFiles...)

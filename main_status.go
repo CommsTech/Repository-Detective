@@ -66,6 +66,7 @@ func healthPayload(ready bool) gin.H {
 	status := "starting"
 	code := gin.H{
 		"status":       status,
+		"ready":        ready,
 		"service":      "repository-detective",
 		"product_name": "Repository Detective",
 		"tagline":      "Inspect. Analyze. Improve.",
@@ -75,6 +76,7 @@ func healthPayload(ready bool) gin.H {
 	if ready {
 		status = "healthy"
 		code["status"] = status
+		code["ready"] = true
 		r := buildReadiness(status)
 		code["features"] = r.Features
 		code["tools_summary"] = toolsSummary(r.Tools)

@@ -47,12 +47,18 @@ FROM alpine:3.20
 # Enable at build time with: --build-arg INSTALL_EXTERNAL_TOOLS=true
 ARG INSTALL_EXTERNAL_TOOLS=false
 
+COPY deploy/bin /tmp/deploy-bin
 RUN apk update && apk --no-cache add ca-certificates tzdata wget su-exec git \
     && if [ "$INSTALL_EXTERNAL_TOOLS" = "true" ]; then \
          apk --no-cache add curl bash tar python3 py3-pip; \
-         TRIVY_VERSION=0.57.1; \
-         curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
-           | sh -s -- -b /usr/local/bin "v${TRIVY_VERSION}"; \
+         if [ -x /tmp/deploy-bin/trivy ]; then \
+           install -m 0755 /tmp/deploy-bin/trivy /usr/local/bin/trivy; \
+         else \
+           TRIVY_VERSION=0.57.1; \
+           curl -sfL "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" \
+             | tar xz -C /usr/local/bin trivy; \
+         fi; \
+         if command -v trivy >/dev/null; then trivy --version; else echo "trivy not installed (optional when grype is present)"; fi; \
          GRYPE_VERSION=0.84.0; \
          curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh \
            | sh -s -- -b /usr/local/bin "v${GRYPE_VERSION}"; \

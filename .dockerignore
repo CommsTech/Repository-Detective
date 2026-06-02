@@ -11,7 +11,7 @@ coverage.out
 coverage.html
 docs/dogfood-reports/
 deployment-backups/
-vendor/
+# vendor/ included when present (run ./scripts/vendor-deps.sh for offline/DNS-filtered builds)
 certs/
 status.md
 *.md

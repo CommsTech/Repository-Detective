@@ -27,6 +27,7 @@ max_file_size: 1048576
 enable_security: true
 enable_quality: true
 
+# Trivy is optional when grype is installed; missing trivy is bypassed at runtime.
 enable_trivy: true
 enable_grype: true
 enable_gitleaks: true

@@ -561,10 +561,7 @@ func setupRoutes(router *gin.Engine) {
 	router.GET("/health", func(c *gin.Context) {
 		ready := componentsReady.Load()
 		payload := healthPayload(ready)
-		if !ready {
-			c.JSON(http.StatusServiceUnavailable, payload)
-			return
-		}
+		// Always 200 so Docker/orchestrator health probes do not flap while components initialize.
 		c.JSON(http.StatusOK, payload)
 	})
 
@@ -852,7 +849,7 @@ func initializeComponents() error {
 		logger.Infof("Testing AI provider connection (timeout %s)...", checkTimeout)
 		if err := aiClient.TestConnection(ctx); err != nil {
 			if config.SkipStartupChecks {
-				logger.Warnf("AI provider connection check failed (skipped): %v", err)
+				logger.Debugf("AI provider connection check failed (skipped): %v", err)
 			} else {
 				return fmt.Errorf("failed to connect to AI provider: %w", err)
 			}
@@ -900,15 +897,20 @@ func initializeComponents() error {
 		SimilarityThreshold: config.QdrantSimilarityThreshold,
 	}
 	embedder := ai.NewEmbedder(ai.EmbedderConfig{
-		BaseURL:    firstNonEmpty(config.EmbeddingBaseURL, config.AIBaseURL, config.OpenWebUIURL),
-		APIKey:     firstNonEmpty(config.EmbeddingAPIKey, config.AIAPIKey, config.OpenWebUIToken),
-		Model:      config.EmbeddingModel,
-		Dimensions: config.QdrantVectorSize,
+		BaseURL:               firstNonEmpty(config.EmbeddingBaseURL, config.AIBaseURL, config.OpenWebUIURL),
+		APIKey:                firstNonEmpty(config.EmbeddingAPIKey, config.AIAPIKey, config.OpenWebUIToken),
+		Model:                 config.EmbeddingModel,
+		Dimensions:            config.QdrantVectorSize,
+		InsecureSkipTLSVerify: config.AIInsecureSkipTLSVerify,
 	})
 	semanticStore := issues.NewSemanticStore(qdrant.NewStore(qdrantCfg), embedder, logger)
 	if semanticStore.Enabled() {
 		if err := semanticStore.Prepare(ctx); err != nil {
-			logger.Warnf("Qdrant prepare failed (semantic dedup disabled): %v", err)
+			if config.SkipStartupChecks {
+				logger.Debugf("Qdrant prepare failed (semantic dedup disabled): %v", err)
+			} else {
+				logger.Warnf("Qdrant prepare failed (semantic dedup disabled): %v", err)
+			}
 		} else {
 			logger.Infof("Qdrant semantic dedup enabled (collection=%s, threshold=%.2f)",
 				config.QdrantCollection, config.QdrantSimilarityThreshold)
@@ -1864,7 +1866,7 @@ func mainGraphConfig() graph.Config {
 }
 
 func mainScannerConfig() scanners.Config {
-	return scanners.Config{
+	cfg := scanners.Config{
 		EnableTrivy:              config.EnableTrivy,
 		EnableGrype:              config.EnableGrype,
 		EnableGitleaks:           config.EnableGitleaks,
@@ -1893,6 +1895,7 @@ func mainScannerConfig() scanners.Config {
 		LinterMinSeverity:        "warning",
 		TimeoutSeconds:           config.ScannerTimeoutSeconds,
 	}
+	return scanners.ApplyRuntimeAvailability(cfg, logger)
 }
 
 func registerControlPlaneRoutes(router *gin.Engine) {

@@ -19,8 +19,8 @@ func TestMergeScannerRollupsLabels(t *testing.T) {
 	if merged.UniqueMissingTools != 1 {
 		t.Fatalf("unique missing = %d", merged.UniqueMissingTools)
 	}
-	if merged.ConfiguredMissingRuntime != 1 || !merged.DegradedCoverage {
-		t.Fatalf("degraded coverage: missing=%d degraded=%v", merged.ConfiguredMissingRuntime, merged.DegradedCoverage)
+	if merged.ConfiguredMissingRuntime != 0 || merged.DegradedCoverage {
+		t.Fatalf("trivy bypassed by grype: missing=%d degraded=%v", merged.ConfiguredMissingRuntime, merged.DegradedCoverage)
 	}
 	for _, r := range merged.Rollups {
 		switch r.Name {
@@ -32,8 +32,11 @@ func TestMergeScannerRollupsLabels(t *testing.T) {
 				t.Fatalf("hadolint optional/inactive: optional=%v impact=%q", r.Optional, r.CoverageImpact)
 			}
 		case "trivy":
-			if r.AffectedRepos != 12 || r.RecommendedFix == "" {
-				t.Fatalf("trivy rollup: repos=%d fix=%q", r.AffectedRepos, r.RecommendedFix)
+			if !r.Optional || r.StatusLabel != "bypassed (grype active)" {
+				t.Fatalf("trivy rollup: optional=%v label=%q", r.Optional, r.StatusLabel)
+			}
+			if r.RecommendedFix == "" {
+				t.Fatal("trivy bypass should include recommended fix text")
 			}
 		}
 	}
