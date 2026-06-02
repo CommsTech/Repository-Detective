@@ -1245,6 +1245,7 @@ func (e *Engine) analysisResultFromReport(ctx context.Context, owner, repo, ref,
 		FalsePositive: e.config.FalsePositive,
 		KnownPaths:    knownPaths,
 	})
+	result.OverallScore = ComputeOverallScore(result.Issues)
 	return result, nil
 }
 

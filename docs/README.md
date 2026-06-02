@@ -29,6 +29,11 @@ detect → issue → plan → approve → patch PR → merge → rescan → veri
 | [COMPLIANCE_READINESS.md](COMPLIANCE_READINESS.md) | Compliance evidence index |
 | [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) | Honest product limits |
 | [SECURITY_MODEL.md](SECURITY_MODEL.md) | Trust boundaries overview |
+| [SECURITY_CHECK_MATRIX.md](SECURITY_CHECK_MATRIX.md) | Ten minimum checks vs shipped tools |
+| [PRE_PUBLISH_CHECKS.md](PRE_PUBLISH_CHECKS.md) | Pre-public release checklist |
+| [PIPELINE_GOVERNANCE.md](PIPELINE_GOVERNANCE.md) | CI/workflow and runner governance |
+| [OPTIMIZATION_CHECKS.md](OPTIMIZATION_CHECKS.md) | Advisory optimization rules |
+| [DOC_DETECTIVE_REVIEW.md](DOC_DETECTIVE_REVIEW.md) | Doc Detective integration review |
 | [WIKI_PUBLISHING.md](WIKI_PUBLISHING.md) | Gitea wiki sync (`docs/wiki/` copies) |
 
 ## Product and policy

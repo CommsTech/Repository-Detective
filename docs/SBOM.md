@@ -57,6 +57,18 @@ Optional offline builds: `./scripts/vendor-deps.sh` then build with `-mod=vendor
 |-------|---------|--------|
 | Chart.js | 4.4.1 | `ui/static/chart.umd.min.js` (npm chart.js@4.4.1) |
 
+## Additional tools (roadmap — Gitea #41)
+
+| Tool | Status in RD |
+|------|----------------|
+| OpenSCAP | Not integrated — compliance scanning roadmap |
+| TruffleHog | Not integrated — gitleaks covers secret patterns |
+| OWASP Dependency-Check | Partial overlap — trivy/grype |
+| Syft / Dependency-Track | SBOM export manual; continuous monitor roadmap |
+| CodeQL / SonarQube | Not integrated — semgrep + staticcheck cover SAST for supported langs |
+
+See [SCANNERS.md](SCANNERS.md) and [SCANNER_ROADMAP.md](SCANNER_ROADMAP.md).
+
 ## Machine-readable export
 
 For SPDX or CycloneDX in CI, generate from the lockfiles:

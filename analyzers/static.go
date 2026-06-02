@@ -124,6 +124,9 @@ func skipStaticAnalysisPath(path string) bool {
 		return true
 	case path == "ai/client.go":
 		return true
+	case strings.HasPrefix(path, "analyzers/static"):
+		// Rule definitions must not self-match (see Gitea #38).
+		return true
 	}
 	return false
 }

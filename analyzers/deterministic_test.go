@@ -2,12 +2,28 @@ package analyzers
 
 import (
 	"context"
+	"io"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"git.commsnet.org/commstech/bugbot/ai"
 	"github.com/sirupsen/logrus"
 )
+
+var testLogger = func() *logrus.Logger {
+	l := logrus.New()
+	l.SetOutput(io.Discard)
+	l.SetLevel(logrus.ErrorLevel)
+	return l
+}()
+
+func testContext(t *testing.T) context.Context {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	t.Cleanup(cancel)
+	return ctx
+}
 
 type countingTransport struct {
 	calls atomic.Int32
@@ -22,14 +38,14 @@ func (c *countingTransport) Complete(ctx context.Context, req ai.ChatRequest) (*
 
 func TestPrepareDeterministicOnlyNoAICalls(t *testing.T) {
 	transport := &countingTransport{}
-	client := ai.NewClientWithTransport(transport, "test-model", logrus.New())
+	client := ai.NewClientWithTransport(transport, "test-model", testLogger)
 	engine := NewEngine(nil, client, &Config{
 		AnalysisDepth:     1,
 		EnableLLMAuditors: false,
 		EnableSecurity:    true,
-	}, logrus.New())
+	}, testLogger)
 
-	_, err := engine.Prepare(context.Background(), "owner", "repo", "main", []string{"src/app.go"}, false)
+	_, err := engine.Prepare(testContext(t), "owner", "repo", "main", []string{"src/app.go"}, false)
 	if err != nil {
 		t.Fatalf("prepare failed: %v", err)
 	}
@@ -40,13 +56,13 @@ func TestPrepareDeterministicOnlyNoAICalls(t *testing.T) {
 
 func TestValidateStaticFindingNoAICalls(t *testing.T) {
 	transport := &countingTransport{}
-	client := ai.NewClientWithTransport(transport, "test-model", logrus.New())
+	client := ai.NewClientWithTransport(transport, "test-model", testLogger)
 	engine := NewEngine(nil, client, &Config{
 		AnalysisDepth:     1,
 		EnableLLMAuditors: false,
-	}, logrus.New())
+	}, testLogger)
 
-	validated, err := engine.validateOne(context.Background(), CandidateFinding{
+	validated, err := engine.validateOne(testContext(t), CandidateFinding{
 		ID:          "static-1",
 		Hypothesis:  "Hardcoded secret",
 		AuditorType: "static",
@@ -68,13 +84,13 @@ func TestValidateStaticFindingNoAICalls(t *testing.T) {
 
 func TestValidateHealthFindingNoAICalls(t *testing.T) {
 	transport := &countingTransport{}
-	client := ai.NewClientWithTransport(transport, "test-model", logrus.New())
+	client := ai.NewClientWithTransport(transport, "test-model", testLogger)
 	engine := NewEngine(nil, client, &Config{
 		AnalysisDepth:     3,
 		EnableLLMAuditors: true,
-	}, logrus.New())
+	}, testLogger)
 
-	validated, err := engine.validateOne(context.Background(), CandidateFinding{
+	validated, err := engine.validateOne(testContext(t), CandidateFinding{
 		ID:          "health-1",
 		Hypothesis:  "Technical debt marker found in code",
 		AuditorType: "tech_debt",
@@ -97,13 +113,13 @@ func TestValidateHealthFindingNoAICalls(t *testing.T) {
 
 func TestProveDeterministicNoAICalls(t *testing.T) {
 	transport := &countingTransport{}
-	client := ai.NewClientWithTransport(transport, "test-model", logrus.New())
+	client := ai.NewClientWithTransport(transport, "test-model", testLogger)
 	engine := NewEngine(nil, client, &Config{
 		AnalysisDepth:     1,
 		EnableLLMAuditors: false,
-	}, logrus.New())
+	}, testLogger)
 
-	proven, err := engine.Prove(context.Background(), []DedupedFinding{{
+	proven, err := engine.Prove(testContext(t), []DedupedFinding{{
 		ID:          "trivy-1",
 		AuditorType: "trivy",
 		Title:       "CVE",
