@@ -22,13 +22,15 @@ type ScanWithRepo struct {
 
 // FindingFilter filters finding list queries.
 type FindingFilter struct {
-	RepositoryID int64
-	Severity     string
-	Category     string
-	Status       string
-	Source       string
-	Limit        int
-	Offset       int
+	RepositoryID      int64
+	Severity          string
+	Category          string
+	Status            string
+	Source            string
+	IncludeSuppressed bool
+	OnlySuppressed    bool
+	Limit             int
+	Offset            int
 }
 
 // FindingListItem is a finding row for list views.
@@ -37,6 +39,8 @@ type FindingListItem struct {
 	RepoFullName        string
 	ExternalIssueNumber int
 	ExternalIssueURL    string
+	Suppressed          bool
+	SuppressionReason   string
 }
 
 // FindingDetail is a full finding with related records.
@@ -55,6 +59,7 @@ type DashboardSummary struct {
 	ScannerFailuresCount     int
 	ScannerToolsMissingCount int
 	OpenFindingsCount        int
+	SuppressedFindingsCount  int
 	IssuesDetectedInScans    int
 	OpenFindingsBySeverity   map[string]int
 	OpenFindingsByCategory   map[string]int
@@ -107,6 +112,7 @@ type QueryStore interface {
 	CountFindings(ctx context.Context, filter FindingFilter) (int, error)
 	OpenFindingsBySeverityForRepository(ctx context.Context, repositoryID int64) (map[string]int, error)
 	GetFindingDetail(ctx context.Context, id int64) (FindingDetail, error)
+	ListFindingsByIDs(ctx context.Context, ids []int64) (map[int64]Finding, error)
 	ListLifecycleEventsByFinding(ctx context.Context, findingID int64) ([]LifecycleEvent, error)
 
 	DashboardSummary(ctx context.Context, recentLimit int) (DashboardSummary, error)
@@ -158,7 +164,26 @@ type QueryStore interface {
 	ClosureSummary(ctx context.Context) (ClosureSummary, error)
 	LifecycleSummary(ctx context.Context) (LifecycleSummary, error)
 	UpdateFindingStatus(ctx context.Context, findingID int64, status string) error
+
+	CreateFindingSuppression(ctx context.Context, sup FindingSuppression) (FindingSuppression, error)
+	DisableFindingSuppression(ctx context.Context, id int64) (FindingSuppression, error)
+	GetFindingSuppression(ctx context.Context, id int64) (FindingSuppression, error)
+	ListFindingSuppressions(ctx context.Context, filter SuppressionFilter) ([]FindingSuppression, error)
+	ListActiveSuppressionsForRepository(ctx context.Context, repositoryID int64) ([]FindingSuppression, error)
+	CountSuppressedFindings(ctx context.Context) (int, error)
+	ScanQualityReport(ctx context.Context) (ScanQualityReport, error)
 	ListPatchAttemptsByRepositoryAndStatus(ctx context.Context, repositoryID int64, status string) ([]PatchAttemptRecord, error)
 	GetPatchAttemptForClosure(ctx context.Context, attemptID string) (PatchAttemptRecord, Finding, error)
 	UpdatePatchAttemptMerged(ctx context.Context, attemptID, mergeSHA string, mergedAt time.Time) error
+
+	GetLatestCompletedScanForRepository(ctx context.Context, repositoryID int64) (Scan, error)
+	ListFingerprintsInScan(ctx context.Context, scanID string, repositoryID int64) (map[string]bool, error)
+	SaveReconciliationRun(ctx context.Context, run ReconciliationRun, items []ReconciliationItemRecord) error
+	GetReconciliationRun(ctx context.Context, runID string) (ReconciliationRun, []ReconciliationItemRecord, error)
+	RecomputeCalibrationRuleStats(ctx context.Context) (int, error)
+	ListCalibrationRuleStats(ctx context.Context, limit int) ([]CalibrationRuleStat, error)
+	GenerateCalibrationRecommendations(ctx context.Context, minFindings int) (int, error)
+	ListCalibrationRecommendations(ctx context.Context, status string, limit int) ([]CalibrationRecommendation, error)
+	UpdateCalibrationRecommendationStatus(ctx context.Context, id int64, status string) error
+	CalibrationSummary(ctx context.Context) (map[string]any, error)
 }

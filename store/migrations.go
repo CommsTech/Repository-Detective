@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-const currentSchemaVersion = 13
+const currentSchemaVersion = 16
 
 var migrationStatements = map[int][]string{
 	1: {
@@ -392,6 +392,91 @@ var migrationStatements = map[int][]string{
 		`CREATE INDEX IF NOT EXISTS idx_closure_evidence_finding ON closure_evidence(finding_id, updated_at DESC)`,
 		`CREATE INDEX IF NOT EXISTS idx_closure_evidence_repo_status ON closure_evidence(repository_id, status)`,
 		`CREATE INDEX IF NOT EXISTS idx_closure_evidence_patch ON closure_evidence(patch_attempt_id)`,
+	},
+	14: {
+		`CREATE TABLE IF NOT EXISTS finding_suppressions (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			repository_id INTEGER,
+			fingerprint TEXT,
+			source TEXT,
+			rule_id TEXT,
+			category TEXT,
+			severity TEXT,
+			scope TEXT NOT NULL DEFAULT 'repo',
+			reason TEXT NOT NULL DEFAULT '',
+			created_by TEXT NOT NULL DEFAULT '',
+			expires_at TEXT,
+			active INTEGER NOT NULL DEFAULT 1,
+			created_at TEXT NOT NULL,
+			updated_at TEXT NOT NULL,
+			FOREIGN KEY (repository_id) REFERENCES repositories(id) ON DELETE CASCADE
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_finding_suppressions_repo_active ON finding_suppressions(repository_id, active)`,
+		`CREATE INDEX IF NOT EXISTS idx_finding_suppressions_scope_active ON finding_suppressions(scope, active)`,
+		`CREATE INDEX IF NOT EXISTS idx_finding_suppressions_fingerprint ON finding_suppressions(fingerprint)`,
+		`CREATE INDEX IF NOT EXISTS idx_finding_suppressions_rule ON finding_suppressions(rule_id, source)`,
+	},
+	15: {
+		`CREATE TABLE IF NOT EXISTS calibration_rule_stats (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			source TEXT NOT NULL DEFAULT '',
+			rule_id TEXT NOT NULL DEFAULT '',
+			category TEXT NOT NULL DEFAULT '',
+			total_findings INTEGER NOT NULL DEFAULT 0,
+			issues_created INTEGER NOT NULL DEFAULT 0,
+			suppressions INTEGER NOT NULL DEFAULT 0,
+			false_positives INTEGER NOT NULL DEFAULT 0,
+			verified_fixes INTEGER NOT NULL DEFAULT 0,
+			still_present INTEGER NOT NULL DEFAULT 0,
+			last_seen_at TEXT NOT NULL,
+			actionable_rate REAL NOT NULL DEFAULT 0,
+			false_positive_rate REAL NOT NULL DEFAULT 0,
+			recommended_default_action TEXT NOT NULL DEFAULT '',
+			updated_at TEXT NOT NULL,
+			UNIQUE(source, rule_id, category)
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_calibration_rule_stats_rule ON calibration_rule_stats(rule_id, source)`,
+		`CREATE TABLE IF NOT EXISTS calibration_recommendations (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			scope TEXT NOT NULL DEFAULT 'global',
+			repository_id INTEGER,
+			recommendation_type TEXT NOT NULL DEFAULT '',
+			source TEXT NOT NULL DEFAULT '',
+			rule_id TEXT NOT NULL DEFAULT '',
+			category TEXT NOT NULL DEFAULT '',
+			current_action TEXT NOT NULL DEFAULT '',
+			recommended_action TEXT NOT NULL DEFAULT '',
+			reason TEXT NOT NULL DEFAULT '',
+			confidence REAL NOT NULL DEFAULT 0,
+			status TEXT NOT NULL DEFAULT 'proposed',
+			created_at TEXT NOT NULL,
+			updated_at TEXT NOT NULL,
+			FOREIGN KEY (repository_id) REFERENCES repositories(id) ON DELETE CASCADE
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_calibration_recommendations_status ON calibration_recommendations(status, scope)`,
+		`CREATE TABLE IF NOT EXISTS issue_reconciliation_runs (
+			run_id TEXT PRIMARY KEY,
+			repository_id INTEGER NOT NULL,
+			preview INTEGER NOT NULL DEFAULT 1,
+			item_count INTEGER NOT NULL DEFAULT 0,
+			applied INTEGER NOT NULL DEFAULT 0,
+			created_at TEXT NOT NULL,
+			FOREIGN KEY (repository_id) REFERENCES repositories(id) ON DELETE CASCADE
+		)`,
+		`CREATE TABLE IF NOT EXISTS issue_reconciliation_items (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			run_id TEXT NOT NULL,
+			issue_number INTEGER NOT NULL,
+			finding_id INTEGER NOT NULL,
+			status TEXT NOT NULL DEFAULT '',
+			proposed_action TEXT NOT NULL DEFAULT '',
+			reason TEXT NOT NULL DEFAULT '',
+			FOREIGN KEY (run_id) REFERENCES issue_reconciliation_runs(run_id) ON DELETE CASCADE
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_reconciliation_items_run ON issue_reconciliation_items(run_id)`,
+	},
+	16: {
+		`CREATE INDEX IF NOT EXISTS idx_external_issues_finding_id ON external_issues(finding_id)`,
 	},
 }
 

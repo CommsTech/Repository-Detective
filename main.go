@@ -229,6 +229,18 @@ type Config struct {
 	EvidenceClosureCloseIssues        bool              `mapstructure:"evidence_closure_close_issues"`
 	EvidenceClosureComment            bool              `mapstructure:"evidence_closure_comment"`
 	EvidenceClosureRequireScannerSuccess bool           `mapstructure:"evidence_closure_require_scanner_success"`
+	IssueReconciliationEnabled           bool              `mapstructure:"issue_reconciliation_enabled"`
+	IssueReconciliationComment           bool              `mapstructure:"issue_reconciliation_comment"`
+	IssueReconciliationCloseVerified     bool              `mapstructure:"issue_reconciliation_close_verified"`
+	IssueReconciliationMaxCommentsPerIssue int             `mapstructure:"issue_reconciliation_max_comments_per_issue"`
+	AIStartupTestEnabled                 bool              `mapstructure:"ai_startup_test_enabled"`
+	AIConnectionTestMode                 string            `mapstructure:"ai_connection_test_mode"`
+	AIConnectionTestCacheMinutes         int               `mapstructure:"ai_connection_test_cache_minutes"`
+	AIMaxTokensPerScan                   int               `mapstructure:"ai_max_tokens_per_scan"`
+	CalibrationEnabled                   bool              `mapstructure:"calibration_enabled"`
+	CalibrationIntervalHours             int               `mapstructure:"calibration_interval_hours"`
+	CalibrationMinFindingsForRecommendation int            `mapstructure:"calibration_min_findings_for_recommendation"`
+	CalibrationAutoApply                 bool              `mapstructure:"calibration_auto_apply"`
 	Reporting                         profile.ReportingConfig              `mapstructure:"reporting"`
 	FalsePositiveReduction            profile.FalsePositiveReductionConfig `mapstructure:"false_positive_reduction"`
 }
@@ -270,8 +282,8 @@ func main() {
 	server := &http.Server{
 		Addr:         listenAddr,
 		Handler:      router,
-		ReadTimeout:  30 * time.Second,
-		WriteTimeout: 30 * time.Second,
+		ReadTimeout:  120 * time.Second,
+		WriteTimeout: 120 * time.Second,
 		IdleTimeout:  60 * time.Second,
 	}
 
@@ -451,6 +463,18 @@ func loadConfig() error {
 	viper.SetDefault("evidence_closure_close_issues", false)
 	viper.SetDefault("evidence_closure_comment", true)
 	viper.SetDefault("evidence_closure_require_scanner_success", true)
+	viper.SetDefault("issue_reconciliation_enabled", true)
+	viper.SetDefault("issue_reconciliation_comment", true)
+	viper.SetDefault("issue_reconciliation_close_verified", false)
+	viper.SetDefault("issue_reconciliation_max_comments_per_issue", 3)
+	viper.SetDefault("ai_startup_test_enabled", false)
+	viper.SetDefault("ai_connection_test_mode", "metadata_only")
+	viper.SetDefault("ai_connection_test_cache_minutes", 60)
+	viper.SetDefault("ai_max_tokens_per_scan", 0)
+	viper.SetDefault("calibration_enabled", true)
+	viper.SetDefault("calibration_interval_hours", 24)
+	viper.SetDefault("calibration_min_findings_for_recommendation", 20)
+	viper.SetDefault("calibration_auto_apply", false)
 
 	reportingDefaults := profile.DefaultReportingConfig()
 	viper.SetDefault("reporting.mode", reportingDefaults.Mode)
@@ -694,6 +718,7 @@ func initializeComponents() error {
 		}
 		bugbotStore = s
 		scanRecorder = store.NewRecorder(s, logger)
+		initSuppressionMatcher()
 		logger.Infof("Local database enabled (driver=%s path=%s)", config.DatabaseDriver, config.DatabasePath)
 	} else {
 		scanRecorder = store.NewRecorder(nil, logger)
@@ -796,6 +821,9 @@ func initializeComponents() error {
 		if config.EvidenceClosureEnabled {
 			uiHandler.SetClosureBackend(true, closureUIBridge{})
 		}
+		if bugbotStore != nil {
+			uiHandler.SetSuppressionBackend(true, suppressionUIBridge{})
+		}
 		uiHandler.SetReadinessFn(func() operator.Readiness { return buildReadiness("running") })
 		operatorUI = uiHandler
 		logger.Infof("Operator UI enabled at %s", uiHandler.BasePath())
@@ -853,6 +881,7 @@ func initializeComponents() error {
 	)
 
 	// Initialize AI client (multi-provider) when LLM or Qdrant embeddings are required
+	initAIStatus()
 	if config.needsAIProvider() {
 		var err error
 		aiClient, err = ai.NewClient(ai.Config{
@@ -870,15 +899,26 @@ func initializeComponents() error {
 			return fmt.Errorf("failed to configure AI client: %w", err)
 		}
 
-		logger.Infof("Testing AI provider connection (timeout %s)...", checkTimeout)
-		if err := aiClient.TestConnection(ctx); err != nil {
-			if config.SkipStartupChecks {
-				logger.Debugf("AI provider connection check failed (skipped): %v", err)
-			} else {
-				return fmt.Errorf("failed to connect to AI provider: %w", err)
+		mode := ai.ConnectionTestMode(config.AIConnectionTestMode)
+		if mode == "" {
+			mode = ai.TestModeMetadataOnly
+		}
+		if config.AIStartupTestEnabled && !config.SkipStartupChecks {
+			logger.Infof("Testing AI provider (%s, timeout %s)...", mode, checkTimeout)
+			testCtx, cancel := context.WithTimeout(ctx, checkTimeout)
+			st, err := ai.RunConnectionTest(testCtx, aiClient, mode, false)
+			cancel()
+			if err != nil {
+				if config.SkipStartupChecks {
+					logger.Debugf("AI provider connection check failed (skipped): %v", err)
+				} else {
+					return fmt.Errorf("failed to connect to AI provider: %w", err)
+				}
+			} else if st.LastTestOK {
+				logger.Infof("AI provider reachable (%s, model=%s, test=%s)", aiClient.Provider(), aiClient.Model(), st.LastTestSource)
 			}
 		} else {
-			logger.Infof("AI provider connection established (%s, model=%s)", aiClient.Provider(), aiClient.Model())
+			logger.Info("AI startup test disabled — provider configured but not tested until manual test or AI-enabled scan")
 		}
 	} else {
 		logger.Info("AI provider not required — deterministic-only mode (no LLM auditors, Qdrant disabled)")
@@ -963,6 +1003,11 @@ func initializeComponents() error {
 		issueConfig.GitHubBaseURL = "https://github.com"
 	}
 	issueManager = issues.NewManager(giteaClient, githubIssueClient, issueConfig, logger, semanticStore)
+	initReconcileEngine()
+	if operatorUI != nil && reconcileEngine != nil {
+		operatorUI.SetIssueReconciler(config.IssueReconciliationEnabled, uiReconcileBridge{})
+	}
+	startCalibrationBackgroundJob()
 
 	webhookHandler = handlers.NewWebhookHandler(logger, &handlers.Config{
 		WebhookSecret:         config.WebhookSecret,
@@ -1052,7 +1097,7 @@ func (p *webhookProcessor) ProcessPush(ctx context.Context, payload *handlers.Gi
 			owner,
 			repo,
 			resolveCommitSHA(result, commitSHA),
-			severitiesForStatus(result, effective),
+			severitiesForStatus(result, effective, repositoryID),
 			scannerSummaries(result),
 			false,
 			effective.PolicyLevel,
@@ -1105,7 +1150,7 @@ func (p *webhookProcessor) ProcessPullRequest(ctx context.Context, payload *hand
 			owner,
 			repo,
 			resolveCommitSHA(result, commitSHA),
-			severitiesForStatus(result, effective),
+			severitiesForStatus(result, effective, repositoryID),
 			scannerSummaries(result),
 			false,
 			effective.PolicyLevel,
@@ -1360,18 +1405,22 @@ func applyReportingDefaults(cfg *Config) {
 	if cfg.Reporting.SourceTypeOverrides == nil {
 		cfg.Reporting.SourceTypeOverrides = defaults.SourceTypeOverrides
 	}
+	if cfg.Reporting.RuleOverrides == nil {
+		cfg.Reporting.RuleOverrides = defaults.RuleOverrides
+	}
 	if cfg.MaxIssuesPerRun <= 0 && cfg.Reporting.MaxIssuesPerScan > 0 {
 		cfg.MaxIssuesPerRun = cfg.Reporting.MaxIssuesPerScan
 	}
 }
 
-func severitiesForStatus(result *analyzers.AnalysisResult, effective store.EffectiveSettings) []string {
+func severitiesForStatus(result *analyzers.AnalysisResult, effective store.EffectiveSettings, repositoryID int64) []string {
 	if result == nil {
 		return nil
 	}
-	severities := make([]string, len(result.Issues))
-	confidences := make([]float64, len(result.Issues))
-	for i, issue := range result.Issues {
+	issues := filterIssuesWithSuppression(repositoryID, result.Issues)
+	severities := make([]string, len(issues))
+	confidences := make([]float64, len(issues))
+	for i, issue := range issues {
 		severities[i] = issue.Severity
 		confidences[i] = issue.Confidence
 	}
@@ -1464,6 +1513,8 @@ func createIssuesFromResult(ctx context.Context, forgeType, owner, repo string, 
 
 	repository := fmt.Sprintf("%s/%s", owner, repo)
 	issues.EnrichIssues(repository, result.ScanID, result.Issues)
+	loadSuppressionPolicy(postCtx, repositoryID)
+	actionIssues := filterIssuesWithSuppression(repositoryID, result.Issues)
 
 	commitRef := commit
 	if commitRef == "" {
@@ -1476,7 +1527,7 @@ func createIssuesFromResult(ctx context.Context, forgeType, owner, repo string, 
 	forgeReady := (forgeType == store.ForgeTypeGitHub && githubClient != nil) ||
 		(forgeType == store.ForgeTypeGitea && giteaClient != nil)
 	if store.ShouldCreateForgeIssues(effective) && forgeReady && issueManager != nil {
-		forgeIssues := filterIssuesForForge(result.Issues, effective, config.Reporting)
+		forgeIssues := filterIssuesForForge(actionIssues, effective, config.Reporting)
 		if len(forgeIssues) > 0 {
 			issueReq := &issues.IssueCreationRequest{
 				ForgeType:  forgeType,
@@ -1512,7 +1563,7 @@ func createIssuesFromResult(ctx context.Context, forgeType, owner, repo string, 
 		if err := scanRecorder.RecordIssues(postCtx, repositoryID, result.ScanID, forgeType, result.Issues, processed); err != nil {
 			logger.Warnf("Failed to persist findings: %v", err)
 		} else {
-			maybeGenerateRemediationPlans(postCtx, repositoryID, result.Issues, processed)
+			maybeGenerateRemediationPlans(postCtx, repositoryID, actionIssues, processed)
 		}
 	}
 	maybeProcessEvidenceClosure(postCtx, owner, repo, repositoryID, result)
@@ -2058,6 +2109,16 @@ func registerControlPlaneRoutes(router *gin.Engine) {
 	if config.EvidenceClosureEnabled {
 		api.NewClosureHandler(bugbotStore, closureBridge{}).RegisterRoutes(cp)
 	}
+	if bugbotStore != nil {
+		api.NewSuppressionsHandler(bugbotStore, suppressionBridge{}).RegisterRoutes(cp)
+	}
+	if config.IssueReconciliationEnabled && bugbotStore != nil {
+		api.NewReconcileHandler(bugbotStore, reconcileBridge{}).RegisterRoutes(cp)
+	}
+	if config.CalibrationEnabled && bugbotStore != nil {
+		api.NewCalibrationHandler(bugbotStore, calibrationBridge{}).RegisterRoutes(cp)
+	}
+	api.NewAIHandler(aiStatusBridge{}).RegisterRoutes(cp)
 
 	if runnerHandler != nil && runnerCfg.SharedSecret != "" {
 		rg := router.Group("/api/v1/runner")
