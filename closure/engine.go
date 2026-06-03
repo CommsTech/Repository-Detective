@@ -3,6 +3,7 @@ package closure
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"git.commsnet.org/commstech/bugbot/issues"
@@ -119,6 +120,49 @@ func (e *Engine) CheckPatchAttemptMerge(ctx context.Context, attemptID string) (
 		return Evidence{}, err
 	}
 	return e.detectAndRecordMerge(ctx, attempt)
+}
+
+// DirectRemediationInput records closure evidence for a fix merged outside the PR workflow.
+type DirectRemediationInput struct {
+	FindingID      int64
+	RepositoryID   int64
+	Fingerprint    string
+	OriginalSource string
+	MergeCommitSHA string
+	Reason         string
+}
+
+// RecordDirectRemediation persists closure evidence for a direct-to-main remediation.
+// MergeCommitSHA must be set so Verify treats the remediation as merged (PRMerged=true).
+func (e *Engine) RecordDirectRemediation(ctx context.Context, in DirectRemediationInput) (Evidence, error) {
+	if e == nil || !e.Config.Enabled || e.Store == nil {
+		return Evidence{}, fmt.Errorf("evidence closure disabled")
+	}
+	if in.FindingID <= 0 || in.RepositoryID <= 0 {
+		return Evidence{}, fmt.Errorf("finding_id and repository_id are required")
+	}
+	mergeSHA := strings.TrimSpace(in.MergeCommitSHA)
+	if mergeSHA == "" {
+		return Evidence{}, fmt.Errorf("merge_commit_sha is required")
+	}
+	reason := strings.TrimSpace(in.Reason)
+	if reason == "" {
+		reason = "Remediation merged directly to default branch"
+	}
+	row := EvidenceRow{
+		FindingID:      in.FindingID,
+		RepositoryID:   in.RepositoryID,
+		Fingerprint:    strings.TrimSpace(in.Fingerprint),
+		MergeCommitSHA: mergeSHA,
+		OriginalSource: strings.TrimSpace(in.OriginalSource),
+		Status:         StatusPendingRescan,
+		Reason:         reason,
+	}
+	saved, err := e.Store.SaveClosureEvidence(ctx, row)
+	if err != nil {
+		return Evidence{}, err
+	}
+	return rowToEvidence(saved), nil
 }
 
 // VerifyFindingClosure verifies closure for a finding using the latest scan context.

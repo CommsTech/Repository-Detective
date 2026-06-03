@@ -292,6 +292,24 @@ func verifyFindingClosure(ctx context.Context, findingID int64) (closure.Evidenc
 	return closureEngine.VerifyFindingClosure(ctx, findingID, scanCtx)
 }
 
+func recordDirectRemediation(ctx context.Context, findingID int64, mergeCommitSHA, reason string) (closure.Evidence, error) {
+	if closureEngine == nil || bugbotStore == nil {
+		return closure.Evidence{}, fmt.Errorf("evidence closure disabled")
+	}
+	detail, err := bugbotStore.GetFindingDetail(ctx, findingID)
+	if err != nil {
+		return closure.Evidence{}, err
+	}
+	return closureEngine.RecordDirectRemediation(ctx, closure.DirectRemediationInput{
+		FindingID:      findingID,
+		RepositoryID:   detail.RepositoryID,
+		Fingerprint:    detail.Fingerprint,
+		OriginalSource: detail.Source,
+		MergeCommitSHA: mergeCommitSHA,
+		Reason:         reason,
+	})
+}
+
 type closureBridge struct{}
 
 func (closureBridge) GetClosureEvidence(c *gin.Context, findingID int64) (closure.Evidence, error) {
@@ -310,6 +328,10 @@ func (closureBridge) GetClosureEvidence(c *gin.Context, findingID int64) (closur
 
 func (closureBridge) VerifyClosure(c *gin.Context, findingID int64) (closure.Evidence, error) {
 	return verifyFindingClosure(c.Request.Context(), findingID)
+}
+
+func (closureBridge) RecordDirectRemediation(c *gin.Context, findingID int64, mergeCommitSHA, reason string) (closure.Evidence, error) {
+	return recordDirectRemediation(c.Request.Context(), findingID, mergeCommitSHA, reason)
 }
 
 func (closureBridge) CheckPatchAttemptMerge(c *gin.Context, attemptID string) (closure.Evidence, error) {

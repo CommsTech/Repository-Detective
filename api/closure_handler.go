@@ -13,6 +13,7 @@ import (
 type ClosureService interface {
 	GetClosureEvidence(c *gin.Context, findingID int64) (closure.Evidence, error)
 	VerifyClosure(c *gin.Context, findingID int64) (closure.Evidence, error)
+	RecordDirectRemediation(c *gin.Context, findingID int64, mergeCommitSHA, reason string) (closure.Evidence, error)
 	CheckPatchAttemptMerge(c *gin.Context, attemptID string) (closure.Evidence, error)
 }
 
@@ -31,6 +32,7 @@ func NewClosureHandler(s store.QueryStore, svc ClosureService) *ClosureHandler {
 func (h *ClosureHandler) RegisterRoutes(g *gin.RouterGroup) {
 	g.GET("/findings/:id/closure-evidence", h.GetClosureEvidence)
 	g.POST("/findings/:id/verify-closure", h.VerifyClosure)
+	g.POST("/findings/:id/record-direct-remediation", h.RecordDirectRemediation)
 	g.POST("/patch-attempts/:attempt_id/check-merge", h.CheckPatchAttemptMerge)
 }
 
@@ -59,6 +61,32 @@ func (h *ClosureHandler) VerifyClosure(c *gin.Context) {
 		return
 	}
 	ev, err := h.service.VerifyClosure(c, id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, toClosureEvidenceResponse(ev))
+}
+
+type recordDirectRemediationRequest struct {
+	MergeCommitSHA string `json:"merge_commit_sha" binding:"required"`
+	Reason         string `json:"reason"`
+}
+
+func (h *ClosureHandler) RecordDirectRemediation(c *gin.Context) {
+	if !h.requireStore(c) || h.service == nil {
+		return
+	}
+	id, ok := parseFindingID(c)
+	if !ok {
+		return
+	}
+	var req recordDirectRemediationRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "merge_commit_sha is required"})
+		return
+	}
+	ev, err := h.service.RecordDirectRemediation(c, id, req.MergeCommitSHA, req.Reason)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

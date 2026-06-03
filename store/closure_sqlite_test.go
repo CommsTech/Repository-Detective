@@ -39,6 +39,15 @@ func TestClosureEvidenceCRUD(t *testing.T) {
 	if got.MergeCommitSHA != "abc123" {
 		t.Fatalf("unexpected merge sha %q", got.MergeCommitSHA)
 	}
+	if got.OriginalSource != "staticcheck" {
+		t.Fatalf("unexpected original source %q", got.OriginalSource)
+	}
+	if got.Fingerprint != "fp-cl" {
+		t.Fatalf("unexpected fingerprint %q", got.Fingerprint)
+	}
+	if got.PatchAttemptID != "" {
+		t.Fatalf("expected empty patch attempt, got %q", got.PatchAttemptID)
+	}
 	got.VerificationScanID = "scan-1"
 	got.Status = store.ClosureStatusVerified
 	if err := s.UpdateClosureEvidence(ctx, got); err != nil {
