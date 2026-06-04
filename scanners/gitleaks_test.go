@@ -189,6 +189,37 @@ func TestGitleaksIsDeterministicSource(t *testing.T) {
 	}
 }
 
+func TestParseGitleaksScanOutputPrefersReportFile(t *testing.T) {
+	dir := t.TempDir()
+	stderrLogs := []byte("\x1b[90m1:37PM\x1b[0m \x1b[32mINF\x1b[0m scan completed\n\x1b[31mWRN\x1b[0m leaks found: 10\n")
+	findings, err := scanners.ParseGitleaksScanOutputForTest([]byte(gitleaksFoundJSON), stderrLogs, dir)
+	if err != nil {
+		t.Fatalf("parse error: %v", err)
+	}
+	if len(findings) != 1 {
+		t.Fatalf("expected 1 finding from report file, got %d", len(findings))
+	}
+}
+
+func TestParseGitleaksStderrANSIIgnoredWhenReportFileValid(t *testing.T) {
+	dir := t.TempDir()
+	// stderr-only ANSI brackets must not be parsed when report file is present.
+	findings, err := scanners.ParseGitleaksScanOutputForTest([]byte(gitleaksCleanJSON), []byte("\x1b[90mINF\x1b[0m no leaks\n"), dir)
+	if err != nil {
+		t.Fatalf("parse error: %v", err)
+	}
+	if len(findings) != 0 {
+		t.Fatalf("expected clean report file, got %d", len(findings))
+	}
+}
+
+func TestParseGitleaksOutputInvalidJSON(t *testing.T) {
+	_, err := scanners.ParseGitleaksOutputForTest([]byte("not-json"), t.TempDir())
+	if err == nil {
+		t.Fatal("expected parse error for invalid JSON")
+	}
+}
+
 func assertNoRawSecret(t *testing.T, value string) {
 	t.Helper()
 	if strings.Contains(value, gitleaksRawSecretNeverExpected) {

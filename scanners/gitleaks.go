@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -40,17 +41,36 @@ func runGitleaksWithCommand(ctx context.Context, logger *logrus.Logger, dir stri
 		return result
 	}
 
-	args := gitleaksArgs(dir, cfg)
+	reportFile, err := os.CreateTemp("", "gitleaks-report-*.json")
+	if err != nil {
+		result.Status = StatusFailed
+		result.Detail = fmt.Sprintf("create report file: %v", err)
+		return result
+	}
+	reportPath := reportFile.Name()
+	_ = reportFile.Close()
+	defer func() { _ = os.Remove(reportPath) }()
+
+	args := gitleaksArgs(dir, cfg, reportPath)
 	timeout := gitleaksTimeout(cfg)
 	output, err := runCommand(ctx, timeout, dir, commandName, args...)
-	if err != nil && len(output) == 0 {
+
+	reportBytes, readErr := os.ReadFile(reportPath)
+	if readErr != nil {
+		reportBytes = nil
+	}
+	parseInput := reportBytes
+	if strings.TrimSpace(string(reportBytes)) == "" {
+		parseInput = output
+	}
+	if err != nil && len(parseInput) == 0 {
 		result.Status = classifyCommandError(err)
 		result.Detail = err.Error()
 		logger.Warnf("[SCANNER:gitleaks] scan failed: status=%s err=%v", result.Status, err)
 		return result
 	}
 
-	findings, parseErr := parseGitleaksOutput(output, dir)
+	findings, parseErr := parseGitleaksScanOutput(reportBytes, output, dir)
 	if parseErr != nil {
 		result.Status = StatusParseFailed
 		result.Detail = parseErr.Error()
@@ -63,14 +83,16 @@ func runGitleaksWithCommand(ctx context.Context, logger *logrus.Logger, dir stri
 	return result
 }
 
-func gitleaksArgs(dir string, cfg Config) []string {
+func gitleaksArgs(dir string, cfg Config, reportPath string) []string {
 	args := []string{
 		"dir",
 		dir,
 		"--report-format", "json",
-		"--report-path", "-",
+		"--report-path", reportPath,
 		"--no-banner",
+		"--no-color",
 		"--redact",
+		"--log-level", "error",
 	}
 	if strings.TrimSpace(cfg.GitleaksConfig) != "" {
 		args = append(args, "--config", cfg.GitleaksConfig)
@@ -86,15 +108,28 @@ func gitleaksTimeout(cfg Config) time.Duration {
 	return time.Duration(seconds) * time.Second
 }
 
+// parseGitleaksScanOutput prefers the JSON report file (gitleaks 8.x does not write JSON to stdout for report-path "-").
+func parseGitleaksScanOutput(reportBytes, commandOutput []byte, dir string) ([]Finding, error) {
+	if strings.TrimSpace(string(stripANSI(reportBytes))) != "" {
+		return parseGitleaksOutput(reportBytes, dir)
+	}
+	return parseGitleaksOutput(commandOutput, dir)
+}
+
 func parseGitleaksOutput(output []byte, dir string) ([]Finding, error) {
-	trimmed := strings.TrimSpace(string(stripANSI(output)))
+	clean := stripANSI(output)
+	trimmed := strings.TrimSpace(string(clean))
 	if trimmed == "" {
 		return nil, nil
 	}
 
-	payload, err := extractJSONArray(output)
-	if err != nil {
-		return nil, err
+	payload := []byte(trimmed)
+	if trimmed[0] != '[' {
+		extracted, err := extractJSONArray(clean)
+		if err != nil {
+			return nil, err
+		}
+		payload = extracted
 	}
 
 	var report []gitleaksFinding

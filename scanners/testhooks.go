@@ -23,6 +23,11 @@ func ParseGitleaksOutputForTest(output []byte, dir string) ([]Finding, error) {
 	return parseGitleaksOutput(output, dir)
 }
 
+// ParseGitleaksScanOutputForTest exposes report-file-first gitleaks parsing for unit tests.
+func ParseGitleaksScanOutputForTest(reportBytes, commandOutput []byte, dir string) ([]Finding, error) {
+	return parseGitleaksScanOutput(reportBytes, commandOutput, dir)
+}
+
 // ParseSemgrepOutputForTest exposes Semgrep JSON parsing for unit tests.
 func ParseSemgrepOutputForTest(output []byte, dir string, cfg Config) (semgrepParseResult, error) {
 	return parseSemgrepOutput(output, dir, cfg)

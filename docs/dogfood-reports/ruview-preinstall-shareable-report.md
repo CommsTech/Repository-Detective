@@ -30,15 +30,15 @@ This score reflects breadth of signals (including maintainability and graph nois
 | trivy | found (16) | Dependency and config advisories |
 | semgrep | found (8) | Static patterns including CI and credential-like code |
 | hadolint | found (5) | Dockerfile hygiene |
-| gitleaks | **parse_failed** | **Inconclusive** — see below |
+| gitleaks | **found (10)** | Redacted secret-pattern scan completed (rerun `07483617`) |
 | checkov | parse_failed | IaC rules not fully applied this run |
 | grype | timed_out | Secondary SBOM scan incomplete |
 
-### Secret scanning (inconclusive)
+### Secret scanning (gitleaks completed)
 
-**Secret scanning was inconclusive because gitleaks output could not be parsed.** Semgrep and Trivy reported patterns that may relate to secret handling (for example Docker build secret usage and credential-like code patterns), but **no raw secret values are included in this report**.
+**Gitleaks completed successfully** on the post-fix rerun (`07483617-e3a5-4df1-bef2-85e6512a1aac`). **Ten** redacted credential-like patterns were reported (for example `generic-api-key` and `curl-auth-header` classes in docs, workflows, and examples). **No raw secret values** are included in this report.
 
-We recommend maintainers run **gitleaks** (or equivalent) locally on the audited commit and treat this area as **unverified** until that completes.
+An earlier audit pass (`dae05e0c`) recorded `parse_failed` due to a parser/tooling issue — see `ruview-gitleaks-parse-diagnosis.md`. Maintainers should still **triage locally** (documentation examples are common false positives).
 
 ---
 
@@ -96,12 +96,12 @@ Checkov did not contribute findings this run (parser issue). Trivy and hadolint 
 
 ---
 
-## Inconclusive checks
+## Inconclusive / partial checks
 
 | Check | Status | Guidance |
 |-------|--------|----------|
-| gitleaks | parse_failed | Rerun locally; do not assume “no secrets” |
-| checkov | parse_failed | Rerun IaC scan when parser fixed |
+| gitleaks | **found (rerun)** | Redacted patterns only — triage docs/examples |
+| checkov | parse_failed | IaC rules not fully applied this run |
 | grype | timed_out | Optional second opinion SBOM scan |
 
 ---

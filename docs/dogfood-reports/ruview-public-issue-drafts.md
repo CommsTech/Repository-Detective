@@ -14,6 +14,7 @@
 | Gradio / CVE dependency cluster | **No** | Use private channel or maintainer dependency bump PR |
 | Docker DS031 (build secrets) | **No** | Private security disclosure |
 | JWT-hardcode pattern (semgrep) | **No** | Private security disclosure |
+| gitleaks matches (any) | **No** | Private security disclosure only — redacted pattern scan |
 | GitHub Actions injection patterns | **No** | Private security disclosure |
 | axios / Rust CVE titles with attack detail | **No** | Private or dependency bump PR |
 | Container runs as root (DS002) | **Optional** | Draft below — hardening, neutral tone |

@@ -71,6 +71,9 @@ docs/dogfood-reports/*
 !docs/dogfood-reports/ruview-preinstall-shareable-report.md
 !docs/dogfood-reports/ruview-private-security-disclosure-draft.md
 !docs/dogfood-reports/ruview-public-issue-drafts.md
+!docs/dogfood-reports/ruview-gitleaks-parse-diagnosis.md
+!docs/dogfood-reports/ruview-preinstall-audit-rerun.md
+!docs/dogfood-reports/ruview-preinstall-compare.md
 
 # Configuration overrides
 config.local.yaml

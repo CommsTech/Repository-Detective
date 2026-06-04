@@ -13,7 +13,7 @@
 
 Repository Detective detected several **potential security and install-hardening concerns** during a third-party pre-install review. We recommend maintainer review before production deployment. Findings below are **scanner-reported patterns and advisory IDs**; impact depends on how components are deployed.
 
-Secret scanning via gitleaks was **inconclusive** (parser failure). Pattern-based checks (Semgrep/Trivy) still flagged items that may relate to credentials, CI trust boundaries, and dependency exposure.
+**Gitleaks** completed on the post-fix rerun: **10** redacted matches (`generic-api-key`, `curl-auth-header` classes) in documentation, workflow examples, and related paths. **No secret values** are included below. Earlier audit pass had a parser failure (fixed; see `ruview-gitleaks-parse-diagnosis.md`). Semgrep/Trivy also flagged credential and CI-trust patterns.
 
 ---
 
@@ -96,13 +96,20 @@ Review in context of whether these artifacts ship to production binaries or mobi
 
 ---
 
-## Secret scanning caveat
+## Secret scanning (gitleaks)
 
-**gitleaks:** `parse_failed` during automated audit — **secret scan inconclusive.**  
-**Semgrep/Trivy:** reported possible secret-handling and credential-like patterns only.  
+| Item | Detail |
+|------|--------|
+| Status | **found** (10 redacted matches, rerun audit) |
+| Pattern classes | `generic-api-key`, `curl-auth-header` (examples in docs/workflows) |
+| Raw values in this draft | **none** |
+
+**Recommendation:** Maintainer triage — confirm whether matches are documentation examples vs live credentials; rotate only if material is real.
+
+## Other scanners
+
+**Semgrep/Trivy:** credential-handling and CI-trust patterns (see sections above).  
 **This draft:** contains **no raw secret values.**
-
-**Recommendation:** Maintainers run gitleaks (or equivalent) locally on commit `872d7593` and address any confirmed leaks separately.
 
 ---
 
