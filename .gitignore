@@ -68,6 +68,9 @@ docs/dogfood-reports/*
 !docs/dogfood-reports/qdrant-redacted-local-test.md
 !docs/dogfood-reports/qdrant-redacted-test-result.json
 !docs/dogfood-reports/ruview-preinstall-audit.md
+!docs/dogfood-reports/ruview-preinstall-shareable-report.md
+!docs/dogfood-reports/ruview-private-security-disclosure-draft.md
+!docs/dogfood-reports/ruview-public-issue-drafts.md
 
 # Configuration overrides
 config.local.yaml

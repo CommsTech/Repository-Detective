@@ -5,7 +5,13 @@
 **Depth:** `standard`  
 **Audit ID:** `dae05e0c-4c24-441e-9c05-c8ce5db4cbe0` (operator-local; not a secret)
 
-> **Sanitized dogfood report.** Manual review required before any external sharing. No upstream issues filed, no email, no auto-submit. Qdrant and LLM auditors were off during this run.
+> **Internal operator notes (sanitized).** For external sharing, use the polished package below—not this file verbatim. No upstream issues filed, no email, no auto-submit. Qdrant and LLM auditors were off during this run.
+
+**Polished package (review before sharing):**
+
+- `ruview-preinstall-shareable-report.md` — neutral, evidence-based install assessment
+- `ruview-private-security-disclosure-draft.md` — security-sensitive items only
+- `ruview-public-issue-drafts.md` — optional public issues (non-sensitive)
 
 ---
 
@@ -27,11 +33,11 @@
 | Field | Value |
 |-------|--------|
 | **Risk score** | 100 / 100 |
-| **Recommendation** | **`do_not_install`** |
+| **Recommendation** | **`do_not_install`** — do not install until listed critical/high findings are reviewed or mitigated |
 | **Duration** | ~4m 30s |
 | **Findings stored (cap)** | 198 (summary reports 200 analyzed) |
 
-**Summary:** Multiple **critical** dependency and container misconfiguration issues, numerous **high** CVEs (Gradio, Rust/npm lockfiles, Kubernetes config), elevated CI workflow permissions, and graph signals of disconnected subsystems. Do not install or deploy until dependencies, Dockerfiles, CI permissions, and disclosed security patterns are reviewed in isolation.
+**Summary:** Repository Detective found several high-risk install concerns (dependency advisories, container configuration, CI permissions, possible secret-handling patterns) that should be reviewed before production use. This is an evidence-based scanner summary—not a claim that every item is exploitable in all deployments.
 
 ---
 
@@ -107,20 +113,13 @@ Checkov did not contribute (parse failure); rely on trivy + hadolint for this pa
 
 ## Secrets check (redacted)
 
+**Secret scanning was inconclusive because gitleaks output could not be parsed.** Semgrep/Trivy pattern checks identified possible secret-handling risks, but **no raw secret values are included in this report.** Recommend maintainers run gitleaks locally before sharing upstream.
+
 | Check | Result |
 |-------|--------|
-| gitleaks | **parse_failed** — no automated secret list |
-| semgrep secret patterns | **8** security-rule hits; evidence stored as rule titles only |
-| Risk summary flag | `secret_finding: true` in audit metadata (caution flag) |
-| Raw tokens in Qdrant / report | **none committed** |
-
-**Representative patterns (no values reproduced):**
-
-- JWT hardcoded-secret rule in test/archive Python
-- GitHub Actions injection rules in workflow YAML
-- Trivy DS031 “secrets in Docker build” (build-time secret handling)
-
-**Operator action:** Re-run gitleaks/checkov in a fixed environment before treating secrets as absent.
+| gitleaks | **parse_failed** — inconclusive (not “clean”) |
+| semgrep | **8** security-rule hits; rule titles only |
+| Raw tokens in committed reports | **none** |
 
 ---
 
@@ -160,58 +159,9 @@ Retrieve via API: `GET /api/v1/preinstall/audits/{audit_id}/reports` and `GET /a
 
 ---
 
-## Manual disclosure draft (private — review before sending)
+## Disclosure drafts
 
-> **Private security disclosure draft** — do not paste raw secrets publicly.
-
-**Subject:** Docker build secret handling + Gradio CVE cluster in RuView  
-**Repository:** https://github.com/ruvnet/RuView  
-**Commit:** `872d7593bbeeed63524386aa60e6805bb4e1b26c`
-
-**Summary:** Pre-install audit flagged **critical** misconfiguration (Docker build secrets / build-args) and **critical/high** dependency issues in Gradio-related Python requirements, plus GitHub Actions injection class findings in CI workflows.
-
-**Impact:** Potential credential leakage in images, exploitable web UI dependencies, and CI workflow injection if inputs are attacker-controlled.
-
-**Evidence:** Scanner rule IDs and paths only (see tables above). Reproduce from a local checkout at the audited commit; do not publish exploit steps.
-
-**Suggested remediation:** Remove secrets from build contexts; pin and upgrade Gradio stack; harden workflow permissions and untrusted `github.script` usage; add lockfiles; re-scan with gitleaks/checkov when parsers succeed.
-
-**Validation:** Re-run trivy/semgrep/hadolint in isolation after fixes.
-
----
-
-## Public issue draft (non-sensitive example)
-
-Suitable for upstream **public** issue after human edit (from `general_bug` draft):
-
-```markdown
-**Title:** Gradio Blocked Path ACL Bypass (CVE-2025-23042) in aether-arena requirements
-
-**Repository:** https://github.com/ruvnet/RuView
-**Commit:** `872d7593bbeeed63524386aa60e6805bb4e1b26c`
-
-## Affected location
-
-- **File:** `aether-arena/space/requirements.txt`
-- **Rule:** CVE-2025-23042
-- **Scanner:** trivy
-
-## Summary
-
-Dependency scan reported a critical Gradio ACL bypass advisory on the pinned requirements set.
-
-## Suggested fix
-
-Upgrade Gradio (and related deps) to patched versions per upstream advisory; verify with `trivy` or equivalent.
-
-## Validation
-
-Re-run dependency scanner after bump; exercise Gradio file-upload paths in a test environment.
-
----
-Generated by Repository Detective — Inspect. Analyze. Improve.
-_Review by a human before submission._
-```
+Moved to polished package files (see top of document). In-product DB drafts remain operator-local.
 
 ---
 
@@ -234,7 +184,8 @@ This markdown omits operator-specific project URLs. Configure `preinstall_report
 | Item | Status |
 |------|--------|
 | Qdrant for RuView | **Not used** (disabled; embedding/UUID fixes pending) |
-| External sharing | **Blocked** until tone/format review |
-| Re-audit | Optional after upstream fixes or scanner parser fixes |
+| External sharing | Use **polished package** files; human review still required |
+| gitleaks parser | Fix tooling, then re-audit |
+| Re-audit | After gitleaks fix and/or upstream mitigations |
 
 **Risk breakdown (from audit summary):** critical 70, high 360, medium 190, low 173, scanner_failure 25 (pre-cap counts in `risk_explanation`; stored findings capped at 200).
