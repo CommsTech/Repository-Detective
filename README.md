@@ -28,7 +28,7 @@ Then open http://localhost:8080/onboard
 
 - Scans changed files on push; scans PR diff files on pull requests
 - Runs **deterministic checks first**: static rules, [Trivy](https://github.com/aquasecurity/trivy), [Grype](https://github.com/anchore/grype), golangci-lint, ruff, shellcheck
-- Uses LLM analysis only on flagged files (or disable entirely with `BUGBOT_ENABLE_LLM_AUDITORS=false`)
+- Uses LLM analysis only on flagged files (or disable entirely with `REPOSITORY_DETECTIVE_ENABLE_LLM_AUDITORS=false`; legacy `BUGBOT_ENABLE_LLM_AUDITORS` still works)
 - Creates Gitea issues with severity, file, line, code snippet, and PoC when available
 - Supports OpenAI, Anthropic, OpenRouter, Ollama, OpenWebUI, and OpenClaw
 
@@ -65,7 +65,13 @@ Full AI provider examples: [docs/AI_PROVIDERS.md](docs/AI_PROVIDERS.md)
 | `GET /api/v1/status` | API key | Runtime info |
 | `POST /api/v1/onboard/*` | API key | Wizard backend |
 
-API key header: `X-Bugbot-API-Key: your-key`
+**Preferred** API key header:
+
+```http
+X-Repository-Detective-API-Key: your-key
+```
+
+Legacy header `X-Bugbot-API-Key` is still accepted. See [docs/BRANDING_MIGRATION.md](docs/BRANDING_MIGRATION.md).
 
 ## Documentation
 
@@ -82,6 +88,10 @@ API key header: `X-Bugbot-API-Key: your-key`
 | [docs/QDRANT.md](docs/QDRANT.md) | Semantic dedup via existing Qdrant server |
 | [docs/TESTING.md](docs/TESTING.md) | Unit tests, Docker smoke test, E2E |
 | [docs/TUNNEL.md](docs/TUNNEL.md) | Cloudflare tunnel (optional) |
+| [docs/EDITIONS.md](docs/EDITIONS.md) | Community / Commercial / Enterprise |
+| [docs/LICENSING_STRATEGY.md](docs/LICENSING_STRATEGY.md) | Proposed licensing model |
+| [docs/AUTH_RBAC_PLAN.md](docs/AUTH_RBAC_PLAN.md) | Multi-user auth design (not implemented) |
+| [docs/BETA_READINESS.md](docs/BETA_READINESS.md) | Private beta checklist |
 
 ## Development
 
@@ -94,4 +104,4 @@ See [docs/TESTING.md](docs/TESTING.md) for CI parity checks, Docker smoke tests,
 
 ## License
 
-MIT
+**Planning:** Community Edition under [AGPL-3.0-or-later](docs/LICENSING_STRATEGY.md) (proposed); Commercial/Enterprise under a separate paid license. **Not yet finalized** — see [docs/LICENSING_STRATEGY.md](docs/LICENSING_STRATEGY.md). Current tree may still reference MIT until legal review.

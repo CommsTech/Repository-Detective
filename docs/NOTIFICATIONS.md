@@ -116,7 +116,7 @@ Cooldown applies per repository + event type (default 300 seconds). Duplicate bu
 Requires API key auth (same as other control-plane routes).
 
 ```bash
-curl -X POST -H "X-Bugbot-API-Key: $KEY" "$BASE/api/v1/notifications/test"
+curl -X POST -H "X-Repository-Detective-API-Key: $REPOSITORY_DETECTIVE_API_KEY" "$BASE/api/v1/notifications/test"
 ```
 
 ## Integration points

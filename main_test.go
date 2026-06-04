@@ -1,8 +1,11 @@
 package main
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
+	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
 )
 
@@ -57,5 +60,62 @@ func TestGiteaStatusConfigDefaults(t *testing.T) {
 	}
 	if !cfg.GiteaStatusIncludeScannerFailures {
 		t.Fatal("expected scanner failure inclusion default true")
+	}
+}
+
+func TestRequireAPIKeyAuthAcceptsPreferredAndLegacyHeaders(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	saved := config
+	defer func() { config = saved }()
+	config = &Config{APIKey: "test-secret-key"}
+
+	r := gin.New()
+	r.GET("/protected", requireAPIKeyAuth(), func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	cases := []struct {
+		name       string
+		setHeaders func(*http.Request)
+		wantStatus int
+	}{
+		{
+			name: "preferred X-Repository-Detective-API-Key",
+			setHeaders: func(req *http.Request) {
+				req.Header.Set("X-Repository-Detective-API-Key", "test-secret-key")
+			},
+			wantStatus: http.StatusOK,
+		},
+		{
+			name: "legacy X-Bugbot-API-Key",
+			setHeaders: func(req *http.Request) {
+				req.Header.Set("X-Bugbot-API-Key", "test-secret-key")
+			},
+			wantStatus: http.StatusOK,
+		},
+		{
+			name:       "missing key",
+			setHeaders: func(req *http.Request) {},
+			wantStatus: http.StatusUnauthorized,
+		},
+		{
+			name: "wrong key on preferred header",
+			setHeaders: func(req *http.Request) {
+				req.Header.Set("X-Repository-Detective-API-Key", "wrong")
+			},
+			wantStatus: http.StatusUnauthorized,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "/protected", nil)
+			tc.setHeaders(req)
+			w := httptest.NewRecorder()
+			r.ServeHTTP(w, req)
+			if w.Code != tc.wantStatus {
+				t.Fatalf("expected %d, got %d body=%s", tc.wantStatus, w.Code, w.Body.String())
+			}
+		})
 	}
 }

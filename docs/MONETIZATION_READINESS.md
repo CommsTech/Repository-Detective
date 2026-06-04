@@ -30,7 +30,15 @@ This document tracks what revenue paths are open today versus what requires futu
 
 ## Next unlock for monetization
 
-**Auth/RBAC** — not more scanners.
+**Auth/RBAC** (Commercial) and **edition feature gates** (Commercial/Enterprise) — not more scanners.
+
+| Tier | Path |
+|------|------|
+| Community | Default today — API key, AGPL proposed |
+| Commercial | Auth/RBAC + license — [COMMERCIAL_ENTERPRISE.md](COMMERCIAL_ENTERPRISE.md) |
+| Enterprise | SSO, HA, policy packs — same binary, expanded capabilities |
+
+See [EDITIONS.md](EDITIONS.md) and [LICENSING_STRATEGY.md](LICENSING_STRATEGY.md).
 
 Recommended sequence:
 
@@ -52,7 +60,7 @@ Recommended sequence:
 | **Team** | Small AppSec team | Multi-user RBAC, repo grants, audit log |
 | **SaaS** | Self-service | OIDC, billing, tenant isolation, SLA |
 
-No billing code exists. Do not implement until Auth/RBAC phases 1–5 are stable.
+No billing or **license enforcement** code exists. Do not implement until Auth/RBAC phases 1–5 are stable and beta week completes.
 
 ---
 
@@ -60,5 +68,9 @@ No billing code exists. Do not implement until Auth/RBAC phases 1–5 are stable
 
 - [BETA_READINESS.md](BETA_READINESS.md)
 - [AUTH_RBAC_PLAN.md](AUTH_RBAC_PLAN.md)
+- [EDITIONS.md](EDITIONS.md)
+- [LICENSING_STRATEGY.md](LICENSING_STRATEGY.md)
+- [COMMUNITY_EDITION.md](COMMUNITY_EDITION.md)
+- [COMMERCIAL_ENTERPRISE.md](COMMERCIAL_ENTERPRISE.md)
 - [POLICY.md](POLICY.md)
 - [PRIVACY.md](PRIVACY.md)

@@ -1,49 +1,53 @@
 # Onboarding Web UI
 
-Bugbot includes a browser-based setup wizard for connecting Gitea repositories without hand-editing webhooks.
+Repository Detective includes a browser-based setup wizard for connecting Gitea repositories without hand-editing webhooks.
 
 ## Access
 
 | URL | Auth |
 |-----|------|
-| `http://your-bugbot-host:8080/onboard` | Public (UI only) |
-| `http://your-bugbot-host:8080/` | Redirects to `/onboard` |
+| `http://your-host:8080/onboard` | Public (UI only) |
+| `http://your-host:8080/` | Redirects to `/onboard` |
 
-API calls from the wizard require the Bugbot API key (`BUGBOT_API_KEY` / `api_key` in config). Send it as header:
+API calls from the wizard require the operator API key (`REPOSITORY_DETECTIVE_API_KEY` in `.env`; legacy `BUGBOT_API_KEY` still works). **Preferred** header:
 
+```http
+X-Repository-Detective-API-Key: your-api-key
 ```
-X-Bugbot-API-Key: your-api-key
-```
+
+Legacy header `X-Bugbot-API-Key` is still accepted.
 
 ## Wizard steps
 
-1. **Connection settings** — Gitea URL, access token, Bugbot public URL, webhook secret, API key
+1. **Connection settings** — Gitea URL, access token, public URL, webhook secret, API key
 2. **AI provider** — provider, base URL, API key, model (test connection before continuing)
 3. **Select repositories** — loads repos visible to your token
 4. **Register webhooks** — creates push + pull request hooks on selected repos
-5. **Environment export** — copy/paste variables for Docker or systemd deployment
+5. **Environment export** — copy/paste `REPOSITORY_DETECTIVE_*` variables for Docker or systemd deployment
 
 ## Required configuration
 
-Set `public_url` so Gitea can reach Bugbot for webhooks:
+Set `public_url` so Gitea can reach Repository Detective for webhooks:
 
 ```yaml
-public_url: "https://bugbot.example.com"
+public_url: "https://detective.example.com"
 ```
 
-If Bugbot runs on an internal network and Gitea is public, expose Bugbot via port forward, reverse proxy, or tunnel — see [docs/NETWORKING.md](docs/NETWORKING.md). Cloudflare tunnel is optional ([TUNNEL.md](docs/TUNNEL.md)).
+If the service runs on an internal network and Gitea is public, expose it via port forward, reverse proxy, or tunnel — see [docs/NETWORKING.md](NETWORKING.md). Cloudflare tunnel is optional ([TUNNEL.md](TUNNEL.md)).
 
 Or environment variable:
 
 ```bash
-BUGBOT_PUBLIC_URL=https://bugbot.example.com
+REPOSITORY_DETECTIVE_PUBLIC_URL=https://detective.example.com
 ```
+
+Legacy: `BUGBOT_PUBLIC_URL` still works.
 
 The wizard registers hooks at `{public_url}/webhook`.
 
 ## API endpoints
 
-All endpoints are under `/api/v1/onboard/` and require `X-Bugbot-API-Key`.
+All endpoints are under `/api/v1/onboard/` and require the API key header (preferred: `X-Repository-Detective-API-Key`).
 
 | Method | Path | Purpose |
 |--------|------|---------|
@@ -57,7 +61,7 @@ All endpoints are under `/api/v1/onboard/` and require `X-Bugbot-API-Key`.
 
 ```bash
 curl -X POST http://localhost:8080/api/v1/onboard/test-gitea \
-  -H "X-Bugbot-API-Key: your-key" \
+  -H "X-Repository-Detective-API-Key: your-key" \
   -H "Content-Type: application/json" \
   -d '{"gitea_url":"https://git.example.com","gitea_token":"your-token"}'
 ```
@@ -66,12 +70,12 @@ curl -X POST http://localhost:8080/api/v1/onboard/test-gitea \
 
 ```bash
 curl -X POST http://localhost:8080/api/v1/onboard/webhooks \
-  -H "X-Bugbot-API-Key: your-key" \
+  -H "X-Repository-Detective-API-Key: your-key" \
   -H "Content-Type: application/json" \
   -d '{
     "gitea_url": "https://git.example.com",
     "gitea_token": "your-token",
-    "public_url": "https://bugbot.example.com",
+    "public_url": "https://detective.example.com",
     "webhook_secret": "shared-secret",
     "repositories": ["org/repo1", "org/repo2"]
   }'
@@ -79,19 +83,14 @@ curl -X POST http://localhost:8080/api/v1/onboard/webhooks \
 
 ## Token permissions
 
-The Gitea token used for onboarding needs:
+Your Gitea personal access token needs at least:
 
-- Read access to repositories you want to scan
-- Write access to repository hooks (for webhook registration)
-- Write access to issues (if `auto_create_issues` is enabled)
+- `read:repository`
+- `write:repository` (webhook registration)
+- `write:issue` (if auto-creating issues)
 
-## Manual webhook setup
+## Related
 
-If you prefer not to use the wizard, configure Gitea webhooks manually:
-
-- **URL**: `{BUGBOT_PUBLIC_URL}/webhook`
-- **Content type**: `application/json`
-- **Secret**: same string as `BUGBOT_WEBHOOK_SECRET` (Gitea HMAC-SHA256 signs the request body; Bugbot validates the `X-Gitea-Signature` header)
-- **Events**: Push, Pull request
-
-See also [AI_PROVIDERS.md](AI_PROVIDERS.md) for AI backend configuration.
+- [SETUP.md](SETUP.md) — full deployment walkthrough
+- [BRANDING_MIGRATION.md](BRANDING_MIGRATION.md) — legacy Bugbot compatibility
+- [NAMING.md](NAMING.md) — product naming rules

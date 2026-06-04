@@ -2,14 +2,11 @@ const selectedRepos = new Set();
 
 function apiHeaders() {
   const key = document.getElementById('apiKey').value.trim();
-  const headerName = 'X-Repository-Detective-API-Key';
-  const legacyHeader = 'X-Bugbot-API-Key';
   if (!key) {
     return { 'Content-Type': 'application/json' };
   }
   return {
-    [headerName]: key,
-    [legacyHeader]: key,
+    'X-Repository-Detective-API-Key': key,
     'Content-Type': 'application/json',
   };
 }

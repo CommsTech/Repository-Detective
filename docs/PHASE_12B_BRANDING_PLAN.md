@@ -48,7 +48,7 @@ Never break old scans, issues, or integrations.
 | Fingerprint value | `bugbot-<hex>` | Same algorithm | Same `bugbot-` prefix | **Do not change** — breaks dedup |
 | Issue search | Labels `bugbot` | Labels `repository-detective` | Search both label sets | `FindIssueByFingerprint` |
 | Status context | `bugbot/security-scan` | Configurable; default new name | New default, old accepted | |
-| API header | `X-Bugbot-API-Key` | Optional alias `X-Repository-Detective-API-Key` | Accept both | Document both |
+| API header | **Preferred:** `X-Repository-Detective-API-Key` | **Legacy accepted:** `X-Bugbot-API-Key` | Accept both | Document preferred first |
 | API routes | `/api/v1/*` | Same | Same | No breaking rename |
 | DB tables | `findings`, `repo_settings`, … | Same | Same | Display name only in UI |
 | Docker image / binary | `bugbot` | Optional tag alias | Gradual | Out of scope for 12B code |
@@ -186,7 +186,7 @@ label_compat_mode: dual   # dual | new_only | legacy_only
 
 **Optional (12B or later):**
 
-- Accept `X-Repository-Detective-API-Key` as alias for `X-Bugbot-API-Key`
+- Accept both `X-Repository-Detective-API-Key` (preferred) and legacy `X-Bugbot-API-Key`
 - Future branded path group `/api/v1/repository-detective/*` as thin alias — **not required for 12B**
 
 **Tests required:**

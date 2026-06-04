@@ -101,6 +101,11 @@ See [examples/](examples/) for copy-paste YAML profiles:
 | Document | Description |
 |----------|-------------|
 | [BRANDING_MIGRATION.md](BRANDING_MIGRATION.md) | Bugbot → Repository Detective migration |
+| [BRANDING_COMPATIBILITY_AUDIT.md](BRANDING_COMPATIBILITY_AUDIT.md) | Preferred vs legacy naming audit |
+| [EDITIONS.md](EDITIONS.md) | Community / Commercial / Enterprise matrix |
+| [LICENSING_STRATEGY.md](LICENSING_STRATEGY.md) | Proposed AGPL + commercial licensing |
+| [COMMUNITY_EDITION.md](COMMUNITY_EDITION.md) | Community scope and limits |
+| [COMMERCIAL_ENTERPRISE.md](COMMERCIAL_ENTERPRISE.md) | Paid tiers and feature-gate plan |
 | [SCANNER_ROADMAP.md](SCANNER_ROADMAP.md) | Future scanner plans (not shipped) |
 | [REPO_GUARDIAN_ARCHITECTURE.md](REPO_GUARDIAN_ARCHITECTURE.md) | Historical architecture notes (superseded naming) |
 

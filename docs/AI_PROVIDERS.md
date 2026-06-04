@@ -1,6 +1,6 @@
 # AI Provider Configuration
 
-Gitea Bugbot uses a **provider-agnostic AI layer**. All CAH pipeline stages (Prepare, Scan, Validate, Prove) call the same chat interface regardless of backend.
+Repository Detective uses a **provider-agnostic AI layer**. All CAH pipeline stages (Prepare, Scan, Validate, Prove) call the same chat interface regardless of backend.
 
 ## Supported Providers
 
@@ -29,10 +29,12 @@ ai_model: "gpt-4o-mini"
 ### Environment Variables
 
 ```bash
-BUGBOT_AI_PROVIDER=anthropic
-BUGBOT_AI_API_KEY=sk-ant-...
-BUGBOT_AI_MODEL=claude-3-5-sonnet-latest
+REPOSITORY_DETECTIVE_AI_PROVIDER=anthropic
+REPOSITORY_DETECTIVE_AI_API_KEY=sk-ant-...
+REPOSITORY_DETECTIVE_AI_MODEL=claude-3-5-sonnet-latest
 ```
+
+Legacy `BUGBOT_AI_*` env vars remain supported.
 
 ### Legacy OpenWebUI
 
@@ -97,7 +99,7 @@ OpenClaw exposes an OpenAI-compatible `/v1/chat/completions` endpoint on the gat
 }
 ```
 
-Bugbot config:
+Repository Detective config:
 
 ```yaml
 ai_provider: openclaw
@@ -119,13 +121,15 @@ analyzers/engine.go
 
 ## Testing Connection
 
-On startup Bugbot calls `TestConnection()` against the configured provider unless `skip_startup_checks: true`.
+On startup Repository Detective calls `TestConnection()` against the configured provider unless `skip_startup_checks: true`.
 
 Check runtime status:
 
 ```bash
-curl -H "X-Bugbot-API-Key: $BUGBOT_API_KEY" http://localhost:8080/api/v1/status
+curl -H "X-Repository-Detective-API-Key: $REPOSITORY_DETECTIVE_API_KEY" http://localhost:8080/api/v1/status
 ```
+
+(Legacy header `X-Bugbot-API-Key` and env `BUGBOT_API_KEY` still work.)
 
 Response includes `ai_provider` and `ai_model`.
 

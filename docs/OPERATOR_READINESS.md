@@ -167,7 +167,7 @@ Copy-paste examples: [examples/deterministic-standard.yaml](examples/determinist
 
 ```bash
 curl -s http://localhost:8080/health | jq .
-curl -s -H "X-Bugbot-API-Key: $API_KEY" http://localhost:8080/api/v1/status | jq .
+curl -s -H "X-Repository-Detective-API-Key: $REPOSITORY_DETECTIVE_API_KEY" http://localhost:8080/api/v1/status | jq .
 curl -s http://localhost:8080/api/v1/about | jq .
 ```
 

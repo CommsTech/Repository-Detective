@@ -1,6 +1,6 @@
 # Testing
 
-How to verify Bugbot locally before deploying.
+How to verify Repository Detective locally before deploying.
 
 ## Unit tests
 
@@ -81,7 +81,7 @@ All five commands should print version info.
 
 ```bash
 curl -X POST http://127.0.0.1:8081/api/v1/analyze \
-  -H "X-Bugbot-API-Key: $BUGBOT_API_KEY" \
+  -H "X-Repository-Detective-API-Key: $REPOSITORY_DETECTIVE_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"owner":"org","repo":"repo","ref":"main"}'
 ```

@@ -74,7 +74,7 @@ Works with legacy `docker-compose` 1.x as well as `docker compose` v2.
 
 ```bash
 curl -m 5 http://127.0.0.1:8081/health
-curl -H "X-Bugbot-API-Key: $BUGBOT_API_KEY" http://127.0.0.1:8081/api/v1/status
+curl -H "X-Repository-Detective-API-Key: $REPOSITORY_DETECTIVE_API_KEY" http://127.0.0.1:8081/api/v1/status
 docker logs repository-detective --tail 50
 ```
 

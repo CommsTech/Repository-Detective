@@ -14,7 +14,7 @@ This document describes the migration from **API-key-only homelab mode** to **au
 |--------|----------|
 | **Identity** | None — all callers share one operator secret |
 | **Config** | Single `api_key` in `config.yaml` / `REPOSITORY_DETECTIVE_API_KEY` |
-| **API auth** | `X-Repository-Detective-API-Key`, `X-Bugbot-API-Key`, `Authorization: Bearer`, or `?api_key=` query |
+| **API auth** | **Preferred:** `X-Repository-Detective-API-Key`. **Legacy accepted:** `X-Bugbot-API-Key`, `Authorization: Bearer`, or `?api_key=` query |
 | **UI auth** | Same global API key passed in query string or header |
 | **UI CSRF** | HMAC token derived from global API key (`internal/security/csrf.go`) — mitigates form POST abuse when key is in URL |
 | **Runner auth** | Separate HMAC on `/api/v1/runner/*` — unchanged by user auth |
@@ -452,4 +452,6 @@ CREATE INDEX idx_api_tokens_user ON api_tokens(user_id);
 - [BETA_READINESS.md](BETA_READINESS.md)
 - [SECURITY_HARDENING.md](SECURITY_HARDENING.md)
 - [MONETIZATION_READINESS.md](MONETIZATION_READINESS.md)
+- [EDITIONS.md](EDITIONS.md)
+- [BRANDING_COMPATIBILITY_AUDIT.md](BRANDING_COMPATIBILITY_AUDIT.md)
 - [PRIVACY.md](PRIVACY.md)

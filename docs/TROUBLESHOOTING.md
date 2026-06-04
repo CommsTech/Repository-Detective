@@ -109,7 +109,7 @@ Quick mitigations:
 
 ## Wizard API returns 401
 
-`X-Bugbot-API-Key` must match `BUGBOT_API_KEY` in `.env`.
+`X-Repository-Detective-API-Key` must match `REPOSITORY_DETECTIVE_API_KEY` in `.env` (legacy `X-Bugbot-API-Key` / `BUGBOT_API_KEY` still accepted).
 
 ---
 

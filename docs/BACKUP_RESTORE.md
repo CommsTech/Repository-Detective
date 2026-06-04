@@ -74,7 +74,7 @@ Back up the Qdrant storage volume or snapshot per your Qdrant deployment docs. R
 ```bash
 # 1. Baseline
 curl -s http://127.0.0.1:8081/health | jq .
-curl -s -H "X-Bugbot-API-Key: $API_KEY" http://127.0.0.1:8081/api/v1/dashboard/summary | jq .
+curl -s -H "X-Repository-Detective-API-Key: $REPOSITORY_DETECTIVE_API_KEY" http://127.0.0.1:8081/api/v1/dashboard/summary | jq .
 
 # 2. Stop
 docker stop repository-detective
@@ -105,10 +105,10 @@ docker run -d --name rd-restore-drill --network host --env-file .env \
 
 # 6. Validate
 curl -s http://127.0.0.1:18082/health | jq .
-curl -s -H "X-Bugbot-API-Key: $API_KEY" http://127.0.0.1:18082/api/v1/dashboard/summary | jq .
+curl -s -H "X-Repository-Detective-API-Key: $REPOSITORY_DETECTIVE_API_KEY" http://127.0.0.1:18082/api/v1/dashboard/summary | jq .
 
 # 7. Post-restore manual scan
-curl -s -X POST -H "X-Bugbot-API-Key: $API_KEY" -H "Content-Type: application/json" \
+curl -s -X POST -H "X-Repository-Detective-API-Key: $REPOSITORY_DETECTIVE_API_KEY" -H "Content-Type: application/json" \
   http://127.0.0.1:18082/api/v1/analyze \
   -d '{"owner":"commstech","repository":"Bugbot","ref":"main","scan_profile":"fast"}'
 

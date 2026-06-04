@@ -172,7 +172,7 @@ curl -s -H "X-Repository-Detective-API-Key: $KEY" "$BASE/api/v1/dashboard/summar
 Legacy header (equivalent):
 
 ```bash
-curl -s -H "X-Bugbot-API-Key: $KEY" "$BASE/api/v1/status" | jq .
+curl -s -H "X-Repository-Detective-API-Key: $REPOSITORY_DETECTIVE_API_KEY" "$BASE/api/v1/status" | jq .
 ```
 
 ---

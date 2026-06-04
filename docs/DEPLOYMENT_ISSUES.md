@@ -119,6 +119,6 @@ Repository: https://git.commsnet.org/commstech/Bugbot
 | `http://192.168.255.10:8081/health` | Health check (no auth) |
 | `http://192.168.255.10:8081/onboard/` | Setup wizard |
 | `http://192.168.255.10:8081/ui?api_key=…` | Operator dashboard |
-| `http://192.168.255.10:8081/api/v1/status` | API (header `X-Bugbot-API-Key`) |
+| `http://192.168.255.10:8081/api/v1/status` | API (header `X-Repository-Detective-API-Key`; legacy `X-Bugbot-API-Key` accepted) |
 
 **Note:** Bugbot listens on port **8081**, not 80. Include `:8081` unless a reverse proxy maps 443/80 → 8081.

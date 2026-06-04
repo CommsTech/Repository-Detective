@@ -14,7 +14,7 @@
   var cyContainer = document.getElementById('cy');
 
   function headers() {
-    return apiKey ? { 'X-Bugbot-API-Key': apiKey } : {};
+    return apiKey ? { 'X-Repository-Detective-API-Key': apiKey } : {};
   }
 
   function setStatus(text, isError) {

@@ -109,11 +109,11 @@ Per-repo AI policy: use `ai_policy: disabled` unless explicitly testing LLM feat
 
 ## Next engineering phase (recommended order)
 
-1. **Auth/RBAC design** — [AUTH_RBAC_PLAN.md](AUTH_RBAC_PLAN.md) (design complete; implement in small slices after beta week)  
-2. **Operator docs polish** — onboard another homelab without babysitting  
-3. **Paid manual assessment workflow** — pre-install package + human review SOP  
-4. **Health endpoint performance** — cache scanner availability  
-5. **Qdrant production path** — after embedding + UUID fixes  
+1. **Beta freeze week** — track issues/FPs/scanner failures only (no feature work)  
+2. **Auth/RBAC implementation** — [AUTH_RBAC_PLAN.md](AUTH_RBAC_PLAN.md) in small slices (Commercial unlock)  
+3. **Edition / license gates** — [EDITIONS.md](EDITIONS.md) (after beta feedback; not enforced yet)  
+4. **Operator docs polish** — onboard another homelab without babysitting  
+5. **Paid manual assessment workflow** — pre-install package + human review SOP  
 
 Do **not** expand scanners or RuView dogfood until another operator completes a successful beta week.
 
@@ -145,3 +145,6 @@ No feature work unless a **blocks-private-beta** defect appears.
 - [QDRANT.md](QDRANT.md)
 - [AUTH_RBAC_PLAN.md](AUTH_RBAC_PLAN.md)
 - [MONETIZATION_READINESS.md](MONETIZATION_READINESS.md)
+- [EDITIONS.md](EDITIONS.md)
+- [LICENSING_STRATEGY.md](LICENSING_STRATEGY.md)
+- [BRANDING_COMPATIBILITY_AUDIT.md](BRANDING_COMPATIBILITY_AUDIT.md)

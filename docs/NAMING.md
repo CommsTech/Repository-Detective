@@ -18,7 +18,7 @@ Branding compatibility migration is **implemented**. See [BRANDING_MIGRATION.md]
 | Label compat modes (`dual`, `legacy_only`, `new_only`) | Shipped |
 | Dual fingerprint body markers | Shipped |
 | Fingerprint values (`bugbot-<hex>`) | Unchanged |
-| API header alias | Shipped |
+| API header alias | Shipped — preferred `X-Repository-Detective-API-Key`; legacy `X-Bugbot-API-Key` accepted |
 | `/api/v1/about` | Shipped |
 | DB table / API path renames | Not in scope |
 

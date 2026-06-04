@@ -47,11 +47,11 @@ Runner binary also accepts `REPOSITORY_DETECTIVE_CORE_URL`, `REPOSITORY_DETECTIV
 
 ## API authentication
 
-Both headers are accepted (new first):
+Both headers are accepted (**preferred first**):
 
 ```text
-X-Repository-Detective-API-Key
-X-Bugbot-API-Key
+X-Repository-Detective-API-Key    ← preferred
+X-Bugbot-API-Key                  ← legacy, still accepted
 ```
 
 Query parameter `api_key` still works for UI links.
