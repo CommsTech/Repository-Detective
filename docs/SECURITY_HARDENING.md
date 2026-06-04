@@ -114,7 +114,7 @@ staticcheck ./...  # clean after Phase 9.5 cleanup (May 2026)
 | API key in UI query string | Convenience for browser UI; documented; use header auth in production |
 | DNS rebinding during long git clone | Re-check at clone start; full TOCTOU elimination needs connect-time pinning (backlog) |
 | Git HTTP redirects | Git may follow redirects; mitigated by re-validation + HTTPS-only clone URL normalization |
-| No CSRF for API JSON clients | API writes require `X-Bugbot-API-Key`; not cookie-session based |
+| No CSRF for API JSON clients | API writes require `X-Bugbot-API-Key` or Bearer token; not cookie-session based (session CSRF planned in AUTH_RBAC phase 1) |
 | Scanner binaries are trusted | External tools (trivy, semgrep, etc.) run with minimal env but full PATH |
 | SQLite file permissions | Operator must protect `database_path` at OS level |
 | Rate limiting on pre-install audits | Global webhook rate limit exists; dedicated audit rate limit is backlog |
@@ -123,8 +123,8 @@ staticcheck ./...  # clean after Phase 9.5 cleanup (May 2026)
 
 1. **Connect-time SSRF pinning** — resolve and connect to validated IP set; reject connection to other addresses.
 2. **Pre-install audit rate limiting** — per-operator and global concurrency caps for clone jobs.
-3. **Session-based UI auth** — replace query-string API keys for browser use.
-4. **Structured audit logging** — security events without sensitive payloads.
+3. **Session-based UI auth** — replace query-string API keys for browser use. Design: [AUTH_RBAC_PLAN.md](AUTH_RBAC_PLAN.md) (phases 1–2).
+4. **Structured audit logging** — security events without sensitive payloads. Schema in AUTH_RBAC plan §11.
 5. **gosec/staticcheck in CI** — optional pipeline step when tooling is available.
 6. **Dependency scanning** — `govulncheck` in release pipeline.
 

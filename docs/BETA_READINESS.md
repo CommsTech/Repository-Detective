@@ -2,9 +2,9 @@
 
 **Product:** Repository Detective — Inspect. Analyze. Improve.  
 **Checkpoint date:** 2026-06-04 (UTC)  
-**Branch:** `main` @ post-cleanup commit
+**Branch:** `main` @ `af89214` (synced with `origin/main`)
 
-This document is the **go/no-go checklist** for handing the product to another operator on a homelab or single-tenant host. It is not SaaS-ready.
+Private beta **freeze week** is active: no new scanners, features, or Qdrant enablement. Track issues, false positives, scanner failures, reconciliation, scores, UI friction, and scan duration only.
 
 ---
 
@@ -109,13 +109,30 @@ Per-repo AI policy: use `ai_policy: disabled` unless explicitly testing LLM feat
 
 ## Next engineering phase (recommended order)
 
-1. **Auth/RBAC design** — single-admin login → org/team model  
+1. **Auth/RBAC design** — [AUTH_RBAC_PLAN.md](AUTH_RBAC_PLAN.md) (design complete; implement in small slices after beta week)  
 2. **Operator docs polish** — onboard another homelab without babysitting  
 3. **Paid manual assessment workflow** — pre-install package + human review SOP  
 4. **Health endpoint performance** — cache scanner availability  
 5. **Qdrant production path** — after embedding + UUID fixes  
 
 Do **not** expand scanners or RuView dogfood until another operator completes a successful beta week.
+
+---
+
+## Beta week tracking (operator checklist)
+
+During the freeze week, log only:
+
+- New issues created  
+- False positives  
+- Scanner failures  
+- Reconciliation results  
+- Score accuracy  
+- Operator friction  
+- UI bugs  
+- Scan duration  
+
+No feature work unless a **blocks-private-beta** defect appears.
 
 ---
 
@@ -126,3 +143,5 @@ Do **not** expand scanners or RuView dogfood until another operator completes a 
 - [POLICY.md](POLICY.md)
 - [PRIVACY.md](PRIVACY.md)
 - [QDRANT.md](QDRANT.md)
+- [AUTH_RBAC_PLAN.md](AUTH_RBAC_PLAN.md)
+- [MONETIZATION_READINESS.md](MONETIZATION_READINESS.md)
