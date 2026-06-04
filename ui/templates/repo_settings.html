@@ -124,6 +124,26 @@
 <button type="submit">Save</button>
 </div></form>
 <p class="rd-muted">Effective schedule: enabled={{.Data.Effective.ScheduleEnabled}} cron={{.Data.Effective.ScheduleCron}}</p>
+
+<div class="rd-card">
+  <div class="rd-card-head"><h2>Active suppressions</h2><span class="rd-chip">{{len .Data.Suppressions}}</span></div>
+  <p class="rd-muted">Repo-scoped and global rules that hide matching findings from issues, PR gates, and remediation. Use the <a class="rd-link" href="{{$.BasePath}}/findings?repo_id={{.Data.Repo.ID}}{{if $.APIKey}}&amp;api_key={{$.APIKey}}{{end}}">findings queue</a> to mark false positives.</p>
+  <table class="rd-table">
+    <thead><tr><th>Scope</th><th>Match</th><th>Reason</th><th>Expires</th></tr></thead>
+    <tbody>
+    {{range .Data.Suppressions}}
+    <tr>
+      <td>{{.Scope}}</td>
+      <td class="rd-muted"><code>{{if .Fingerprint}}{{.Fingerprint}}{{else}}{{.RuleID}}{{if .Source}} / {{.Source}}{{end}}{{end}}</code></td>
+      <td>{{.Reason}}</td>
+      <td class="rd-muted">{{if .ExpiresAt}}{{.ExpiresAt.Format "2006-01-02"}}{{else}}—{{end}}</td>
+    </tr>
+    {{else}}
+    <tr><td colspan="4" class="rd-muted">No active suppressions for this repository.</td></tr>
+    {{end}}
+    </tbody>
+  </table>
+</div>
 {{template "foot" .}}
 </body></html>
 {{end}}

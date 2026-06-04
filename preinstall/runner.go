@@ -217,7 +217,7 @@ func (r *Runner) runAudit(auditID string, parsed ParsedRepoURL, depth string) {
 		storedFindings = findings
 	}
 
-	for _, report := range GenerateReports(req, storedFindings, scannerResults) {
+	for _, report := range GenerateReports(r.cfg, req, storedFindings, scannerResults) {
 		report.AuditID = auditID
 		if _, err := r.store.AddDisclosureReport(ctx, report); err != nil {
 			r.logger.Errorf("preinstall audit %s report: %v", auditID, err)

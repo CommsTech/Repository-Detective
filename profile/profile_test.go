@@ -133,7 +133,7 @@ func TestNormalizeHighSeveritySourceAutoIssue(t *testing.T) {
 
 func TestDecideActionLowSeverityReportOnly(t *testing.T) {
 	cfg := profile.DefaultReportingConfig()
-	action, _ := profile.DecideAction("low", "code_quality", profile.SourceTypeSource, 0.6, cfg, profile.DefaultFalsePositiveReductionConfig())
+	action, _ := profile.DecideAction("low", "code_quality", profile.SourceTypeSource, "", 0.6, cfg, profile.DefaultFalsePositiveReductionConfig())
 	if action != profile.ActionReportOnly {
 		t.Fatalf("expected report_only for low severity, got %s", action)
 	}
@@ -203,6 +203,30 @@ func TestIssueTemplateDetection(t *testing.T) {
 	}
 }
 
+func TestBetaNoiseRulesReportOnlyForStandardProfile(t *testing.T) {
+	cfg := profile.ReportingForScanProfile(profile.DefaultReportingConfig(), "beta_standard")
+	action, _ := profile.DecideAction("medium", "maintainability", profile.SourceTypeSource, "GRAPH-ORPHAN-FILE", 0.9, cfg, profile.DefaultFalsePositiveReductionConfig())
+	if action != profile.ActionReportOnly {
+		t.Fatalf("expected report_only for graph orphan, got %s", action)
+	}
+}
+
+func TestBetaNoiseRulesNotAppliedForMaintainerDeep(t *testing.T) {
+	cfg := profile.ReportingForScanProfile(profile.DefaultReportingConfig(), "maintainer_deep")
+	action, _ := profile.DecideAction("medium", "maintainability", profile.SourceTypeSource, "GRAPH-ORPHAN-FILE", 0.9, cfg, profile.DefaultFalsePositiveReductionConfig())
+	if action != profile.ActionManualReview {
+		t.Fatalf("maintainer_deep should not force report_only for graph findings, got %s", action)
+	}
+}
+
+func TestQualDebugReportOnlyByCategory(t *testing.T) {
+	cfg := profile.DefaultReportingConfig()
+	action, _ := profile.DecideAction("low", "quality", profile.SourceTypeSource, "QUAL-DEBUG", 0.8, cfg, profile.DefaultFalsePositiveReductionConfig())
+	if action != profile.ActionReportOnly {
+		t.Fatalf("expected report_only for QUAL-DEBUG via quality category, got %s", action)
+	}
+}
+
 func TestMaxIssuesGateViaReportingConfig(t *testing.T) {
 	cfg := profile.DefaultReportingConfig()
 	if cfg.MaxIssuesPerScan != 25 {
@@ -214,7 +238,7 @@ func TestMonitorOnlyMode(t *testing.T) {
 	cfg := profile.DefaultReportingConfig()
 	cfg.Mode = profile.ModeMonitorOnly
 	cfg = profile.ApplyReportingMode(cfg)
-	action, _ := profile.DecideAction("critical", "secrets", profile.SourceTypeSource, 0.99, cfg, profile.DefaultFalsePositiveReductionConfig())
+	action, _ := profile.DecideAction("critical", "secrets", profile.SourceTypeSource, "", 0.99, cfg, profile.DefaultFalsePositiveReductionConfig())
 	if action != profile.ActionReportOnly {
 		t.Fatalf("monitor_only should not auto issue, got %s", action)
 	}

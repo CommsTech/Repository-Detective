@@ -142,9 +142,36 @@ jobs:
             --workspace "$BUGBOT_WORKSPACE"
 ```
 
-### Runner binary
+### Runner image (recommended)
 
-Build from this repo:
+Build the **`repository-detective:runner`** target (see [DOCKER.md](DOCKER.md)):
+
+```bash
+docker build --target runner -t repository-detective:runner \
+  --build-arg INSTALL_EXTERNAL_TOOLS=true .
+```
+
+The image includes `repository-detective-runner` plus pinned scanner binaries (trivy, grype, gitleaks, semgrep, govulncheck, gosec, staticcheck, hadolint, checkov).
+
+Example Gitea Actions step:
+
+```yaml
+      - name: Run Repository Detective runner
+        image: registry.example.com/repository-detective:runner
+        env:
+          REPOSITORY_DETECTIVE_CORE_URL: https://detective.example.com
+          REPOSITORY_DETECTIVE_RUNNER_SHARED_SECRET: ${{ secrets.REPOSITORY_DETECTIVE_RUNNER_SECRET }}
+          REPOSITORY_DETECTIVE_WORKSPACE: ${{ github.workspace }}
+        run: |
+          repository-detective-runner \
+            --core-url "$REPOSITORY_DETECTIVE_CORE_URL" \
+            --runner-secret "$REPOSITORY_DETECTIVE_RUNNER_SHARED_SECRET" \
+            --workspace "$REPOSITORY_DETECTIVE_WORKSPACE"
+```
+
+Legacy `BUGBOT_*` env names still work via [envcompat](../internal/config/envcompat).
+
+### Runner binary (source build)
 
 ```bash
 go build -o repository-detective-runner ./cmd/repository-detective-runner
@@ -160,23 +187,7 @@ The runner:
 
 ### Scanner tools on runner host
 
-Install the same external scanner binaries configured globally (Trivy, Grype, Gitleaks, Semgrep, Go scanners, linters as enabled). Missing binaries produce scanner status `binary_missing` in results — core persists them as usual.
-
-Go scanner trio (Phase 13A) when enabled globally or in job policy snapshot:
-
-```bash
-go install golang.org/x/vuln/cmd/govulncheck@latest
-go install github.com/securego/gosec/v2/cmd/gosec@latest
-go install honnef.co/go/tools/cmd/staticcheck@latest
-```
-
-IaC/container scanners (Phase 13B):
-
-```bash
-# hadolint — install from distro package manager or GitHub release binary
-# checkov — on runner host only (not installed by Repository Detective):
-python3 -m pip install --user checkov
-```
+If not using the Docker runner image, install the same external scanner binaries as [DOCKER.md](DOCKER.md) (Trivy, Grype, Gitleaks, Semgrep, Go scanners, hadolint, checkov). Missing binaries produce scanner status `binary_missing` in results — core persists them as usual.
 
 Runner jobs merge `effective_settings` from the job spec into scanner config (including Go and IaC scanner toggles, timeouts, and max findings). Profile metadata (`scan_profile`, `profile_source`) is included in the policy snapshot. See [SCAN_PROFILES.md](SCAN_PROFILES.md) — `maintainer_deep` is recommended for scheduled runner delegation.
 

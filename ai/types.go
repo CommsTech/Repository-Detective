@@ -90,11 +90,14 @@ type CodeAnalysisRequest struct {
 
 // CodeAnalysisResult represents the result of code analysis.
 type CodeAnalysisResult struct {
-	Issues       []CodeIssue
-	Suggestions  []CodeSuggestion
-	OverallScore float64
-	AnalysisTime time.Duration
-	ModelUsed    string
+	Issues                []CodeIssue
+	Suggestions           []CodeSuggestion
+	OverallScore          float64
+	ScoreComplete         bool
+	ScoreIncompleteReason string
+	ScoreExplanation      string
+	AnalysisTime          time.Duration
+	ModelUsed             string
 }
 
 // CodeIssue represents a detected issue in the code.

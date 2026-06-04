@@ -3,6 +3,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#0d1b2a">
 <title>{{.Title}} — Repository Detective</title>
+<script>
+(function () {
+  try {
+    var key = "rd-theme";
+    var valid = { system: 1, light: 1, dark: 1 };
+    var stored = localStorage.getItem(key);
+    var theme = valid[stored] ? stored : "system";
+    document.documentElement.dataset.theme = theme;
+  } catch (e) {
+    document.documentElement.dataset.theme = "system";
+  }
+})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -46,6 +59,12 @@
         <h1>{{.Title}}</h1>
       </div>
       <div class="rd-topbar-meta">
+        <div class="rd-theme-switch" role="group" aria-label="Theme" id="rd-theme-toggle">
+          <span class="rd-theme-label" id="rd-theme-label">Theme</span>
+          <button type="button" class="rd-theme-btn" data-theme-choice="system" aria-pressed="false" aria-labelledby="rd-theme-label">System</button>
+          <button type="button" class="rd-theme-btn" data-theme-choice="light" aria-pressed="false" aria-labelledby="rd-theme-label">Light</button>
+          <button type="button" class="rd-theme-btn" data-theme-choice="dark" aria-pressed="false" aria-labelledby="rd-theme-label">Dark</button>
+        </div>
         <span class="rd-status-pill" title="Platform operational">
           <span class="rd-status-dot" aria-hidden="true"></span>
           <span class="rd-status-text">Live</span>
@@ -59,5 +78,6 @@
     </main>
   </div>
 </div>
+<script src="{{.BasePath}}/static/theme.js" defer></script>
 <script src="{{.BasePath}}/static/app.js" defer></script>
 {{end}}

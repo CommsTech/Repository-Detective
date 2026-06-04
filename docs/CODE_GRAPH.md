@@ -40,6 +40,8 @@ Findings never claim code was abandoned or AI-written — they recommend human r
 
 **False-positive expectations:** Orphan/disconnected signals are conservative heuristics. Reflection, dynamic imports, code generation, build tags, and plugin architectures may produce false positives. Treat as review hints, not proof of dead code.
 
+**Beta default (`beta_standard`):** All graph rule IDs above are **report-only** — visible on the dashboard and Repository Map, but not opened as Gitea issues by default. Use global suppressions (see `docs/dogfood-reports/closeout-suppressions.sql`) for legacy issues created before calibration.
+
 ## When graphs are generated
 
 | Context | Trigger |

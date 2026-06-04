@@ -174,6 +174,8 @@ type Config struct {
 	PreinstallTimeoutSeconds          int               `mapstructure:"preinstall_timeout_seconds"`
 	PreinstallMaxFindings             int               `mapstructure:"preinstall_max_findings"`
 	PreinstallAllowGitClone           bool              `mapstructure:"preinstall_allow_git_clone"`
+	PreinstallReportIncludeProjectLink bool             `mapstructure:"preinstall_report_include_project_link"`
+	RepositoryDetectiveProjectURL     string            `mapstructure:"repository_detective_project_url"`
 	EnableHealthChecks                bool              `mapstructure:"enable_health_checks"`
 	EnableTechDebtChecks              bool              `mapstructure:"enable_tech_debt_checks"`
 	EnableReliabilityChecks           bool              `mapstructure:"enable_reliability_checks"`
@@ -376,9 +378,9 @@ func loadConfig() error {
 	viper.SetDefault("min_issue_confidence", 0.5)
 	viper.SetDefault("qdrant_enabled", false)
 	viper.SetDefault("qdrant_url", "http://127.0.0.1:6333")
-	viper.SetDefault("qdrant_collection", "bugbot-findings")
-	viper.SetDefault("qdrant_vector_size", 1536)
-	viper.SetDefault("qdrant_similarity_threshold", 0.85)
+	viper.SetDefault("qdrant_collection", "cah_findings")
+	viper.SetDefault("qdrant_vector_size", 1024)
+	viper.SetDefault("qdrant_similarity_threshold", 0.7)
 	viper.SetDefault("embedding_model", "text-embedding-3-small")
 	viper.SetDefault("auto_create_issues", true)
 	viper.SetDefault("max_issues_per_run", 50)
@@ -416,6 +418,8 @@ func loadConfig() error {
 	viper.SetDefault("preinstall_timeout_seconds", 600)
 	viper.SetDefault("preinstall_max_findings", 200)
 	viper.SetDefault("preinstall_allow_git_clone", true)
+	viper.SetDefault("preinstall_report_include_project_link", true)
+	viper.SetDefault("repository_detective_project_url", "https://git.commsnet.org/commstech/bugbot")
 	viper.SetDefault("enable_health_checks", true)
 	viper.SetDefault("enable_tech_debt_checks", true)
 	viper.SetDefault("enable_reliability_checks", true)
@@ -777,15 +781,17 @@ func initializeComponents() error {
 	}
 
 	preinstallCfg := preinstall.Config{
-		Enabled:              config.PreinstallAuditEnabled,
-		AllowPrivateNetworks: config.PreinstallAllowPrivateNetworks,
-		MaxRepoSizeMB:        config.PreinstallMaxRepoSizeMB,
-		MaxFiles:             config.PreinstallMaxFiles,
-		TimeoutSeconds:       config.PreinstallTimeoutSeconds,
-		MaxFindings:          config.PreinstallMaxFindings,
-		AllowGitClone:        config.PreinstallAllowGitClone,
-		Health:               mainHealthConfig(),
-		Graph:                mainGraphConfig(),
+		Enabled:                         config.PreinstallAuditEnabled,
+		AllowPrivateNetworks:            config.PreinstallAllowPrivateNetworks,
+		MaxRepoSizeMB:                   config.PreinstallMaxRepoSizeMB,
+		MaxFiles:                        config.PreinstallMaxFiles,
+		TimeoutSeconds:                  config.PreinstallTimeoutSeconds,
+		MaxFindings:                     config.PreinstallMaxFindings,
+		AllowGitClone:                   config.PreinstallAllowGitClone,
+		ReportIncludeProjectLink:        config.PreinstallReportIncludeProjectLink,
+		RepositoryDetectiveProjectURL:   config.RepositoryDetectiveProjectURL,
+		Health:                          mainHealthConfig(),
+		Graph:                           mainGraphConfig(),
 	}
 	if bugbotStore != nil && config.PreinstallAuditEnabled {
 		preinstallRunner = preinstall.NewRunner(bugbotStore, preinstallCfg, mainScannerConfig(), logger)
@@ -1462,11 +1468,14 @@ func finishPersistedScan(ctx context.Context, scanCtx *store.ScanContext, reposi
 			})
 		}
 		data = &store.ScanCompletion{
-			IssuesFound:       len(result.Issues),
-			FilesAnalyzed:     result.FilesAnalyzed,
-			AnalysisTime:      result.AnalysisTime,
-			OverallScore:      result.OverallScore,
-			CommitSHA:         result.CommitSHA,
+			IssuesFound:           len(result.Issues),
+			FilesAnalyzed:         result.FilesAnalyzed,
+			AnalysisTime:          result.AnalysisTime,
+			OverallScore:          result.OverallScore,
+			ScoreComplete:         result.ScoreComplete,
+			ScoreIncompleteReason: result.ScoreIncompleteReason,
+			ScoreExplanation:      result.ScoreExplanation,
+			CommitSHA:             result.CommitSHA,
 			WorkspaceModeUsed: result.WorkspaceModeUsed,
 			PolicySnapshot:    result.PolicySnapshot,
 			ScannerResults:    scanners,
@@ -1534,9 +1543,12 @@ func createIssuesFromResult(ctx context.Context, forgeType, owner, repo string, 
 				Owner:      owner,
 				Repository: repo,
 				AnalysisResult: &ai.CodeAnalysisResult{
-					Issues:       forgeIssues,
-					OverallScore: result.OverallScore,
-					AnalysisTime: result.AnalysisTime,
+					Issues:                forgeIssues,
+					OverallScore:          result.OverallScore,
+					ScoreComplete:         result.ScoreComplete,
+					ScoreIncompleteReason: result.ScoreIncompleteReason,
+					ScoreExplanation:      result.ScoreExplanation,
+					AnalysisTime:          result.AnalysisTime,
 				},
 				Context:            contextLabel,
 				Commit:             commitRef,

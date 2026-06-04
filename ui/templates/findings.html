@@ -35,8 +35,18 @@
       <select name="status" aria-label="Filter by status">
         <option value="">All statuses</option>
         <option value="open" {{if eq .Data.Filter.Status "open"}}selected{{end}}>Open</option>
+        <option value="suppressed" {{if eq .Data.Filter.Status "suppressed"}}selected{{end}}>Suppressed</option>
+        <option value="false_positive" {{if eq .Data.Filter.Status "false_positive"}}selected{{end}}>False positive</option>
         <option value="resolved" {{if eq .Data.Filter.Status "resolved"}}selected{{end}}>Resolved</option>
       </select>
+    </label>
+    <label class="rd-checkbox-label">
+      <input type="checkbox" name="show_suppressed" value="1" {{if .Data.Filter.IncludeSuppressed}}checked{{end}}>
+      Show suppressed / false-positive
+    </label>
+    <label class="rd-checkbox-label">
+      <input type="checkbox" name="only_suppressed" value="1" {{if .Data.Filter.OnlySuppressed}}checked{{end}}>
+      Only suppressed
     </label>
   </div>
   {{if .APIKey}}<input type="hidden" name="api_key" value="{{.APIKey}}">{{end}}

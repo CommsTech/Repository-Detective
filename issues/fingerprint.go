@@ -5,18 +5,17 @@ import (
 	"encoding/hex"
 	"fmt"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"git.commsnet.org/commstech/bugbot/ai"
+	"git.commsnet.org/commstech/bugbot/redact"
 )
 
 const lineBlockSize = 10
 
-var secretPatterns = []*regexp.Regexp{
-	regexp.MustCompile(`(?i)(password|api[_-]?key|secret|token|auth)\s*[:=]\s*["'][^"']{4,}["']`),
-	regexp.MustCompile(`AKIA[0-9A-Z]{16}`),
-	regexp.MustCompile(`(?i)Bearer\s+[A-Za-z0-9\-._~+/]+=*`),
+// SanitizeSecretEvidence redacts likely secret material from snippets.
+func SanitizeSecretEvidence(value string) string {
+	return redact.SecretEvidence(value)
 }
 
 // FingerprintInput carries fields used to compute a stable finding fingerprint.
@@ -79,18 +78,6 @@ func SanitizedEvidenceHash(evidence string) string {
 	}
 	sum := sha256.Sum256([]byte(evidence))
 	return hex.EncodeToString(sum[:6])
-}
-
-// SanitizeSecretEvidence redacts likely secret material from snippets.
-func SanitizeSecretEvidence(value string) string {
-	value = strings.TrimSpace(value)
-	if value == "" {
-		return ""
-	}
-	for _, pattern := range secretPatterns {
-		value = pattern.ReplaceAllString(value, "[REDACTED]")
-	}
-	return value
 }
 
 // ExtractFingerprintFromBody reads a fingerprint marker from an issue body.

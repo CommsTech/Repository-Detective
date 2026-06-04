@@ -6,6 +6,9 @@ import (
 	"git.commsnet.org/commstech/bugbot/remediation"
 )
 
+// SafeFixRolloutPolicy is shown in UI and docs for owned-repo remediation PRs.
+const SafeFixRolloutPolicy = "Repository Detective creates PRs only for approved low-risk plans. It never auto-merges."
+
 var forbiddenCategories = map[string]struct{}{
 	"secret": {}, "hardcoded_secret": {}, "dependency": {}, "dependency_vulnerability": {},
 	"architecture": {}, "security": {},

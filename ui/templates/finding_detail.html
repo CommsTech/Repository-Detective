@@ -40,6 +40,53 @@
   {{if .ExternalIssueURL}}<div class="rd-actions"><a class="rd-btn rd-btn-secondary" href="{{.ExternalIssueURL}}" target="_blank" rel="noopener">Open Gitea issue #{{.ExternalIssueNumber}}</a></div>{{end}}
 </div>
 
+{{if $.Data.SuppressionEnabled}}
+<div class="rd-card">
+  <h2>Calibration</h2>
+  <p class="rd-muted">Suppress noisy findings or mark false positives. Historical data is kept; suppressed findings are excluded from new issues, PR gates, and remediation plans.</p>
+  <form method="post" action="{{$.BasePath}}/findings/{{$.Data.Finding.ID}}/suppress{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}" class="rd-form-inline">
+    <label>Reason <input name="reason" required placeholder="e.g. test fixture noise"></label>
+    <button type="submit" class="rd-btn rd-btn-secondary">Suppress this fingerprint</button>
+  </form>
+  {{if eq .Source "graph"}}
+  <form method="post" action="{{$.BasePath}}/findings/{{$.Data.Finding.ID}}/suppress-rule{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}" class="rd-form-inline" style="margin-top:0.75rem">
+    <label>Reason <input name="reason" required placeholder="e.g. graph heuristics too noisy for this repo"></label>
+    <button type="submit" class="rd-btn rd-btn-secondary">Suppress graph rule for this repo</button>
+  </form>
+  <form method="post" action="{{$.BasePath}}/findings/{{$.Data.Finding.ID}}/mark-intentional{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}" class="rd-form-inline" style="margin-top:0.75rem">
+    <label>Note <input name="reason" placeholder="e.g. CLI entrypoint by design"></label>
+    <button type="submit" class="rd-btn rd-btn-ghost">Mark as intentional standalone</button>
+  </form>
+  {{end}}
+  <form method="post" action="{{$.BasePath}}/findings/{{$.Data.Finding.ID}}/mark-false-positive{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}" class="rd-form-inline" style="margin-top:0.75rem">
+    <label>Reason <input name="reason" required placeholder="e.g. not exploitable in our deployment"></label>
+    <button type="submit" class="rd-btn rd-btn-ghost">Mark false positive</button>
+  </form>
+</div>
+{{end}}
+
+{{if $.Data.GraphDetail.IsGraph}}
+<div class="rd-card">
+  <h2>Graph analysis — troubleshooting</h2>
+  <p class="rd-muted"><strong>Rule:</strong> {{$.Data.GraphDetail.RuleID}} · <strong>Node type:</strong> {{$.Data.GraphDetail.NodeType}}</p>
+  {{if $.Data.GraphDetail.WhyFlagged}}<p><strong>Why flagged:</strong> {{$.Data.GraphDetail.WhyFlagged}}</p>{{end}}
+  <dl class="rd-dl">
+    <dt>Inbound edges</dt><dd>{{$.Data.GraphDetail.InboundEdgeCount}}</dd>
+    <dt>Outbound edges</dt><dd>{{$.Data.GraphDetail.OutboundEdgeCount}}</dd>
+    <dt>Entrypoint reachable</dt><dd>{{$.Data.GraphDetail.EntrypointReachable}}</dd>
+    {{if $.Data.GraphDetail.PathClassification}}<dt>Path classification</dt><dd>{{$.Data.GraphDetail.PathClassification}}</dd>{{end}}
+    {{if $.Data.GraphDetail.ImportsFrom}}<dt>Imports from file</dt><dd>{{join $.Data.GraphDetail.ImportsFrom ", "}}</dd>{{end}}
+    {{if $.Data.GraphDetail.ImportedBy}}<dt>Imported by</dt><dd>{{join $.Data.GraphDetail.ImportedBy ", "}}</dd>{{end}}
+  </dl>
+  {{if $.Data.GraphDetail.Troubleshooting}}
+  <p><strong>Troubleshooting steps:</strong></p>
+  <ol>{{range $.Data.GraphDetail.Troubleshooting}}<li>{{.}}</li>{{end}}</ol>
+  {{end}}
+  {{if $.Data.GraphDetail.SuggestedAction}}<p class="rd-muted">{{$.Data.GraphDetail.SuggestedAction}}</p>{{end}}
+  {{if $.Data.GraphMapURL}}<div class="rd-actions"><a class="rd-btn rd-btn-secondary" href="{{$.Data.GraphMapURL}}">View in Repository Map</a></div>{{end}}
+</div>
+{{end}}
+
 <div class="rd-card">
   <h2>Report flow</h2>
   <div class="rd-pipeline">
@@ -94,6 +141,7 @@
 {{if $.Data.PREnabled}}
 <h3>Safe remediation PR</h3>
 <div class="rd-alert">Repository Detective will create a branch and PR only. It will not merge or close the issue.</div>
+<p class="rd-muted">Repository Detective creates PRs only for approved low-risk plans. It never auto-merges.</p>
 {{with $.Data.PREligibility}}
 <p><strong>PR eligible:</strong> {{.Eligible}}</p>
 {{if .Checklist}}<p><strong>Eligibility checklist:</strong></p><ul>{{range $k, $v := .Checklist}}<li>{{$k}}: {{$v}}</li>{{end}}</ul>{{end}}

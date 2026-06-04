@@ -11,6 +11,7 @@ const (
 	ScanProfileStrictSecurity        = "strict_security"
 	ScanProfileMaintainerDeep        = "maintainer_deep"
 	ScanProfilePreinstallCautious    = "preinstall_cautious"
+	ScanProfileBetaStandard          = "beta_standard"
 	ScanProfileCustom                = "custom"
 )
 
@@ -18,6 +19,7 @@ const (
 var AllowedScanProfiles = []string{
 	ScanProfileFast,
 	ScanProfileStandardDeterministic,
+	ScanProfileBetaStandard,
 	ScanProfileStrictSecurity,
 	ScanProfileMaintainerDeep,
 	ScanProfilePreinstallCautious,
@@ -28,6 +30,7 @@ var AllowedScanProfiles = []string{
 var ProfileDescriptions = map[string]string{
 	ScanProfileFast:                  "Quick feedback, low noise — gitleaks + trivy, minimal health, no AI",
 	ScanProfileStandardDeterministic: "Default deterministic scan — security, Go, IaC, health, and graph",
+	ScanProfileBetaStandard:          "Private beta default — deterministic, low issue noise, graph on dashboard only",
 	ScanProfileStrictSecurity:        "Strong PR/security gate — all scanners, medium severity gate, status gate",
 	ScanProfileMaintainerDeep:        "Deep maintenance — full workspace, scanners, health, graph, and LLM auditors",
 	ScanProfilePreinstallCautious:    "Third-party trust assessment — no issues/AI, conservative scanners",
@@ -125,6 +128,16 @@ func ProfileDefaults(profile string) EffectiveSettings {
 		base.EnableCodeGraph = true
 		base.GraphIncludeFunctions = true
 		base.GraphIncludeFindings = true
+		return base
+	case ScanProfileBetaStandard:
+		base = ProfileDefaults(ScanProfileStandardDeterministic)
+		base.AnalysisDepth = 2
+		base.EnableLLMAuditors = false
+		base.AIPolicy = AIPolicyDisabled
+		base.SeverityGate = "high"
+		base.ConfidenceGate = 0.85
+		base.IssuePolicy = IssuePolicyAll
+		base.RemediationPolicy = "suggest"
 		return base
 	case ScanProfileStrictSecurity:
 		base.AnalysisDepth = 2

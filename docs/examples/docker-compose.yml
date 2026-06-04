@@ -1,0 +1,122 @@
+# Repository Detective — example Compose with profiles.
+#
+# Usage:
+#   cp ../../.env.example ../../.env   # edit secrets on host, never bake into images
+#   docker compose -f docs/examples/docker-compose.yml --profile all-in-one up -d --build
+#   docker compose -f docs/examples/docker-compose.yml --profile core up -d --build
+#   docker compose -f docs/examples/docker-compose.yml --profile qdrant --profile all-in-one up -d
+#
+# See docs/DOCKER.md for image targets, volumes, and rollback.
+
+name: repository-detective
+
+services:
+  repository-detective:
+    profiles: ["all-in-one", "default"]
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      target: all-in-one
+      args:
+        INSTALL_EXTERNAL_TOOLS: "true"
+        VERSION: ${RD_VERSION:-dev}
+        COMMIT: ${RD_COMMIT:-local}
+        BUILD_DATE: ${RD_BUILD_DATE:-unknown}
+    image: repository-detective:all-in-one
+    container_name: repository-detective
+    ports:
+      - "${REPOSITORY_DETECTIVE_PORT:-8081}:8081"
+    env_file:
+      - ../../.env
+    environment:
+      REPOSITORY_DETECTIVE_PORT: "${REPOSITORY_DETECTIVE_PORT:-8081}"
+      REPOSITORY_DETECTIVE_LISTEN_HOST: "0.0.0.0"
+      REPOSITORY_DETECTIVE_DATABASE_PATH: /app/data/bugbot.db
+      REPOSITORY_DETECTIVE_SKIP_STARTUP_CHECKS: "true"
+      # Legacy aliases (still read)
+      BUGBOT_PORT: "${REPOSITORY_DETECTIVE_PORT:-8081}"
+      BUGBOT_DATABASE_PATH: /app/data/bugbot.db
+    volumes:
+      - ../../config:/app/config:ro
+      - ../../data:/app/data
+      - ../../certs:/app/certs:ro
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/docker-healthcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+    restart: unless-stopped
+    # No privileged mode, no Docker socket
+    security_opt:
+      - no-new-privileges:true
+
+  repository-detective-core:
+    profiles: ["core"]
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      target: core
+      args:
+        VERSION: ${RD_VERSION:-dev}
+        COMMIT: ${RD_COMMIT:-local}
+        BUILD_DATE: ${RD_BUILD_DATE:-unknown}
+    image: repository-detective:core
+    container_name: repository-detective-core
+    ports:
+      - "${REPOSITORY_DETECTIVE_PORT:-8081}:8081"
+    env_file:
+      - ../../.env
+    environment:
+      REPOSITORY_DETECTIVE_PORT: "${REPOSITORY_DETECTIVE_PORT:-8081}"
+      REPOSITORY_DETECTIVE_LISTEN_HOST: "0.0.0.0"
+      REPOSITORY_DETECTIVE_DATABASE_PATH: /app/data/bugbot.db
+      BUGBOT_PORT: "${REPOSITORY_DETECTIVE_PORT:-8081}"
+      BUGBOT_DATABASE_PATH: /app/data/bugbot.db
+    volumes:
+      - ../../config:/app/config:ro
+      - ../../data:/app/data
+      - ../../certs:/app/certs:ro
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/docker-healthcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  qdrant:
+    profiles: ["qdrant"]
+    image: qdrant/qdrant:v1.12.5
+    container_name: repository-detective-qdrant
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    restart: unless-stopped
+
+  # Example: run a one-shot runner job (normally invoked from Gitea Actions).
+  repository-detective-runner:
+    profiles: ["runner-example"]
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      target: runner
+      args:
+        INSTALL_EXTERNAL_TOOLS: "true"
+    image: repository-detective:runner
+    environment:
+      REPOSITORY_DETECTIVE_CORE_URL: "http://repository-detective:8081"
+      REPOSITORY_DETECTIVE_RUNNER_SHARED_SECRET: "${REPOSITORY_DETECTIVE_RUNNER_SHARED_SECRET:-}"
+      REPOSITORY_DETECTIVE_WORKSPACE: /workspace
+    volumes:
+      - runner_workspace:/workspace
+    # Override entrypoint for local testing; Gitea Actions supplies flags via workflow.
+    entrypoint: ["/usr/local/bin/repository-detective-runner"]
+    command: ["--help"]
+
+volumes:
+  qdrant_data:
+  runner_workspace:

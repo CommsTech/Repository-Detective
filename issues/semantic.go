@@ -57,6 +57,8 @@ func (s *SemanticStore) FindDuplicate(ctx context.Context, repository string, is
 		Line:        issue.LineNumber,
 		Severity:    issue.Severity,
 		Category:    issue.Category,
+		Source:      issue.Source,
+		RuleID:      issue.RuleID,
 		Confidence:  issue.Confidence,
 		Fingerprint: issue.Fingerprint,
 	}
@@ -100,6 +102,8 @@ func (s *SemanticStore) Remember(ctx context.Context, repository string, issue *
 		Confidence:  issue.Confidence,
 		ClusterID:   clusterID,
 		Fingerprint: issue.Fingerprint,
+		Source:      issue.Source,
+		RuleID:      issue.RuleID,
 	}
 
 	vector, err := s.embedder.Embed(ctx, qdrant.EmbeddingText(input))

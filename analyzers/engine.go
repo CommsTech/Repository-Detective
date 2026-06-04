@@ -64,8 +64,11 @@ type AnalysisResult struct {
 	Issues         []ai.CodeIssue
 	ScannerResults []scanners.RunResult
 	Suggestions    []CodeSuggestion
-	OverallScore   float64
-	Errors         []string
+	OverallScore          float64
+	ScoreComplete         bool
+	ScoreIncompleteReason string
+	ScoreExplanation      string
+	Errors                []string
 	PolicySnapshot    *PolicySnapshot
 	WorkspaceModeUsed string
 	Graph             *graph.Graph
@@ -415,6 +418,7 @@ func (e *Engine) Scan(ctx context.Context, prepare *PrepareReport) ([]CandidateF
 		for _, f := range staticFindings {
 			allCandidates = append(allCandidates, CandidateFinding(f))
 		}
+		summary.Results = append(summary.Results, scanners.DeterministicRunResult("static", len(staticFindings)))
 		e.logger.Infof("[CAH:SCAN] Static analysis found %d candidate(s)", len(staticFindings))
 	}
 
@@ -435,6 +439,7 @@ func (e *Engine) Scan(ctx context.Context, prepare *PrepareReport) ([]CandidateF
 		for _, f := range health.ToCandidateFindings(healthFindings) {
 			allCandidates = append(allCandidates, CandidateFinding(f))
 		}
+		summary.Results = append(summary.Results, scanners.DeterministicRunResult("health", len(healthFindings)))
 		e.logger.Infof("[CAH:SCAN] Health checks found %d candidate(s)", len(healthFindings))
 	}
 
@@ -459,6 +464,7 @@ func (e *Engine) Scan(ctx context.Context, prepare *PrepareReport) ([]CandidateF
 		for _, f := range graph.ToCandidateFindings(graphFindings) {
 			allCandidates = append(allCandidates, CandidateFinding(f))
 		}
+		summary.Results = append(summary.Results, scanners.DeterministicRunResult("graph", len(graphFindings)))
 		e.logger.Infof("[CAH:SCAN] Code graph generated %d nodes, %d edges, %d graph finding(s)",
 			g.Metrics.NodeCount, g.Metrics.EdgeCount, len(graphFindings))
 	}
@@ -490,7 +496,9 @@ func (e *Engine) Scan(ctx context.Context, prepare *PrepareReport) ([]CandidateF
 		} else {
 			defer prepared.Cleanup()
 			workspaceMeta = prepared.Meta
-			summary = scanners.RunAll(ctx, e.logger, prepared.Dir, prepared.Entries, cfg.Scanners, cfg.EnableSecurity, cfg.EnableQuality)
+			deterministicResults := append([]scanners.RunResult(nil), summary.Results...)
+			externalSummary := scanners.RunAll(ctx, e.logger, prepared.Dir, prepared.Entries, cfg.Scanners, cfg.EnableSecurity, cfg.EnableQuality)
+			summary = mergeScannerRunSummaries(deterministicResults, externalSummary)
 			for _, finding := range summary.Candidates() {
 				allCandidates = append(allCandidates, finding.ToCandidateFinding())
 			}
@@ -548,6 +556,12 @@ func (e *Engine) Scan(ctx context.Context, prepare *PrepareReport) ([]CandidateF
 	}
 
 	return allCandidates, summary, workspaceMeta, repoGraph, nil
+}
+
+// mergeScannerRunSummaries keeps in-process deterministic stage results when external scanners run.
+func mergeScannerRunSummaries(deterministic []scanners.RunResult, external scanners.RunSummary) scanners.RunSummary {
+	external.Results = append(deterministic, external.Results...)
+	return external
 }
 
 // selectLLMTargetFiles limits LLM usage to files flagged by deterministic checks when possible.
@@ -906,7 +920,9 @@ func (e *Engine) Dedup(candidates []ValidatedFinding) []DedupedFinding {
 
 		clusterID := fmt.Sprintf("cluster-%03d", clusterIndex)
 		description := best.Hypothesis
-		if len(group) > 1 {
+		if best.AuditorType == "graph" && strings.TrimSpace(best.Evidence.Code) != "" {
+			description = best.Evidence.Code
+		} else if len(group) > 1 {
 			description = fmt.Sprintf("%s\n\n**Dedup cluster `%s`** — merged %d related finding(s):\n",
 				best.Hypothesis, clusterID, len(group))
 			for _, item := range group {
@@ -1229,6 +1245,12 @@ func (e *Engine) analysisResultFromReport(ctx context.Context, owner, repo, ref,
 			file = f.Files[0]
 		}
 
+		snippet := f.Evidence.Code
+		detailJSON := f.Evidence.ASTNode
+		if f.AuditorType == "graph" {
+			snippet = ""
+		}
+
 		result.Issues = append(result.Issues, ai.CodeIssue{
 			Severity:       f.Severity,
 			Category:       f.Category,
@@ -1236,7 +1258,7 @@ func (e *Engine) analysisResultFromReport(ctx context.Context, owner, repo, ref,
 			Description:    description,
 			File:           file,
 			LineNumber:     line,
-			CodeSnippet:    f.Evidence.Code,
+			CodeSnippet:    snippet,
 			ProofOfConcept: poc,
 			Confidence:     f.Confidence,
 			ClusterID:      f.ClusterID,
@@ -1244,22 +1266,31 @@ func (e *Engine) analysisResultFromReport(ctx context.Context, owner, repo, ref,
 			RuleID:         firstNonEmptyRuleID(f.ID, f.ClusterID),
 			ScanID:         report.ScanID,
 			PackageName:    packageNameFromFinding(f),
+			Evidence:       detailJSON,
 		})
 	}
 
 	knownPaths := buildKnownPathSet(report)
 	result.RepoProfile = report.RepoProfile
 	issues.EnrichIssues(result.Repository, result.ScanID, result.Issues)
+	reporting := e.config.Reporting
+	if policy, ok := ScanPolicyFromContext(ctx); ok {
+		reporting = profile.ReportingForScanProfile(reporting, policy.ScanProfile)
+	}
 	result.Issues = profile.NormalizeIssues(result.Issues, profile.NormalizeInput{
 		Repository:    result.Repository,
 		CommitSHA:     result.CommitSHA,
 		ScanID:        result.ScanID,
 		Profile:       report.RepoProfile,
-		Reporting:     e.config.Reporting,
+		Reporting:     reporting,
 		FalsePositive: e.config.FalsePositive,
 		KnownPaths:    knownPaths,
 	})
-	result.OverallScore = ComputeOverallScore(result.Issues)
+	score := ComputeScoreResult(result.Issues, ScoreInput{ScannerResults: report.ScannerResults})
+	result.ScoreComplete = score.Complete
+	result.ScoreIncompleteReason = score.IncompleteReason
+	result.ScoreExplanation = score.Explanation
+	result.OverallScore = ComputeOverallScoreWithInput(result.Issues, ScoreInput{ScannerResults: report.ScannerResults})
 	return result, nil
 }
 

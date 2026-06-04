@@ -9,27 +9,31 @@ import (
 
 // Config controls third-party pre-install audit behavior.
 type Config struct {
-	Enabled              bool
-	AllowPrivateNetworks bool
-	MaxRepoSizeMB        int
-	MaxFiles             int
-	TimeoutSeconds       int
-	MaxFindings          int
-	AllowGitClone        bool
-	Health               health.Config
-	Graph                graph.Config
+	Enabled                         bool
+	AllowPrivateNetworks            bool
+	MaxRepoSizeMB                   int
+	MaxFiles                        int
+	TimeoutSeconds                  int
+	MaxFindings                     int
+	AllowGitClone                   bool
+	ReportIncludeProjectLink        bool
+	RepositoryDetectiveProjectURL   string
+	Health                          health.Config
+	Graph                           graph.Config
 }
 
 // DefaultConfig returns safe Phase 9 defaults.
 func DefaultConfig() Config {
 	return Config{
-		Enabled:              true,
-		AllowPrivateNetworks: false,
-		MaxRepoSizeMB:        500,
-		MaxFiles:             5000,
-		TimeoutSeconds:       600,
-		MaxFindings:          200,
-		AllowGitClone:        true,
+		Enabled:                       true,
+		AllowPrivateNetworks:          false,
+		MaxRepoSizeMB:                 500,
+		MaxFiles:                      5000,
+		TimeoutSeconds:                600,
+		MaxFindings:                   200,
+		AllowGitClone:                 true,
+		ReportIncludeProjectLink:      true,
+		RepositoryDetectiveProjectURL: "https://git.commsnet.org/commstech/bugbot",
 	}
 }
 

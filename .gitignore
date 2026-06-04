@@ -75,6 +75,16 @@ docs/dogfood-reports/*
 !docs/dogfood-reports/ruview-preinstall-audit-rerun.md
 !docs/dogfood-reports/ruview-preinstall-compare.md
 !docs/dogfood-reports/ruview-gitleaks-triage.md
+!docs/dogfood-reports/working-tree-cleanup-report.md
+
+# Private operator dogfood (unsanitized — keep local)
+docs/DOGFOOD_REPORT_FIRST_39_REPOS.md
+
+# Operator-only closeout scripts (homelab paths, not portable)
+scripts/apply_closeout_suppressions.py
+scripts/apply_repo_closeout_step2.py
+scripts/apply_repo_closeout_step5.py
+scripts/issue_closeout_triage.py
 
 # Configuration overrides
 config.local.yaml
@@ -105,6 +115,18 @@ tmp/
 deploy/bin/trivy
 deploy/bin/grype
 deploy/bin/gitleaks
+
+# Local deployment artifacts and drills (operator-only)
+deployment-backups/
+restore-drill-test/
+config/config.yaml.bak-*
+
+# Root-level build outputs (use build/ or Docker images)
+/repository-detective
+/repository-detective-build
+
+# Vendored modules (generate via scripts/vendor-deps.sh when needed)
+vendor/
 
 # Production configuration files (contain secrets)
 docker-compose.prod.yml

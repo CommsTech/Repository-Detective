@@ -153,6 +153,11 @@ func (s *SQLiteStore) ListFindings(ctx context.Context, filter FindingFilter) ([
 		query += ` AND LOWER(f.source) = LOWER(?)`
 		args = append(args, filter.Source)
 	}
+	if filter.OnlySuppressed {
+		query += ` AND f.status IN ('suppressed', 'false_positive')`
+	} else if !filter.IncludeSuppressed {
+		query += ` AND f.status NOT IN ('suppressed', 'false_positive')`
+	}
 	query += ` ORDER BY f.last_seen_at DESC LIMIT ? OFFSET ?`
 	args = append(args, filter.Limit, filter.Offset)
 
@@ -170,7 +175,10 @@ func (s *SQLiteStore) ListFindings(ctx context.Context, filter FindingFilter) ([
 		}
 		out = append(out, item)
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return s.annotateFindingSuppression(ctx, out), nil
 }
 
 func (s *SQLiteStore) CountFindings(ctx context.Context, filter FindingFilter) (int, error) {
@@ -196,6 +204,11 @@ func (s *SQLiteStore) CountFindings(ctx context.Context, filter FindingFilter) (
 	if filter.Source != "" {
 		query += ` AND LOWER(f.source) = LOWER(?)`
 		args = append(args, filter.Source)
+	}
+	if filter.OnlySuppressed {
+		query += ` AND f.status IN ('suppressed', 'false_positive')`
+	} else if !filter.IncludeSuppressed {
+		query += ` AND f.status NOT IN ('suppressed', 'false_positive')`
 	}
 
 	var n int
@@ -244,6 +257,10 @@ func (s *SQLiteStore) GetFindingDetail(ctx context.Context, id int64) (FindingDe
 	item, err := scanFindingListItem(row)
 	if err != nil {
 		return FindingDetail{}, fmt.Errorf("get finding: %w", err)
+	}
+	annotated := s.annotateFindingSuppression(ctx, []FindingListItem{item})
+	if len(annotated) > 0 {
+		item = annotated[0]
 	}
 
 	instances, err := s.listFindingInstances(ctx, id)
@@ -407,6 +424,11 @@ func (s *SQLiteStore) DashboardSummary(ctx context.Context, recentLimit int) (Da
 		SELECT COUNT(1) FROM findings WHERE status = 'open'
 	`).Scan(&summary.OpenFindingsCount); err != nil {
 		return summary, fmt.Errorf("count open findings: %w", err)
+	}
+	if err := s.db.QueryRowContext(ctx, `
+		SELECT COUNT(1) FROM findings WHERE status IN ('suppressed', 'false_positive')
+	`).Scan(&summary.SuppressedFindingsCount); err != nil {
+		return summary, fmt.Errorf("count suppressed findings: %w", err)
 	}
 
 	if err := s.db.QueryRowContext(ctx, `

@@ -7,6 +7,8 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"git.commsnet.org/commstech/bugbot/store"
 )
 
 func templateFuncs() template.FuncMap {
@@ -151,6 +153,8 @@ func findingStatusBadgeClass(status string) string {
 		return "completed"
 	case "needs_review", "needs-human-review":
 		return "timed_out"
+	case "suppressed", "false_positive":
+		return "skipped"
 	default:
 		return "started"
 	}
@@ -187,6 +191,77 @@ func jsonPretty(raw json.RawMessage) string {
 		return string(raw)
 	}
 	return string(b)
+}
+
+// GraphFindingView is parsed safe graph detail for dashboard drill-down.
+type GraphFindingView struct {
+	IsGraph             bool
+	RuleID              string
+	NodeType            string
+	WhyFlagged          string
+	Troubleshooting     []string
+	SuggestedAction     string
+	InboundEdgeCount    int
+	OutboundEdgeCount   int
+	EntrypointReachable string
+	ImportsFrom         []string
+	ImportedBy          []string
+	PathClassification  string
+	GraphNodeID         string
+}
+
+func buildGraphFindingView(detail store.FindingDetail) GraphFindingView {
+	view := GraphFindingView{IsGraph: detail.Source == "graph", RuleID: detail.RuleID}
+	if !view.IsGraph {
+		return view
+	}
+	for _, inst := range detail.Instances {
+		if len(inst.RawMetadataJSON) == 0 {
+			continue
+		}
+		var meta map[string]json.RawMessage
+		if err := json.Unmarshal(inst.RawMetadataJSON, &meta); err != nil {
+			continue
+		}
+		raw, ok := meta["graph_detail"]
+		if !ok || len(raw) == 0 {
+			continue
+		}
+		var gd struct {
+			RuleID              string   `json:"rule_id"`
+			NodeType            string   `json:"node_type"`
+			WhyFlagged          string   `json:"why_flagged"`
+			Troubleshooting     []string `json:"troubleshooting"`
+			SuggestedAction     string   `json:"suggested_action"`
+			InboundEdgeCount    int      `json:"inbound_edge_count"`
+			OutboundEdgeCount   int      `json:"outbound_edge_count"`
+			EntrypointReachable string   `json:"entrypoint_reachable"`
+			ImportsFrom         []string `json:"imports_from"`
+			ImportedBy          []string `json:"imported_by"`
+			PathClassification  string   `json:"path_classification"`
+			GraphNodeID         string   `json:"graph_node_id"`
+		}
+		if err := json.Unmarshal(raw, &gd); err != nil {
+			continue
+		}
+		view.RuleID = gd.RuleID
+		view.NodeType = gd.NodeType
+		view.WhyFlagged = gd.WhyFlagged
+		view.Troubleshooting = gd.Troubleshooting
+		view.SuggestedAction = gd.SuggestedAction
+		view.InboundEdgeCount = gd.InboundEdgeCount
+		view.OutboundEdgeCount = gd.OutboundEdgeCount
+		view.EntrypointReachable = gd.EntrypointReachable
+		view.ImportsFrom = gd.ImportsFrom
+		view.ImportedBy = gd.ImportedBy
+		view.PathClassification = gd.PathClassification
+		view.GraphNodeID = gd.GraphNodeID
+		break
+	}
+	if view.WhyFlagged == "" && len(detail.Instances) > 0 {
+		view.WhyFlagged = detail.Instances[0].EvidenceRedacted
+	}
+	return view
 }
 
 type scanDetailView struct {

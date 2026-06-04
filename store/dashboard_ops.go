@@ -30,6 +30,8 @@ type ScannerPlatformRollup struct {
 	Optional        bool
 	Required        bool
 	InstallState    string
+	StatusState     string
+	Action          string
 	Version         string
 	VersionDisplay  string
 	CoverageImpact  string
@@ -92,6 +94,7 @@ type RemediationInsight struct {
 	Summary      string
 	Reasons      []string
 	SettingsHint string
+	PolicyNote   string
 }
 
 // DashboardAction is an operator-facing next step.
@@ -146,7 +149,10 @@ func scanFailureBucketLabel(bucket string) string {
 
 // BuildRemediationInsight explains why remediation candidates may be zero.
 func BuildRemediationInsight(openFindings, candidates int, plannerEnabled, prEnabled bool, remediationPolicy string) RemediationInsight {
-	insight := RemediationInsight{Candidates: candidates}
+	insight := RemediationInsight{
+		Candidates: candidates,
+		PolicyNote: "Repository Detective creates PRs only for approved low-risk plans. It never auto-merges.",
+	}
 	reasons := []string{}
 	if !plannerEnabled {
 		reasons = append(reasons, "Remediation planner is disabled globally (remediation_planner_enabled=false).")
@@ -197,6 +203,8 @@ func MergeScannerRollups(dbRollups map[string]scannerDBRollup, tools []operator.
 			Optional:       tool.IsOptional() || bypassed,
 			Required:       tool.IsRequiredInProfile() && !bypassed,
 			InstallState:   tool.InstallState(),
+			StatusState:    tool.StatusState,
+			Action:         tool.Action,
 			Version:        tool.Version,
 			VersionDisplay: tool.VersionDisplay(),
 			CoverageImpact: tool.CoverageImpact(),
@@ -208,7 +216,9 @@ func MergeScannerRollups(dbRollups map[string]scannerDBRollup, tools []operator.
 			r.StatusLabel = "bypassed (grype active)"
 			r.RecommendedFix = "Dependency scanning uses grype; install trivy only if you need its misconfig/secret scanners."
 		}
-		if tool.Configured && !tool.Available && !bypassed {
+		enabled := tool.EnabledInConfig || tool.Configured
+		installed := tool.BinaryInstalled || tool.Available
+		if enabled && !installed && !bypassed {
 			summary.ConfiguredMissingRuntime++
 		}
 		if db.MissingScans > 0 {
@@ -241,22 +251,32 @@ type scannerDBRollup struct {
 
 func scannerStatusLabel(r ScannerPlatformRollup, tool operator.ToolStatus) (status, fix string) {
 	fix = tool.RemediationHint()
+	if fix == "" {
+		fix = r.Action
+	}
+	switch r.StatusState {
+	case operator.StatusDisabledByConfig:
+		return "disabled by config", fix
+	case operator.StatusInstalledButDisabled:
+		return "installed, disabled by config", fix
+	case operator.StatusEnabledMissingBinary:
+		if r.AffectedRepos > 0 {
+			return "enabled, missing binary (degraded)", fix
+		}
+		return "enabled, missing binary", fix
+	case operator.StatusEnabledAvailable:
+		if r.FailureScans > 0 {
+			return "enabled, available (recent failures)", "Review scan logs for parse/timeouts; re-run scan after fixing scanner output."
+		}
+		return "enabled, available", fix
+	}
 	if !r.Configured {
 		return "optional, inactive", fix
 	}
 	if r.Available {
-		if r.FailureScans > 0 {
-			return "installed, recent run failures", "Review scan logs for parse/timeouts; re-run scan after fixing scanner output."
-		}
-		if strings.TrimSpace(r.Version) == "" {
-			return "installed, version unknown", fix
-		}
 		return "installed", fix
 	}
-	if r.AffectedRepos > 0 {
-		return "configured, missing (degraded coverage)", fix
-	}
-	return "configured, missing (degraded coverage)", fix
+	return "configured, missing", fix
 }
 
 // BuildDashboardActions assembles prioritized operator next steps.

@@ -2,18 +2,33 @@ package operator
 
 import (
 	"context"
+	"fmt"
 	"os/exec"
 	"strings"
 	"time"
 )
 
+// Scanner status state constants for operator clarity.
+const (
+	StatusDisabledByConfig     = "disabled_by_config"
+	StatusEnabledMissingBinary = "enabled_missing_binary"
+	StatusEnabledAvailable     = "enabled_available"
+	StatusInstalledButDisabled = "installed_but_disabled"
+	StatusNotApplicable        = "not_applicable"
+	StatusNotChecked           = "not_checked"
+)
+
 // ToolStatus describes whether an external tool binary is configured and available.
 type ToolStatus struct {
-	Name        string `json:"name"`
-	Configured  bool   `json:"configured"`
-	Available   bool   `json:"available"`
-	Version     string `json:"version,omitempty"`
-	LastChecked string `json:"last_checked"`
+	Name              string `json:"name"`
+	Configured        bool   `json:"configured"`
+	EnabledInConfig   bool   `json:"enabled_in_config"`
+	BinaryInstalled   bool   `json:"binary_installed"`
+	Available         bool   `json:"available"`
+	StatusState       string `json:"status_state"`
+	Action            string `json:"action,omitempty"`
+	Version           string `json:"version,omitempty"`
+	LastChecked       string `json:"last_checked"`
 }
 
 // ScannerConfig toggles which tools are enabled in configuration.
@@ -56,25 +71,48 @@ func CheckTools(cfg ScannerConfig) []ToolStatus {
 	now := time.Now().UTC().Format(time.RFC3339)
 	out := make([]ToolStatus, 0, len(toolDefs))
 	for _, def := range toolDefs {
-		configured := def.always
+		enabled := def.always
 		if def.enabled != nil {
-			configured = def.enabled(cfg)
+			enabled = def.enabled(cfg)
 		}
-		if !configured && !def.always {
-			out = append(out, ToolStatus{Name: def.name, Configured: false, Available: false, LastChecked: now})
-			continue
-		}
-		available := lookPath(def.binary)
+		installed := lookPath(def.binary)
 		version := ""
-		if available && len(def.versionArg) > 0 {
+		if installed && len(def.versionArg) > 0 {
 			version = probeVersion(def.binary, def.versionArg)
 		}
+		state, action := resolveToolState(def.name, enabled, installed, def.always)
 		out = append(out, ToolStatus{
-			Name: def.name, Configured: configured || def.always,
-			Available: available, Version: version, LastChecked: now,
+			Name:            def.name,
+			Configured:      enabled || def.always,
+			EnabledInConfig: enabled || def.always,
+			BinaryInstalled: installed,
+			Available:       enabled && installed,
+			StatusState:     state,
+			Action:          action,
+			Version:         version,
+			LastChecked:     now,
 		})
 	}
 	return out
+}
+
+func resolveToolState(name string, enabled, installed, always bool) (state, action string) {
+	if always {
+		if installed {
+			return StatusEnabledAvailable, ""
+		}
+		return StatusEnabledMissingBinary, fmt.Sprintf("Install %s in the core/all-in-one image or runner image.", name)
+	}
+	if enabled && installed {
+		return StatusEnabledAvailable, ""
+	}
+	if enabled && !installed {
+		return StatusEnabledMissingBinary, fmt.Sprintf("Install %s in the core/all-in-one image or runner image, or disable it in scan profile/repo settings.", name)
+	}
+	if !enabled && installed {
+		return StatusInstalledButDisabled, fmt.Sprintf("Enable %s in repo settings or scan profile if you want this scanner active.", name)
+	}
+	return StatusDisabledByConfig, fmt.Sprintf("Enable %s in repo settings/profile if desired.", name)
 }
 
 func lookPath(name string) bool {

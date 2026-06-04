@@ -100,6 +100,11 @@ func (m *Manager) forgeFor(forgeType string) IssueForge {
 	return m.giteaForge
 }
 
+// ForgeFor returns the issue forge adapter for a platform.
+func (m *Manager) ForgeFor(forgeType string) IssueForge {
+	return m.forgeFor(forgeType)
+}
+
 func (m *Manager) normalizeForgeType(forgeType string) string {
 	forgeType = strings.ToLower(strings.TrimSpace(forgeType))
 	if forgeType == "github" {
@@ -409,12 +414,34 @@ func (m *Manager) applyIssueBodyTemplate(tmpl string, issue *ai.CodeIssue, req *
 	return body
 }
 
+func formatAnalysisOverallScore(result *ai.CodeAnalysisResult) string {
+	if result == nil {
+		return "incomplete"
+	}
+	complete := result.ScoreComplete
+	score := result.OverallScore
+	if !complete && score >= 0 && score <= 1 {
+		complete = true
+	}
+	if !complete || score < 0 {
+		if strings.TrimSpace(result.ScoreIncompleteReason) != "" {
+			return "incomplete (" + result.ScoreIncompleteReason + ")"
+		}
+		return "incomplete"
+	}
+	line := fmt.Sprintf("%.2f%%", score*100)
+	if strings.TrimSpace(result.ScoreExplanation) != "" {
+		line += " — " + result.ScoreExplanation
+	}
+	return line
+}
+
 func (m *Manager) createSummaryIssueBody(req *IssueCreationRequest) string {
 	var body strings.Builder
 
 	body.WriteString("## Code Review Summary\n\n")
 	body.WriteString(fmt.Sprintf("**Total Issues Found:** %d\n", len(req.AnalysisResult.Issues)))
-	body.WriteString(fmt.Sprintf("**Overall Score:** %.2f%%\n", req.AnalysisResult.OverallScore*100))
+	body.WriteString(fmt.Sprintf("**Overall Score:** %s\n", formatAnalysisOverallScore(req.AnalysisResult)))
 	body.WriteString(fmt.Sprintf("**Analysis Time:** %v\n", req.AnalysisResult.AnalysisTime))
 	if req.ScanID != "" {
 		body.WriteString(fmt.Sprintf("**Scan ID:** %s\n", req.ScanID))
@@ -479,6 +506,36 @@ func capitalizeWord(value string) string {
 		return value
 	}
 	return strings.ToUpper(value[:1]) + strings.ToLower(value[1:])
+}
+
+// AnnotateCalibration adds lifecycle labels and a comment to an existing forge issue.
+// Existing issues are not closed or deleted.
+func (m *Manager) AnnotateCalibration(ctx context.Context, forgeType, owner, repo string, issueNumber int, falsePositive bool, reason string) error {
+	if m == nil || issueNumber <= 0 {
+		return nil
+	}
+	forge := m.forgeFor(forgeType)
+	if forge == nil {
+		return nil
+	}
+	var labels []string
+	var marker string
+	if falsePositive {
+		labels = ExpandLifecycleLabels(LifecycleFalsePositive)
+		marker = "false positive"
+	} else {
+		labels = ExpandLifecycleLabels(LifecycleSuppressed)
+		marker = "suppressed"
+	}
+	if err := forge.AddIssueLabels(ctx, owner, repo, issueNumber, labels); err != nil {
+		return err
+	}
+	body := "Repository Detective marked this finding as **" + marker + "**."
+	if strings.TrimSpace(reason) != "" {
+		body += "\n\n**Reason:** " + strings.TrimSpace(reason)
+	}
+	body += "\n\nThe issue remains open for audit history."
+	return forge.CreateIssueComment(ctx, owner, repo, issueNumber, body)
 }
 
 func GetDefaultConfig() *Config {

@@ -172,6 +172,8 @@ type findingListResponse struct {
 	LastSeenAt          time.Time `json:"last_seen_at"`
 	ExternalIssueNumber int       `json:"external_issue_number,omitempty"`
 	ExternalIssueURL    string    `json:"external_issue_url,omitempty"`
+	Suppressed          bool      `json:"suppressed"`
+	SuppressionReason   string    `json:"suppression_reason,omitempty"`
 }
 
 type findingDetailResponse struct {
@@ -217,6 +219,7 @@ type dashboardSummaryResponse struct {
 	ScannerFailuresCount     int                      `json:"scanner_failures_count"`
 	ScannerToolsMissingCount int                      `json:"scanner_tools_missing_count"`
 	OpenFindingsCount        int                      `json:"open_findings_count"`
+	SuppressedFindingsCount  int                      `json:"suppressed_findings_count"`
 	IssuesDetectedInScans    int                      `json:"issues_detected_in_scans"`
 	OpenFindingsBySeverity   map[string]int           `json:"open_findings_by_severity"`
 	RecentScans            []scanResponse           `json:"recent_scans"`
@@ -461,6 +464,7 @@ func toFindingListResponse(f store.FindingListItem) findingListResponse {
 		Confidence: f.Confidence, Source: f.Source, RuleID: f.RuleID, Title: f.Title,
 		Status: f.Status, FirstSeenAt: f.FirstSeenAt, LastSeenAt: f.LastSeenAt,
 		ExternalIssueNumber: f.ExternalIssueNumber, ExternalIssueURL: f.ExternalIssueURL,
+		Suppressed: f.Suppressed, SuppressionReason: f.SuppressionReason,
 	}
 }
 
@@ -498,7 +502,8 @@ func toDashboardSummaryResponse(s store.DashboardSummary) dashboardSummaryRespon
 	resp := dashboardSummaryResponse{
 		TotalRepositories: s.TotalRepositories, FailedScansCount: s.FailedScansCount,
 		ScannerFailuresCount: s.ScannerFailuresCount, ScannerToolsMissingCount: s.ScannerToolsMissingCount,
-		OpenFindingsCount: s.OpenFindingsCount, IssuesDetectedInScans: s.IssuesDetectedInScans,
+		OpenFindingsCount: s.OpenFindingsCount, SuppressedFindingsCount: s.SuppressedFindingsCount,
+		IssuesDetectedInScans: s.IssuesDetectedInScans,
 		OpenFindingsBySeverity: s.OpenFindingsBySeverity,
 		ScheduledScansCount: s.ScheduledScansCount, LastScheduledScanAt: s.LastScheduledScanAt,
 		RunnerJobsByStatus: s.RunnerJobsByStatus,

@@ -131,7 +131,7 @@ func notifyScanFinish(ctx context.Context, scanCtx *store.ScanContext, repositor
 	if result == nil {
 		return
 	}
-	counts, maxSev := severityCounts(result.Issues)
+	counts, maxSev := severityCounts(filterIssuesWithSuppression(repositoryID, result.Issues))
 	if maxSev == "critical" {
 		notifyManager.Emit(ctx, repositoryID, notify.Event{
 			Type:       notify.EventCriticalFinding,

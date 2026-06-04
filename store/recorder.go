@@ -118,6 +118,13 @@ func (r *Recorder) FinishScan(ctx context.Context, scanID string, data *ScanComp
 		summary["files_analyzed"] = data.FilesAnalyzed
 		summary["analysis_time_ms"] = data.AnalysisTime.Milliseconds()
 		summary["overall_score"] = data.OverallScore
+		summary["score_complete"] = data.ScoreComplete
+		if data.ScoreIncompleteReason != "" {
+			summary["score_incomplete_reason"] = data.ScoreIncompleteReason
+		}
+		if data.ScoreExplanation != "" {
+			summary["score_explanation"] = data.ScoreExplanation
+		}
 		commitSHA = data.CommitSHA
 		if data.RepoProfile != nil {
 			summary["repo_profile"] = data.RepoProfile
@@ -226,11 +233,22 @@ func (r *Recorder) RecordIssues(ctx context.Context, repositoryID int64, scanID 
 			"fixable": issue.Fixable,
 			"scan_id": scanID,
 		})
+		if issue.Source == "graph" && strings.TrimSpace(issue.Evidence) != "" {
+			var meta map[string]any
+			_ = json.Unmarshal(metaJSON, &meta)
+			if meta == nil {
+				meta = map[string]any{}
+			}
+			meta["graph_detail"] = json.RawMessage(issue.Evidence)
+			metaJSON, _ = json.Marshal(meta)
+		}
+
+		evidenceText := redactSnippet(issue.Description)
 
 		if err := r.store.AddFindingInstance(ctx, FindingInstance{
 			FindingID:        stored.ID,
 			ScanID:           scanID,
-			EvidenceRedacted: redactSnippet(issue.Description),
+			EvidenceRedacted: evidenceText,
 			LocationJSON:     locationJSON,
 			RawMetadataJSON:  metaJSON,
 			CreatedAt:        now,

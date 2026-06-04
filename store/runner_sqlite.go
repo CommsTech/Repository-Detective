@@ -254,6 +254,34 @@ func (s *SQLiteStore) CountRunnerJobsByStatus(ctx context.Context) (map[string]i
 	return out, rows.Err()
 }
 
+// RunnerJobSummary holds recent runner queue telemetry for operator UI.
+type RunnerJobSummary struct {
+	LastJobAt *time.Time
+	LastError string
+}
+
+func (s *SQLiteStore) RunnerJobSummary(ctx context.Context) (RunnerJobSummary, error) {
+	var summary RunnerJobSummary
+	var updatedAt, errMsg sql.NullString
+	err := s.db.QueryRowContext(ctx, `
+		SELECT updated_at, error FROM runner_jobs ORDER BY updated_at DESC LIMIT 1
+	`).Scan(&updatedAt, &errMsg)
+	if err == sql.ErrNoRows {
+		return summary, nil
+	}
+	if err != nil {
+		return summary, err
+	}
+	if updatedAt.Valid {
+		t := parseTime(updatedAt.String)
+		summary.LastJobAt = &t
+	}
+	if errMsg.Valid {
+		summary.LastError = errMsg.String
+	}
+	return summary, nil
+}
+
 func scanRunnerJob(row *sql.Row) (RunnerJob, error) {
 	var job RunnerJob
 	var scanID, policy, spec, result, errMsg sql.NullString

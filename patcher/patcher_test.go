@@ -233,3 +233,9 @@ func TestFailedValidationPreventsEligibleWhenNoPassingCommand(t *testing.T) {
 		t.Fatal("make test should fail validation eligibility")
 	}
 }
+
+func TestSafeFixRolloutPolicyText(t *testing.T) {
+	if !strings.Contains(SafeFixRolloutPolicy, "never auto-merges") {
+		t.Fatalf("policy text missing no-merge guarantee: %q", SafeFixRolloutPolicy)
+	}
+}

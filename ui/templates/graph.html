@@ -3,31 +3,32 @@
 {{template "nav" .}}
 <p class="rd-muted">Repository Detective — Inspect. Analyze. Improve. Interactive repository map with findings overlay.</p>
 <div class="rd-card">
-<div id="graph-controls">
-<label>Layout <select id="layout-mode"><option value="cose">Architecture clusters</option><option value="breadthfirst">Directory tree</option><option value="circle">Dependency ring</option></select></label>
-<label>Node type <select id="filter-type"><option value="">All</option><option value="file">Files</option><option value="package">Packages</option><option value="function">Functions</option><option value="finding">Findings</option><option value="directory">Directories</option></select></label>
-<label><input type="checkbox" id="filter-disconnected"> Disconnected only</label>
-<label><input type="checkbox" id="filter-findings-off"> Hide findings overlay</label>
-<label><input type="checkbox" id="filter-entrypoints"> Highlight entrypoints</label>
+<div id="graph-controls" role="toolbar" aria-label="Graph display options">
+<label for="layout-mode">Layout <select id="layout-mode"><option value="cose">Architecture clusters</option><option value="breadthfirst">Directory tree</option><option value="circle">Dependency ring</option></select></label>
+<label for="filter-type">Node type <select id="filter-type"><option value="">All</option><option value="file">Files</option><option value="package">Packages</option><option value="function">Functions</option><option value="finding">Findings</option><option value="directory">Directories</option></select></label>
+<label for="filter-disconnected"><input type="checkbox" id="filter-disconnected"> Disconnected only</label>
+<label for="filter-findings-off"><input type="checkbox" id="filter-findings-off"> Hide findings overlay</label>
+<label for="filter-entrypoints"><input type="checkbox" id="filter-entrypoints"> Highlight entrypoints</label>
 {{if .Data.ExportURL}}<a id="export-graph" href="{{.Data.ExportURL}}" class="rd-btn rd-btn-secondary">Download JSON</a>{{end}}
 <button type="button" id="copy-graph-summary">Copy graph summary</button>
 </div>
-<div id="graph-legend" class="rd-muted">
-<span class="legend-item"><span class="dot type-file"></span> File</span>
-<span class="legend-item"><span class="dot type-package"></span> Package</span>
-<span class="legend-item"><span class="dot type-function"></span> Function</span>
-<span class="legend-item"><span class="dot type-finding"></span> Finding</span>
-<span class="legend-item"><span class="dot entry"></span> Entrypoint</span>
-<span class="legend-item"><span class="dot disc"></span> Disconnected</span>
-<span class="legend-item"><span class="dot sev-critical"></span> Critical</span>
-<span class="legend-item"><span class="dot sev-high"></span> High</span>
-<span class="legend-item"><span class="dot sev-medium"></span> Medium</span>
-<span class="legend-item"><span class="dot sev-low"></span> Low/Info</span>
+<div id="graph-legend" class="rd-muted" aria-label="Graph legend">
+<span class="legend-item"><span class="dot type-file" aria-hidden="true"></span> File</span>
+<span class="legend-item"><span class="dot type-package" aria-hidden="true"></span> Package</span>
+<span class="legend-item"><span class="dot type-function" aria-hidden="true"></span> Function</span>
+<span class="legend-item"><span class="dot type-finding" aria-hidden="true"></span> Finding</span>
+<span class="legend-item"><span class="dot entry" aria-hidden="true"></span> Entrypoint</span>
+<span class="legend-item"><span class="dot disc" aria-hidden="true"></span> Disconnected</span>
+<span class="legend-item"><span class="dot sev-critical" aria-hidden="true"></span> Critical</span>
+<span class="legend-item"><span class="dot sev-high" aria-hidden="true"></span> High</span>
+<span class="legend-item"><span class="dot sev-medium" aria-hidden="true"></span> Medium</span>
+<span class="legend-item"><span class="dot sev-low" aria-hidden="true"></span> Low/Info</span>
 </div>
-<div id="graph-truncated" class="rd-alert" style="display:none">Graph was truncated due to node/edge limits. Increase per-repo or global graph limits for fuller coverage.</div>
-<div id="cy" style="width:100%;height:70vh;min-height:420px;border:1px solid #334155;border-radius:8px;background:#0f172a;"></div>
-<p id="graph-status" class="rd-muted">Loading graph…</p>
-<div id="node-detail" class="muted card" style="margin-top:0.5rem;padding:0.75rem;min-height:2.5rem">Select a node for details.</div>
+<div id="graph-truncated" class="rd-alert" style="display:none" role="status">Graph was truncated due to node/edge limits. Increase per-repo or global graph limits for fuller coverage.</div>
+<p id="graph-summary" class="rd-graph-summary rd-muted" aria-live="polite">Loading graph summary…</p>
+<div id="cy" class="rd-graph-canvas" role="img" aria-label="Repository code graph visualization"></div>
+<p id="graph-status" class="rd-muted" aria-live="polite">Loading graph…</p>
+<div id="node-detail" class="rd-muted rd-card" style="margin-top:0.5rem;padding:0.75rem;min-height:2.5rem" role="region" aria-label="Selected node details">Select a node for details.</div>
 </div>
 <div id="graph-app"
   data-graph-url="{{.Data.GraphURL}}"
@@ -35,15 +36,6 @@
   data-api-key="{{.APIKey}}"></div>
 <script src="{{.BasePath}}/static/cytoscape.min.js"></script>
 <script src="{{.BasePath}}/static/graph.js"></script>
-<style>
-.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:middle}
-.dot.type-file{background:#64748b}.dot.type-package{background:#0ea5e9}.dot.type-function{background:#94a3b8}
-.dot.type-finding{background:#f59e0b}.dot.entry{background:#22c55e}.dot.disc{background:#f97316}
-.dot.sev-critical{background:#dc2626}.dot.sev-high{background:#ef4444}.dot.sev-medium{background:#f59e0b}.dot.sev-low{background:#3b82f6}
-.legend-item{margin-right:1rem;display:inline-block;margin-bottom:0.25rem}
-#graph-controls label{margin-right:1rem}
-#graph-controls .button-link,#graph-controls button{margin-right:0.5rem}
-</style>
 {{template "foot" .}}
 </body></html>
 {{end}}

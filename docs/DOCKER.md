@@ -1,0 +1,163 @@
+# Docker images and deployment profiles
+
+Repository Detective ships as **three image targets** from one multi-stage `Dockerfile`. Choose based on deployment shape — not on product features (suppression, remediation, and policy are the same in all variants).
+
+## Image targets
+
+| Image tag (example) | Target | Use case | Approx. size |
+|---------------------|--------|----------|--------------|
+| `repository-detective:core` | `core` | Control plane only; scanners on separate runners | Smallest (~50–80 MB + your base) |
+| `repository-detective:runner` | `runner` | Gitea Actions / delegated scan workers | Large (~1–2 GB with Python scanners) |
+| `repository-detective:all-in-one` | `all-in-one` | Homelab single container | Largest (core + all tools) |
+
+### core
+
+Includes:
+
+- `repository-detective` binary (web, API, UI, scheduler, DB migrations, issue manager, policy)
+- **git** (repository clone/checkout in-process)
+- SQLite path: `/app/data` (default DB file `bugbot.db`)
+- Config mount: `/app/config/config.yaml`
+
+Does **not** include: trivy, grype, gitleaks, semgrep, govulncheck, gosec, staticcheck, hadolint, checkov.
+
+Use with [RUNNERS.md](RUNNERS.md) delegation or mount scanner binaries via a custom image layer.
+
+### runner
+
+Includes:
+
+- `repository-detective-runner` binary
+- Same scanner toolchain as all-in-one (when `INSTALL_EXTERNAL_TOOLS=true`)
+- Non-root user `repositorydetective` (UID 1001)
+
+Does **not** run the web server. Workers call back to core over HMAC-authenticated APIs.
+
+### all-in-one
+
+Includes everything in **core** plus **runner** binary and the full scanner toolchain. Default for `docker-compose.yml` and `./deploy.sh`.
+
+## Build commands
+
+```bash
+# From repository root
+export RD_VERSION=0.1.0 RD_COMMIT=$(git rev-parse --short HEAD) RD_BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+docker build --target core -t repository-detective:core \
+  --build-arg VERSION="$RD_VERSION" --build-arg COMMIT="$RD_COMMIT" --build-arg BUILD_DATE="$RD_BUILD_DATE" .
+
+docker build --target runner -t repository-detective:runner \
+  --build-arg INSTALL_EXTERNAL_TOOLS=true \
+  --build-arg VERSION="$RD_VERSION" --build-arg COMMIT="$RD_COMMIT" --build-arg BUILD_DATE="$RD_BUILD_DATE" .
+
+docker build --target all-in-one -t repository-detective:all-in-one \
+  --build-arg INSTALL_EXTERNAL_TOOLS=true \
+  --build-arg VERSION="$RD_VERSION" --build-arg COMMIT="$RD_COMMIT" --build-arg BUILD_DATE="$RD_BUILD_DATE" .
+```
+
+Offline / DNS-filtered networks:
+
+```bash
+./scripts/vendor-deps.sh
+cp ~/.local/bin/trivy deploy/bin/trivy   # optional pre-staged binaries
+docker build --target all-in-one --build-arg INSTALL_EXTERNAL_TOOLS=true .
+```
+
+Verify all targets:
+
+```bash
+./scripts/docker-build-verify.sh
+```
+
+## Pinned scanner versions (all-in-one / runner)
+
+| Tool | Version | Install method |
+|------|---------|----------------|
+| trivy | 0.57.1 | Release tarball or `deploy/bin/trivy` |
+| grype | 0.84.0 | install.sh |
+| gitleaks | 8.21.2 | Release tarball |
+| semgrep | 1.76.0 | pip (`semgrep==…`) |
+| govulncheck | 1.1.3 | `go install` (builder stage) |
+| gosec | 2.21.4 | `go install` |
+| staticcheck | 0.5.1 | `go install` |
+| hadolint | 2.12.0 | Release binary |
+| checkov | 3.2.254 | pip (`checkov==…`) |
+| golangci-lint | 1.55.2 | install.sh (optional linters) |
+
+Override at build time via env in `scripts/install-scanner-tools.sh` (e.g. `TRIVY_VERSION=…`).
+
+## Compose profiles
+
+Example file: [examples/docker-compose.yml](examples/docker-compose.yml)
+
+| Profile | Services |
+|---------|----------|
+| `all-in-one` (default) | `repository-detective` |
+| `core` | `repository-detective-core` |
+| `qdrant` | Optional Qdrant for semantic dedup |
+| `runner-example` | One-shot runner image smoke (not production workflow) |
+
+```bash
+docker compose -f docs/examples/docker-compose.yml --profile all-in-one up -d --build
+docker compose -f docs/examples/docker-compose.yml --profile core up -d --build
+docker compose -f docs/examples/docker-compose.yml --profile qdrant --profile all-in-one up -d --build
+```
+
+Root [docker-compose.yml](../docker-compose.yml) builds **all-in-one** for homelab host networking (port 8081).
+
+## Volumes and paths
+
+| Path | Purpose |
+|------|---------|
+| `/app/data` | SQLite database (`REPOSITORY_DETECTIVE_DATABASE_PATH`, default `/app/data/bugbot.db`) |
+| `/app/config` | Read-only `config.yaml` (mount from host `./config`) |
+| `/app/certs` | Optional CA bundles for private AI/Gitea TLS |
+
+**Do not** mount the Docker socket. **Do not** run privileged.
+
+## Secrets and environment
+
+- **Never** copy `.env` into the image (`.dockerignore` excludes it).
+- Prefer `REPOSITORY_DETECTIVE_*` variables; legacy `BUGBOT_*` still works ([envcompat](../internal/config/envcompat)).
+- Provide secrets via `env_file`, Docker secrets, or orchestrator — not baked into layers.
+
+## Health checks
+
+- `GET /health` — liveness (no auth)
+- `GET /api/v1/status` — scanner availability, DB, features (API key)
+
+Container healthcheck runs `scripts/docker-healthcheck.sh`, honoring `REPOSITORY_DETECTIVE_PORT` / `BUGBOT_PORT`.
+
+## Runtime user
+
+All targets run as **`repositorydetective` (UID 1001)**. Host `data/` should be writable by that UID or world-writable in homelab setups.
+
+## Image size tradeoffs
+
+| Choice | Benefit | Cost |
+|--------|---------|------|
+| **core** | Fast pulls, smaller attack surface | Requires runner hosts with scanners |
+| **runner** | Repeatable CI workers | Large image; Python deps (semgrep, checkov) |
+| **all-in-one** | Simplest ops | Slow builds/pulls; duplicates tools if you also use runners |
+
+## Rollback plan
+
+1. Note current image ID: `docker images repository-detective`
+2. Stop container: `docker compose down`
+3. Backup DB: `cp data/bugbot.db data/bugbot.db.bak` (see [BACKUP_RESTORE.md](BACKUP_RESTORE.md))
+4. Run previous tag: `docker run … repository-detective:all-in-one@<previous-digest>`
+5. Confirm `GET /health` and dashboard; re-run one manual scan
+
+## Known limitations
+
+- Scanner install requires network during build unless binaries are staged under `deploy/bin/`.
+- **core** cannot run in-process Trivy/Semgrep/etc. without delegation or custom layers.
+- musl/Alpine binaries — pre-staged `deploy/bin/*` must match architecture (amd64 assumed in install script).
+- `checkov` / `semgrep` add significant image size and build time.
+
+## Related docs
+
+- [OPERATOR_READINESS.md](OPERATOR_READINESS.md)
+- [RUNNERS.md](RUNNERS.md)
+- [BACKUP_RESTORE.md](BACKUP_RESTORE.md)
+- [UPGRADE.md](UPGRADE.md)

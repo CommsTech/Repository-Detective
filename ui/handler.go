@@ -43,7 +43,25 @@ type Handler struct {
 	remediationPR       RemediationPRBackend
 	closureEnabled      bool
 	closure             ClosureBackend
+	suppressionEnabled  bool
+	suppression         SuppressionBackend
+	reconcileEnabled    bool
+	reconciler          IssueReconciler
 	readinessFn         func() operator.Readiness
+}
+
+// IssueReconciler previews and applies existing issue reconciliation.
+type IssueReconciler interface {
+	Preview(ctx context.Context, repositoryID int64) (any, error)
+	Apply(ctx context.Context, repositoryID int64) (any, error)
+}
+
+// SuppressionBackend applies calibration actions from the UI.
+type SuppressionBackend interface {
+	SuppressFinding(ctx context.Context, findingID int64, reason, createdBy string) error
+	SuppressRuleForRepo(ctx context.Context, findingID int64, reason, createdBy string) error
+	MarkIntentionalStandalone(ctx context.Context, findingID int64, reason, createdBy string) error
+	MarkFalsePositive(ctx context.Context, findingID int64, reason, createdBy string) error
 }
 
 // RemediationBackend generates and updates remediation plans from the UI.
@@ -104,6 +122,22 @@ func (h *Handler) SetRemediationPRBackend(enabled bool, backend RemediationPRBac
 	}
 }
 
+// SetSuppressionBackend wires false-positive and suppression actions for the UI.
+func (h *Handler) SetSuppressionBackend(enabled bool, backend SuppressionBackend) {
+	if h != nil {
+		h.suppressionEnabled = enabled
+		h.suppression = backend
+	}
+}
+
+// SetIssueReconciler wires issue reconciliation for the UI.
+func (h *Handler) SetIssueReconciler(enabled bool, r IssueReconciler) {
+	if h != nil {
+		h.reconcileEnabled = enabled
+		h.reconciler = r
+	}
+}
+
 // SetClosureBackend wires evidence-based closure for the UI.
 func (h *Handler) SetClosureBackend(enabled bool, backend ClosureBackend) {
 	if h != nil {
@@ -147,6 +181,8 @@ func (h *Handler) RegisterRoutes(g *gin.RouterGroup) {
 	g.POST("/repos/:id/settings", h.SaveRepoSettings)
 	g.GET("/repos/:id/graph", h.RepoGraph)
 	g.GET("/repos/:id/report", h.RepoReport)
+	g.GET("/repos/:id/reconcile", h.RepoReconcilePreview)
+	g.POST("/repos/:id/reconcile", h.RepoReconcileApply)
 	g.GET("/scans", h.Scans)
 	g.GET("/reports", h.Reports)
 	g.GET("/health", h.SystemHealth)
@@ -160,6 +196,10 @@ func (h *Handler) RegisterRoutes(g *gin.RouterGroup) {
 	g.POST("/findings/:id/remediation/attempt-pr", h.AttemptFindingRemediationPR)
 	g.POST("/findings/:id/closure/verify", h.VerifyFindingClosure)
 	g.POST("/findings/:id/closure/check-merge", h.CheckFindingClosureMerge)
+	g.POST("/findings/:id/suppress", h.SuppressFinding)
+	g.POST("/findings/:id/suppress-rule", h.SuppressGraphRule)
+	g.POST("/findings/:id/mark-intentional", h.MarkIntentionalStandalone)
+	g.POST("/findings/:id/mark-false-positive", h.MarkFindingFalsePositive)
 	if h.preinstallEnabled {
 		g.GET("/preinstall", h.Preinstall)
 		g.POST("/preinstall", h.StartPreinstallAudit)
@@ -303,6 +343,8 @@ func (h *Handler) Dashboard(c *gin.Context) {
 	high, _ := h.store.ListFindings(c.Request.Context(), store.FindingFilter{Severity: "high", Status: "open", Limit: 10})
 	severe := append(critical, high...)
 
+	calibration, _ := h.store.CalibrationSummary(c.Request.Context())
+
 	data := map[string]any{
 		"Summary":              summary,
 		"Readiness":            readiness,
@@ -311,6 +353,7 @@ func (h *Handler) Dashboard(c *gin.Context) {
 		"AllRepos":             repos,
 		"RecentSevereFindings": severe,
 		"Actions":              actions,
+		"Calibration":          calibration,
 		"ChartJSON":            buildDashboardChartJSON(summary, repos),
 	}
 	h.renderNav(c, "dashboard.html", "Dashboard", "dashboard", data)
@@ -437,6 +480,22 @@ func (h *Handler) SystemHealth(c *gin.Context) {
 	}
 	active, _ := h.store.CountActiveScans(c.Request.Context())
 	data["ActiveScans"] = active
+	runnerJobs := summary.RunnerJobsByStatus
+	delegationEnabled := false
+	if r, ok := data["Readiness"].(operator.Readiness); ok {
+		delegationEnabled = r.Features.RunnerDelegationEnabled
+	}
+	var lastJob *time.Time
+	var lastErr string
+	if rs, ok := h.store.(interface {
+		RunnerJobSummary(context.Context) (store.RunnerJobSummary, error)
+	}); ok {
+		if rsum, err := rs.RunnerJobSummary(c.Request.Context()); err == nil {
+			lastJob = rsum.LastJobAt
+			lastErr = rsum.LastError
+		}
+	}
+	data["RunnerTelemetry"] = operator.BuildRunnerTelemetry(delegationEnabled, runnerJobs, lastJob, lastErr)
 	h.renderNav(c, "health.html", "System Health", "health", data)
 }
 
@@ -484,6 +543,7 @@ func (h *Handler) RepoDetail(c *gin.Context) {
 		"Repo": repo, "Scans": scans, "Findings": findings,
 		"ExternalIssues": external, "Effective": effective, "ProfileMeta": meta,
 		"CronInfo": cronInfo, "ScheduledScans": scheduledScans,
+		"ReconcileEnabled": h.reconcileEnabled,
 	})
 }
 
@@ -516,6 +576,11 @@ func (h *Handler) RepoSettings(c *gin.Context) {
 		selectedProfile = *settings.ScanProfile
 	}
 	notifyEff := notify.ResolveEffective(h.notifyGlobal, settings)
+	suppressions, _ := h.store.ListFindingSuppressions(c.Request.Context(), store.SuppressionFilter{
+		RepositoryID: id,
+		ActiveOnly:   true,
+		Limit:        100,
+	})
 	h.renderNav(c, "repo_settings.html", "Settings — "+repo.FullName, "policies", map[string]any{
 		"Repo": repo, "Settings": settings, "Effective": effective, "ProfileMeta": meta,
 		"SelectedProfile": selectedProfile,
@@ -523,6 +588,7 @@ func (h *Handler) RepoSettings(c *gin.Context) {
 		"Allowed": allowedSettingsDoc(), "CronInfo": cronInfo,
 		"NotificationGlobal": h.notifyGlobal, "EffectiveNotifications": notifyEff,
 		"NotificationEvents": store.AllowedNotificationEvents,
+		"Suppressions": suppressions,
 	})
 }
 
@@ -722,11 +788,13 @@ func (h *Handler) Findings(c *gin.Context) {
 		return
 	}
 	filter := store.FindingFilter{
-		Severity: c.Query("severity"),
-		Category: c.Query("category"),
-		Status:   c.Query("status"),
-		Source:   c.Query("source"),
-		Limit:    100,
+		Severity:          c.Query("severity"),
+		Category:          c.Query("category"),
+		Status:            c.Query("status"),
+		Source:            c.Query("source"),
+		IncludeSuppressed: c.Query("show_suppressed") == "1",
+		OnlySuppressed:    c.Query("only_suppressed") == "1",
+		Limit:             100,
 	}
 	if v := c.Query("repo_id"); v != "" {
 		filter.RepositoryID, _ = strconv.ParseInt(v, 10, 64)
@@ -769,12 +837,32 @@ func (h *Handler) FindingDetail(c *gin.Context) {
 			}
 		}
 	}
+	suppressions, _ := h.store.ListFindingSuppressions(c.Request.Context(), store.SuppressionFilter{
+		RepositoryID: detail.RepositoryID,
+		ActiveOnly:   true,
+		Limit:        50,
+	})
 	h.renderNav(c, "finding_detail.html", detail.Title, "findings", map[string]any{
 		"Finding": detail, "RemediationPlan": plan, "PlannerEnabled": h.remediationEnabled,
 		"PREnabled": h.remediationPREnabled, "PREligibility": prEligibility, "PatchAttempts": patchAttempts,
 		"ClosureEnabled": h.closureEnabled, "ClosureEvidence": h.closureEvidenceForUI(c.Request.Context(), id),
 		"LifecycleLabel": lifecycleStageLabel(plan, patchAttempts, h.closureEvidenceForUI(c.Request.Context(), id)),
+		"SuppressionEnabled": h.suppressionEnabled, "RepoSuppressions": suppressions,
+		"GraphDetail": buildGraphFindingView(detail),
+		"GraphMapURL": graphMapURL(h.basePath, detail.RepositoryID, detail.FilePath, detail.Source, clientAPIKeyFromRequest(c)),
 	})
+}
+
+func graphMapURL(basePath string, repoID int64, filePath, source, apiKey string) string {
+	if source != "graph" || repoID <= 0 || strings.TrimSpace(filePath) == "" {
+		return ""
+	}
+	focus := "file:" + strings.ReplaceAll(filePath, "\\", "/")
+	u := fmt.Sprintf("%s/repos/%d/graph?focus=%s", strings.TrimSuffix(basePath, "/"), repoID, url.QueryEscape(focus))
+	if apiKey != "" {
+		u += "&api_key=" + url.QueryEscape(apiKey)
+	}
+	return u
 }
 
 func (h *Handler) closureEvidenceForUI(ctx context.Context, findingID int64) closure.Evidence {
@@ -898,6 +986,76 @@ func (h *Handler) CheckFindingClosureMerge(c *gin.Context) {
 		return
 	}
 	if _, err := h.closure.CheckPatchAttemptMerge(c.Request.Context(), attemptID); err != nil {
+		c.String(http.StatusBadRequest, err.Error())
+		return
+	}
+	h.redirectFindingSettings(c, id)
+}
+
+func (h *Handler) SuppressFinding(c *gin.Context) {
+	if !h.requireStore(c) || !h.requireCSRF(c) || h.suppression == nil {
+		c.String(http.StatusServiceUnavailable, "suppression calibration disabled")
+		return
+	}
+	id, ok := parseID(c, "id")
+	if !ok {
+		return
+	}
+	if err := h.suppression.SuppressFinding(c.Request.Context(), id, c.PostForm("reason"), c.PostForm("created_by")); err != nil {
+		c.String(http.StatusBadRequest, err.Error())
+		return
+	}
+	h.redirectFindingSettings(c, id)
+}
+
+func (h *Handler) MarkFindingFalsePositive(c *gin.Context) {
+	if !h.requireStore(c) || !h.requireCSRF(c) || h.suppression == nil {
+		c.String(http.StatusServiceUnavailable, "suppression calibration disabled")
+		return
+	}
+	id, ok := parseID(c, "id")
+	if !ok {
+		return
+	}
+	if err := h.suppression.MarkFalsePositive(c.Request.Context(), id, c.PostForm("reason"), c.PostForm("created_by")); err != nil {
+		c.String(http.StatusBadRequest, err.Error())
+		return
+	}
+	h.redirectFindingSettings(c, id)
+}
+
+func (h *Handler) SuppressGraphRule(c *gin.Context) {
+	if !h.requireStore(c) || !h.requireCSRF(c) || h.suppression == nil {
+		c.String(http.StatusServiceUnavailable, "suppression calibration disabled")
+		return
+	}
+	id, ok := parseID(c, "id")
+	if !ok {
+		return
+	}
+	if err := h.suppression.SuppressRuleForRepo(c.Request.Context(), id, c.PostForm("reason"), c.PostForm("created_by")); err != nil {
+		c.String(http.StatusBadRequest, err.Error())
+		return
+	}
+	h.redirectFindingSettings(c, id)
+}
+
+func (h *Handler) MarkIntentionalStandalone(c *gin.Context) {
+	if !h.requireStore(c) || !h.requireCSRF(c) || h.suppression == nil {
+		c.String(http.StatusServiceUnavailable, "suppression calibration disabled")
+		return
+	}
+	id, ok := parseID(c, "id")
+	if !ok {
+		return
+	}
+	reason := strings.TrimSpace(c.PostForm("reason"))
+	if reason == "" {
+		reason = "intentionally standalone architecture"
+	} else {
+		reason = "intentional standalone: " + reason
+	}
+	if err := h.suppression.MarkIntentionalStandalone(c.Request.Context(), id, reason, c.PostForm("created_by")); err != nil {
 		c.String(http.StatusBadRequest, err.Error())
 		return
 	}

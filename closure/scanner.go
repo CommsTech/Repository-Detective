@@ -8,8 +8,10 @@ func ScannerForSource(source string) string {
 	switch source {
 	case "golangci-lint":
 		return "staticcheck"
+	case "reliability", "tech_debt", "maintainability", "test_gap", "performance", "ai_generated_risk":
+		return "health"
 	case "semgrep", "trivy", "grype", "gitleaks", "govulncheck", "gosec",
-		"staticcheck", "hadolint", "checkov", "linters", "graph", "test_gap", "health":
+		"staticcheck", "hadolint", "checkov", "linters", "graph", "health", "static":
 		return source
 	default:
 		return source

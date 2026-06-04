@@ -12,9 +12,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: all-in-one
       args:
         INSTALL_EXTERNAL_TOOLS: "false"
-    image: repository-detective:latest
+    image: repository-detective:all-in-one
     container_name: repository-detective-dev
     ports:
       - "8080:8080"
@@ -35,7 +36,7 @@ services:
       - ./config:/app/config:ro
       - ./data:/app/data
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/health"]
+      test: ["CMD", "/usr/local/bin/docker-healthcheck.sh"]
       interval: 30s
       timeout: 10s
       start_period: 20s

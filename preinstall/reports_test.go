@@ -9,7 +9,14 @@ import (
 	"git.commsnet.org/commstech/bugbot/store"
 )
 
+func testReportConfig() preinstall.Config {
+	cfg := preinstall.DefaultConfig()
+	cfg.RepositoryDetectiveProjectURL = "https://git.example.com/commstech/bugbot"
+	return cfg
+}
+
 func TestGenerateReportsInstallSummaryAlways(t *testing.T) {
+	cfg := testReportConfig()
 	audit := store.AuditRequest{
 		AuditID:           "a1",
 		NormalizedRepoURL: "https://github.com/o/r",
@@ -18,7 +25,7 @@ func TestGenerateReportsInstallSummaryAlways(t *testing.T) {
 		RiskScore:         0,
 		Recommendation:    store.AuditRecommendationSafe,
 	}
-	reports := preinstall.GenerateReports(audit, nil, nil)
+	reports := preinstall.GenerateReports(cfg, audit, nil, nil)
 	if len(reports) == 0 {
 		t.Fatal("expected install summary report")
 	}
@@ -28,9 +35,16 @@ func TestGenerateReportsInstallSummaryAlways(t *testing.T) {
 	if !strings.Contains(reports[0].BodyMarkdown, preinstall.ReportDisclaimerText()) {
 		t.Fatal("missing human review disclaimer")
 	}
+	if !strings.Contains(reports[0].BodyMarkdown, preinstall.ReportFooterLead()) {
+		t.Fatal("missing marketing footer")
+	}
+	if !strings.Contains(reports[0].BodyMarkdown, cfg.RepositoryDetectiveProjectURL) {
+		t.Fatal("missing project URL in footer")
+	}
 }
 
 func TestGenerateReportsSecurityDisclosureForHighFinding(t *testing.T) {
+	cfg := testReportConfig()
 	audit := store.AuditRequest{
 		AuditID:           "a1",
 		NormalizedRepoURL: "https://github.com/o/r",
@@ -43,7 +57,7 @@ func TestGenerateReportsSecurityDisclosureForHighFinding(t *testing.T) {
 		ID: 1, Severity: "high", Category: "security", Confidence: 0.95,
 		Title: "SQL injection risk", FilePath: "app.go", EvidenceRedacted: "query built from input",
 	}}
-	reports := preinstall.GenerateReports(audit, findings, nil)
+	reports := preinstall.GenerateReports(cfg, audit, findings, nil)
 	var foundSecurity bool
 	for _, r := range reports {
 		if r.ReportType == store.ReportTypeSecurityDisclosure {
@@ -59,12 +73,13 @@ func TestGenerateReportsSecurityDisclosureForHighFinding(t *testing.T) {
 }
 
 func TestGenerateReportsNoPublicDraftForSecrets(t *testing.T) {
+	cfg := testReportConfig()
 	audit := store.AuditRequest{AuditID: "a1", NormalizedRepoURL: "https://github.com/o/r", StartedAt: time.Now().UTC()}
 	findings := []store.AuditFinding{{
 		ID: 2, Severity: "high", Category: "secret", Source: "gitleaks", Confidence: 0.99,
 		Title: "AWS key", EvidenceRedacted: "AKIA1234567890ABCD",
 	}}
-	reports := preinstall.GenerateReports(audit, findings, nil)
+	reports := preinstall.GenerateReports(cfg, audit, findings, nil)
 	for _, r := range reports {
 		if r.ReportType == store.ReportTypeGeneralBug || r.ReportType == store.ReportTypeSecurityDisclosure {
 			t.Fatalf("should not generate external draft for secret finding, got %s", r.ReportType)
@@ -73,16 +88,27 @@ func TestGenerateReportsNoPublicDraftForSecrets(t *testing.T) {
 }
 
 func TestReportsDoNotContainRawSecrets(t *testing.T) {
+	cfg := testReportConfig()
 	audit := store.AuditRequest{AuditID: "a1", NormalizedRepoURL: "https://github.com/o/r", StartedAt: time.Now().UTC()}
 	raw := `password = "supersecret12345"`
 	findings := []store.AuditFinding{{
 		ID: 3, Severity: "high", Category: "quality", Confidence: 0.95,
 		Title: "Hardcoded value", EvidenceRedacted: raw,
 	}}
-	reports := preinstall.GenerateReports(audit, findings, nil)
+	reports := preinstall.GenerateReports(cfg, audit, findings, nil)
 	for _, r := range reports {
 		if strings.Contains(r.BodyMarkdown, "supersecret12345") {
 			t.Fatalf("report %s contains raw secret", r.ReportType)
 		}
+	}
+}
+
+func TestReportFooterOmitsProjectLinkWhenDisabled(t *testing.T) {
+	cfg := testReportConfig()
+	cfg.ReportIncludeProjectLink = false
+	audit := store.AuditRequest{AuditID: "a1", NormalizedRepoURL: "https://github.com/o/r", StartedAt: time.Now().UTC()}
+	reports := preinstall.GenerateReports(cfg, audit, nil, nil)
+	if strings.Contains(reports[0].BodyMarkdown, cfg.RepositoryDetectiveProjectURL) {
+		t.Fatal("project URL should be omitted when disabled")
 	}
 }

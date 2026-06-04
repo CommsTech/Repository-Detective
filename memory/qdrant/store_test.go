@@ -2,19 +2,22 @@ package qdrant_test
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"git.commsnet.org/commstech/bugbot/memory/qdrant"
 )
 
-func TestEmbeddingTextIncludesTitle(t *testing.T) {
+func TestEmbeddingTextUsesNormalizedFields(t *testing.T) {
 	text := qdrant.EmbeddingText(qdrant.MatchInput{
-		Title:       "SQL injection",
-		Description: "User input concatenated into query",
-		File:        "db.go",
+		Source: "gitleaks", RuleID: "generic-api-key", Category: "secret",
+		File: "config.env.template", Verdict: "false_positive",
+		Title: "token", Description: "placeholder token in example file",
 	})
-	if text == "" {
-		t.Fatal("expected non-empty embedding text")
+	for _, want := range []string{"source: gitleaks", "rule: generic-api-key", "verdict: false_positive"} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("expected %q in %q", want, text)
+		}
 	}
 }
 

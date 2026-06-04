@@ -37,6 +37,29 @@ func TestIsDeterministicAuditorUsesScannerRegistry(t *testing.T) {
 	}
 }
 
+func TestMergeScannerRunSummariesPreservesDeterministicStages(t *testing.T) {
+	deterministic := []scanners.RunResult{
+		scanners.DeterministicRunResult("static", 2),
+		scanners.DeterministicRunResult("health", 5),
+		scanners.DeterministicRunResult("graph", 1),
+	}
+	external := scanners.RunSummary{
+		Results: []scanners.RunResult{
+			{Scanner: "trivy", Status: scanners.StatusClean},
+			{Scanner: "semgrep", Status: scanners.StatusClean},
+		},
+	}
+	merged := mergeScannerRunSummaries(deterministic, external)
+	if len(merged.Results) != 5 {
+		t.Fatalf("expected 5 scanner results, got %d", len(merged.Results))
+	}
+	for i, name := range []string{"static", "health", "graph", "trivy", "semgrep"} {
+		if merged.Results[i].Scanner != name {
+			t.Fatalf("result[%d]: got scanner %q, want %q", i, merged.Results[i].Scanner, name)
+		}
+	}
+}
+
 func TestSelectLLMTargetFilesUsesDeterministicFlags(t *testing.T) {
 	engine := &Engine{logger: nil, config: &Config{}}
 	allFiles := []FileContent{

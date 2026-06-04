@@ -203,23 +203,8 @@ func (s *SQLiteStore) ListCalibrationRuleStats(ctx context.Context, limit int) (
 		return nil, err
 	}
 	defer rows.Close()
-	var out []CalibrationRuleStat
-	for rows.Next() {
-		var st CalibrationRuleStat
-		var lastSeen string
-		if err := rows.Scan(
-			&st.Source, &st.RuleID, &st.Category, &st.TotalFindings, &st.IssuesCreated,
-			&st.Suppressions, &st.FalsePositives, &st.VerifiedFixes, &st.StillPresent,
-			&lastSeen, &st.ActionableRate, &st.FalsePositiveRate, &st.RecommendedDefaultAction,
-		); err != nil {
-			return nil, err
-		}
-		st.LastSeenAt = parseTime(lastSeen)
-		out = append(out, st)
-	}
-	return out, rows.Err()
+	return scanCalibrationRuleStats(rows)
 }
-
 // GenerateCalibrationRecommendations creates proposed calibration changes from stats.
 func (s *SQLiteStore) GenerateCalibrationRecommendations(ctx context.Context, minFindings int) (int, error) {
 	if minFindings <= 0 {
@@ -321,12 +306,86 @@ func (s *SQLiteStore) UpdateCalibrationRecommendationStatus(ctx context.Context,
 // CalibrationSummary aggregates calibration metrics for dashboard.
 func (s *SQLiteStore) CalibrationSummary(ctx context.Context) (map[string]any, error) {
 	out := map[string]any{}
-	var proposed, accepted int
+	var proposed, accepted, rejected int
 	_ = s.db.QueryRowContext(ctx, `SELECT COUNT(1) FROM calibration_recommendations WHERE status = 'proposed'`).Scan(&proposed)
 	_ = s.db.QueryRowContext(ctx, `SELECT COUNT(1) FROM calibration_recommendations WHERE status = 'accepted'`).Scan(&accepted)
+	_ = s.db.QueryRowContext(ctx, `SELECT COUNT(1) FROM calibration_recommendations WHERE status = 'rejected'`).Scan(&rejected)
 	out["proposed_recommendations"] = proposed
 	out["accepted_recommendations"] = accepted
+	out["rejected_recommendations"] = rejected
+	out["pending_recommendations"] = proposed
+
 	noisy, _ := s.ListCalibrationRuleStats(ctx, 10)
 	out["noisy_rules"] = noisy
+	actionable, _ := s.ListCalibrationRuleStatsByActionable(ctx, 10)
+	out["actionable_rules"] = actionable
+	reliability, _ := s.ScannerReliabilitySummary(ctx, 10)
+	out["scanner_reliability"] = reliability
+	pending, _ := s.ListCalibrationRecommendations(ctx, "proposed", 10)
+	out["recommendations_pending"] = pending
 	return out, nil
+}
+
+// ListCalibrationRuleStatsByActionable returns rules with high verified-fix rates.
+func (s *SQLiteStore) ListCalibrationRuleStatsByActionable(ctx context.Context, limit int) ([]CalibrationRuleStat, error) {
+	if limit <= 0 {
+		limit = 50
+	}
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT source, rule_id, category, total_findings, issues_created, suppressions,
+			false_positives, verified_fixes, still_present, last_seen_at,
+			actionable_rate, false_positive_rate, recommended_default_action
+		FROM calibration_rule_stats
+		WHERE total_findings >= 5
+		ORDER BY actionable_rate DESC, verified_fixes DESC, total_findings DESC
+		LIMIT ?
+	`, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return scanCalibrationRuleStats(rows)
+}
+
+// ScannerReliabilitySummary aggregates scanner failure counts for operator review.
+func (s *SQLiteStore) ScannerReliabilitySummary(ctx context.Context, limit int) ([]ScannerStatusCount, error) {
+	if limit <= 0 {
+		limit = 20
+	}
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT scanner_name, status, COUNT(1) FROM scanner_results
+		WHERE status IN ('failed', 'error', 'timeout', 'binary_missing', 'parse_failed', 'timed_out')
+		GROUP BY scanner_name, status ORDER BY COUNT(1) DESC LIMIT ?
+	`, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []ScannerStatusCount
+	for rows.Next() {
+		var sc ScannerStatusCount
+		if err := rows.Scan(&sc.ScannerName, &sc.Status, &sc.Count); err != nil {
+			return nil, err
+		}
+		out = append(out, sc)
+	}
+	return out, rows.Err()
+}
+
+func scanCalibrationRuleStats(rows *sql.Rows) ([]CalibrationRuleStat, error) {
+	var out []CalibrationRuleStat
+	for rows.Next() {
+		var st CalibrationRuleStat
+		var lastSeen string
+		if err := rows.Scan(
+			&st.Source, &st.RuleID, &st.Category, &st.TotalFindings, &st.IssuesCreated,
+			&st.Suppressions, &st.FalsePositives, &st.VerifiedFixes, &st.StillPresent,
+			&lastSeen, &st.ActionableRate, &st.FalsePositiveRate, &st.RecommendedDefaultAction,
+		); err != nil {
+			return nil, err
+		}
+		st.LastSeenAt = parseTime(lastSeen)
+		out = append(out, st)
+	}
+	return out, rows.Err()
 }

@@ -20,6 +20,7 @@ type ReportingConfig struct {
 	PreserveAllFindings          bool              `mapstructure:"preserve_all_findings"`
 	DefaultActionBySeverity      map[string]string `mapstructure:"default_action_by_severity"`
 	CategoryOverrides            map[string]string `mapstructure:"category_overrides"`
+	RuleOverrides                map[string]string `mapstructure:"rule_overrides"`
 	SourceTypeOverrides          map[string]string `mapstructure:"source_type_overrides"`
 	ManualReviewCanCreateIssue   bool              `mapstructure:"manual_review_can_create_issue"`
 	SuppressedFindingsAuditable  bool              `mapstructure:"suppressed_findings_are_auditable"`
@@ -73,6 +74,7 @@ func DefaultReportingConfig() ReportingConfig {
 			"dependency":               ActionAutoIssue,
 			"license":                  ActionManualReview,
 			"code_quality":             ActionReportOnly,
+			"quality":                  ActionReportOnly,
 			"documentation":            ActionReportOnly,
 			"test_gap":                 ActionReportOnly,
 			"ai_risk":                  ActionManualReview,
@@ -107,6 +109,55 @@ func DefaultFalsePositiveReductionConfig() FalsePositiveReductionConfig {
 	}
 }
 
+// BetaNoiseRuleIDs are graph/debug rules kept on the dashboard but not opened as issues by default.
+var BetaNoiseRuleIDs = []string{
+	"GRAPH-ORPHAN-FILE",
+	"GRAPH-ORPHAN-FUNCTION",
+	"GRAPH-DISCONNECTED-PACKAGE",
+	"GRAPH-SUSPICIOUS-ISLAND",
+	"QUAL-DEBUG",
+}
+
+// BetaNoiseRuleOverrides returns report-only actions for beta calibration noise rules.
+func BetaNoiseRuleOverrides() map[string]string {
+	out := make(map[string]string, len(BetaNoiseRuleIDs))
+	for _, id := range BetaNoiseRuleIDs {
+		out[normalizeKey(id)] = ActionReportOnly
+	}
+	return out
+}
+
+// ProfileAllowsBetaNoiseSuppression reports whether graph/debug rules should stay report-only.
+func ProfileAllowsBetaNoiseSuppression(scanProfile string) bool {
+	switch normalizeKey(scanProfile) {
+	case "maintainer_deep", "strict_security", "custom", "":
+		return false
+	default:
+		return true
+	}
+}
+
+// ReportingForScanProfile layers profile-specific rule overrides on global reporting config.
+func ReportingForScanProfile(base ReportingConfig, scanProfile string) ReportingConfig {
+	if !ProfileAllowsBetaNoiseSuppression(scanProfile) {
+		return base
+	}
+	cfg := base
+	if cfg.RuleOverrides == nil {
+		cfg.RuleOverrides = map[string]string{}
+	} else {
+		merged := make(map[string]string, len(cfg.RuleOverrides)+len(BetaNoiseRuleIDs))
+		for k, v := range cfg.RuleOverrides {
+			merged[k] = v
+		}
+		cfg.RuleOverrides = merged
+	}
+	for k, v := range BetaNoiseRuleOverrides() {
+		cfg.RuleOverrides[k] = v
+	}
+	return cfg
+}
+
 // ApplyReportingMode adjusts config for named reporting modes.
 func ApplyReportingMode(cfg ReportingConfig) ReportingConfig {
 	switch cfg.Mode {
@@ -133,11 +184,20 @@ func ApplyReportingMode(cfg ReportingConfig) ReportingConfig {
 }
 
 // DecideAction picks the reporting outcome for a normalized finding.
-func DecideAction(severity, category, sourceType string, confidence float64, cfg ReportingConfig, fp FalsePositiveReductionConfig) (action string, suppressionReason string) {
+func DecideAction(severity, category, sourceType, ruleID string, confidence float64, cfg ReportingConfig, fp FalsePositiveReductionConfig) (action string, suppressionReason string) {
 	cfg = ApplyReportingMode(cfg)
 
 	if cfg.Mode == ModeMonitorOnly {
 		return ActionReportOnly, "monitor_only reporting mode"
+	}
+
+	if ruleID != "" {
+		if ruleAction, ok := cfg.RuleOverrides[normalizeKey(ruleID)]; ok && ruleAction != "" {
+			if ruleAction == ActionSuppressedWithReason {
+				return ruleAction, "rule policy: " + ruleID
+			}
+			return ruleAction, ""
+		}
 	}
 
 	// Source type overrides first (unless mode allows explicit create flags)

@@ -1,0 +1,245 @@
+package main
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"strings"
+
+	"git.commsnet.org/commstech/bugbot/ai"
+	"git.commsnet.org/commstech/bugbot/api"
+	"git.commsnet.org/commstech/bugbot/calibration"
+	"git.commsnet.org/commstech/bugbot/store"
+	"github.com/gin-gonic/gin"
+)
+
+var suppressionMatcher *calibration.Matcher
+
+type suppressionBridge struct{}
+
+func initSuppressionMatcher() {
+	if bugbotStore == nil {
+		suppressionMatcher = nil
+		return
+	}
+	suppressionMatcher = calibration.NewMatcher(bugbotStore)
+}
+
+func (suppressionBridge) SuppressFinding(c *gin.Context, findingID int64, req api.SuppressionRequest) (store.FindingSuppression, error) {
+	return applyFindingSuppression(c.Request.Context(), findingID, req, store.FindingStatusSuppressed, store.LifecycleEventSuppressed, false)
+}
+
+func (suppressionBridge) MarkFalsePositive(c *gin.Context, findingID int64, req api.SuppressionRequest) (store.FindingSuppression, error) {
+	return applyFindingSuppression(c.Request.Context(), findingID, req, store.FindingStatusFalsePositive, store.LifecycleEventFalsePositiveMarked, true)
+}
+
+func (suppressionBridge) CreateSuppression(c *gin.Context, req api.CreateSuppressionRequest) (store.FindingSuppression, error) {
+	if bugbotStore == nil {
+		return store.FindingSuppression{}, fmt.Errorf("database disabled")
+	}
+	sup := store.FindingSuppression{
+		RepositoryID: req.RepositoryID,
+		Fingerprint:  strings.TrimSpace(req.Fingerprint),
+		Source:       strings.TrimSpace(req.Source),
+		RuleID:       strings.TrimSpace(req.RuleID),
+		Category:     strings.TrimSpace(req.Category),
+		Severity:     strings.TrimSpace(req.Severity),
+		Scope:        store.NormalizeSuppressionScope(req.Scope),
+		Reason:       strings.TrimSpace(req.Reason),
+		CreatedBy:    strings.TrimSpace(req.CreatedBy),
+		ExpiresAt:    req.ExpiresAt,
+		Active:       true,
+	}
+	created, err := bugbotStore.CreateFindingSuppression(c.Request.Context(), sup)
+	if err != nil {
+		return store.FindingSuppression{}, err
+	}
+	if req.RepositoryID != nil && *req.RepositoryID > 0 {
+		suppressionMatcher.Invalidate(*req.RepositoryID)
+	}
+	return created, nil
+}
+
+func (suppressionBridge) DisableSuppression(c *gin.Context, id int64) (store.FindingSuppression, error) {
+	if bugbotStore == nil {
+		return store.FindingSuppression{}, fmt.Errorf("database disabled")
+	}
+	prev, err := bugbotStore.GetFindingSuppression(c.Request.Context(), id)
+	if err != nil {
+		return store.FindingSuppression{}, err
+	}
+	disabled, err := bugbotStore.DisableFindingSuppression(c.Request.Context(), id)
+	if err != nil {
+		return store.FindingSuppression{}, err
+	}
+	if prev.RepositoryID != nil {
+		suppressionMatcher.Invalidate(*prev.RepositoryID)
+	}
+	meta, _ := json.Marshal(map[string]any{"suppression_id": id})
+	_ = bugbotStore.AddLifecycleEvent(c.Request.Context(), store.LifecycleEvent{
+		EventType:    store.LifecycleEventUnsuppressed,
+		Message:      "Suppression rule disabled",
+		MetadataJSON: meta,
+	})
+	return disabled, nil
+}
+
+func applyFindingSuppression(ctx context.Context, findingID int64, req api.SuppressionRequest, status, lifecycleEvent string, falsePositive bool) (store.FindingSuppression, error) {
+	if bugbotStore == nil {
+		return store.FindingSuppression{}, fmt.Errorf("database disabled")
+	}
+	detail, err := bugbotStore.GetFindingDetail(ctx, findingID)
+	if err != nil {
+		return store.FindingSuppression{}, fmt.Errorf("finding not found")
+	}
+	scope := store.NormalizeSuppressionScope(req.Scope)
+	var repoIDPtr *int64
+	if scope == store.SuppressionScopeRepo {
+		repoID := detail.RepositoryID
+		repoIDPtr = &repoID
+	}
+	sup := store.FindingSuppression{
+		RepositoryID: repoIDPtr,
+		Fingerprint:  detail.Fingerprint,
+		Source:       detail.Source,
+		RuleID:       detail.RuleID,
+		Category:     detail.Category,
+		Severity:     detail.Severity,
+		Scope:        scope,
+		Reason:       strings.TrimSpace(req.Reason),
+		CreatedBy:    strings.TrimSpace(req.CreatedBy),
+		ExpiresAt:    req.ExpiresAt,
+		Active:       true,
+	}
+	created, err := bugbotStore.CreateFindingSuppression(ctx, sup)
+	if err != nil {
+		return store.FindingSuppression{}, err
+	}
+	if err := bugbotStore.UpdateFindingStatus(ctx, findingID, status); err != nil {
+		return store.FindingSuppression{}, err
+	}
+	fid := findingID
+	meta, _ := json.Marshal(map[string]any{
+		"suppression_id": created.ID,
+		"scope":          created.Scope,
+		"reason":         created.Reason,
+	})
+	_ = bugbotStore.AddLifecycleEvent(ctx, store.LifecycleEvent{
+		FindingID:    &fid,
+		EventType:    lifecycleEvent,
+		Message:      created.Reason,
+		MetadataJSON: meta,
+	})
+	if suppressionMatcher != nil {
+		suppressionMatcher.Invalidate(detail.RepositoryID)
+		_ = suppressionMatcher.LoadRepository(ctx, detail.RepositoryID)
+	}
+	if issueManager != nil && detail.ExternalIssueNumber > 0 {
+		repo, rerr := bugbotStore.GetRepository(ctx, detail.RepositoryID)
+		if rerr == nil {
+			_ = issueManager.AnnotateCalibration(ctx, repo.ForgeType, repo.Owner, repo.Name, detail.ExternalIssueNumber, falsePositive, created.Reason)
+		}
+	}
+	return created, nil
+}
+
+func loadSuppressionPolicy(ctx context.Context, repositoryID int64) {
+	if suppressionMatcher == nil || repositoryID <= 0 {
+		return
+	}
+	_ = suppressionMatcher.LoadRepository(ctx, repositoryID)
+}
+
+func filterIssuesWithSuppression(repositoryID int64, issues []ai.CodeIssue) []ai.CodeIssue {
+	if suppressionMatcher == nil || repositoryID <= 0 {
+		return issues
+	}
+	return suppressionMatcher.FilterIssues(repositoryID, issues)
+}
+
+type suppressionUIBridge struct{}
+
+func (suppressionUIBridge) SuppressFinding(ctx context.Context, findingID int64, reason, createdBy string) error {
+	_, err := applyFindingSuppression(ctx, findingID, api.SuppressionRequest{Reason: reason, CreatedBy: createdBy}, store.FindingStatusSuppressed, store.LifecycleEventSuppressed, false)
+	return err
+}
+
+func (suppressionUIBridge) MarkFalsePositive(ctx context.Context, findingID int64, reason, createdBy string) error {
+	_, err := applyFindingSuppression(ctx, findingID, api.SuppressionRequest{Reason: reason, CreatedBy: createdBy}, store.FindingStatusFalsePositive, store.LifecycleEventFalsePositiveMarked, true)
+	return err
+}
+
+func (suppressionUIBridge) SuppressRuleForRepo(ctx context.Context, findingID int64, reason, createdBy string) error {
+	return suppressRepoRule(ctx, findingID, reason, createdBy, false)
+}
+
+func (suppressionUIBridge) MarkIntentionalStandalone(ctx context.Context, findingID int64, reason, createdBy string) error {
+	return suppressRepoRule(ctx, findingID, reason, createdBy, true)
+}
+
+func suppressRepoRule(ctx context.Context, findingID int64, reason, createdBy string, intentional bool) error {
+	if bugbotStore == nil {
+		return fmt.Errorf("database disabled")
+	}
+	detail, err := bugbotStore.GetFindingDetail(ctx, findingID)
+	if err != nil {
+		return fmt.Errorf("finding not found")
+	}
+	if strings.TrimSpace(detail.RuleID) == "" {
+		return fmt.Errorf("finding has no rule_id to suppress")
+	}
+	repoID := detail.RepositoryID
+	sup := store.FindingSuppression{
+		RepositoryID: &repoID,
+		Source:       detail.Source,
+		RuleID:       detail.RuleID,
+		Category:     detail.Category,
+		Scope:        store.SuppressionScopeRepo,
+		Reason:       strings.TrimSpace(reason),
+		CreatedBy:    strings.TrimSpace(createdBy),
+		Active:       true,
+	}
+	if _, err := bugbotStore.CreateFindingSuppression(ctx, sup); err != nil {
+		return err
+	}
+	status := store.FindingStatusSuppressed
+	event := store.LifecycleEventSuppressed
+	if intentional {
+		event = store.LifecycleEventSuppressed
+		if !strings.Contains(strings.ToLower(sup.Reason), "intentional") {
+			sup.Reason = "intentional standalone: " + sup.Reason
+		}
+	}
+	_ = bugbotStore.UpdateFindingStatus(ctx, findingID, status)
+	fid := findingID
+	_ = bugbotStore.AddLifecycleEvent(ctx, store.LifecycleEvent{
+		FindingID: &fid,
+		EventType: event,
+		Message:   sup.Reason,
+	})
+	if suppressionMatcher != nil {
+		suppressionMatcher.Invalidate(detail.RepositoryID)
+		_ = suppressionMatcher.LoadRepository(ctx, detail.RepositoryID)
+	}
+	return nil
+}
+
+func isFindingSuppressedForRemediation(ctx context.Context, detail store.FindingDetail) bool {
+	st := strings.ToLower(strings.TrimSpace(detail.Status))
+	if st == store.FindingStatusSuppressed || st == store.FindingStatusFalsePositive {
+		return true
+	}
+	if suppressionMatcher == nil {
+		return false
+	}
+	in := store.FindingMatchInput{
+		RepositoryID: detail.RepositoryID,
+		Fingerprint:  detail.Fingerprint,
+		Source:       detail.Source,
+		RuleID:       detail.RuleID,
+		Category:     detail.Category,
+		Severity:     detail.Severity,
+	}
+	suppressed, _ := suppressionMatcher.IsSuppressed(detail.RepositoryID, in)
+	return suppressed
+}

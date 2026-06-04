@@ -4,11 +4,15 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"time"
 )
+
+// ErrCollectionMismatch is returned when an existing Qdrant collection does not match config.
+var ErrCollectionMismatch = errors.New("qdrant collection vector size mismatch")
 
 // Config connects Bugbot to an existing Qdrant server.
 type Config struct {
@@ -21,14 +25,14 @@ type Config struct {
 	TimeoutSeconds      int
 }
 
-// DefaultConfig returns defaults for a local Qdrant instance.
+// DefaultConfig returns defaults for cah_findings compatibility.
 func DefaultConfig() Config {
 	return Config{
 		Enabled:             false,
 		URL:                 "http://127.0.0.1:6333",
-		Collection:          "bugbot-findings",
-		VectorSize:          1536,
-		SimilarityThreshold: 0.85,
+		Collection:          "cah_findings",
+		VectorSize:          1024,
+		SimilarityThreshold: 0.7,
 		TimeoutSeconds:      15,
 	}
 }
@@ -74,12 +78,58 @@ func (c *Client) EnsureCollection(ctx context.Context) error {
 			"size":     c.vectorSize(),
 			"distance": "Cosine",
 		},
+		"on_disk_payload": true,
 	}
 	_, err = c.do(ctx, http.MethodPut, fmt.Sprintf("/collections/%s", c.cfg.Collection), body)
 	return err
 }
 
-// FindingPayload is stored alongside each vector in Qdrant.
+// ValidateCollection verifies an existing collection matches configured vector size.
+func (c *Client) ValidateCollection(ctx context.Context) error {
+	if !c.Enabled() {
+		return nil
+	}
+	respBody, err := c.doRaw(ctx, http.MethodGet, fmt.Sprintf("/collections/%s", c.cfg.Collection), nil)
+	if err != nil {
+		return err
+	}
+	var parsed struct {
+		Result struct {
+			Config struct {
+				Params struct {
+					Vectors struct {
+						Size json.Number `json:"size"`
+					} `json:"vectors"`
+				} `json:"params"`
+			} `json:"config"`
+		} `json:"result"`
+	}
+	if err := json.Unmarshal(respBody, &parsed); err != nil {
+		return err
+	}
+	size, err := parsed.Result.Config.Params.Vectors.Size.Int64()
+	if err != nil {
+		return fmt.Errorf("qdrant collection size unreadable: %w", err)
+	}
+	if int(size) != c.vectorSize() {
+		return fmt.Errorf("%w: collection=%s have=%d want=%d", ErrCollectionMismatch, c.cfg.Collection, size, c.vectorSize())
+	}
+	return nil
+}
+
+// ValidateVectorLen rejects vectors that do not match configured dimensions.
+func (c *Client) ValidateVectorLen(length int) error {
+	if !c.Enabled() {
+		return nil
+	}
+	want := c.vectorSize()
+	if length != want {
+		return fmt.Errorf("%w: vector length=%d want=%d", ErrCollectionMismatch, length, want)
+	}
+	return nil
+}
+
+// FindingPayload is the legacy payload stored alongside each vector in Qdrant.
 type FindingPayload struct {
 	Repository  string  `json:"repository"`
 	Title       string  `json:"title"`
@@ -99,13 +149,20 @@ type FindingPayload struct {
 type ScoredFinding struct {
 	ID      string
 	Score   float64
-	Payload FindingPayload
+	Payload map[string]any
 }
 
-// Upsert stores or updates a finding vector.
-func (c *Client) Upsert(ctx context.Context, pointID string, vector []float32, payload FindingPayload) error {
+// Upsert stores or updates a finding vector with a redacted cah_findings payload.
+func (c *Client) Upsert(ctx context.Context, pointID string, vector []float32, payload CAHFindingPayload) error {
 	if !c.Enabled() {
 		return nil
+	}
+	if err := c.ValidateVectorLen(len(vector)); err != nil {
+		return err
+	}
+	payloadMap, err := PayloadToMap(payload)
+	if err != nil {
+		return err
 	}
 
 	body := map[string]any{
@@ -113,11 +170,11 @@ func (c *Client) Upsert(ctx context.Context, pointID string, vector []float32, p
 			{
 				"id":      pointID,
 				"vector":  vector,
-				"payload": payload,
+				"payload": payloadMap,
 			},
 		},
 	}
-	_, err := c.do(ctx, http.MethodPut, fmt.Sprintf("/collections/%s/points?wait=true", c.cfg.Collection), body)
+	_, err = c.do(ctx, http.MethodPut, fmt.Sprintf("/collections/%s/points?wait=true", c.cfg.Collection), body)
 	return err
 }
 
@@ -125,6 +182,9 @@ func (c *Client) Upsert(ctx context.Context, pointID string, vector []float32, p
 func (c *Client) SearchSimilar(ctx context.Context, repository string, vector []float32, limit int) ([]ScoredFinding, error) {
 	if !c.Enabled() {
 		return nil, nil
+	}
+	if err := c.ValidateVectorLen(len(vector)); err != nil {
+		return nil, err
 	}
 	if limit <= 0 {
 		limit = 3
@@ -135,9 +195,13 @@ func (c *Client) SearchSimilar(ctx context.Context, repository string, vector []
 		"limit":        limit,
 		"with_payload": true,
 		"filter": map[string]any{
-			"must": []map[string]any{
+			"should": []map[string]any{
 				{
 					"key":   "repository",
+					"match": map[string]any{"value": repository},
+				},
+				{
+					"key":   "target",
 					"match": map[string]any{"value": repository},
 				},
 			},
@@ -153,7 +217,7 @@ func (c *Client) SearchSimilar(ctx context.Context, repository string, vector []
 		Result []struct {
 			ID      any            `json:"id"`
 			Score   float64        `json:"score"`
-			Payload FindingPayload `json:"payload"`
+			Payload map[string]any `json:"payload"`
 		} `json:"result"`
 	}
 	if err := json.Unmarshal(respBody, &parsed); err != nil {
@@ -175,7 +239,7 @@ func (c *Client) vectorSize() int {
 	if c.cfg.VectorSize > 0 {
 		return c.cfg.VectorSize
 	}
-	return 1536
+	return 1024
 }
 
 func (c *Client) do(ctx context.Context, method, path string, body any) (int, error) {
@@ -186,10 +250,6 @@ func (c *Client) do(ctx context.Context, method, path string, body any) (int, er
 	if len(respBody) == 0 {
 		return http.StatusOK, nil
 	}
-	var status struct {
-		Status string `json:"status"`
-	}
-	_ = json.Unmarshal(respBody, &status)
 	return http.StatusOK, nil
 }
 

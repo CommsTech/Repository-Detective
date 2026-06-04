@@ -17,7 +17,18 @@ Maps the requested **10 minimum checks** (Gitea #39) to Repository Detective cap
 
 ## Overall score
 
-After each scan, `ComputeOverallScore` in `analyzers/scoring.go` produces a **0–1 score** (higher is better) from finding severities. Stored on scan summary as `overall_score` and shown in Gitea summary issues.
+After each scan, `ComputeScoreResult` in `analyzers/scoring.go` produces a **0–100 repository health score** (stored normalized as `overall_score` 0–1 on scan summary JSON and shown in Gitea summary issues).
+
+### Scoring formula
+
+- Start at **100**
+- Subtract per finding: critical **−30**, high **−15**, medium **−5**, low **−1**
+- Cap graph/low-health noise at **−10** total so noisy low findings cannot drive the score to zero
+- **Suppressed** and **report-only** findings do not affect the score
+- When required scanners fail and no findings exist, score is **`incomplete`** (not `0.00%`)
+- `score_explanation` on the scan summary documents the breakdown
+
+Example: 27 mixed non-critical findings typically score well above zero unless many are critical/high without caps applying.
 
 ## Roadmap (not blocking closeout)
 

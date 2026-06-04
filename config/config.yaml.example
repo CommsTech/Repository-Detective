@@ -126,3 +126,9 @@ remediation_planner_enabled: true
 remediation_pr_enabled: false
 evidence_closure_enabled: true
 evidence_closure_close_issues: false
+
+# Private beta defaults (see docs/BETA_READINESS.md)
+preinstall_audit_enabled: false
+ai_startup_test_enabled: false
+notifications_enabled: false
+runner_delegation_enabled: false

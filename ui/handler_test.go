@@ -521,6 +521,87 @@ func TestReportsPageRenders(t *testing.T) {
 	}
 }
 
+func TestThemeBootstrapAndToggle(t *testing.T) {
+	dir := t.TempDir()
+	s, _ := store.Open(store.Config{Enabled: true, Path: filepath.Join(dir, "theme-ui.db")})
+	defer s.Close()
+	r, _ := testUI(t, s)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, "/ui/", nil)
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status %d", w.Code)
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "localStorage.getItem") {
+		t.Fatal("expected theme bootstrap script in head")
+	}
+	if !strings.Contains(body, "document.documentElement.dataset.theme") {
+		t.Fatal("expected data-theme bootstrap via dataset.theme")
+	}
+	if !strings.Contains(body, `id="rd-theme-toggle"`) {
+		t.Fatal("expected theme toggle group")
+	}
+	if !strings.Contains(body, `data-theme-choice="system"`) {
+		t.Fatal("expected system theme option")
+	}
+	if !strings.Contains(body, `data-theme-choice="light"`) {
+		t.Fatal("expected light theme option")
+	}
+	if !strings.Contains(body, `data-theme-choice="dark"`) {
+		t.Fatal("expected dark theme option")
+	}
+	if !strings.Contains(body, `aria-label="Theme"`) {
+		t.Fatal("expected accessible Theme label on toggle group")
+	}
+	if !strings.Contains(body, "theme.js") {
+		t.Fatal("expected theme.js script")
+	}
+}
+
+func TestThemeCSSIncludesLightAndDarkTokens(t *testing.T) {
+	r, _ := testUI(t, nil)
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, "/ui/static/theme.css", nil)
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("theme.css status %d", w.Code)
+	}
+	body := w.Body.String()
+	for _, token := range []string{`html[data-theme="light"]`, `html[data-theme="dark"]`, `html[data-theme="system"]`, ".rd-theme-switch"} {
+		if !strings.Contains(body, token) {
+			t.Fatalf("expected %q in theme.css", token)
+		}
+	}
+}
+
+func TestGraphPageAccessibility(t *testing.T) {
+	dir := t.TempDir()
+	s, _ := store.Open(store.Config{Enabled: true, Path: filepath.Join(dir, "graph-ui.db")})
+	defer s.Close()
+	r, _ := testUI(t, s)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, "/ui/repos/1/graph", nil)
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusNotFound && w.Code != http.StatusOK {
+		t.Fatalf("unexpected graph page status %d", w.Code)
+	}
+	if w.Code == http.StatusOK {
+		body := w.Body.String()
+		if !strings.Contains(body, `id="graph-summary"`) {
+			t.Fatal("expected graph text summary fallback")
+		}
+		if !strings.Contains(body, `for="layout-mode"`) {
+			t.Fatal("expected labeled graph layout control")
+		}
+		if !strings.Contains(body, "rd-graph-canvas") {
+			t.Fatal("expected themed graph canvas class")
+		}
+	}
+}
+
 func min(a, b int) int {
 	if a < b {
 		return a

@@ -243,13 +243,15 @@ func findingFilterFromQuery(c *gin.Context) store.FindingFilter {
 	opts := listOptions(c)
 	repoID, _ := strconv.ParseInt(c.Query("repo_id"), 10, 64)
 	return store.FindingFilter{
-		RepositoryID: repoID,
-		Severity:     c.Query("severity"),
-		Category:     c.Query("category"),
-		Status:       c.Query("status"),
-		Source:       c.Query("source"),
-		Limit:        opts.Limit,
-		Offset:       opts.Offset,
+		RepositoryID:      repoID,
+		Severity:          c.Query("severity"),
+		Category:          c.Query("category"),
+		Status:            c.Query("status"),
+		Source:            c.Query("source"),
+		IncludeSuppressed: c.Query("show_suppressed") == "1" || c.Query("include_suppressed") == "true",
+		OnlySuppressed:    c.Query("only_suppressed") == "1",
+		Limit:             opts.Limit,
+		Offset:            opts.Offset,
 	}
 }
 

@@ -130,9 +130,43 @@ See [REMEDIATION.md](REMEDIATION.md). Generates structured fix plans only by def
 
 See [REMEDIATION_PRS.md](REMEDIATION_PRS.md). **Disabled by default.** When enabled, only approved low-risk plans with deterministic patchers may open a branch + PR on connected Gitea repos. No auto-merge, no issue close, no secret or dependency auto-fix.
 
+### Owned-repo safe fix rollout (beta)
+
+Start fixing **owned/connected repos only** through the approved loop:
+
+```text
+finding → issue → remediation plan → approval → safe PR → tests → merge → rescan → verified closure
+```
+
+PRs are created only when **all** of the following hold:
+
+| Gate | Requirement |
+|------|-------------|
+| Repository | Connected/owned Gitea repo |
+| Plan | `approved`, `safe_for_auto_pr=true`, `requires_human_review=false` |
+| Risk | `regression_risk=low`, `fix_complexity=small` |
+| Validation | At least one allowlisted command passes |
+| Scope | Not secret, graph/orphan deletion, architecture rewiring, dependency major upgrade, or high-risk gosec/checkov/trivy |
+
+**Third-party pre-install audits:** never auto-file issues or PRs — generate copy/paste reports and disclosure drafts only.
+
+UI copy: *Repository Detective creates PRs only for approved low-risk plans. It never auto-merges.*
+
 ## Evidence-based closure (Phase 18)
 
 See [EVIDENCE_CLOSURE.md](EVIDENCE_CLOSURE.md). **Enabled by default** for evidence tracking; **auto-close disabled by default**. Closes or marks resolved only after PR merge + rescan + fingerprint gone + scanner success.
+
+## Issue reconciliation (Phase 19)
+
+See [ISSUE_RECONCILIATION.md](ISSUE_RECONCILIATION.md). Inspects already-filed Gitea issues against latest scans. Never deletes issues; closes only when `issue_reconciliation_close_verified: true` and verification evidence exists.
+
+## Deterministic calibration (Phase 19)
+
+See [CALIBRATION.md](CALIBRATION.md). Local rule statistics and recommendations from suppressions, false positives, and verified fixes. **No auto-apply by default.**
+
+## AI token efficiency (Phase 19)
+
+See [AI_TOKEN_EFFICIENCY.md](AI_TOKEN_EFFICIENCY.md). **AI startup chat tests disabled by default**; use metadata-only or manual test endpoints.
 
 ## Example: deterministic strict repo
 
@@ -171,3 +205,17 @@ Pre-install audit mode (Phase 9) uses separate tables and does **not** use per-r
 - `runner_policy` is **enforced** for scheduled and manual full scans when global runner delegation is enabled (Phase 12). See [RUNNERS.md](RUNNERS.md).
 - Manual analyze of unknown repos uses global config only.
 - No `.bugbot.yaml` in-repo config yet.
+
+## Private beta defaults (issue closeout calibration)
+
+Evidence from the 253-issue closeout sprint (see `docs/dogfood-reports/issue-closeout-calibration-report.md`):
+
+| Default | Rationale |
+|---------|-----------|
+| Global profile `beta_standard` | Graph + QUAL-DEBUG findings report-only; reduces Gitea noise |
+| Graph rules report-only | 82 open graph issues were legacy noise; keep on dashboard |
+| `standard_deterministic` issue min severity **high** for lint/health | Ruff F401 and low health findings deferred — not auto-closed |
+| Critical/high security unchanged | SEC-* and dependency findings remain actionable |
+| Global suppressions for graph/debug rules | See `docs/dogfood-reports/closeout-suppressions.sql` |
+
+**Do not** suppress critical/high security findings without documented false-positive review.

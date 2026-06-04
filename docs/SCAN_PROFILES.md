@@ -129,6 +129,13 @@ Settings and scan summaries include:
 | `strict_security` | `core` or `gitea_actions` for isolated PR scans |
 | `maintainer_deep` | `auto` or `gitea_actions` for full workspace |
 | `preinstall_cautious` | core read-only audit path |
+| `beta_standard` | Private beta: deterministic, graph on dashboard, low issue noise |
+
+### `beta_standard` (private beta)
+
+- Same scanners as `standard_deterministic` with **report-only overrides** for graph orphan/disconnected/island rules and `QUAL-DEBUG`
+- Recommended global default during private beta (`REPOSITORY_DETECTIVE_SCAN_PROFILE=beta_standard`)
+- Does not disable security issue creation for high/critical findings
 
 ## Rollback
 

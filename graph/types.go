@@ -139,18 +139,28 @@ type GraphFinding struct {
 	File        string
 	Line        int
 	Evidence    string
+	Detail      FindingDetail
 }
 
 // ToCandidateFindings converts graph findings to pipeline candidates.
 func ToCandidateFindings(findings []GraphFinding) []models.CandidateFinding {
 	out := make([]models.CandidateFinding, 0, len(findings))
 	for _, f := range findings {
+		detailJSON := f.Detail.JSON()
+		dashboardText := f.Description
+		if dashboardText == "" {
+			dashboardText = f.Title
+		}
+		if len(dashboardText) > 6000 {
+			dashboardText = dashboardText[:6000] + "…"
+		}
 		out = append(out, models.CandidateFinding{
 			ID:         f.RuleID,
 			Hypothesis: f.Title,
 			Evidence: models.Evidence{
-				Code:      f.Evidence,
+				Code:      dashboardText,
 				CallChain: []string{f.File},
+				ASTNode:   detailJSON,
 			},
 			Severity:    f.Severity,
 			Confidence:  f.Confidence,

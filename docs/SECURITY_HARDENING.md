@@ -158,4 +158,14 @@ After enabling the safe remediation loop (`plan → approve → patch PR → mer
 
 Operator checklist: [OPERATOR_READINESS.md](OPERATOR_READINESS.md).
 
-Status endpoints (no secrets exposed): `GET /health`, `GET /api/v1/status`, `GET /api/v1/about`.
+Status endpoints (no secrets exposed): `GET /health`, `GET /api/v1/status`, `GET /api/v1/about`, `GET /api/v1/ai/status`.
+
+## Phase 19 — AI cost and local learning
+
+| Control | Detail |
+|---------|--------|
+| **No startup chat test** | `ai_startup_test_enabled: false` — avoids paid "Hello" completion prompts |
+| **Metadata-only probe** | Default `ai_connection_test_mode: metadata_only` uses `/v1/models` when available |
+| **Manual cost warning** | `POST /api/v1/ai/test-connection` warns when chat completion mode is used |
+| **Local calibration only** | Rule stats and recommendations stay in SQLite — see [PRIVACY.md](PRIVACY.md) |
+| **Issue reconciliation audit** | Runs persisted in `issue_reconciliation_runs` — no issue deletion |

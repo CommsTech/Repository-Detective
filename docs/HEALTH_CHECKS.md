@@ -85,6 +85,10 @@ Enable only when you accept higher false-positive rate: `enable_ai_risk_checks: 
 - `_ = conn.Close()`-style ignores are suppressed; other ignored errors may need manual review.
 - Large-file thresholds may flag generated code — increase `health_large_file_lines`.
 
+## Beta default reporting
+
+Under the `beta_standard` profile, low-severity health findings (`HEALTH-TECH-MARKER`, `HEALTH-LARGE-FILE`) and medium reliability markers remain on the **dashboard only** — they do not create Gitea issues unless the repo uses `strict_security` or explicit `issue_only` with lower severity gates. See [POLICY.md](POLICY.md#issue-policies).
+
 ## Per-repo examples (Phase 10B)
 
 Strict security repo with health but no AI-risk:

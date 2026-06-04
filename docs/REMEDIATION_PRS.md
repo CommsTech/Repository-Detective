@@ -103,7 +103,18 @@ Issues **remain open** until a future evidence-based closure phase (merge + resc
 
 Finding detail → remediation section shows eligibility checklist, blocked reasons, **Create remediation PR** (when eligible), latest patch attempts, validation results, and PR link.
 
-Warning displayed: Repository Detective creates a branch and PR only — no merge or issue close.
+Warning displayed: Repository Detective creates PRs only for approved low-risk plans. It never auto-merges.
+
+## Beta rollout order
+
+For owned repos, prioritize fixes in this order:
+
+1. Critical/high true positives with approved plans
+2. High-confidence medium findings with low regression risk
+3. Safe staticcheck/hadolint low-risk fixes
+4. Reliability/test-gap improvements after human approval
+
+Do **not** enable broad auto-fixing across all repositories. Use the allowlist gates above and keep third-party audits report-only.
 
 ## Database
 

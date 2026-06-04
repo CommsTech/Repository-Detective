@@ -4,6 +4,24 @@ Repository Detective — **Inspect. Analyze. Improve.**
 
 Use this checklist before your first real deployment (Track A: dogfooding on your own Gitea repos).
 
+## Docker image targets
+
+Repository Detective publishes three images from one `Dockerfile` (see [DOCKER.md](DOCKER.md)):
+
+| Image | When to use |
+|-------|-------------|
+| `repository-detective:all-in-one` | Homelab / single host — core + scanners (default in root `docker-compose.yml`) |
+| `repository-detective:core` | Split deploy — scanners only on runners |
+| `repository-detective:runner` | Gitea Actions workers — `repository-detective-runner` + toolchain |
+
+Persistent data: mount host `./data` → `/app/data`. Config: `./config` → `/app/config/config.yaml` (read-only). **Never** bake `.env` into images.
+
+```bash
+docker build --target all-in-one -t repository-detective:all-in-one .
+docker compose up -d --build
+./scripts/docker-build-verify.sh   # optional CI smoke
+```
+
 ## Required binaries by feature
 
 | Feature | Binary | Notes |
@@ -32,11 +50,13 @@ Repository Detective **does not fail startup** when optional scanner binaries ar
 
 ## Recommended runner binaries
 
-When using [RUNNERS.md](RUNNERS.md) delegation, install the same scanner set on runner hosts. Runners need:
+When using [RUNNERS.md](RUNNERS.md) delegation, use the **`repository-detective:runner`** image or install the same scanner set on runner hosts. Runners need:
 
-- `repository-detective-runner` (or legacy runner binary from your deployment image)
-- Scanner binaries matching the scan profile assigned to repos they serve
+- `repository-detective-runner` (included in the runner image)
+- Scanner binaries matching the scan profile assigned to repos they serve (bundled in `repository-detective:runner` / `all-in-one`)
 - Network egress to Gitea and the Repository Detective control plane (not to arbitrary operator networks unless configured)
+
+**core-only** deployments must delegate scans to runners — the core image does not ship Trivy/Semgrep/etc.
 
 ## Required Gitea configuration
 

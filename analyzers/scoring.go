@@ -1,45 +1,187 @@
 package analyzers
 
 import (
+	"fmt"
 	"strings"
 
 	"git.commsnet.org/commstech/bugbot/ai"
+	"git.commsnet.org/commstech/bugbot/profile"
+	"git.commsnet.org/commstech/bugbot/scanners"
 )
 
-// ComputeOverallScore returns a 0–1 repository health score from validated findings.
-// Higher is better. Deterministic scans use this for reports and issue summaries.
-func ComputeOverallScore(issues []ai.CodeIssue) float64 {
-	if len(issues) == 0 {
-		return 1.0
-	}
-	var penalty float64
-	for _, issue := range issues {
-		penalty += severityPenalty(issue.Severity)
-		if issue.Confidence > 0 && issue.Confidence < 1 {
-			penalty += (1 - issue.Confidence) * 0.02
-		}
-	}
-	score := 1.0 - penalty
-	if score < 0 {
-		return 0
-	}
-	if score > 1 {
-		return 1
-	}
-	return score
+const lowNoisePenaltyCap = 10.0
+
+// ScoreInput carries scan context for repository health scoring.
+type ScoreInput struct {
+	ScannerResults []scanners.RunResult
 }
 
-func severityPenalty(severity string) float64 {
+// ScoreResult is a transparent 0–100 repository health score.
+type ScoreResult struct {
+	Percent           float64
+	Complete          bool
+	IncompleteReason  string
+	Explanation       string
+	ScoredFindings    int
+	IgnoredFindings   int
+	ScannerFailures   []string
+}
+
+// ComputeScoreResult calculates a repository health score from issue-worthy findings.
+// Starts at 100 and subtracts weighted penalties. Suppressed and report-only findings are ignored.
+func ComputeScoreResult(issues []ai.CodeIssue, input ScoreInput) ScoreResult {
+	failures := scannerFailures(input.ScannerResults)
+	if len(failures) > 0 && len(issues) == 0 {
+		return ScoreResult{
+			Complete:         false,
+			IncompleteReason: fmt.Sprintf("scanner evidence incomplete: %s", strings.Join(failures, ", ")),
+			Explanation:      "Score unavailable until required scanners produce findings evidence.",
+			ScannerFailures:  failures,
+		}
+	}
+
+	if len(issues) == 0 && len(failures) == 0 {
+		return ScoreResult{
+			Percent:     100,
+			Complete:    true,
+			Explanation: "No issue-worthy findings; score starts at 100.",
+		}
+	}
+
+	var penalty, lowNoisePenalty float64
+	scored, ignored := 0, 0
+	breakdown := map[string]int{}
+
+	for _, issue := range issues {
+		if !shouldAffectScore(issue) {
+			ignored++
+			continue
+		}
+		scored++
+		p := severityPenaltyPoints(issue.Severity)
+		if isLowNoiseFinding(issue) {
+			remaining := lowNoisePenaltyCap - lowNoisePenalty
+			if remaining <= 0 {
+				continue
+			}
+			if p > remaining {
+				p = remaining
+			}
+			lowNoisePenalty += p
+		} else {
+			penalty += p
+		}
+		breakdown[strings.ToLower(strings.TrimSpace(issue.Severity))]++
+	}
+
+	penalty += lowNoisePenalty
+	score := 100.0 - penalty
+	if score < 0 {
+		score = 0
+	}
+
+	explanation := fmt.Sprintf(
+		"Start 100; subtract severity penalties (critical -30, high -15, medium -5, low -1); "+
+			"cap graph/low-health noise at %.0f; ignored %d suppressed/report-only findings; scored %d findings.",
+		lowNoisePenaltyCap, ignored, scored,
+	)
+	if len(breakdown) > 0 {
+		explanation += fmt.Sprintf(" Breakdown: %v.", breakdown)
+	}
+	if len(failures) > 0 {
+		explanation += fmt.Sprintf(" Note: some scanners did not complete (%s); score is approximate.", strings.Join(failures, ", "))
+	}
+
+	return ScoreResult{
+		Percent:          score,
+		Complete:         true,
+		Explanation:      explanation,
+		ScoredFindings:   scored,
+		IgnoredFindings:  ignored,
+		ScannerFailures:  failures,
+	}
+}
+
+// ComputeOverallScore returns a 0–1 normalized score for legacy callers.
+// When incomplete, returns -1.
+func ComputeOverallScore(issues []ai.CodeIssue) float64 {
+	return ComputeOverallScoreWithInput(issues, ScoreInput{})
+}
+
+// ComputeOverallScoreWithInput returns a 0–1 normalized score or -1 when incomplete.
+func ComputeOverallScoreWithInput(issues []ai.CodeIssue, input ScoreInput) float64 {
+	result := ComputeScoreResult(issues, input)
+	if !result.Complete {
+		return -1
+	}
+	return result.Percent / 100.0
+}
+
+// FormatOverallScore renders a human-readable score line for reports and issues.
+func FormatOverallScore(complete bool, normalized float64, incompleteReason, explanation string) string {
+	if !complete || normalized < 0 {
+		if strings.TrimSpace(incompleteReason) != "" {
+			return "incomplete (" + incompleteReason + ")"
+		}
+		return "incomplete"
+	}
+	line := fmt.Sprintf("%.2f%%", normalized*100)
+	if strings.TrimSpace(explanation) != "" {
+		line += " — " + explanation
+	}
+	return line
+}
+
+func shouldAffectScore(issue ai.CodeIssue) bool {
+	action := strings.ToLower(strings.TrimSpace(issue.ReportingAction))
+	switch action {
+	case profile.ActionSuppressedWithReason, profile.ActionDisabledByPolicy, profile.ActionReportOnly:
+		return false
+	}
+	state := strings.ToLower(strings.TrimSpace(issue.LifecycleState))
+	return state != profile.LifecycleSuppressed
+}
+
+func severityPenaltyPoints(severity string) float64 {
 	switch strings.ToLower(strings.TrimSpace(severity)) {
 	case "critical", "crit":
-		return 0.18
+		return 30
 	case "high", "error":
-		return 0.09
+		return 15
 	case "medium", "warning", "warn":
-		return 0.04
+		return 5
 	case "low", "info", "note":
-		return 0.015
+		return 1
 	default:
-		return 0.03
+		return 3
 	}
+}
+
+func isLowNoiseFinding(issue ai.CodeIssue) bool {
+	cat := strings.ToLower(strings.TrimSpace(issue.Category))
+	src := strings.ToLower(strings.TrimSpace(issue.Source))
+	rule := strings.ToUpper(strings.TrimSpace(issue.RuleID))
+	if cat == "graph" || strings.HasPrefix(rule, "GRAPH-") {
+		return true
+	}
+	switch cat {
+	case "tech_debt", "maintainability", "test_gap", "performance", "code_quality", "reliability", "documentation":
+		return true
+	}
+	switch src {
+	case "graph", "tech_debt", "maintainability", "test_gap", "performance", "reliability", "health":
+		return true
+	}
+	return false
+}
+
+func scannerFailures(results []scanners.RunResult) []string {
+	var failed []string
+	for _, r := range results {
+		switch r.Status {
+		case scanners.StatusFailed, scanners.StatusTimedOut, scanners.StatusParseFailed:
+			failed = append(failed, r.Scanner+"="+string(r.Status))
+		}
+	}
+	return failed
 }

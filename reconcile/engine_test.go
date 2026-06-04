@@ -141,6 +141,69 @@ func TestPreviewManyIssuesNoForgeCalls(t *testing.T) {
 	}
 }
 
+func TestPreviewReliabilityNotScannerNotRunWhenHealthRan(t *testing.T) {
+	s := openTestStore(t)
+	ctx := context.Background()
+	repo, _ := s.UpsertRepository(ctx, store.Repository{Owner: "o", Name: "rel", FullName: "o/rel", ConnectedRepo: true})
+	now := time.Now().UTC()
+	oldScan := "scan-rel-old"
+	newScan := "scan-rel-new"
+	_, _ = s.CreateScan(ctx, store.Scan{ID: oldScan, RepositoryID: repo.ID, Status: store.ScanStatusCompleted, StartedAt: now, TriggerType: store.TriggerManual})
+	_, _ = s.CreateScan(ctx, store.Scan{ID: newScan, RepositoryID: repo.ID, Status: store.ScanStatusCompleted, StartedAt: now.Add(time.Minute), TriggerType: store.TriggerManual})
+	_ = s.AddScannerResults(ctx, []store.ScannerResultRecord{{ScanID: newScan, ScannerName: "health", Status: "found"}})
+	f, _ := s.UpsertFinding(ctx, store.Finding{
+		RepositoryID: repo.ID, Fingerprint: "fp-rel-1", Title: "ignored err", Severity: "medium",
+		Source: "reliability", RuleID: "HEALTH-IGNORED-ERROR", Status: store.FindingStatusOpen,
+		FirstSeenAt: now, LastSeenAt: now,
+	})
+	_ = s.AddFindingInstance(ctx, store.FindingInstance{FindingID: f.ID, ScanID: oldScan})
+	_, _ = s.UpsertExternalIssue(ctx, store.ExternalIssue{
+		FindingID: f.ID, ForgeType: "gitea", IssueNumber: 99, IssueURL: "http://x/99", State: "open",
+	})
+	eng := reconcile.NewEngine(s, calibration.NewMatcher(s), &fakeForge{}, reconcile.Config{Comment: true})
+	result, err := eng.Preview(ctx, repo.ID)
+	if err != nil {
+		t.Fatalf("preview: %v", err)
+	}
+	if len(result.Items) != 1 {
+		t.Fatalf("expected 1 item, got %d", len(result.Items))
+	}
+	if result.Items[0].Status == reconcile.StatusScannerNotRun {
+		t.Fatalf("expected health scanner evidence, got scanner_not_run: %s", result.Items[0].Reason)
+	}
+	if result.Items[0].Status != reconcile.StatusAlreadyFixedVerify {
+		t.Fatalf("expected already_fixed_verify when absent and health ran, got %s", result.Items[0].Status)
+	}
+}
+
+func TestPreviewReliabilityScannerNotRunWhenHealthMissing(t *testing.T) {
+	s := openTestStore(t)
+	ctx := context.Background()
+	repo, _ := s.UpsertRepository(ctx, store.Repository{Owner: "o", Name: "rel2", FullName: "o/rel2", ConnectedRepo: true})
+	now := time.Now().UTC()
+	oldScan := "scan-rel2-old"
+	newScan := "scan-rel2-new"
+	_, _ = s.CreateScan(ctx, store.Scan{ID: oldScan, RepositoryID: repo.ID, Status: store.ScanStatusCompleted, StartedAt: now, TriggerType: store.TriggerManual})
+	_, _ = s.CreateScan(ctx, store.Scan{ID: newScan, RepositoryID: repo.ID, Status: store.ScanStatusCompleted, StartedAt: now.Add(time.Minute), TriggerType: store.TriggerManual})
+	f, _ := s.UpsertFinding(ctx, store.Finding{
+		RepositoryID: repo.ID, Fingerprint: "fp-rel-2", Title: "ignored err", Severity: "medium",
+		Source: "reliability", RuleID: "HEALTH-IGNORED-ERROR", Status: store.FindingStatusOpen,
+		FirstSeenAt: now, LastSeenAt: now,
+	})
+	_ = s.AddFindingInstance(ctx, store.FindingInstance{FindingID: f.ID, ScanID: oldScan})
+	_, _ = s.UpsertExternalIssue(ctx, store.ExternalIssue{
+		FindingID: f.ID, ForgeType: "gitea", IssueNumber: 100, IssueURL: "http://x/100", State: "open",
+	})
+	eng := reconcile.NewEngine(s, calibration.NewMatcher(s), &fakeForge{}, reconcile.Config{Comment: true})
+	result, err := eng.Preview(ctx, repo.ID)
+	if err != nil {
+		t.Fatalf("preview: %v", err)
+	}
+	if result.Items[0].Status != reconcile.StatusScannerNotRun {
+		t.Fatalf("expected scanner_not_run when health missing, got %s", result.Items[0].Status)
+	}
+}
+
 func openTestStore(t *testing.T) store.QueryStore {
 	t.Helper()
 	dir := t.TempDir()

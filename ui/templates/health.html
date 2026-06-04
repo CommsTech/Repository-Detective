@@ -52,16 +52,16 @@
   <div class="rd-card-head"><h2>Scanner availability</h2><span class="rd-chip">Runtime probe · 2s timeout per binary</span></div>
   <p class="rd-muted">Configured = enabled in effective profile. Installed = binary on PATH. Missing configured scanners reduce coverage but do not stop the service.</p>
   <table class="rd-table">
-    <tr><th scope="col">Scanner</th><th scope="col">Configured</th><th scope="col">Installed</th><th scope="col">Version</th><th scope="col">Role</th></tr>
+    <tr><th scope="col">Scanner</th><th scope="col">Enabled</th><th scope="col">Installed</th><th scope="col">Status</th><th scope="col">Version</th></tr>
     {{range .Tools}}
     <tr>
       <td><strong>{{.Name}}</strong></td>
-      <td>{{if .Configured}}<span class="rd-badge completed">yes</span>{{else}}<span class="rd-badge skipped">no</span>{{end}}</td>
-      <td>{{if eq .InstallState "available"}}<span class="rd-badge found">available</span>{{else if eq .InstallState "missing"}}<span class="rd-badge binary_missing">missing</span>{{else if eq .InstallState "disabled"}}<span class="rd-muted">n/a</span>{{else}}<span class="rd-badge skipped">unknown</span>{{end}}</td>
+      <td>{{if .EnabledInConfig}}<span class="rd-badge completed">yes</span>{{else}}<span class="rd-badge skipped">no</span>{{end}}</td>
+      <td>{{if .BinaryInstalled}}<span class="rd-badge found">yes</span>{{else}}<span class="rd-badge binary_missing">no</span>{{end}}</td>
+      <td><span class="rd-badge {{if eq .StatusState "enabled_available"}}completed{{else if eq .StatusState "enabled_missing_binary"}}binary_missing{{else}}skipped{{end}}">{{.StatusState}}</span></td>
       <td class="rd-muted">{{.VersionDisplay}}</td>
-      <td>{{if .IsOptional}}<span class="rd-badge skipped">optional</span>{{else}}<span class="rd-badge medium">required</span>{{end}}</td>
     </tr>
-    {{if .RemediationHint}}<tr><td colspan="5" class="rd-muted rd-scanner-hint">{{.RemediationHint}}</td></tr>{{end}}
+    {{if .Action}}<tr><td colspan="5" class="rd-muted rd-scanner-hint"><strong>Action:</strong> {{.Action}}</td></tr>{{end}}
     {{end}}
   </table>
 </div>
@@ -82,14 +82,29 @@
 
 <div class="rd-card">
   <div class="rd-card-head"><h2>Runner job queue</h2></div>
-  {{if .RunnerJobsByStatus}}
+  {{with $.Data.RunnerTelemetry}}
+  <p><strong>{{.Title}}</strong></p>
+  <p class="rd-muted">{{.Message}}</p>
+  {{if .Detail}}<p class="rd-muted">{{.Detail}}</p>{{end}}
+  {{if .Action}}<p class="rd-muted"><strong>Next:</strong> {{.Action}} · <a class="rd-link" href="https://github.com/commstech/Bugbot/blob/main/docs/RUNNERS.md" target="_blank" rel="noopener">docs/RUNNERS.md</a></p>{{end}}
+  {{if .JobsByStatus}}
   <table class="rd-table rd-table-compact">
-    {{range $status, $count := .RunnerJobsByStatus}}
+    {{range $status, $count := .JobsByStatus}}
+    <tr><td>{{$status}}</td><td><strong>{{$count}}</strong></td></tr>
+    {{end}}
+  </table>
+  {{if .LastError}}<p class="rd-muted">Last error: {{.LastError}}</p>{{end}}
+  {{end}}
+  {{else}}
+  {{if $.Summary.RunnerJobsByStatus}}
+  <table class="rd-table rd-table-compact">
+    {{range $status, $count := $.Summary.RunnerJobsByStatus}}
     <tr><td>{{$status}}</td><td><strong>{{$count}}</strong></td></tr>
     {{end}}
   </table>
   {{else}}
-  <div class="rd-empty"><p class="rd-muted">No runner job telemetry recorded yet.</p></div>
+  <div class="rd-empty"><p class="rd-muted">Runner telemetry unavailable.</p></div>
+  {{end}}
   {{end}}
 </div>
 {{end}}

@@ -14,9 +14,13 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: all-in-one
       args:
         INSTALL_EXTERNAL_TOOLS: "true"
-    image: repository-detective:latest
+        VERSION: ${RD_VERSION:-dev}
+        COMMIT: ${RD_COMMIT:-local}
+        BUILD_DATE: ${RD_BUILD_DATE:-unknown}
+    image: repository-detective:all-in-one
     container_name: repository-detective
     network_mode: host
     env_file:
@@ -40,7 +44,7 @@ services:
       - ./data:/app/data
       - ./certs:/app/certs:ro
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8081/health"]
+      test: ["CMD", "/usr/local/bin/docker-healthcheck.sh"]
       interval: 30s
       timeout: 10s
       start_period: 20s

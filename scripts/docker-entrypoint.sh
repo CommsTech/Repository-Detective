@@ -17,7 +17,7 @@ if [ -d /app/certs ]; then
 fi
 
 if [ "$(id -u)" -eq 0 ]; then
-  exec su-exec repositorydetective "$@"
+  exec su-exec repositorydetective:repositorydetective "$@"
 fi
 
 exec "$@"

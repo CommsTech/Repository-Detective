@@ -80,7 +80,7 @@ func normalizeOne(issue ai.CodeIssue, in NormalizeInput) ai.CodeIssue {
 
 	n.FalsePositiveRisk = assessFalsePositiveRisk(n, in)
 
-	action, suppressReason := DecideAction(n.Severity, n.Category, n.SourceType, n.Confidence, in.Reporting, in.FalsePositive)
+	action, suppressReason := DecideAction(n.Severity, n.Category, n.SourceType, n.RuleID, n.Confidence, in.Reporting, in.FalsePositive)
 	n.ReportingAction = action
 	n.SuppressionReason = suppressReason
 

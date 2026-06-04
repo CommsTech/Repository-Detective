@@ -7,8 +7,11 @@ type ScanCompletion struct {
 	IssuesFound       int
 	FilesAnalyzed     int
 	AnalysisTime      time.Duration
-	OverallScore      float64
-	CommitSHA         string
+	OverallScore          float64
+	ScoreComplete         bool
+	ScoreIncompleteReason string
+	ScoreExplanation      string
+	CommitSHA             string
 	WorkspaceModeUsed string
 	PolicySnapshot    any
 	ScannerResults    []ScanCompletionScanner

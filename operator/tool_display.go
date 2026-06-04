@@ -2,76 +2,95 @@ package operator
 
 import "strings"
 
-// InstallState describes runtime install status for UI and APIs.
-// Values: available, missing, disabled, unknown.
+// InstallState maps StatusState to legacy UI values.
 func (t ToolStatus) InstallState() string {
-	if !t.Configured {
-		return "disabled"
-	}
-	if t.Available {
+	switch t.StatusState {
+	case StatusEnabledAvailable:
 		return "available"
+	case StatusEnabledMissingBinary:
+		return "missing"
+	case StatusDisabledByConfig, StatusInstalledButDisabled, StatusNotApplicable:
+		return "disabled"
+	case StatusNotChecked:
+		return "unknown"
 	}
-	if t.LastChecked != "" {
+	if t.EnabledInConfig || t.Configured {
+		if t.BinaryInstalled || t.Available {
+			return "available"
+		}
 		return "missing"
 	}
-	return "unknown"
+	return "disabled"
 }
 
-// IsOptional reports scanners not enabled in the effective profile (excluding git).
 func (t ToolStatus) IsOptional() bool {
-	return !t.Configured && t.Name != "git"
+	return !(t.EnabledInConfig || t.Configured) && t.Name != "git"
 }
 
-// GrypeAvailable reports whether grype is installed (used to bypass missing trivy).
 func GrypeAvailable(tools []ToolStatus) bool {
 	for _, tool := range tools {
-		if tool.Name == "grype" && tool.Available {
+		if tool.Name == "grype" && (tool.BinaryInstalled || tool.Available) {
 			return true
 		}
 	}
 	return false
 }
 
-// TrivyBypassedByGrype reports configured trivy that is skipped because grype is available.
 func TrivyBypassedByGrype(tool ToolStatus, tools []ToolStatus) bool {
-	return tool.Name == "trivy" && tool.Configured && !tool.Available && GrypeAvailable(tools)
+	enabled := tool.EnabledInConfig || tool.Configured
+	installed := tool.BinaryInstalled || tool.Available
+	return tool.Name == "trivy" && enabled && !installed && GrypeAvailable(tools)
 }
 
-// IsRequiredInProfile reports scanners expected for scans per configuration.
 func (t ToolStatus) IsRequiredInProfile() bool {
-	return t.Configured
+	return t.EnabledInConfig || t.Configured
 }
 
-// VersionDisplay returns a safe version label for operator tables.
 func (t ToolStatus) VersionDisplay() string {
 	v := strings.TrimSpace(t.Version)
 	if v != "" {
 		return v
 	}
-	if !t.Configured {
+	if !t.EnabledInConfig && !t.Configured {
 		return "—"
 	}
-	if t.Available {
-		return "unknown"
+	if t.BinaryInstalled || t.Available {
+		if strings.TrimSpace(t.Version) == "" {
+			return "unknown"
+		}
+		return v
 	}
 	return "—"
 }
 
-// CoverageImpact classifies operator impact: none, degraded, inactive.
 func (t ToolStatus) CoverageImpact() string {
-	if !t.Configured {
+	if !t.EnabledInConfig && !t.Configured {
 		return "inactive"
 	}
-	if t.Available {
+	if t.BinaryInstalled || t.Available {
 		return "none"
 	}
 	return "degraded"
 }
 
-// RemediationHint returns short operator guidance (no secrets).
 func (t ToolStatus) RemediationHint() string {
-	switch {
-	case !t.Configured:
+	if strings.TrimSpace(t.Action) != "" {
+		return t.Action
+	}
+	switch t.StatusState {
+	case StatusDisabledByConfig:
+		return t.Name + " is disabled by configuration."
+	case StatusInstalledButDisabled:
+		return t.Name + " is installed but disabled in the effective scan profile."
+	case StatusEnabledMissingBinary:
+		return t.Name + " is enabled but the binary is not on PATH."
+	case StatusEnabledAvailable:
+		if strings.TrimSpace(t.Version) == "" {
+			return "Installed; version could not be parsed from scanner output."
+		}
+		return ""
+	}
+	if !t.EnabledInConfig && !t.Configured {
 		switch t.Name {
 		case "hadolint":
 			return "hadolint is not configured; Dockerfile linting is currently skipped."
@@ -80,14 +99,26 @@ func (t ToolStatus) RemediationHint() string {
 		default:
 			return t.Name + " is not configured in scanner settings (optional)."
 		}
-	case t.Available:
+	}
+	if t.BinaryInstalled || t.Available {
 		if strings.TrimSpace(t.Version) == "" {
 			return "Installed; version could not be parsed from scanner output."
 		}
 		return ""
-	case t.Name == "trivy":
-		return "trivy is not installed. Optional when grype is available; otherwise install trivy or set enable_trivy: false."
-	default:
-		return t.Name + " is configured but not installed. Install " + t.Name + " in PATH or disable it in scanner settings."
 	}
+	if t.Name == "trivy" {
+		return "trivy is not installed. Optional when grype is available; otherwise install trivy or set enable_trivy: false."
+	}
+	return t.Name + " is configured but not installed. Install " + t.Name + " in PATH or disable it in scanner settings."
+}
+
+// CountEnabledMissing returns tools enabled in config but missing from PATH.
+func CountEnabledMissing(tools []ToolStatus) int {
+	n := 0
+	for _, t := range tools {
+		if t.StatusState == StatusEnabledMissingBinary || ((t.EnabledInConfig || t.Configured) && !(t.BinaryInstalled || t.Available)) {
+			n++
+		}
+	}
+	return n
 }

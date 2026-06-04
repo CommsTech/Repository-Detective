@@ -30,6 +30,20 @@ func TestFastProfileDisablesHeavyChecks(t *testing.T) {
 	}
 }
 
+func TestBetaStandardProfile(t *testing.T) {
+	effective := store.ProfileDefaults(store.ScanProfileBetaStandard)
+	if effective.EnableLLMAuditors || effective.AIPolicy != store.AIPolicyDisabled {
+		t.Fatalf("beta_standard should be deterministic-only: llm=%v ai=%s", effective.EnableLLMAuditors, effective.AIPolicy)
+	}
+	if effective.SeverityGate != "high" || effective.ConfidenceGate != 0.85 {
+		t.Fatalf("unexpected beta gates: severity=%s confidence=%f", effective.SeverityGate, effective.ConfidenceGate)
+	}
+	if !effective.EnableCodeGraph || effective.RemediationPolicy != "suggest" {
+		t.Fatalf("beta_standard should keep graph and suggest remediation: graph=%v remediation=%s",
+			effective.EnableCodeGraph, effective.RemediationPolicy)
+	}
+}
+
 func TestStandardDeterministicEnablesScanners(t *testing.T) {
 	global := store.DefaultGlobalSettings()
 	global.ScanProfile = store.ScanProfileStandardDeterministic

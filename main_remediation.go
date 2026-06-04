@@ -100,6 +100,9 @@ func generateRemediationPlan(ctx context.Context, findingID int64) (remediation.
 	if err != nil {
 		return remediation.Plan{}, fmt.Errorf("repository not found")
 	}
+	if isFindingSuppressedForRemediation(ctx, detail) {
+		return remediation.Plan{}, fmt.Errorf("finding is suppressed or marked false positive")
+	}
 	fctx := findingContextFromDetail(detail, repo)
 	if !remediationPlanner.ShouldPlan(fctx) {
 		return remediation.Plan{}, fmt.Errorf("finding not eligible for remediation planning")
@@ -162,6 +165,9 @@ func maybeGenerateRemediationPlans(ctx context.Context, repositoryID int64, code
 		}
 		finding, err := bugbotStore.GetFindingByFingerprint(ctx, repositoryID, issue.Fingerprint)
 		if err != nil {
+			continue
+		}
+		if isFindingSuppressedForRemediation(ctx, store.FindingDetail{FindingListItem: store.FindingListItem{Finding: finding}}) {
 			continue
 		}
 		fctx := remediation.FindingContext{

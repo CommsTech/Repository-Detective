@@ -134,6 +134,42 @@
 </div>
 {{end}}
 
+{{with $.Data.Calibration}}
+<div class="rd-card">
+  <div class="rd-card-head">
+    <h2>Calibration maturity</h2>
+    <span class="rd-chip">{{index . "pending_recommendations"}} pending</span>
+  </div>
+  <p class="rd-muted">Recommendations require human approval — nothing auto-applies by default.</p>
+  <div class="rd-grid rd-grid-stats">
+    <div class="rd-stat info">
+      <div class="rd-stat-value">{{index . "proposed_recommendations"}}</div>
+      <div class="rd-stat-label">Proposed rules</div>
+    </div>
+    <div class="rd-stat success">
+      <div class="rd-stat-value">{{index . "accepted_recommendations"}}</div>
+      <div class="rd-stat-label">Accepted</div>
+    </div>
+  </div>
+  {{with index . "noisy_rules"}}
+  <h3>Top noisy rules</h3>
+  <ul class="rd-quicklink-list">
+    {{range .}}
+    <li><code>{{.RuleID}}</code> ({{.Source}}) — {{printf "%.0f" (mul .FalsePositiveRate 100)}}% FP/suppression · {{.TotalFindings}} findings</li>
+    {{else}}<li class="rd-muted">No rule stats yet — run calibration recompute.</li>{{end}}
+  </ul>
+  {{end}}
+  {{with index . "actionable_rules"}}
+  <h3>Top actionable rules</h3>
+  <ul class="rd-quicklink-list">
+    {{range .}}
+    <li><code>{{.RuleID}}</code> ({{.Source}}) — {{printf "%.0f" (mul .ActionableRate 100)}}% verified-fix rate</li>
+    {{else}}<li class="rd-muted">No actionable rule stats yet.</li>{{end}}
+  </ul>
+  {{end}}
+</div>
+{{end}}
+
 {{with .Data.Summary}}
 <div class="rd-card">
   <div class="rd-card-head"><h2>Finding backlog</h2><span class="rd-chip">Deduplicated</span></div>
@@ -142,6 +178,11 @@
       <div class="rd-stat-value">{{.Backlog.OpenUnique}}</div>
       <div class="rd-stat-label">Open unique findings</div>
       <p class="rd-stat-hint">Primary security backlog (fingerprint-deduped)</p>
+    </div>
+    <div class="rd-stat info">
+      <div class="rd-stat-value">{{.SuppressedFindingsCount}}</div>
+      <div class="rd-stat-label">Suppressed / false positive</div>
+      <p class="rd-stat-hint"><a class="rd-link" href="{{$.BasePath}}/findings?only_suppressed=1{{if $.APIKey}}&amp;api_key={{$.APIKey}}{{end}}">Review calibration →</a></p>
     </div>
     <div class="rd-stat info">
       <div class="rd-stat-value">{{.Backlog.NewLast7Days}}</div>
@@ -233,16 +274,16 @@
   <div class="rd-alert info" role="status">{{.Platform.UniqueMissingTools}} scanner(s) reported missing in recent scan results (historical signal).</div>
   {{end}}
   <table class="rd-table rd-table-compact">
-    <tr><th scope="col">Scanner</th><th scope="col">Profile</th><th scope="col">Installed</th><th scope="col">Version</th><th scope="col">Impact</th></tr>
+    <tr><th scope="col">Scanner</th><th scope="col">Enabled</th><th scope="col">Installed</th><th scope="col">Status</th><th scope="col">Version</th></tr>
     {{range .Platform.Rollups}}
     <tr>
       <td><strong>{{.Name}}</strong></td>
-      <td>{{if .Configured}}<span class="rd-badge completed">configured</span>{{else}}<span class="rd-badge skipped">optional</span>{{end}}</td>
-      <td>{{if eq .InstallState "available"}}<span class="rd-badge found">available</span>{{else if eq .InstallState "missing"}}<span class="rd-badge binary_missing">missing</span>{{else if eq .InstallState "disabled"}}<span class="rd-muted">not configured</span>{{else}}<span class="rd-badge skipped">unknown</span>{{end}}</td>
+      <td>{{if .Configured}}<span class="rd-badge completed">yes</span>{{else}}<span class="rd-badge skipped">no</span>{{end}}</td>
+      <td>{{if .Available}}<span class="rd-badge found">yes</span>{{else if .Configured}}<span class="rd-badge binary_missing">no</span>{{else}}<span class="rd-muted">—</span>{{end}}</td>
+      <td class="rd-muted">{{if .StatusLabel}}{{.StatusLabel}}{{else}}{{.StatusState}}{{end}}</td>
       <td class="rd-muted">{{.VersionDisplay}}</td>
-      <td class="rd-muted">{{if eq .CoverageImpact "degraded"}}degraded{{else if eq .CoverageImpact "inactive"}}inactive{{else}}ok{{end}}</td>
     </tr>
-    {{if .RecommendedFix}}<tr><td colspan="5" class="rd-muted rd-scanner-hint">{{.RecommendedFix}}</td></tr>{{end}}
+    {{if .Action}}<tr><td colspan="5" class="rd-muted rd-scanner-hint">{{.Action}}</td></tr>{{else if .RecommendedFix}}<tr><td colspan="5" class="rd-muted rd-scanner-hint">{{.RecommendedFix}}</td></tr>{{end}}
     {{end}}
   </table>
 </div>
