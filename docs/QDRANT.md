@@ -1,17 +1,62 @@
 # Qdrant Semantic Dedup
 
-Bugbot can connect to your **existing Qdrant server** to avoid duplicate Gitea issues when findings are semantically similar to ones already filed in the same repository.
+Repository Detective can connect to your **existing Qdrant server** to avoid duplicate Gitea issues when findings are semantically similar to ones already filed in the same repository.
 
-This is the connective tissue layer — Bugbot does not bundle Qdrant; point it at the instance you already run (for example alongside OpenClaw at `~/.openclaw/memory/qdrant/` or a LAN host).
+This is the connective tissue layer — Repository Detective does not bundle Qdrant; point it at the instance you already run.
 
 ## How it works
 
-```
+```text
 New finding generated
-  ├─ Embed title + description + category (OpenAI-compatible /v1/embeddings)
-  ├─ Search Qdrant collection filtered by repository
+  ├─ Build redacted normalized embedding text (source, rule, category, path_class, verdict, summary)
+  ├─ Embed via OpenAI-compatible /v1/embeddings
+  ├─ Search Qdrant collection filtered by repository/target
   ├─ Score >= threshold → comment on existing Gitea issue (no duplicate)
-  └─ Otherwise → create issue, upsert vector + payload into Qdrant
+  └─ Otherwise → create issue, upsert redacted vector + payload into Qdrant
+```
+
+## Collection: `cah_findings`
+
+Default collection name for CAH compatibility:
+
+| Setting | Default |
+|---------|---------|
+| Collection | `cah_findings` |
+| Vector size | `1024` |
+| Distance | Cosine |
+| Similarity threshold | `0.7` |
+| On-disk payload | `true` |
+
+Repository Detective auto-creates the collection when enabled. If an existing collection has a **different vector size**, writes are blocked until the collection is recreated or config matches.
+
+## Redacted payload fields
+
+Stored payloads are **redacted** — never raw secrets, code snippets, tokens, or full issue bodies.
+
+| Field | Content |
+|-------|---------|
+| `id` / `finding_id` | Stable fingerprint |
+| `bug_class` | Normalized category |
+| `severity` | Critical/High/Medium/Low |
+| `file_path` | Safe path (+ line) |
+| `description` | Redacted summary only |
+| `exploit_primitive` | Normalized primitive (rule/category) |
+| `subsystem` | Top-level path/package |
+| `source`, `rule_id` | Scanner metadata |
+| `confidence`, `verdict`, `run_id` | Optional metadata |
+| `gitea_issue`, `issue_url` | Link to filed issue |
+| `repository`, `target` | Repo filter keys |
+
+Example redacted description:
+
+```text
+Hardcoded credential-like value detected in config template.
+```
+
+Not:
+
+```text
+AWS_SECRET_ACCESS_KEY=actual_secret_here
 ```
 
 ## Configuration
@@ -21,58 +66,62 @@ New finding generated
 ```yaml
 qdrant_enabled: true
 qdrant_url: "http://127.0.0.1:6333"
-qdrant_api_key: ""                    # optional
-qdrant_collection: "bugbot-findings"
-qdrant_vector_size: 1536
-qdrant_similarity_threshold: 0.85
+qdrant_api_key: ""
+qdrant_collection: "cah_findings"
+qdrant_vector_size: 1024
+qdrant_similarity_threshold: 0.7
 embedding_model: "text-embedding-3-small"
-embedding_base_url: ""                # defaults to BUGBOT_AI_BASE_URL
-embedding_api_key: ""                 # defaults to BUGBOT_AI_API_KEY
-min_issue_confidence: 0.5             # epistemic gate — discard below this
+embedding_base_url: ""
+embedding_api_key: ""
+min_issue_confidence: 0.5
 ```
 
-Environment equivalents:
+Environment equivalents (prefer `REPOSITORY_DETECTIVE_*`; legacy `BUGBOT_*` via envcompat):
 
 ```bash
-BUGBOT_QDRANT_ENABLED=true
-BUGBOT_QDRANT_URL=http://192.168.255.11:6333
-BUGBOT_QDRANT_COLLECTION=bugbot-findings
-BUGBOT_QDRANT_SIMILARITY_THRESHOLD=0.85
-BUGBOT_EMBEDDING_MODEL=text-embedding-3-small
-BUGBOT_MIN_ISSUE_CONFIDENCE=0.5
+REPOSITORY_DETECTIVE_QDRANT_ENABLED=true
+REPOSITORY_DETECTIVE_QDRANT_URL=http://127.0.0.1:6333
+REPOSITORY_DETECTIVE_QDRANT_COLLECTION=cah_findings
+REPOSITORY_DETECTIVE_QDRANT_VECTOR_SIZE=1024
+REPOSITORY_DETECTIVE_QDRANT_SIMILARITY_THRESHOLD=0.7
 ```
 
-## Epistemic confidence gates
+## Operator-specific credentials
 
-| Confidence | Behavior |
-|------------|----------|
-| `< 0.5` | Discarded (no issue) |
-| `0.5 – 0.7` | Issue created with `low-confidence` label |
-| `0.7 – 0.9` | Issue created normally |
-| `≥ 0.9` | Issue created with `high-confidence` label |
+Repository Detective may be tested with a local operator’s Gitea, Qdrant, and API credentials during dogfooding. These credentials are never required by the product and must not be committed.
 
-Severity and category names are also applied as Gitea labels when they exist on the repo.
+Use environment variables, Docker secrets, or local untracked config for:
 
-## Collection setup
+- `REPOSITORY_DETECTIVE_API_KEY`
+- `REPOSITORY_DETECTIVE_GITEA_TOKEN`
+- `REPOSITORY_DETECTIVE_WEBHOOK_SECRET`
+- `REPOSITORY_DETECTIVE_QDRANT_URL`
+- runner shared secrets
+- notification tokens/webhooks
 
-Bugbot auto-creates the collection on startup when `qdrant_enabled=true`. Vector size must match your embedding model dimensions.
-
-If you already use Qdrant for OpenClaw, use a **separate collection** (default `bugbot-findings`) to avoid mixing payloads.
+Reports and examples must use placeholders or sanitized values. Committed `config/config.yaml` uses generic defaults (for example `qdrant_url: http://127.0.0.1:6333`); override per environment in `.env`.
 
 ## Verify connectivity
 
 ```bash
 curl http://127.0.0.1:6333/collections
-docker logs gitea-bugbot 2>&1 | grep -i qdrant
+docker logs repository-detective 2>&1 | grep -i qdrant
 ```
+
+Dogfood scripts may set `QDRANT_TEST_URL` for a one-off test without changing committed config.
+
+## Operator scripts and SQLite
+
+Prefer **API reads** over direct SQLite access. If you must inspect the DB while the app is running, use read-only mode, `busy_timeout`, and avoid schema probes during active scans. `database is locked` during concurrent writes is expected—not necessarily a product defect. Back up the DB before offline inspection.
 
 Expected log when enabled:
 
-```
-Qdrant semantic dedup enabled (collection=bugbot-findings, threshold=0.85)
+```text
+Qdrant semantic dedup enabled (collection=cah_findings, threshold=0.7)
 ```
 
 ## Related
 
-- [SCANNERS.md](SCANNERS.md) — deterministic Trivy/Grype/linter layer
-- [CAH_PIPELINE.md](CAH_PIPELINE.md) — full pipeline stages including dedup clusters (`cluster-000`, …)
+- [PRIVACY.md](PRIVACY.md) — what is never stored in Qdrant
+- [SCANNERS.md](SCANNERS.md) — deterministic scanner layer
+- [CAH_PIPELINE.md](CAH_PIPELINE.md) — full pipeline stages

@@ -62,8 +62,11 @@ scanner-workspace/
 runner-artifacts/
 runner-work/
 
-# Dogfood reports (may contain redacted curl captures — keep local)
-docs/dogfood-reports/
+# Dogfood reports (may contain operator-specific details — keep local by default)
+docs/dogfood-reports/*
+# Sanitized, committable dogfood reports (no keys, tokens, or internal hostnames)
+!docs/dogfood-reports/qdrant-redacted-local-test.md
+!docs/dogfood-reports/qdrant-redacted-test-result.json
 
 # Configuration overrides
 config.local.yaml

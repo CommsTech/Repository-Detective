@@ -21,9 +21,9 @@ ai_api_key: ""
 ai_model: "gpt-4o-mini"
 ai_insecure_skip_tls_verify: false
 
-# maintainer_deep = scanners + health + graph + LLM (depth 3). standard_deterministic = no LLM.
-scan_profile: maintainer_deep
-analysis_depth: 3
+# beta_standard = private beta default (low issue noise). maintainer_deep = LLM + depth 3.
+scan_profile: beta_standard
+analysis_depth: 2
 max_file_size: 1048576
 enable_security: true
 enable_quality: true
@@ -36,16 +36,18 @@ enable_semgrep: true
 enable_govulncheck: true
 enable_gosec: true
 enable_staticcheck: true
+enable_hadolint: true
+enable_checkov: true
 enable_linters: true
 enable_llm_auditors: false
 scanner_timeout_seconds: 120
 min_issue_confidence: 0.7
 
 qdrant_enabled: false
-qdrant_url: ""
-qdrant_collection: "repository-detective-findings"
-qdrant_vector_size: 1536
-qdrant_similarity_threshold: 0.85
+qdrant_url: "http://127.0.0.1:6333"
+qdrant_collection: "cah_findings"
+qdrant_vector_size: 1024
+qdrant_similarity_threshold: 0.7
 embedding_model: "text-embedding-3-small"
 
 database_enabled: true
@@ -93,6 +95,7 @@ reporting:
     dependency_vulnerability: auto_issue
     license: manual_review
     code_quality: report_only
+    quality: report_only
     documentation: report_only
     test_gap: report_only
     ai_risk: manual_review
