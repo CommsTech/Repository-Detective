@@ -5,7 +5,8 @@
 | Audit | ID | Gitleaks |
 |-------|-----|----------|
 | Before fix | `dae05e0c-4c24-441e-9c05-c8ce5db4cbe0` | `parse_failed` (0 findings) |
-| After fix | `07483617-e3a5-4df1-bef2-85e6512a1aac` | **`found` (10 findings)** |
+| After fix (binary hot-swap) | `07483617-e3a5-4df1-bef2-85e6512a1aac` | **`found` (10 findings)** |
+| After fix (image `0b5005a2a2b3` recreate) | `bd8a34c0-daff-43d7-bff5-bbc0155d97f2` | **`found` (10 findings)** |
 
 Same repository, depth, and commit SHA (`872d7593`).
 
@@ -63,7 +64,7 @@ No change to overall **do_not_install** recommendation tone.
 1. **checkov** / **grype** still incomplete — IaC/SBOM coverage partial.  
 2. **Gitleaks matches** may include documentation and example curl commands — human triage required.  
 3. Some gitleaks `rule_id` values embed scanner metadata paths — cosmetic DB display issue, not secret leakage.  
-4. **External sharing:** Ready for **human review**, not automatic — confirm false positives in docs/workflows before private disclosure.
+4. **External sharing:** Ready for **human review** after image-recreate validation audit `bd8a34c0` — confirm false positives in docs/workflows before private disclosure.
 
 ---
 

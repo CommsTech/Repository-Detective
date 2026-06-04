@@ -4,7 +4,9 @@
 **Repository:** https://github.com/ruvnet/RuView  
 **Commit:** `872d7593bbeeed63524386aa60e6805bb4e1b26c` (`main`)  
 **Depth:** standard  
-**Audit ID:** `07483617-e3a5-4df1-bef2-85e6512a1aac`
+**Audit ID:** `07483617-e3a5-4df1-bef2-85e6512a1aac` (binary hot-swap validation)
+
+**Image-recreate validation:** `bd8a34c0-daff-43d7-bff5-bbc0155d97f2` — same result (`gitleaks found`, 10 redacted).
 
 ---
 
@@ -15,7 +17,7 @@
 | Qdrant | off |
 | LLM / AI auditors | off |
 | Upstream submit | none |
-| Code revision | gitleaks report-file parser fix (binary hot-deployed to container) |
+| Code revision | gitleaks report-file parser fix in image `0b5005a2a2b3` (container recreated 2026-06-04) |
 
 ---
 

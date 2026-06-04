@@ -36,7 +36,7 @@ This score reflects breadth of signals (including maintainability and graph nois
 
 ### Secret scanning (gitleaks completed)
 
-**Gitleaks completed successfully** on the post-fix rerun (`07483617-e3a5-4df1-bef2-85e6512a1aac`). **Ten** redacted credential-like patterns were reported (for example `generic-api-key` and `curl-auth-header` classes in docs, workflows, and examples). **No raw secret values** are included in this report.
+**Gitleaks completed successfully** on post-fix reruns (`07483617`, **`bd8a34c0`** on image `repository-detective:all-in-one` @ `0b5005a2a2b3`). **Ten** redacted credential-like patterns were reported (for example `generic-api-key` and `curl-auth-header` classes in docs, workflows, and examples). **No raw secret values** are included in this report.
 
 An earlier audit pass (`dae05e0c`) recorded `parse_failed` due to a parser/tooling issue — see `ruview-gitleaks-parse-diagnosis.md`. Maintainers should still **triage locally** (documentation examples are common false positives).
 
