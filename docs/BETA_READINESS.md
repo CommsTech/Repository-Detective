@@ -53,7 +53,7 @@ Per-repo AI policy: use `ai_policy: disabled` unless explicitly testing LLM feat
 | `go test ./...` | **Pass** | 2026-06-04 |
 | `go vet ./...` | **Pass** | 2026-06-04 |
 | `staticcheck ./...` | **Pass** | 2026-06-04 |
-| Docker build verify script | **Available** | `./scripts/docker-build-verify.sh` (run before release tag) |
+| Docker build verify script | **Pass** | All targets build; smoke `/health` OK (2026-06-04) |
 
 ---
 

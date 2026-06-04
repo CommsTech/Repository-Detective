@@ -53,6 +53,10 @@ smoke_all_in_one() {
     -e BUGBOT_PORT="$PORT" \
     -e REPOSITORY_DETECTIVE_SKIP_STARTUP_CHECKS=true \
     -e REPOSITORY_DETECTIVE_DATABASE_PATH=/app/data/bugbot.db \
+    -e REPOSITORY_DETECTIVE_GITEA_URL=http://example.com \
+    -e REPOSITORY_DETECTIVE_GITEA_TOKEN=verify-smoke \
+    -e BUGBOT_GITEA_URL=http://example.com \
+    -e BUGBOT_GITEA_TOKEN=verify-smoke \
     -p "${PORT}:${PORT}" \
     "$tag" >/dev/null
 
