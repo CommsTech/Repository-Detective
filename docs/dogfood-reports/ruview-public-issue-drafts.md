@@ -91,6 +91,22 @@ Configuration scan (trivy KSV118 / KSV014 class) suggested reviewing default sec
 
 ---
 
+## Draft 5 — Secret scanning in CI (public, generic hygiene)
+
+**Title:** Consider adding secret scanning to CI (optional)
+
+**Labels:** `ci`, `security-hardening`, `documentation`
+
+**Body:**
+
+For supply-chain hygiene, some projects run secret scanning (for example gitleaks or GitHub secret scanning) in CI to catch accidental credential commits early.
+
+**Note:** This is a generic suggestion only — not a report of confirmed secrets in this repository.
+
+**Suggested change:** Evaluate whether gitleaks or platform-native secret scanning fits your workflow; document the chosen approach in contributing/security docs.
+
+---
+
 ## Not for public issues (reference only)
 
 Maintain **private** communication for:
@@ -99,6 +115,7 @@ Maintain **private** communication for:
 - Docker **DS031** build secret handling
 - Semgrep **jwt-hardcode** in `archive/v1/test_auth_rate_limit.py`
 - Semgrep **github-script-injection** / **run-shell-injection** workflows
+- **All gitleaks findings** (see `ruview-gitleaks-triage.md`) — private disclosure only
 - High-severity axios / Rust lockfile advisories where titles imply exploit scenarios
 
 See `ruview-private-security-disclosure-draft.md`.

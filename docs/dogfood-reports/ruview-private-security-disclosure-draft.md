@@ -13,7 +13,7 @@
 
 Repository Detective detected several **potential security and install-hardening concerns** during a third-party pre-install review. We recommend maintainer review before production deployment. Findings below are **scanner-reported patterns and advisory IDs**; impact depends on how components are deployed.
 
-**Gitleaks** completed on the post-fix rerun: **10** redacted matches (`generic-api-key`, `curl-auth-header` classes) in documentation, workflow examples, and related paths. **No secret values** are included below. Earlier audit pass had a parser failure (fixed; see `ruview-gitleaks-parse-diagnosis.md`). Semgrep/Trivy also flagged credential and CI-trust patterns.
+**Gitleaks** completed on audit **`bd8a34c0`** (image `0b5005a2a2b3`): **10 redacted pattern matches**. Human triage (`ruview-gitleaks-triage.md`) classifies **8 as likely documentation/example false positives** and **2 as needing maintainer review** — **none are treated as confirmed credential exposure** in this draft. **No secret values** are included below. Semgrep/Trivy also flagged credential and CI-trust patterns separately.
 
 ---
 
@@ -100,11 +100,22 @@ Review in context of whether these artifacts ship to production binaries or mobi
 
 | Item | Detail |
 |------|--------|
-| Status | **found** (10 redacted matches, rerun audit) |
-| Pattern classes | `generic-api-key`, `curl-auth-header` (examples in docs/workflows) |
+| Audit | `bd8a34c0-daff-43d7-bff5-bbc0155d97f2` |
+| Status | **found** (10 redacted matches) |
+| Pattern classes | `generic-api-key`, `curl-auth-header` |
+| Confirmed exposure | **Not claimed** — patterns only; see triage table |
 | Raw values in this draft | **none** |
 
-**Recommendation:** Maintainer triage — confirm whether matches are documentation examples vs live credentials; rotate only if material is real.
+### Triage summary (human review)
+
+| Disposition | Count | Notes |
+|-------------|-------|-------|
+| Likely false positive (docs/examples) | 8 | Archived API docs, README curl examples, agent markdown |
+| Needs maintainer review | 2 | CI workflow curl-auth header; tracked Vite source map artifact |
+
+Full table: `ruview-gitleaks-triage.md`.
+
+**Recommendation:** Maintainers run `gitleaks dir . --redact` locally at commit `872d7593`, confirm whether matches are placeholders vs live material, and rotate credentials **only if** real secrets are confirmed. Do not treat scanner hits as proof of active compromise without local verification.
 
 ## Other scanners
 

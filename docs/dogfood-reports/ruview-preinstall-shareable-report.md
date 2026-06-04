@@ -30,15 +30,21 @@ This score reflects breadth of signals (including maintainability and graph nois
 | trivy | found (16) | Dependency and config advisories |
 | semgrep | found (8) | Static patterns including CI and credential-like code |
 | hadolint | found (5) | Dockerfile hygiene |
-| gitleaks | **found (10)** | Redacted secret-pattern scan completed (rerun `07483617`) |
+| gitleaks | **found (10)** | Redacted scan completed (`bd8a34c0`); **maintainer triage required** — see `ruview-gitleaks-triage.md` |
 | checkov | parse_failed | IaC rules not fully applied this run |
 | grype | timed_out | Secondary SBOM scan incomplete |
 
-### Secret scanning (gitleaks completed)
+### Secret scanning (gitleaks completed — triage required)
 
-**Gitleaks completed successfully** on post-fix reruns (`07483617`, **`bd8a34c0`** on image `repository-detective:all-in-one` @ `0b5005a2a2b3`). **Ten** redacted credential-like patterns were reported (for example `generic-api-key` and `curl-auth-header` classes in docs, workflows, and examples). **No raw secret values** are included in this report.
+**Gitleaks completed successfully** on audit **`bd8a34c0`** (image `repository-detective:all-in-one` @ `0b5005a2a2b3`). **Ten** redacted credential-like patterns were reported. **No raw secret values** are included in this report.
 
-An earlier audit pass (`dae05e0c`) recorded `parse_failed` due to a parser/tooling issue — see `ruview-gitleaks-parse-diagnosis.md`. Maintainers should still **triage locally** (documentation examples are common false positives).
+Human triage (`ruview-gitleaks-triage.md`):
+
+- **8** likely documentation/example false positives  
+- **2** need maintainer review (CI workflow curl-auth pattern; tracked Vite source map)  
+- **0** confirmed live credential exposure from this review alone  
+
+Maintainers should run **gitleaks locally** with `--redact` to validate before any disclosure.
 
 ---
 
@@ -100,7 +106,7 @@ Checkov did not contribute findings this run (parser issue). Trivy and hadolint 
 
 | Check | Status | Guidance |
 |-------|--------|----------|
-| gitleaks | **found (rerun)** | Redacted patterns only — triage docs/examples |
+| gitleaks | **found (10)** | Redacted patterns triaged — see `ruview-gitleaks-triage.md` |
 | checkov | parse_failed | IaC rules not fully applied this run |
 | grype | timed_out | Optional second opinion SBOM scan |
 
@@ -121,7 +127,7 @@ Tech-debt and maintainability markers accounted for much of the low/medium volum
 3. **Review container root usage** and Kubernetes security contexts for deployed manifests.
 4. **Review GitHub Actions** permissions and untrusted input in workflow scripts (see private disclosure draft for detail).
 5. **Add lockfiles** where Python installs are user-facing.
-6. **Rerun secret scanning locally** (gitleaks) — automated pass was inconclusive.
+6. **Review gitleaks triage** (`ruview-gitleaks-triage.md`) — 10 redacted patterns; mostly docs/examples; confirm workflow #2 locally.
 7. **Validate** Semgrep/Trivy/hadolint findings in an isolated environment before release.
 
 ---
@@ -132,7 +138,26 @@ Tech-debt and maintainability markers accounted for much of the low/medium volum
 |----------|----------|
 | `ruview-private-security-disclosure-draft.md` | Maintainer security contact (manual send) |
 | `ruview-public-issue-drafts.md` | Optional public issues — non-sensitive items only |
+| `ruview-gitleaks-triage.md` | Human triage of 10 redacted gitleaks findings |
 | `ruview-preinstall-audit.md` | Internal operator notes (audit metadata) |
+
+---
+
+## External-share readiness
+
+| Question | Answer |
+|----------|--------|
+| Ready for **private security disclosure** (manual send)? | **Yes** — use `ruview-private-security-disclosure-draft.md`; lead with dependency/Docker/CI items; gitleaks as redacted patterns requiring maintainer confirmation |
+| Ready for **public hygiene issues**? | **Yes** — drafts 1–5 in `ruview-public-issue-drafts.md` only (no secrets/CVE exploit detail/gitleaks hits) |
+| Ready for **public filing without human review**? | **No** |
+| `do_not_install` recommendation | **Unchanged** until critical/high items reviewed or mitigated |
+
+### Remaining caveats
+
+- Gitleaks: **10 redacted patterns** — not confirmed secrets; workflow item #2 needs maintainer eyes-on.  
+- checkov / grype: partial coverage.  
+- CVE and CI-injection items: private channel preferred over public issues.  
+- Qdrant not used; AI off during audit.
 
 ---
 

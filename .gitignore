@@ -74,6 +74,7 @@ docs/dogfood-reports/*
 !docs/dogfood-reports/ruview-gitleaks-parse-diagnosis.md
 !docs/dogfood-reports/ruview-preinstall-audit-rerun.md
 !docs/dogfood-reports/ruview-preinstall-compare.md
+!docs/dogfood-reports/ruview-gitleaks-triage.md
 
 # Configuration overrides
 config.local.yaml
