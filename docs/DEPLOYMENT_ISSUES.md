@@ -45,10 +45,11 @@ Repository: https://git.commsnet.org/commstech/Bugbot
 **Cause:** Go module proxy redirects to Google Cloud Storage; some DNS filters sinkhole that domain.
 
 **Fix (in repo):**
-- `Dockerfile` supports vendored builds (`-mod=vendor`).
-- `./scripts/vendor-deps.sh` retries with `goproxy.io` when `proxy.golang.org` fails.
+- `Dockerfile` default: `GOPROXY=https://proxy.golang.org,direct`
+- Vendored builds supported (`-mod=vendor`)
+- `./scripts/vendor-deps.sh` retries with `goproxy.io` only as a **temporary local workaround** (not recommended for government/security-sensitive environments)
 
-**Workaround:** Run `./scripts/vendor-deps.sh` before `docker-compose build`, or build on a network without the sinkhole.
+**Workaround:** Run `./scripts/vendor-deps.sh` before `docker-compose build`, use an internal artifact proxy, or build on a network without the sinkhole.
 
 **Gitea issue:** #3
 

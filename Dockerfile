@@ -24,7 +24,7 @@ RUN apk add --no-cache git ca-certificates tzdata
 
 WORKDIR /app
 
-ARG GOPROXY=https://proxy.golang.org,https://goproxy.io,direct
+ARG GOPROXY=https://proxy.golang.org,direct
 ARG VERSION=dev
 ARG COMMIT=unknown
 ARG BUILD_DATE=unknown

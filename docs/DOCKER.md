@@ -58,10 +58,12 @@ docker build --target all-in-one -t repository-detective:all-in-one \
 Offline / DNS-filtered networks:
 
 ```bash
-./scripts/vendor-deps.sh
+GOPROXY=https://proxy.golang.org,direct GOSUMDB=sum.golang.org ./scripts/vendor-deps.sh
 cp ~/.local/bin/trivy deploy/bin/trivy   # optional pre-staged binaries
 docker build --target all-in-one --build-arg INSTALL_EXTERNAL_TOOLS=true .
 ```
+
+**Supply chain:** Default Docker build uses `GOPROXY=https://proxy.golang.org,direct`. For enterprise deployments, pass `--build-arg GOPROXY=https://your-internal-artifact-proxy,direct`. Do not use third-country public proxies as documented defaults.
 
 Verify all targets:
 

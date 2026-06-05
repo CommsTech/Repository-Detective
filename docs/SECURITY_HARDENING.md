@@ -109,6 +109,22 @@ staticcheck ./...  # clean after Phase 9.5 cleanup (May 2026)
 - Removed unused `(*Engine).llmEnabled`, `labelsForIssue`, `issueSeverities`
 - Replaced unnecessary `fmt.Sprintf` in `issues/lifecycle.go`
 
+## Go module proxy (supply chain)
+
+| Environment | Recommended `GOPROXY` |
+|-------------|----------------------|
+| Default / CI | `https://proxy.golang.org,direct` |
+| Enterprise | `https://your-internal-artifact-proxy,direct` |
+| Offline / air-gapped | `off` (after `go mod vendor`) |
+
+Always prefer `GOSUMDB=sum.golang.org` unless your policy uses an internal checksum DB.
+
+`goproxy.cn` is **not** documented or supported. `goproxy.io` may appear in `scripts/vendor-deps.sh` only as a **temporary local workaround** when `proxy.golang.org` is unreachable — not for DoD, FedRAMP, or defense-contractor deployments.
+
+Dockerfile default build arg: `GOPROXY=https://proxy.golang.org,direct`.
+
+---
+
 ## Accepted risks (homelab / Phase 9.5)
 
 | Risk | Rationale / mitigation |
@@ -120,6 +136,7 @@ staticcheck ./...  # clean after Phase 9.5 cleanup (May 2026)
 | Scanner binaries are trusted | External tools (trivy, semgrep, etc.) run with minimal env but full PATH |
 | SQLite file permissions | Operator must protect `database_path` at OS level |
 | Rate limiting on pre-install audits | Global webhook rate limit exists; dedicated audit rate limit is backlog |
+| Access logs may capture `?api_key=` | **P1:** Deprecate query-string API keys in docs; add log redaction middleware; prefer `X-Repository-Detective-API-Key` header only for internet-facing deployments |
 
 ## Follow-up backlog (post Phase 9.5)
 

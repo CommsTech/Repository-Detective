@@ -1,12 +1,27 @@
-# Repository Detective
+<p align="center">
+  <img src="ui/static/logo.svg" alt="Repository Detective logo" width="140">
+</p>
 
-**Inspect. Analyze. Improve.**
+<h1 align="center">Repository Detective</h1>
 
-Automated code review and repository assessment for **Gitea** (primary). Repository Detective watches pushes and pull requests, runs security and quality checks, and opens forge issues when configured.
+<p align="center">
+  <strong>Inspect. Analyze. Improve.</strong><br>
+  Gitea-first repository assessment, issue lifecycle, and evidence-based remediation.
+</p>
 
-**Private beta scope:** single-operator, API-key auth, SQLite, deterministic-first scanning. **Not** multi-user SaaS. See [docs/BETA_READINESS.md](docs/BETA_READINESS.md) and [docs/FEATURE_COMPLETENESS_AUDIT.md](docs/FEATURE_COMPLETENESS_AUDIT.md).
+---
 
-> **Naming:** [Repository Detective](docs/NAMING.md) is the product name. **Bugbot** legacy env vars (`BUGBOT_*`), labels (`bugbot/*`), and fingerprints (`bugbot-<hex>`) remain supported. Prefer `REPOSITORY_DETECTIVE_*` for new deployments — see [docs/BRANDING_MIGRATION.md](docs/BRANDING_MIGRATION.md).
+## Community private beta
+
+| | |
+|---|---|
+| **Edition** | Community private beta — single-operator homelab |
+| **Forge** | Gitea-first (GitHub manual/bulk scans optional) |
+| **UI auth** | API-key mode by default; optional local login (`auth_mode=local`) |
+| **Not yet** | SaaS, multi-tenant, billing, auto-merge, third-party auto-submit |
+| **Editions docs** | [Community](docs/COMMUNITY_EDITION.md) · [Commercial](docs/COMMERCIAL_ENTERPRISE.md) · [Editions overview](docs/EDITIONS.md) |
+
+> **Naming:** [Repository Detective](docs/NAMING.md) is the product name. Legacy **Bugbot** env vars (`BUGBOT_*`), labels, and fingerprints remain supported. Prefer `REPOSITORY_DETECTIVE_*` — see [docs/BRANDING_MIGRATION.md](docs/BRANDING_MIGRATION.md).
 
 Repo: https://git.commsnet.org/commstech/Bugbot.git
 
@@ -14,7 +29,7 @@ Repo: https://git.commsnet.org/commstech/Bugbot.git
 
 **Start here:** [docs/SETUP.md](docs/SETUP.md) — step-by-step from clone to working webhooks.
 
-**Operator docs:** [docs/README.md](docs/README.md) · [Dashboard](docs/DASHBOARD_GUIDE.md) · [Scanner health](docs/SCANNER_HEALTH.md) · [Privacy](docs/PRIVACY_AND_DATA_PROTECTION.md)
+**Operator docs:** [docs/README.md](docs/README.md) · [Dashboard](docs/DASHBOARD_GUIDE.md) · [Auth (local)](docs/AUTH_LOCAL.md) · [Privacy](docs/PRIVACY_AND_DATA_PROTECTION.md)
 
 Quick local trial:
 
@@ -30,11 +45,22 @@ Then open http://localhost:8080/onboard
 
 - Scans changed files on push; scans PR diff files on pull requests
 - Runs **deterministic checks first**: static rules, [Trivy](https://github.com/aquasecurity/trivy), [Grype](https://github.com/anchore/grype), golangci-lint, ruff, shellcheck
-- Uses LLM analysis only on flagged files (or disable entirely with `REPOSITORY_DETECTIVE_ENABLE_LLM_AUDITORS=false`; legacy `BUGBOT_ENABLE_LLM_AUDITORS` still works)
+- Uses LLM analysis only on flagged files (or disable entirely with `REPOSITORY_DETECTIVE_ENABLE_LLM_AUDITORS=false`)
 - Creates Gitea issues with severity, file, line, code snippet, and PoC when available
-- Optional LLM backends (OpenAI, Anthropic, OpenRouter, Ollama, OpenWebUI, OpenClaw) — **off by default** in beta (`enable_llm_auditors: false`)
-- Optional GitHub manual/bulk scans when token configured — **not** full webhook/PR parity ([docs/GITHUB_SCANNING.md](docs/GITHUB_SCANNING.md))
+- Optional LLM backends — **off by default** in beta (`enable_llm_auditors: false`)
 - Remediation planner yes; **remediation PRs off by default**. Qdrant semantic dedup **off by default**
+- **No auto-merge** and **no automatic third-party issue submission**
+
+## Go module proxy (supply chain)
+
+Recommended for builds and CI:
+
+```bash
+GOPROXY=https://proxy.golang.org,direct
+GOSUMDB=sum.golang.org
+```
+
+Enterprise: use your internal artifact proxy. Offline: `go mod vendor` then `GOPROXY=off`. See [docs/SECURITY_HARDENING.md](docs/SECURITY_HARDENING.md).
 
 ## Configuration
 
@@ -43,31 +69,23 @@ Environment variables prefer the `REPOSITORY_DETECTIVE_` prefix. Legacy `BUGBOT_
 | Setting | Preferred variable | Legacy alias |
 |---------|-------------------|--------------|
 | HTTP port | `REPOSITORY_DETECTIVE_PORT` | `BUGBOT_PORT` |
-| Bind address | `REPOSITORY_DETECTIVE_LISTEN_HOST` | `BUGBOT_LISTEN_HOST` |
 | API key | `REPOSITORY_DETECTIVE_API_KEY` | `BUGBOT_API_KEY` |
 | Public URL for webhooks | `REPOSITORY_DETECTIVE_PUBLIC_URL` | `BUGBOT_PUBLIC_URL` |
 | Gitea | `REPOSITORY_DETECTIVE_GITEA_URL`, `REPOSITORY_DETECTIVE_GITEA_TOKEN` | `BUGBOT_GITEA_*` |
 | Webhook secret | `REPOSITORY_DETECTIVE_WEBHOOK_SECRET` | `BUGBOT_WEBHOOK_SECRET` |
-| AI | `REPOSITORY_DETECTIVE_AI_*` | `BUGBOT_AI_*` |
-| Deterministic scanners | `REPOSITORY_DETECTIVE_ENABLE_TRIVY`, etc. | `BUGBOT_ENABLE_*` |
-| LLM auditors | `REPOSITORY_DETECTIVE_ENABLE_LLM_AUDITORS` | `BUGBOT_ENABLE_LLM_AUDITORS` |
-| Label compat mode | `REPOSITORY_DETECTIVE_LABEL_COMPAT_MODE` | `BUGBOT_LABEL_COMPAT_MODE` |
-| Skip Gitea/AI ping on boot | `REPOSITORY_DETECTIVE_SKIP_STARTUP_CHECKS=true` | `BUGBOT_SKIP_STARTUP_CHECKS` |
+| Local auth | `REPOSITORY_DETECTIVE_AUTH_MODE`, `REPOSITORY_DETECTIVE_SESSION_SECRET` | `BUGBOT_*` |
 
-Repo include/exclude patterns and skip patterns are set in `config/config.yaml` only (not env vars).
-
-Full AI provider examples: [docs/AI_PROVIDERS.md](docs/AI_PROVIDERS.md)
+Full reference: [docs/CONFIGURATION.md](docs/CONFIGURATION.md)
 
 ## HTTP endpoints
 
 | Path | Auth | Notes |
 |------|------|-------|
-| `GET /health` | none | Returns `503 starting` then `200 healthy` |
+| `GET /health` | none | Orchestrator probe |
 | `GET /onboard` | none | Setup wizard |
-| `POST /webhook` | webhook secret | Gitea calls this |
-| `POST /api/v1/analyze` | API key | Manual scan trigger |
-| `GET /api/v1/status` | API key | Runtime info |
-| `POST /api/v1/onboard/*` | API key | Wizard backend |
+| `POST /webhook` | HMAC (`X-Gitea-Signature`) | Gitea calls this |
+| `/api/v1/*` | API key (preferred or legacy header) | Automation |
+| `/ui/*` | API key (default) or session (`auth_mode=local`) | Operator UI |
 
 **Preferred** API key header:
 
@@ -75,39 +93,12 @@ Full AI provider examples: [docs/AI_PROVIDERS.md](docs/AI_PROVIDERS.md)
 X-Repository-Detective-API-Key: your-key
 ```
 
-Legacy header `X-Bugbot-API-Key` is still accepted. See [docs/BRANDING_MIGRATION.md](docs/BRANDING_MIGRATION.md).
+Legacy `X-Bugbot-API-Key` still accepted. See [docs/API_ROUTES.md](docs/API_ROUTES.md).
 
 ## Documentation
 
-| Doc | Contents |
-|-----|----------|
-| [docs/SETUP.md](docs/SETUP.md) | Full setup, step by step |
-| [docs/NETWORKING.md](docs/NETWORKING.md) | pfSense, reverse proxy, Traefik |
-| [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Common failures |
-| [docs/ONBOARDING.md](docs/ONBOARDING.md) | Wizard and API details |
-| [docs/AI_PROVIDERS.md](docs/AI_PROVIDERS.md) | AI backend config |
-| [docs/CAH_PIPELINE.md](docs/CAH_PIPELINE.md) | Analysis pipeline spec |
-| [docs/SCANNERS.md](docs/SCANNERS.md) | Trivy, Grype, linters (deterministic) |
-| [docs/RUBRICS.md](docs/RUBRICS.md) | Security, pipeline, release, and optimization rubrics |
-| [docs/QDRANT.md](docs/QDRANT.md) | Semantic dedup via existing Qdrant server |
-| [docs/TESTING.md](docs/TESTING.md) | Unit tests, Docker smoke test, E2E |
-| [docs/TUNNEL.md](docs/TUNNEL.md) | Cloudflare tunnel (optional) |
-| [docs/EDITIONS.md](docs/EDITIONS.md) | Community / Commercial / Enterprise |
-| [docs/LICENSING_STRATEGY.md](docs/LICENSING_STRATEGY.md) | Proposed licensing model |
-| [docs/AUTH_RBAC_PLAN.md](docs/AUTH_RBAC_PLAN.md) | Multi-user auth design (not implemented) |
-| [docs/BETA_READINESS.md](docs/BETA_READINESS.md) | Private beta checklist |
-| [docs/FEATURE_COMPLETENESS_AUDIT.md](docs/FEATURE_COMPLETENESS_AUDIT.md) | Feature inventory and honest claims |
-| [docs/API_ROUTES.md](docs/API_ROUTES.md) | API route reference |
-
-## Development
-
-```bash
-go build -o gitea-bugbot .
-go test ./...
-```
-
-See [docs/TESTING.md](docs/TESTING.md) for CI parity checks, Docker smoke tests, and scanner verification.
+See [docs/README.md](docs/README.md) for the full index.
 
 ## License
 
-**Planning:** Community Edition under [AGPL-3.0-or-later](docs/LICENSING_STRATEGY.md) (proposed); Commercial/Enterprise under a separate paid license. **Not yet finalized** — see [docs/LICENSING_STRATEGY.md](docs/LICENSING_STRATEGY.md). Current tree may still reference MIT until legal review.
+See repository license file. Edition strategy: [docs/EDITIONS.md](docs/EDITIONS.md).

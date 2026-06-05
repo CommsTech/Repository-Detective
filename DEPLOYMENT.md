@@ -38,7 +38,14 @@ If `docker build` fails on `storage.googleapis.com` (Go module proxy redirects),
 docker compose up -d --build
 ```
 
-This uses `goproxy.io` as a fallback when Google’s module CDN is blocked. The `vendor/` directory is not committed — generate it before building on filtered networks. Normal networks can build without it.
+This vendors dependencies using the official Go module proxy first:
+
+```bash
+GOPROXY=https://proxy.golang.org,direct GOSUMDB=sum.golang.org ./scripts/vendor-deps.sh
+docker compose up -d --build
+```
+
+If `proxy.golang.org` is blocked, `vendor-deps.sh` can retry with `goproxy.io` as a **temporary local workaround only** — not recommended for security-sensitive or government deployments. Prefer an internal artifact proxy or fully offline `vendor/` + `GOPROXY=off`. The `vendor/` directory is not committed.
 
 When Docker bridge IP pools are exhausted, the default `docker-compose.yml` uses `network_mode: host` (listens on port 8081).
 

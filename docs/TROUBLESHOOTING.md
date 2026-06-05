@@ -46,6 +46,29 @@ Guide: [AUTH_LOCAL.md](AUTH_LOCAL.md).
 
 ---
 
+## Go module download / Docker build fails on proxy
+
+**Symptoms:** `storage.googleapis.com` blocked; `go mod download` or `docker build` fails.
+
+**Recommended:**
+
+```bash
+GOPROXY=https://proxy.golang.org,direct
+GOSUMDB=sum.golang.org
+./scripts/vendor-deps.sh
+docker compose up -d --build
+```
+
+**Enterprise:** `GOPROXY=https://your-internal-artifact-proxy,direct`
+
+**Offline:** `go mod vendor` then `GOPROXY=off`
+
+**Emergency only:** `vendor-deps.sh` may retry `goproxy.io` — temporary workaround, not for DoD/government deployments. Do **not** use `goproxy.cn`.
+
+See [SECURITY_HARDENING.md](SECURITY_HARDENING.md).
+
+---
+
 ## Health check fails
 
 **Wrong port?**
