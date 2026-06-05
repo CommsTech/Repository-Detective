@@ -28,6 +28,24 @@ See [CONFIGURATION.md](CONFIGURATION.md), [BRANDING_MIGRATION.md](BRANDING_MIGRA
 
 ---
 
+## Local auth (`auth_mode=local`)
+
+**Symptoms:** Service fails to start; cannot sign in; bootstrap loop.
+
+| Message / symptom | Fix |
+|-------------------|-----|
+| `auth_mode=local requires session_secret` | Set `REPOSITORY_DETECTIVE_SESSION_SECRET` (32+ random bytes) in `.env` |
+| `auth_mode=local requires database_enabled` | Enable SQLite (`database_enabled: true`) |
+| Redirect to `/ui/bootstrap` | Expected when no users exist — create owner account |
+| `/ui/bootstrap` redirects to login | Users already exist; use `/ui/login` |
+| `invalid or missing CSRF token` on form POST | Include hidden `csrf_token` from page; do not strip cookies |
+| Locked out | Set `auth_mode: api_key_only`, restart; API key UI works again |
+| API scripts fail after enabling local auth | API still uses `X-Repository-Detective-API-Key` — unchanged |
+
+Guide: [AUTH_LOCAL.md](AUTH_LOCAL.md).
+
+---
+
 ## Health check fails
 
 **Wrong port?**

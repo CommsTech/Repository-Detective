@@ -51,6 +51,23 @@ X-Repository-Detective-API-Key: <same as REPOSITORY_DETECTIVE_API_KEY>
 
 Legacy `X-Bugbot-API-Key` and `?api_key=` (UI homelab only) still accepted.
 
+### Local admin auth (optional slice 1)
+
+Default: `auth_mode: api_key_only` (no behavior change).
+
+| Key | Default | Notes |
+|-----|---------|-------|
+| `auth_mode` | `api_key_only` | Set `local` for session login on UI |
+| `session_cookie_name` | `rd_session` | HttpOnly signed cookie |
+| `session_secret` | `""` | **Required** when `auth_mode=local` |
+| `session_ttl_hours` | `12` | Session lifetime |
+| `csrf_enabled` | `true` | UI form POST protection |
+| `local_admin_bootstrap_enabled` | `true` | First-owner setup at `/ui/bootstrap` |
+
+Env: `REPOSITORY_DETECTIVE_AUTH_MODE`, `REPOSITORY_DETECTIVE_SESSION_SECRET`, `REPOSITORY_DETECTIVE_SESSION_TTL_HOURS`, `REPOSITORY_DETECTIVE_CSRF_ENABLED` (legacy `BUGBOT_*` aliases supported).
+
+Full guide: [AUTH_LOCAL.md](AUTH_LOCAL.md).
+
 ---
 
 ## Key YAML settings
@@ -66,6 +83,7 @@ Legacy `X-Bugbot-API-Key` and `?api_key=` (UI homelab only) still accepted.
 | `ai_startup_test_enabled` | `false` | No paid probe on boot |
 | `database_path` | `./data/bugbot.db` | Legacy filename intentional |
 | `label_compat_mode` | `new_only` | Writes `repository-detective/*` labels |
+| `auth_mode` | `api_key_only` | `local` enables UI session login |
 
 Full example: `config/config.yaml.example`.
 

@@ -59,6 +59,16 @@
         <h1>{{.Title}}</h1>
       </div>
       <div class="rd-topbar-meta">
+        {{if .CurrentUser}}
+        <div class="rd-user-meta">
+          <span class="rd-user-name" title="{{.CurrentUser.Email}}">{{.CurrentUser.DisplayName}}</span>
+          <span class="rd-user-role">{{.CurrentUser.Role}}</span>
+          <form method="post" action="{{.BasePath}}/logout" class="rd-logout-form">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            <button type="submit" class="rd-btn rd-btn-sm rd-btn-ghost">Sign out</button>
+          </form>
+        </div>
+        {{end}}
         <div class="rd-theme-switch" role="group" aria-label="Theme" id="rd-theme-toggle">
           <span class="rd-theme-label" id="rd-theme-label">Theme</span>
           <button type="button" class="rd-theme-btn" data-theme-choice="system" aria-pressed="false" aria-labelledby="rd-theme-label">System</button>

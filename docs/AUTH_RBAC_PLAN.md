@@ -1,8 +1,8 @@
 # Auth / RBAC design plan
 
 **Product:** Repository Detective — Inspect. Analyze. Improve.  
-**Status:** Design only — **no implementation in this phase**  
-**Date:** 2026-06-04
+**Status:** Slice 1 implemented — local login, sessions, CSRF, bootstrap (see [AUTH_LOCAL.md](AUTH_LOCAL.md))  
+**Date:** 2026-06-05 (updated)
 
 This document describes the migration from **API-key-only homelab mode** to **authenticated multi-user** operation suitable for trusted private beta teams and, later, SaaS.
 
@@ -56,11 +56,12 @@ Forge integration  → service-level Gitea/GitHub tokens (unchanged)
 
 | Mode | When |
 |------|------|
-| `legacy_api_key` | Default until bootstrap admin exists; global key still works |
-| `session_and_tokens` | After bootstrap; global key deprecated but optionally retained for break-glass |
+| `api_key_only` | **Shipped default** — global API key for UI and API |
+| `local` | **Shipped slice 1** — session cookie for UI; API key unchanged for API clients |
+| `session_and_tokens` | Future — per-user API tokens + scoped automation |
 | `oidc_only` | Future enterprise; local password disabled |
 
-Config flag (proposed): `auth_mode: legacy_api_key | session_and_tokens | oidc_primary`
+Config flag (implemented): `auth_mode: api_key_only | local`
 
 ---
 
@@ -407,7 +408,7 @@ CREATE INDEX idx_api_tokens_user ON api_tokens(user_id);
 | Phase | Deliverable | Est. scope |
 |-------|-------------|------------|
 | **0** | This design doc + schema review | Done |
-| **1** | Migration 17, password hash util, bootstrap + login + logout, session middleware, login UI | Small |
+| **1** | Migration 17, password hash util, bootstrap + login + logout, session middleware, login UI | **Done** (2026-06-05) |
 | **2** | API token CRUD, dual auth middleware, deprecate query-string key in UI | Small |
 | **3** | Permission checks on scan/settings/suppression/remediation handlers | Medium |
 | **4** | Repo grants + team model + admin user UI | Medium |

@@ -1,0 +1,33 @@
+{{define "bootstrap.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>{{template "head" .}}</head>
+<body class="rd-app rd-page-auth">
+<div class="rd-auth-wrap">
+  <div class="rd-auth-card">
+    <img src="{{.BasePath}}/static/logo.svg" alt="Repository Detective" width="64" height="64">
+    <h1>Create admin account</h1>
+    <p class="rd-muted">First-time setup for local authentication. This page is disabled after the owner account exists.</p>
+    {{with .Data.Error}}{{if .}}<p class="rd-alert rd-alert-danger" role="alert">{{.}}</p>{{end}}{{end}}
+    <form method="post" action="{{.BasePath}}/bootstrap" class="rd-auth-form">
+      <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+      <label>Display name
+        <input type="text" name="display_name" value="{{.Data.DisplayName}}" required autocomplete="name">
+      </label>
+      <label>Email
+        <input type="email" name="email" value="{{.Data.Email}}" required autocomplete="email">
+      </label>
+      <label>Password
+        <input type="password" name="password" required autocomplete="new-password" minlength="12">
+      </label>
+      <label>Confirm password
+        <input type="password" name="password_confirm" required autocomplete="new-password" minlength="12">
+      </label>
+      <p class="rd-muted rd-auth-hint">Minimum 12 characters with letters and numbers.</p>
+      <button type="submit" class="rd-btn">Create owner account</button>
+    </form>
+  </div>
+</div>
+</body>
+</html>
+{{end}}

@@ -101,6 +101,7 @@ func NormalizeListOptions(opts ListOptions) ListOptions {
 // QueryStore extends Store with read APIs for the control plane.
 type QueryStore interface {
 	Store
+	AuthStore
 
 	GetRepository(ctx context.Context, id int64) (Repository, error)
 

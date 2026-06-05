@@ -103,6 +103,18 @@ func TestRunStaticAnalysisSkipsRuleDefinitionLines(t *testing.T) {
 	}
 }
 
+func TestRunStaticAnalysisSkipsModelEvalMethod(t *testing.T) {
+	findings := RunStaticAnalysis([]FileContent{{
+		Path:    "src/eagle/core/brain/ai_processor.py",
+		Content: "model.eval()\nself.model.eval()",
+	}}, true, false)
+	for _, f := range findings {
+		if f.ID == "SEC-EVAL" {
+			t.Fatalf("expected PyTorch model.eval() to be skipped, got SEC-EVAL on %q", f.Evidence.Code)
+		}
+	}
+}
+
 func TestStaticRuleConfidenceOrdering(t *testing.T) {
 	eval := staticRuleConfidence(staticRule{ID: "SEC-EVAL"})
 	secret := staticRuleConfidence(staticRule{ID: "SEC-HARDCODED-SECRET"})

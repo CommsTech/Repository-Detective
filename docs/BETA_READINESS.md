@@ -92,7 +92,7 @@ Per-repo AI policy: use `ai_policy: disabled` unless explicitly testing LLM feat
 | `/health` ~4s latency (scanner probes) | nice-to-have |
 | Qdrant embedding 1024 + UUID point-id | blocks Qdrant enablement only |
 | checkov/grype intermittent timeouts | nice-to-have |
-| No multi-user auth/RBAC | blocks SaaS; **not** private beta (API key OK) |
+| Full multi-user RBAC | blocks SaaS; slice 1 local login optional (`auth_mode=local`); default `api_key_only` |
 | No tenant isolation | blocks SaaS |
 | No billing | blocks SaaS / paid automation |
 | GitHub/GitLab connected-repo parity | blocks paid manual audits at scale |
@@ -105,7 +105,7 @@ Per-repo AI policy: use `ai_policy: disabled` unless explicitly testing LLM feat
 
 ### Blocks private beta
 
-- **None critical** if operator accepts API-key auth and single-tenant SQLite.
+- **None critical** if operator accepts API-key auth (default) or optional local UI login and single-tenant SQLite.
 
 ### Blocks paid manual audits
 

@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-const currentSchemaVersion = 16
+const currentSchemaVersion = 17
 
 var migrationStatements = map[int][]string{
 	1: {
@@ -477,6 +477,40 @@ var migrationStatements = map[int][]string{
 	},
 	16: {
 		`CREATE INDEX IF NOT EXISTS idx_external_issues_finding_id ON external_issues(finding_id)`,
+	},
+	17: {
+		`CREATE TABLE IF NOT EXISTS users (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			email TEXT NOT NULL UNIQUE COLLATE NOCASE,
+			display_name TEXT NOT NULL,
+			password_hash TEXT NOT NULL,
+			role TEXT NOT NULL,
+			enabled INTEGER NOT NULL DEFAULT 1,
+			created_at TEXT NOT NULL,
+			updated_at TEXT NOT NULL,
+			last_login_at TEXT
+		)`,
+		`CREATE TABLE IF NOT EXISTS sessions (
+			id TEXT PRIMARY KEY,
+			user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			created_at TEXT NOT NULL,
+			expires_at TEXT NOT NULL,
+			ip_address TEXT,
+			user_agent TEXT
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at)`,
+		`CREATE TABLE IF NOT EXISTS auth_audit_events (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			event_type TEXT NOT NULL,
+			user_id INTEGER,
+			email TEXT,
+			ip_address TEXT,
+			user_agent TEXT,
+			details TEXT,
+			created_at TEXT NOT NULL
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_auth_audit_events_created_at ON auth_audit_events(created_at)`,
 	},
 }
 

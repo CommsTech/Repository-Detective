@@ -76,6 +76,7 @@ docs/dogfood-reports/*
 !docs/dogfood-reports/ruview-preinstall-compare.md
 !docs/dogfood-reports/ruview-gitleaks-triage.md
 !docs/dogfood-reports/working-tree-cleanup-report.md
+!docs/dogfood-reports/issue-resolution-sprint-plan.md
 
 # Private operator dogfood (unsanitized — keep local)
 docs/DOGFOOD_REPORT_FIRST_39_REPOS.md

@@ -37,6 +37,7 @@ type Handler struct {
 	preinstallRunner  *preinstall.Runner
 	preinstallEnabled bool
 	apiKeySecret      string
+	auth              AuthConfig
 	remediationEnabled bool
 	remediation       RemediationBackend
 	remediationPREnabled bool
@@ -97,6 +98,13 @@ func NewHandler(s store.QueryStore, global store.GlobalSettingsSnapshot, basePat
 		store: s, global: global, basePath: basePath, logger: logger, tmpl: tmpl,
 		preinstallRunner: preinstallRunner, preinstallEnabled: preinstallEnabled, apiKeySecret: apiKeySecret,
 	}, nil
+}
+
+// SetAuthConfig wires local session auth for the operator UI.
+func (h *Handler) SetAuthConfig(cfg AuthConfig) {
+	if h != nil {
+		h.auth = cfg
+	}
 }
 
 // SetNotificationGlobal attaches redacted global notification config for settings pages.
@@ -225,13 +233,15 @@ func (h *Handler) requireStore(c *gin.Context) bool {
 }
 
 type pageData struct {
-	Title      string
-	BasePath   string
-	APIKey     string
-	CSRFToken  string
-	Notice     string
-	NavSection string
-	Data       map[string]any
+	Title       string
+	BasePath    string
+	APIKey      string
+	CSRFToken   string
+	Notice      string
+	NavSection  string
+	AuthLocal   bool
+	CurrentUser *store.User
+	Data        map[string]any
 }
 
 func clientAPIKeyFromRequest(c *gin.Context) string {
@@ -249,13 +259,32 @@ func (h *Handler) page(c *gin.Context, title string, data map[string]any) pageDa
 		data = map[string]any{}
 	}
 	apiKey := clientAPIKeyFromRequest(c)
+	var csrf string
+	var currentUser *store.User
+	if h.auth.IsLocal() {
+		apiKey = ""
+		sessionID := c.GetString(ctxAuthSessionID)
+		userID := c.GetInt64(ctxAuthUserID)
+		if h.auth.CSRFEnabled {
+			csrf = security.SessionCSRFToken(h.auth.SessionSecret, sessionID, userID)
+		}
+		if u, ok := c.Get(ctxAuthUser); ok {
+			if user, ok := u.(store.User); ok {
+				currentUser = &user
+			}
+		}
+	} else if h.auth.CSRFEnabled || h.apiKeySecret != "" {
+		csrf = security.CSRFToken(h.apiKeySecret, apiKey)
+	}
 	return pageData{
-		Title:     title,
-		BasePath:  h.basePath,
-		APIKey:    apiKey,
-		CSRFToken: security.CSRFToken(h.apiKeySecret, apiKey),
-		Notice:    settingsNotice,
-		Data:      data,
+		Title:       title,
+		BasePath:    h.basePath,
+		APIKey:      apiKey,
+		CSRFToken:   csrf,
+		Notice:      settingsNotice,
+		AuthLocal:   h.auth.IsLocal(),
+		CurrentUser: currentUser,
+		Data:        data,
 	}
 }
 
@@ -264,6 +293,15 @@ func (h *Handler) clientAPIKey(c *gin.Context) string {
 }
 
 func (h *Handler) requireCSRF(c *gin.Context) bool {
+	if h.auth.IsLocal() {
+		if !h.auth.CSRFEnabled {
+			return true
+		}
+		return h.requireAuthCSRF(c, c.GetInt64(ctxAuthUserID), c.GetString(ctxAuthSessionID))
+	}
+	if !h.auth.CSRFEnabled && h.apiKeySecret == "" {
+		return true
+	}
 	token := c.PostForm("csrf_token")
 	if !security.ValidCSRFToken(h.apiKeySecret, h.clientAPIKey(c), token) {
 		c.String(http.StatusForbidden, "invalid or missing CSRF token")

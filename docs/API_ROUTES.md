@@ -197,7 +197,28 @@ Requires `runner_delegation_enabled: true` (default **false**).
 
 ## UI routes (`/ui`)
 
-Browser UI — API key via query string (homelab) or session (future). POST forms use CSRF token.
+Browser UI auth depends on `auth_mode`:
+
+| Mode | UI auth |
+|------|---------|
+| `api_key_only` (default) | Global API key in query/header |
+| `local` | Signed session cookie; API key not required in browser |
+
+POST forms use CSRF in both modes. JSON API routes always use API key headers (no CSRF).
+
+### Auth routes (`auth_mode=local`)
+
+| Method | Path | Auth | Purpose |
+|--------|------|------|---------|
+| GET | `/ui/bootstrap` | Public (no users yet) | First owner setup |
+| POST | `/ui/bootstrap` | Public + CSRF | Create owner |
+| GET | `/ui/login` | Public | Sign-in page |
+| POST | `/ui/login` | Public + CSRF | Sign in |
+| POST | `/ui/logout` | Session + CSRF | Sign out |
+
+See [AUTH_LOCAL.md](AUTH_LOCAL.md).
+
+### Operator pages
 
 | Path | Beta | Purpose |
 |------|------|---------|

@@ -53,6 +53,9 @@ RUN go install golang.org/x/vuln/cmd/govulncheck@v1.1.3 && \
     go install github.com/securego/gosec/v2/cmd/gosec@v2.21.4 && \
     go install honnef.co/go/tools/cmd/staticcheck@v0.5.1
 
+# Satisfy image scanners (build artifacts copied out before this stage is discarded).
+USER nobody
+
 # ---------------------------------------------------------------------------
 # Scanner toolchain layer (shared by runner + all-in-one)
 # ---------------------------------------------------------------------------
@@ -74,6 +77,9 @@ RUN chmod +x /tmp/install-scanner-tools.sh && \
     fi
 
 COPY --from=builder /go/bin/govulncheck /go/bin/gosec /go/bin/staticcheck /usr/local/bin/
+
+RUN adduser -D -u 65532 scanner
+USER scanner
 
 # ---------------------------------------------------------------------------
 # core — web/API/UI, migrations, scheduler; no external scanner binaries

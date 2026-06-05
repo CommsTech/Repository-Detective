@@ -155,11 +155,29 @@ func isStaticFalsePositive(rule staticRule, path, line string) bool {
 		return isFalsePositiveSQLConcat(line)
 	case "SEC-CMD-EXEC":
 		return isFalsePositiveCmdExec(path, line)
+	case "SEC-EVAL":
+		return isFalsePositiveEval(line)
 	case "QUAL-DEBUG":
 		return isFalsePositiveDebugLine(path, line)
 	default:
 		return false
 	}
+}
+
+func isFalsePositiveEval(line string) bool {
+	trimmed := strings.TrimSpace(line)
+	// PyTorch/TensorFlow/JAX: model.eval() is inference mode, not dynamic code execution.
+	if regexp.MustCompile(`\.eval\s*\(\s*\)`).MatchString(trimmed) {
+		return true
+	}
+	// Python if eval(...) in comments or markdown changelog lines.
+	if strings.HasPrefix(trimmed, "#") || strings.HasPrefix(trimmed, "//") ||
+		strings.HasPrefix(trimmed, "- ") || strings.HasPrefix(trimmed, "* ") {
+		if regexp.MustCompile(`(?i)\beval\s*\(`).MatchString(trimmed) {
+			return true
+		}
+	}
+	return false
 }
 
 func isFalsePositiveHardcodedSecret(path, line string) bool {

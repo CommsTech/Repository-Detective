@@ -245,6 +245,12 @@ type Config struct {
 	CalibrationAutoApply                 bool              `mapstructure:"calibration_auto_apply"`
 	Reporting                         profile.ReportingConfig              `mapstructure:"reporting"`
 	FalsePositiveReduction            profile.FalsePositiveReductionConfig `mapstructure:"false_positive_reduction"`
+	AuthMode                          string            `mapstructure:"auth_mode"`
+	SessionCookieName                 string            `mapstructure:"session_cookie_name"`
+	SessionSecret                     string            `mapstructure:"session_secret"`
+	SessionTTLHours                   int               `mapstructure:"session_ttl_hours"`
+	CSRFEnabled                       bool              `mapstructure:"csrf_enabled"`
+	LocalAdminBootstrapEnabled        bool              `mapstructure:"local_admin_bootstrap_enabled"`
 }
 
 func main() {
@@ -479,6 +485,12 @@ func loadConfig() error {
 	viper.SetDefault("calibration_interval_hours", 24)
 	viper.SetDefault("calibration_min_findings_for_recommendation", 20)
 	viper.SetDefault("calibration_auto_apply", false)
+	viper.SetDefault("auth_mode", "api_key_only")
+	viper.SetDefault("session_cookie_name", "rd_session")
+	viper.SetDefault("session_secret", "")
+	viper.SetDefault("session_ttl_hours", 12)
+	viper.SetDefault("csrf_enabled", true)
+	viper.SetDefault("local_admin_bootstrap_enabled", true)
 
 	reportingDefaults := profile.DefaultReportingConfig()
 	viper.SetDefault("reporting.mode", reportingDefaults.Mode)
@@ -583,6 +595,36 @@ func loadConfig() error {
 
 	issues.SetLabelCompatMode(config.LabelCompatMode)
 
+	if err := config.validateAuth(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *Config) validateAuth() error {
+	mode := strings.TrimSpace(strings.ToLower(c.AuthMode))
+	if mode == "" {
+		c.AuthMode = "api_key_only"
+	} else if mode != "api_key_only" && mode != "local" {
+		return fmt.Errorf("invalid auth_mode %q (use api_key_only or local)", c.AuthMode)
+	} else {
+		c.AuthMode = mode
+	}
+	if c.AuthMode == "local" {
+		if strings.TrimSpace(c.SessionSecret) == "" {
+			return fmt.Errorf("auth_mode=local requires session_secret (set REPOSITORY_DETECTIVE_SESSION_SECRET)")
+		}
+		if !c.DatabaseEnabled {
+			return fmt.Errorf("auth_mode=local requires database_enabled=true")
+		}
+	}
+	if strings.TrimSpace(c.SessionCookieName) == "" {
+		c.SessionCookieName = "rd_session"
+	}
+	if c.SessionTTLHours <= 0 {
+		c.SessionTTLHours = 12
+	}
 	return nil
 }
 
@@ -812,6 +854,17 @@ func initializeComponents() error {
 
 	if config.UIEnabled {
 		uiHandler, err := ui.NewHandler(bugbotStore, globalSnapshot, config.UIBasePath, logger, preinstallRunner, config.PreinstallAuditEnabled, config.APIKey)
+		if err == nil {
+			uiHandler.SetAuthConfig(ui.AuthConfig{
+				Mode:                       config.AuthMode,
+				SessionSecret:              config.SessionSecret,
+				SessionCookieName:          config.SessionCookieName,
+				SessionTTLHours:            config.SessionTTLHours,
+				CSRFEnabled:                config.CSRFEnabled,
+				LocalAdminBootstrapEnabled: config.LocalAdminBootstrapEnabled,
+				PublicURL:                  config.PublicURL,
+			})
+		}
 		if err != nil {
 			return fmt.Errorf("failed to initialize operator UI: %w", err)
 		}
@@ -2144,8 +2197,15 @@ func registerControlPlaneRoutes(router *gin.Engine) {
 	uiGroup := router.Group(operatorUI.BasePath())
 	uiGroup.Use(requireComponentsReady())
 	operatorUI.RegisterPublicRoutes(uiGroup)
-	uiAuth := uiGroup.Group("")
-	uiAuth.Use(requireAPIKeyAuth())
-	operatorUI.RegisterRoutes(uiAuth)
+	if config.AuthMode == "local" {
+		operatorUI.RegisterAuthRoutes(uiGroup)
+		uiAuth := uiGroup.Group("")
+		uiAuth.Use(operatorUI.SessionAuthMiddleware())
+		operatorUI.RegisterRoutes(uiAuth)
+	} else {
+		uiAuth := uiGroup.Group("")
+		uiAuth.Use(requireAPIKeyAuth())
+		operatorUI.RegisterRoutes(uiAuth)
+	}
 	logger.Infof("Control plane API and UI routes registered")
 }

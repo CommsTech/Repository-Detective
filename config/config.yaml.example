@@ -11,6 +11,14 @@ startup_check_timeout: 10
 api_key: ""
 public_url: "http://127.0.0.1:8081"
 
+# Auth (slice 1): api_key_only (default) or local (session login for UI; API key still works).
+auth_mode: api_key_only
+session_cookie_name: rd_session
+session_secret: ""
+session_ttl_hours: 12
+csrf_enabled: true
+local_admin_bootstrap_enabled: true
+
 gitea_url: "https://git.example.com"
 gitea_token: ""
 webhook_secret: ""
