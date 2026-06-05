@@ -6,7 +6,8 @@
 
 Private beta **freeze week** is active: **no new features** — only testing, documentation, bug fixes, and release hardening.
 
-**Test/doc hardening phase:** **complete** (2026-06-05) — `go test`/`vet`/`staticcheck` pass; `docker-build-verify.sh` pass after disk cleanup.
+**Test/doc hardening phase:** **complete** (2026-06-05)  
+**Feature completeness audit:** **complete** — [FEATURE_COMPLETENESS_AUDIT.md](FEATURE_COMPLETENESS_AUDIT.md) · [API_ROUTES.md](API_ROUTES.md)
 
 **Test & docs:** [TEST_MATRIX.md](TEST_MATRIX.md) · [BETA_SMOKE_TEST.md](BETA_SMOKE_TEST.md) · [QUICKSTART.md](QUICKSTART.md) · [RELEASE_NOTES_0.1.0_BETA.md](RELEASE_NOTES_0.1.0_BETA.md)
 

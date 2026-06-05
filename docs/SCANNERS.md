@@ -1,6 +1,6 @@
 # Deterministic Scanners
 
-Bugbot runs **external security and lint tools** before (and instead of) LLM analysis where possible. Findings are reported as Gitea issues with the same severity, file, and line metadata as AI findings.
+Repository Detective runs **external security and lint tools** before (and instead of) LLM analysis where possible. Findings are reported as forge issues with severity, file, and line metadata.
 
 See [RUBRICS.md](RUBRICS.md) for the security, pipeline governance, public-release, and advisory optimization scoring rubrics.
 
@@ -29,21 +29,21 @@ High-confidence deterministic findings **skip LLM debate and PoC generation**. H
 
 | Tool | Purpose | Install |
 |------|---------|---------|
-| [Trivy](https://github.com/aquasecurity/trivy) | Dependency CVEs, secrets, Dockerfile/K8s misconfig | Included in Bugbot Docker image |
-| [Grype](https://github.com/anchore/grype) | Dependency vulnerability matching | Included in Bugbot Docker image |
-| [Gitleaks](https://github.com/gitleaks/gitleaks) | Hardcoded secrets (filesystem snapshot) | Install on host or wait for Docker image update |
-| [Semgrep](https://github.com/semgrep/semgrep) | SAST (registry rulesets or operator rules) | Install on host or wait for Docker image update |
+| [Trivy](https://github.com/aquasecurity/trivy) | Dependency CVEs, secrets, Dockerfile/K8s misconfig | Included in **all-in-one** image |
+| [Grype](https://github.com/anchore/grype) | Dependency vulnerability matching | Included in **all-in-one** image |
+| [Gitleaks](https://github.com/gitleaks/gitleaks) | Hardcoded secrets (filesystem snapshot) | Included in **all-in-one** image (8.21.2+) |
+| [Semgrep](https://github.com/semgrep/semgrep) | SAST (registry rulesets or operator rules) | Included in **all-in-one** image |
 | [govulncheck](https://pkg.go.dev/golang.org/x/vuln/cmd/govulncheck) | Go module vulnerability scanning | `go install golang.org/x/vuln/cmd/govulncheck@latest` |
 | [gosec](https://github.com/securego/gosec) | Go security anti-patterns | `go install github.com/securego/gosec/v2/cmd/gosec@latest` |
 | [staticcheck](https://staticcheck.dev/) | Go static analysis (first-class scanner) | `go install honnef.co/go/tools/cmd/staticcheck@latest` |
 | [hadolint](https://github.com/hadolint/hadolint) | Dockerfile best-practice lint | Install from distro package manager or release binary |
 | [checkov](https://www.checkov.io/) | IaC policy (Terraform, K8s, Helm, workflows) | `python3 -m pip install --user checkov` |
-| golangci-lint | Go static analysis (includes many linters) | Included in Bugbot Docker image |
-| ruff | Python lint | Included in Bugbot Docker image |
-| shellcheck | Shell script analysis | Included in Bugbot Docker image |
+| golangci-lint | Go static analysis (includes many linters) | Included in **all-in-one** image |
+| ruff | Python lint | Included in **all-in-one** image |
+| shellcheck | Shell script analysis | Included in **all-in-one** image |
 | OpenSCAP | Self-hosted runner/server hardening evidence | Run outside Bugbot on the runner host |
 
-If a binary is missing, Bugbot logs a warning and continues with the other scanners.
+If a binary is missing (e.g. **core** image without tools), Repository Detective logs a warning and continues with other scanners.
 
 ## Configuration
 

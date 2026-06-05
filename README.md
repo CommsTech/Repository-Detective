@@ -2,7 +2,9 @@
 
 **Inspect. Analyze. Improve.**
 
-Automated code review and repository assessment for Gitea. Repository Detective watches pushes and pull requests, runs security and quality checks, and opens Gitea issues when it finds problems.
+Automated code review and repository assessment for **Gitea** (primary). Repository Detective watches pushes and pull requests, runs security and quality checks, and opens forge issues when configured.
+
+**Private beta scope:** single-operator, API-key auth, SQLite, deterministic-first scanning. **Not** multi-user SaaS. See [docs/BETA_READINESS.md](docs/BETA_READINESS.md) and [docs/FEATURE_COMPLETENESS_AUDIT.md](docs/FEATURE_COMPLETENESS_AUDIT.md).
 
 > **Naming:** [Repository Detective](docs/NAMING.md) is the product name. **Bugbot** legacy env vars (`BUGBOT_*`), labels (`bugbot/*`), and fingerprints (`bugbot-<hex>`) remain supported. Prefer `REPOSITORY_DETECTIVE_*` for new deployments — see [docs/BRANDING_MIGRATION.md](docs/BRANDING_MIGRATION.md).
 
@@ -30,7 +32,9 @@ Then open http://localhost:8080/onboard
 - Runs **deterministic checks first**: static rules, [Trivy](https://github.com/aquasecurity/trivy), [Grype](https://github.com/anchore/grype), golangci-lint, ruff, shellcheck
 - Uses LLM analysis only on flagged files (or disable entirely with `REPOSITORY_DETECTIVE_ENABLE_LLM_AUDITORS=false`; legacy `BUGBOT_ENABLE_LLM_AUDITORS` still works)
 - Creates Gitea issues with severity, file, line, code snippet, and PoC when available
-- Supports OpenAI, Anthropic, OpenRouter, Ollama, OpenWebUI, and OpenClaw
+- Optional LLM backends (OpenAI, Anthropic, OpenRouter, Ollama, OpenWebUI, OpenClaw) — **off by default** in beta (`enable_llm_auditors: false`)
+- Optional GitHub manual/bulk scans when token configured — **not** full webhook/PR parity ([docs/GITHUB_SCANNING.md](docs/GITHUB_SCANNING.md))
+- Remediation planner yes; **remediation PRs off by default**. Qdrant semantic dedup **off by default**
 
 ## Configuration
 
@@ -92,6 +96,8 @@ Legacy header `X-Bugbot-API-Key` is still accepted. See [docs/BRANDING_MIGRATION
 | [docs/LICENSING_STRATEGY.md](docs/LICENSING_STRATEGY.md) | Proposed licensing model |
 | [docs/AUTH_RBAC_PLAN.md](docs/AUTH_RBAC_PLAN.md) | Multi-user auth design (not implemented) |
 | [docs/BETA_READINESS.md](docs/BETA_READINESS.md) | Private beta checklist |
+| [docs/FEATURE_COMPLETENESS_AUDIT.md](docs/FEATURE_COMPLETENESS_AUDIT.md) | Feature inventory and honest claims |
+| [docs/API_ROUTES.md](docs/API_ROUTES.md) | API route reference |
 
 ## Development
 

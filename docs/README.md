@@ -21,6 +21,8 @@ detect → issue → plan → approve → patch PR → merge → rescan → veri
 | [DOCKER.md](DOCKER.md) | Image targets and build |
 | [RELEASE_NOTES_0.1.0_BETA.md](RELEASE_NOTES_0.1.0_BETA.md) | Beta release notes |
 | [DOCS_AUDIT.md](DOCS_AUDIT.md) | Documentation completeness audit |
+| [FEATURE_COMPLETENESS_AUDIT.md](FEATURE_COMPLETENESS_AUDIT.md) | Feature inventory and gap audit |
+| [API_ROUTES.md](API_ROUTES.md) | API route reference |
 
 Scripts: `./scripts/release-test.sh` · `./scripts/operator-smoke-test.sh`
 

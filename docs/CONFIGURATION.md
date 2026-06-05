@@ -93,6 +93,10 @@ Set globally or per repo. Private beta: **`beta_standard`**.
 
 ---
 
+## Config matrix (audit)
+
+Beta-critical keys with defaults and edition notes: [FEATURE_COMPLETENESS_AUDIT.md](FEATURE_COMPLETENESS_AUDIT.md#part-c--config-matrix-beta-critical-keys).
+
 ## Related docs
 
 - [POLICY.md](POLICY.md) — reporting and gates
