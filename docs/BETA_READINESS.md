@@ -6,6 +6,8 @@
 
 Private beta **freeze week** is active: **no new features** — only testing, documentation, bug fixes, and release hardening.
 
+**Test/doc hardening phase:** **complete** (2026-06-05) — `go test`/`vet`/`staticcheck` pass; `docker-build-verify.sh` pass after disk cleanup.
+
 **Test & docs:** [TEST_MATRIX.md](TEST_MATRIX.md) · [BETA_SMOKE_TEST.md](BETA_SMOKE_TEST.md) · [QUICKSTART.md](QUICKSTART.md) · [RELEASE_NOTES_0.1.0_BETA.md](RELEASE_NOTES_0.1.0_BETA.md)
 
 Run before handoff:
@@ -63,7 +65,19 @@ Per-repo AI policy: use `ai_policy: disabled` unless explicitly testing LLM feat
 | `go vet ./...` | **Pass** | 2026-06-04 |
 | `staticcheck ./...` | **Pass** | 2026-06-04 |
 | Docker build verify script | **Pass** | `./scripts/release-test.sh` bundles verify + go tests |
-| `docker-build-verify.sh` trap bug | **Fixed** | `SMOKE_CONTAINER_NAME` + preferred API header (2026-06-05) |
+| Operator smoke script | **Pass** | `./scripts/operator-smoke-test.sh` (2026-06-05) |
+| `docker-build-verify.sh` | **Pass** | After host disk cleanup; see release-test notes below |
+| Disk preflight in verify script | **Pass** | 10 GB minimum; `VERIFY_MIN_DISK_GB` override |
+
+### Release-test infrastructure (2026-06-05)
+
+| Item | Detail |
+|------|--------|
+| Initial failure cause | Host root filesystem 100% full |
+| Production impact | None — production on 8081 unaffected |
+| Fixes | Stale `rd-verify-*` cleanup (`9f958fe`); disk preflight in verify script |
+| Cleanup | `docker builder prune`; `docker image prune -af` freed ~35 GB |
+| Result | `docker-build-verify.sh` passed after cleanup |
 | Test matrix documented | **Pass** | [TEST_MATRIX.md](TEST_MATRIX.md) |
 | Beta E2E smoke doc | **Pass** | [BETA_SMOKE_TEST.md](BETA_SMOKE_TEST.md) |
 | Operator quickstart | **Pass** | [QUICKSTART.md](QUICKSTART.md) |

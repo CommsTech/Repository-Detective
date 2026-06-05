@@ -69,6 +69,8 @@ Verify all targets:
 ./scripts/docker-build-verify.sh
 ```
 
+**Disk requirement:** the verify script checks for at least **10 GB** free on the build filesystem (`VERIFY_MIN_DISK_GB` to override). All-in-one builds are large; **30+ GB free** is recommended. If the host is full, smoke tests fail with SQLite errors — see [TROUBLESHOOTING.md](TROUBLESHOOTING.md#disk-full-docker-build-or-verify-fails).
+
 ## Pinned scanner versions (all-in-one / runner)
 
 | Tool | Version | Install method |

@@ -299,6 +299,54 @@ Pull latest and rebuild.
 
 ---
 
+## Disk full — Docker build or verify fails
+
+**Symptoms:**
+
+```text
+database or disk is full (13)
+health check timed out
+Bind for 0.0.0.0:18081 failed: port is already allocated
+ERROR: not enough free disk for Docker build verify
+```
+
+**Production impact:** Usually **none** if `repository-detective` on port 8081 is still running — failures hit isolated verify containers or new builds.
+
+**Check:**
+
+```bash
+df -h /
+docker system df -v
+```
+
+**Clean (safe order):**
+
+```bash
+docker container prune -f
+docker builder prune -f
+docker image prune -af
+```
+
+**Volumes:** Repository Detective homelab uses bind mount `./data` for SQLite — **not** an anonymous Docker volume. Review `docker volume ls` before `docker volume prune`; skip if unsure.
+
+**Stale verify containers:**
+
+```bash
+docker ps -aq --filter "name=rd-verify-" | xargs -r docker rm -f
+```
+
+**Targets:** 10–20 GB free minimum; **30+ GB** preferred for all-in-one rebuilds.
+
+**Retry:**
+
+```bash
+./scripts/docker-build-verify.sh
+```
+
+The script runs a disk preflight and removes stale `rd-verify-*` containers before smoke tests.
+
+---
+
 ## Getting more help
 
 1. `./scripts/operator-smoke-test.sh`

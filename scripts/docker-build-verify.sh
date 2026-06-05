@@ -14,6 +14,29 @@ API_KEY="${REPOSITORY_DETECTIVE_API_KEY:-${BUGBOT_API_KEY:-}}"
 
 log() { printf '==> %s\n' "$*"; }
 
+# Minimum free space on the filesystem hosting the build context (default 10 GB).
+VERIFY_MIN_DISK_GB="${VERIFY_MIN_DISK_GB:-10}"
+
+check_disk_space() {
+  local required_kb=$((VERIFY_MIN_DISK_GB * 1024 * 1024))
+  local available_kb
+  available_kb=$(df -Pk . | awk 'NR==2 {print $4}')
+  if [ -z "$available_kb" ] || [ "$available_kb" -lt "$required_kb" ]; then
+    echo "ERROR: not enough free disk for Docker build verify." >&2
+    echo "Available: $((available_kb / 1024 / 1024)) GB on $(df -Pk . | awk 'NR==2 {print $6}')" >&2
+    echo "Required: ${VERIFY_MIN_DISK_GB} GB minimum (${VERIFY_MIN_DISK_GB}–30+ GB recommended for all-in-one builds)" >&2
+    echo "Remediation:" >&2
+    echo "  docker system df" >&2
+    echo "  docker container prune -f" >&2
+    echo "  docker builder prune -f" >&2
+    echo "  docker image prune -af" >&2
+    echo "Do not run 'docker volume prune' if production SQLite lives in an anonymous volume." >&2
+    echo "Repository Detective homelab deploy uses bind mount ./data — volume prune is usually safe for RD data." >&2
+    exit 1
+  fi
+  log "disk OK: $((available_kb / 1024 / 1024)) GB free (require ${VERIFY_MIN_DISK_GB} GB)"
+}
+
 need_docker() {
   command -v docker >/dev/null 2>&1 || { echo "docker not available" >&2; exit 1; }
 }
@@ -98,6 +121,7 @@ smoke_all_in_one() {
 
 main() {
   need_docker
+  check_disk_space
   build_target core repository-detective:core
   build_target runner repository-detective:runner
   build_target all-in-one repository-detective:all-in-one

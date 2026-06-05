@@ -156,7 +156,7 @@ docker exec repository-detective sh -c 'for t in trivy grype gitleaks semgrep go
 | `go test ./...` | Unit + integration tests across packages |
 | `go vet ./...` | Static analysis |
 | `staticcheck ./...` | Additional lint |
-| `./scripts/docker-build-verify.sh` | All image targets + smoke `/health` |
+| `./scripts/docker-build-verify.sh` | Disk preflight (10 GB min) + all image targets + smoke `/health` |
 | `./scripts/release-test.sh` | All of the above + optional gosec |
 | `./scripts/operator-smoke-test.sh` | Live instance API + health |
 
