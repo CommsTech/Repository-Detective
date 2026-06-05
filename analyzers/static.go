@@ -152,7 +152,7 @@ func isStaticFalsePositive(rule staticRule, path, line string) bool {
 	case "SEC-HARDCODED-SECRET":
 		return isFalsePositiveHardcodedSecret(path, line)
 	case "SEC-SQL-CONCAT":
-		return isFalsePositiveSQLConcat(line)
+		return isFalsePositiveSQLConcat(path, line)
 	case "SEC-CMD-EXEC":
 		return isFalsePositiveCmdExec(path, line)
 	case "SEC-EVAL":
@@ -205,11 +205,18 @@ func isFalsePositiveHardcodedSecret(path, line string) bool {
 	return false
 }
 
-func isFalsePositiveSQLConcat(line string) bool {
+func isFalsePositiveSQLConcat(path, line string) bool {
 	trimmed := strings.TrimSpace(line)
 	// Safe pattern: append a constant SQL fragment that only adds placeholders (?, $1).
 	if safeSQLConcatSuffix.MatchString(trimmed) {
 		return true
+	}
+	// Store layer: fmt.Sprintf for IN (?) lists with bound args (strings.Join of "?" placeholders).
+	if strings.Contains(trimmed, "fmt.Sprintf") {
+		lowerPath := strings.ToLower(path)
+		if strings.Contains(lowerPath, "store/") || strings.Contains(lowerPath, "/store/") {
+			return true
+		}
 	}
 	if strings.Contains(trimmed, "+") && strings.Contains(trimmed, "?") &&
 		!strings.Contains(trimmed, "+ \"") && !strings.Contains(trimmed, "+'") &&

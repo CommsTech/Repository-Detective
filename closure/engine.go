@@ -71,10 +71,11 @@ type EvidenceRow struct {
 
 // FindingRow is a minimal finding record.
 type FindingRow struct {
-	ID          int64
-	Fingerprint string
-	Source      string
-	Status      string
+	ID            int64
+	RepositoryID  int64
+	Fingerprint   string
+	Source        string
+	Status        string
 }
 
 // RepositoryRow is minimal repo metadata.
@@ -107,7 +108,10 @@ func (e *Engine) OnScanFinish(ctx context.Context, scan ScanContext) error {
 	if err := e.checkOpenPRs(ctx, scan); err != nil {
 		return err
 	}
-	return e.verifyPending(ctx, scan)
+	if err := e.verifyPending(ctx, scan); err != nil {
+		return err
+	}
+	return nil
 }
 
 // CheckPatchAttemptMerge queries Gitea and updates state for one patch attempt.
@@ -166,15 +170,44 @@ func (e *Engine) RecordDirectRemediation(ctx context.Context, in DirectRemediati
 }
 
 // VerifyFindingClosure verifies closure for a finding using the latest scan context.
+// When no prior closure evidence exists, a direct-scan verification record is created.
 func (e *Engine) VerifyFindingClosure(ctx context.Context, findingID int64, scan ScanContext) (Evidence, error) {
 	if e == nil || !e.Config.Enabled || e.Store == nil {
 		return Evidence{}, fmt.Errorf("evidence closure disabled")
 	}
-	row, err := e.Store.GetLatestClosureEvidenceByFindingID(ctx, findingID)
+	row, err := e.ensureClosureEvidenceRow(ctx, findingID, scan.RepositoryID)
 	if err != nil {
 		return Evidence{}, err
 	}
 	return e.applyVerification(ctx, row, scan)
+}
+
+func (e *Engine) ensureClosureEvidenceRow(ctx context.Context, findingID, repositoryID int64) (EvidenceRow, error) {
+	row, err := e.Store.GetLatestClosureEvidenceByFindingID(ctx, findingID)
+	if err == nil {
+		return row, nil
+	}
+	if !IsEvidenceNotFound(err) {
+		return EvidenceRow{}, err
+	}
+	finding, err := e.Store.GetFindingByID(ctx, findingID)
+	if err != nil {
+		return EvidenceRow{}, err
+	}
+	repoID := repositoryID
+	if repoID <= 0 {
+		repoID = finding.RepositoryID
+	}
+	row = EvidenceRow{
+		FindingID:      findingID,
+		RepositoryID:   repoID,
+		Fingerprint:    finding.Fingerprint,
+		OriginalSource: finding.Source,
+		MergeCommitSHA: directScanMergeMarker,
+		Status:         StatusPendingRescan,
+		Reason:         "Direct verification against completed scan",
+	}
+	return e.Store.SaveClosureEvidence(ctx, row)
 }
 
 // GetEvidence returns latest closure evidence for a finding.

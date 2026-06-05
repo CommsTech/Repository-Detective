@@ -115,6 +115,18 @@ func TestRunStaticAnalysisSkipsModelEvalMethod(t *testing.T) {
 	}
 }
 
+func TestRunStaticAnalysisSkipsStoreINClauseSprintf(t *testing.T) {
+	findings := RunStaticAnalysis([]FileContent{{
+		Path: "store/findings_batch_sqlite.go",
+		Content: "query := fmt.Sprintf(`SELECT id FROM findings WHERE id IN (%s)`, strings.Join(placeholders, \",\"))",
+	}}, true, false)
+	for _, f := range findings {
+		if f.ID == "SEC-SQL-CONCAT" {
+			t.Fatalf("expected store IN-clause fmt.Sprintf to be skipped, got SEC-SQL-CONCAT")
+		}
+	}
+}
+
 func TestStaticRuleConfidenceOrdering(t *testing.T) {
 	eval := staticRuleConfidence(staticRule{ID: "SEC-EVAL"})
 	secret := staticRuleConfidence(staticRule{ID: "SEC-HARDCODED-SECRET"})

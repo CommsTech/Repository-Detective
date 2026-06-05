@@ -55,6 +55,46 @@ func TestRecordDirectRemediationPersistsMergeSHA(t *testing.T) {
 	}
 }
 
+func TestVerifyFindingClosureWithoutPriorEvidence(t *testing.T) {
+	dir := t.TempDir()
+	s, err := store.Open(store.Config{Enabled: true, Driver: "sqlite", Path: filepath.Join(dir, "verify-direct.db")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+
+	ctx := context.Background()
+	repo, _ := s.UpsertRepository(ctx, store.Repository{Owner: "o", Name: "r", FullName: "o/r", ConnectedRepo: true})
+	finding, _ := s.UpsertFinding(ctx, store.Finding{
+		RepositoryID: repo.ID, Fingerprint: "fp-absent", Title: "secret", Severity: "high",
+		Source: "static", RuleID: "SEC-HARDCODED-SECRET", Status: store.FindingStatusOpen,
+	})
+
+	eng := &closure.Engine{
+		Config: closure.Config{Enabled: true, RequireScannerSuccess: true},
+		Store:  directRemediationStore{s: s},
+	}
+	scan := closure.ScanContext{
+		ScanID: "scan-1", RepositoryID: repo.ID, Owner: "o", Repo: "r",
+		FingerprintsSeen: map[string]struct{}{},
+		ScannerResults:   map[string]string{"static": "clean"},
+	}
+	ev, err := eng.VerifyFindingClosure(ctx, finding.ID, scan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ev.Status != closure.StatusVerified {
+		t.Fatalf("expected verified, got %s (%s)", ev.Status, ev.Reason)
+	}
+	updated, err := s.GetFindingDetail(ctx, finding.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if updated.Status != store.FindingStatusResolvedVerified {
+		t.Fatalf("finding status %q", updated.Status)
+	}
+}
+
 type directRemediationStore struct {
 	s store.QueryStore
 }
@@ -109,7 +149,7 @@ func (d directRemediationStore) GetFindingByID(ctx context.Context, findingID in
 		return closure.FindingRow{}, err
 	}
 	return closure.FindingRow{
-		ID: detail.ID, Fingerprint: detail.Fingerprint, Source: detail.Source, Status: detail.Status,
+		ID: detail.ID, RepositoryID: detail.RepositoryID, Fingerprint: detail.Fingerprint, Source: detail.Source, Status: detail.Status,
 	}, nil
 }
 

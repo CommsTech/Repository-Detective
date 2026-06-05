@@ -80,6 +80,8 @@ docs/dogfood-reports/*
 !docs/dogfood-reports/current-security-blocker-verification.md
 !docs/dogfood-reports/repo-cleanup-audit.md
 !docs/dogfood-reports/issue-resolution-batch-plan-current.md
+!docs/dogfood-reports/core-application-remediation-sprint.md
+!docs/dogfood-reports/rd-self-remediation-dl3018-test.md
 
 # Private operator dogfood (unsanitized — keep local)
 docs/DOGFOOD_REPORT_FIRST_39_REPOS.md

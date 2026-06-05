@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/ai"
 	"git.commsnet.org/commstech/bugbot/analyzers"
 	"git.commsnet.org/commstech/bugbot/closure"
 	"git.commsnet.org/commstech/bugbot/issues"
@@ -124,7 +123,7 @@ func (closureStoreAdapter) GetFindingByID(ctx context.Context, findingID int64) 
 	if err != nil {
 		return closure.FindingRow{}, err
 	}
-	return closure.FindingRow{ID: detail.ID, Fingerprint: detail.Fingerprint, Source: detail.Source, Status: detail.Status}, nil
+	return closure.FindingRow{ID: detail.ID, RepositoryID: detail.RepositoryID, Fingerprint: detail.Fingerprint, Source: detail.Source, Status: detail.Status}, nil
 }
 
 func (closureStoreAdapter) UpdateFindingStatus(ctx context.Context, findingID int64, status string) error {
@@ -266,30 +265,56 @@ func verifyFindingClosure(ctx context.Context, findingID int64) (closure.Evidenc
 	if err != nil {
 		return closure.Evidence{}, err
 	}
-	scans, err := bugbotStore.ListScansByRepository(ctx, detail.RepositoryID, store.ListOptions{Limit: 5})
-	if err != nil || len(scans) == 0 {
-		return closure.Evidence{}, fmt.Errorf("no scan available for verification")
+	scanID, err := latestCompletedScanID(ctx, detail.RepositoryID)
+	if err != nil {
+		return closure.Evidence{}, err
 	}
-	var scanID string
+	scanCtx, err := buildClosureScanContextFromStore(ctx, repo.Owner, repo.Name, detail.RepositoryID, scanID)
+	if err != nil {
+		return closure.Evidence{}, err
+	}
+	return closureEngine.VerifyFindingClosure(ctx, findingID, scanCtx)
+}
+
+func latestCompletedScanID(ctx context.Context, repositoryID int64) (string, error) {
+	scans, err := bugbotStore.ListScansByRepository(ctx, repositoryID, store.ListOptions{Limit: 10})
+	if err != nil {
+		return "", err
+	}
 	for _, sc := range scans {
 		if sc.Status == store.ScanStatusCompleted {
-			scanID = sc.ID
-			break
+			return sc.ID, nil
 		}
 	}
+	return "", fmt.Errorf("no completed scan available for verification")
+}
+
+func buildClosureScanContextFromStore(ctx context.Context, owner, repo string, repositoryID int64, scanID string) (closure.ScanContext, error) {
 	if scanID == "" {
-		return closure.Evidence{}, fmt.Errorf("no completed scan available for verification")
+		return closure.ScanContext{}, fmt.Errorf("scan id required")
 	}
-	findings, _ := bugbotStore.ListFindings(ctx, store.FindingFilter{RepositoryID: detail.RepositoryID, Limit: 1000})
-	var issuesInScan []ai.CodeIssue
-	for _, f := range findings {
-		if f.LastSeenScanID == scanID {
-			issuesInScan = append(issuesInScan, ai.CodeIssue{Fingerprint: f.Fingerprint})
+	seen := map[string]struct{}{}
+	if fps, err := bugbotStore.ListFingerprintsInScan(ctx, scanID, repositoryID); err == nil {
+		for fp, present := range fps {
+			if present {
+				seen[fp] = struct{}{}
+			}
 		}
 	}
-	result := &analyzers.AnalysisResult{ScanID: scanID, Issues: issuesInScan}
-	scanCtx := buildClosureScanContext(ctx, repo.Owner, repo.Name, detail.RepositoryID, result)
-	return closureEngine.VerifyFindingClosure(ctx, findingID, scanCtx)
+	scannerMap := map[string]string{}
+	if recs, err := bugbotStore.ListScannerResultsByScan(ctx, scanID); err == nil {
+		for _, sr := range recs {
+			scannerMap[sr.ScannerName] = sr.Status
+		}
+	}
+	return closure.ScanContext{
+		ScanID:           scanID,
+		RepositoryID:     repositoryID,
+		Owner:            owner,
+		Repo:             repo,
+		FingerprintsSeen: seen,
+		ScannerResults:   scannerMap,
+	}, nil
 }
 
 func recordDirectRemediation(ctx context.Context, findingID int64, mergeCommitSHA, reason string) (closure.Evidence, error) {

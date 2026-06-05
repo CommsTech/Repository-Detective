@@ -105,7 +105,7 @@ func (w workflowStore) GetFindingByID(ctx context.Context, findingID int64) (clo
 	if err != nil {
 		return closure.FindingRow{}, err
 	}
-	return closure.FindingRow{ID: d.ID, Fingerprint: d.Fingerprint, Source: d.Source, Status: d.Status}, nil
+	return closure.FindingRow{ID: d.ID, RepositoryID: d.RepositoryID, Fingerprint: d.Fingerprint, Source: d.Source, Status: d.Status}, nil
 }
 
 func (w workflowStore) UpdateFindingStatus(ctx context.Context, findingID int64, status string) error {
