@@ -13,6 +13,13 @@ func enabledPlanner() *Planner {
 	}, nil, func() string { return "rp-test" })
 }
 
+func TestHadolintContainerCategorySafeForAutoPR(t *testing.T) {
+	plan := ApplyRecipe(FindingContext{Category: "container", Source: "hadolint", RuleID: "DL3018", Severity: "medium", FilePath: "Dockerfile", Confidence: 0.9})
+	if !plan.SafeForAutoPR {
+		t.Fatal("hadolint container findings should be safe for auto PR when low risk")
+	}
+}
+
 func TestSecretRecipeHumanReviewNoAutoPR(t *testing.T) {
 	plan := ApplyRecipe(FindingContext{Category: "secret", Source: "gitleaks", Severity: "high", Confidence: 0.95})
 	if plan.SafeForAutoPR {

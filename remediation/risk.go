@@ -55,7 +55,7 @@ func SafeForAutoPR(ctx FindingContext, complexity, regressionRisk string, blocke
 		return complexity == ComplexitySmall && !ctx.FromAI
 	case "code_quality", "maintainability", "tech_debt":
 		return complexity == ComplexitySmall && regressionRisk == RiskLow && !ctx.FromAI
-	case "misconfiguration":
+	case "misconfiguration", "container":
 		source := strings.ToLower(ctx.Source)
 		if source == "hadolint" || source == "checkov" {
 			return complexity == ComplexitySmall && regressionRisk != RiskHigh
