@@ -55,9 +55,10 @@ func isStaticcheckPatchable(rule string) bool {
 
 func isHadolintPatchable(rule string) bool {
 	switch strings.ToUpper(rule) {
-	case "DL3015", "DL3016":
+	case "DL3015", "DL3016", "DL3018":
 		return true
 	default:
-		return strings.HasPrefix(strings.ToUpper(rule), "DL3015")
+		upper := strings.ToUpper(rule)
+		return strings.HasPrefix(upper, "DL3015") || strings.HasPrefix(upper, "DL3018")
 	}
 }

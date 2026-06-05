@@ -118,6 +118,30 @@ func TestUnsupportedRuleBlocked(t *testing.T) {
 	}
 }
 
+func TestHadolintDL3018ApkPinPatch(t *testing.T) {
+	dir := t.TempDir()
+	df := filepath.Join(dir, "Dockerfile")
+	content := "RUN apk add --no-cache ca-certificates tzdata wget su-exec git && \\\n"
+	if err := os.WriteFile(df, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	plan := EligiblePlan()
+	plan.Source = "hadolint"
+	plan.RuleID = "DL3018"
+	plan.AffectedFiles = []string{"Dockerfile"}
+	result, err := ApplyPatch(plan, dir, 3, 100)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Summary == "" {
+		t.Fatal("expected summary")
+	}
+	updated, _ := os.ReadFile(df)
+	if !strings.Contains(string(updated), "ca-certificates=*") || !strings.Contains(string(updated), "git=*") {
+		t.Fatalf("expected pinned packages, got %q", updated)
+	}
+}
+
 func TestStaticcheckPatchGenerated(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "main.go")
