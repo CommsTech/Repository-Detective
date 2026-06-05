@@ -8,6 +8,22 @@ Operator and developer documentation for the full safe remediation loop:
 detect → issue → plan → approve → patch PR → merge → rescan → verified closure
 ```
 
+## Private beta (start here)
+
+| Document | Description |
+|----------|-------------|
+| [QUICKSTART.md](QUICKSTART.md) | Zero to first scan (~15 min) |
+| [BETA_READINESS.md](BETA_READINESS.md) | Go/no-go checklist and beta config |
+| [BETA_SMOKE_TEST.md](BETA_SMOKE_TEST.md) | End-to-end operator validation |
+| [TEST_MATRIX.md](TEST_MATRIX.md) | Full regression test areas |
+| [CONFIGURATION.md](CONFIGURATION.md) | `.env` + `config.yaml` reference |
+| [DEPLOYMENT.md](DEPLOYMENT.md) | Deployment index |
+| [DOCKER.md](DOCKER.md) | Image targets and build |
+| [RELEASE_NOTES_0.1.0_BETA.md](RELEASE_NOTES_0.1.0_BETA.md) | Beta release notes |
+| [DOCS_AUDIT.md](DOCS_AUDIT.md) | Documentation completeness audit |
+
+Scripts: `./scripts/release-test.sh` · `./scripts/operator-smoke-test.sh`
+
 ## Getting started
 
 | Document | Description |

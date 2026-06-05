@@ -4,7 +4,16 @@
 **Checkpoint date:** 2026-06-04 (UTC)  
 **Branch:** `main` @ `af89214` (synced with `origin/main`)
 
-Private beta **freeze week** is active: no new scanners, features, or Qdrant enablement. Track issues, false positives, scanner failures, reconciliation, scores, UI friction, and scan duration only.
+Private beta **freeze week** is active: **no new features** — only testing, documentation, bug fixes, and release hardening.
+
+**Test & docs:** [TEST_MATRIX.md](TEST_MATRIX.md) · [BETA_SMOKE_TEST.md](BETA_SMOKE_TEST.md) · [QUICKSTART.md](QUICKSTART.md) · [RELEASE_NOTES_0.1.0_BETA.md](RELEASE_NOTES_0.1.0_BETA.md)
+
+Run before handoff:
+
+```bash
+./scripts/release-test.sh
+./scripts/operator-smoke-test.sh
+```
 
 ---
 
@@ -53,7 +62,11 @@ Per-repo AI policy: use `ai_policy: disabled` unless explicitly testing LLM feat
 | `go test ./...` | **Pass** | 2026-06-04 |
 | `go vet ./...` | **Pass** | 2026-06-04 |
 | `staticcheck ./...` | **Pass** | 2026-06-04 |
-| Docker build verify script | **Pass** | All targets build; smoke `/health` OK (2026-06-04) |
+| Docker build verify script | **Pass** | `./scripts/release-test.sh` bundles verify + go tests |
+| `docker-build-verify.sh` trap bug | **Fixed** | `SMOKE_CONTAINER_NAME` + preferred API header (2026-06-05) |
+| Test matrix documented | **Pass** | [TEST_MATRIX.md](TEST_MATRIX.md) |
+| Beta E2E smoke doc | **Pass** | [BETA_SMOKE_TEST.md](BETA_SMOKE_TEST.md) |
+| Operator quickstart | **Pass** | [QUICKSTART.md](QUICKSTART.md) |
 
 ---
 
@@ -148,3 +161,9 @@ No feature work unless a **blocks-private-beta** defect appears.
 - [EDITIONS.md](EDITIONS.md)
 - [LICENSING_STRATEGY.md](LICENSING_STRATEGY.md)
 - [BRANDING_COMPATIBILITY_AUDIT.md](BRANDING_COMPATIBILITY_AUDIT.md)
+- [TEST_MATRIX.md](TEST_MATRIX.md)
+- [BETA_SMOKE_TEST.md](BETA_SMOKE_TEST.md)
+- [QUICKSTART.md](QUICKSTART.md)
+- [CONFIGURATION.md](CONFIGURATION.md)
+- [DOCS_AUDIT.md](DOCS_AUDIT.md)
+- [RELEASE_NOTES_0.1.0_BETA.md](RELEASE_NOTES_0.1.0_BETA.md)

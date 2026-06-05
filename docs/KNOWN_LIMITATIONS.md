@@ -32,7 +32,14 @@ Honest constraints as of the closeout sprint. Update when shipping fixes.
 ## Documentation / wiki
 
 - Wiki not auto-synced to Gitea wiki remote
-- Some legacy docs reference “Bugbot” paths
+- Prefer [QUICKSTART.md](QUICKSTART.md) for new operators; [SETUP.md](SETUP.md) for full walkthrough
+- Legacy docs may mention “Bugbot” — see [BRANDING_MIGRATION.md](BRANDING_MIGRATION.md)
+
+## Beta validation
+
+- [TEST_MATRIX.md](TEST_MATRIX.md) — regression areas
+- [BETA_SMOKE_TEST.md](BETA_SMOKE_TEST.md) — end-to-end checklist
+- [DOCS_AUDIT.md](DOCS_AUDIT.md) — doc completeness
 
 ## Integrations
 

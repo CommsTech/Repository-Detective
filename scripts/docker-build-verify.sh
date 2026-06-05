@@ -44,23 +44,28 @@ verify_no_secrets_in_image() {
 
 smoke_all_in_one() {
   local tag=repository-detective:all-in-one-verify
-  local cname=rd-verify-$$
+  SMOKE_CONTAINER_NAME="rd-verify-$$"
 
-  docker rm -f "$cname" 2>/dev/null || true
+  docker rm -f "$SMOKE_CONTAINER_NAME" 2>/dev/null || true
   log "starting smoke container on port $PORT"
-  docker run -d --name "$cname" \
+  docker run -d --name "$SMOKE_CONTAINER_NAME" \
     -e REPOSITORY_DETECTIVE_PORT="$PORT" \
+    -e REPOSITORY_DETECTIVE_LISTEN_HOST=0.0.0.0 \
     -e BUGBOT_PORT="$PORT" \
     -e REPOSITORY_DETECTIVE_SKIP_STARTUP_CHECKS=true \
     -e REPOSITORY_DETECTIVE_DATABASE_PATH=/app/data/bugbot.db \
     -e REPOSITORY_DETECTIVE_GITEA_URL=http://example.com \
     -e REPOSITORY_DETECTIVE_GITEA_TOKEN=verify-smoke \
+    -e REPOSITORY_DETECTIVE_API_KEY="${API_KEY:-verify-smoke-key}" \
     -e BUGBOT_GITEA_URL=http://example.com \
     -e BUGBOT_GITEA_TOKEN=verify-smoke \
     -p "${PORT}:${PORT}" \
     "$tag" >/dev/null
 
-  trap 'docker rm -f "$cname" 2>/dev/null || true' EXIT
+  cleanup_smoke() {
+    docker rm -f "${SMOKE_CONTAINER_NAME:-}" 2>/dev/null || true
+  }
+  trap cleanup_smoke EXIT
 
   for i in $(seq 1 60); do
     if curl -sf "http://127.0.0.1:${PORT}/health" >/dev/null 2>&1; then
@@ -68,7 +73,7 @@ smoke_all_in_one() {
       break
     fi
     if [ "$i" -eq 60 ]; then
-      docker logs "$cname" 2>&1 | tail -40
+      docker logs "$SMOKE_CONTAINER_NAME" 2>&1 | tail -40
       echo "health check timed out" >&2
       exit 1
     fi
@@ -77,14 +82,16 @@ smoke_all_in_one() {
 
   if [ -n "$API_KEY" ]; then
     log "/api/v1/status (scanner tools)"
-    curl -sf -H "Authorization: Bearer ${API_KEY}" "http://127.0.0.1:${PORT}/api/v1/status" | head -c 400
+    curl -sf -H "X-Repository-Detective-API-Key: ${API_KEY}" \
+      "http://127.0.0.1:${PORT}/api/v1/status" | head -c 400 || true
     echo
   else
     log "skip /api/v1/status (set REPOSITORY_DETECTIVE_API_KEY to verify)"
   fi
 
-  docker rm -f "$cname" >/dev/null
+  cleanup_smoke
   trap - EXIT
+  unset SMOKE_CONTAINER_NAME
 }
 
 main() {

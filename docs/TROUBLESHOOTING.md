@@ -1,5 +1,33 @@
 # Troubleshooting
 
+**Repository Detective** — Inspect. Analyze. Improve.
+
+Operator-focused fixes for private beta deployments. Prefer `REPOSITORY_DETECTIVE_*` env vars; legacy `BUGBOT_*` still works.
+
+---
+
+## API key authentication
+
+**Symptoms:** `401 Unauthorized`, wizard/API calls fail.
+
+**Fix:**
+
+1. Confirm `.env` has `REPOSITORY_DETECTIVE_API_KEY` (or legacy `BUGBOT_API_KEY`).
+2. Send **preferred** header:
+
+   ```bash
+   curl -H "X-Repository-Detective-API-Key: $REPOSITORY_DETECTIVE_API_KEY" \
+     http://127.0.0.1:8081/api/v1/status
+   ```
+
+3. Legacy header `X-Bugbot-API-Key` still accepted.
+4. Query string `?api_key=` works for UI links — **homelab only**; do not share URLs.
+5. Restart container after changing `.env`.
+
+See [CONFIGURATION.md](CONFIGURATION.md), [BRANDING_MIGRATION.md](BRANDING_MIGRATION.md).
+
+---
+
 ## Health check fails
 
 **Wrong port?**
@@ -10,19 +38,20 @@
 | `docker-compose.minimal.yml` | `http://127.0.0.1:8080/health` |
 
 ```bash
-docker ps | grep bugbot
+docker ps | grep repository-detective
 ss -tlnp | grep -E '8080|8081'
-docker logs gitea-bugbot --tail 50
+docker logs repository-detective --tail 50
 ```
 
 **Config errors** (in `docker logs`):
 
 | Message | Fix |
 |---------|-----|
-| `gitea_url is required` | `BUGBOT_GITEA_URL` in `.env` |
-| `gitea_token is required` | `BUGBOT_GITEA_TOKEN` |
-| `configure ai_provider` | `BUGBOT_AI_PROVIDER` + `BUGBOT_AI_BASE_URL` if needed |
-| Connection timeout at startup | `BUGBOT_SKIP_STARTUP_CHECKS=true` |
+| `gitea_url is required` | `REPOSITORY_DETECTIVE_GITEA_URL` in `.env` |
+| `gitea_token is required` | `REPOSITORY_DETECTIVE_GITEA_TOKEN` |
+| `configure gitea_token and/or github_token` | At least one forge token |
+| `configure ai_provider` | Only if LLM/Qdrant enabled |
+| Connection timeout at startup | `REPOSITORY_DETECTIVE_SKIP_STARTUP_CHECKS=true` |
 
 Run in foreground:
 
@@ -34,124 +63,245 @@ docker compose up --build
 
 ---
 
-## Gitea webhooks fail
+## Slow `/health` (~4 seconds)
 
-Gitea cannot reach private IPs. Bugbot needs a public URL — [NETWORKING.md](NETWORKING.md).
+**Cause:** Health endpoint probes scanner binary availability.
 
-1. Confirm external access: `curl https://bugbot.example.com/health`
-2. Set `BUGBOT_PUBLIC_URL` in `.env`, restart container
-3. Webhook URL: `{PUBLIC_URL}/webhook`
-4. Secret in Gitea must match `BUGBOT_WEBHOOK_SECRET`
-5. Gitea signs each delivery with **HMAC-SHA256** of the raw JSON body and sends the hex digest in the `X-Gitea-Signature` header (Bugbot verifies this automatically)
-6. Test delivery in Gitea webhook settings (expect HTTP 200)
+**Mitigation:** Expected on all-in-one; use for monitoring, not per-request UI polling. Caching improvement is backlog.
 
-**401 Unauthorized on webhook test:** Secret mismatch, or missing signature header. Confirm the secret matches on both sides and that Gitea is sending `X-Gitea-Signature`.
-
----
-
-## `cannot unmarshal array into RepositoryContent`
-
-Fixed in commit `c0580f6`. Pull latest and rebuild or reload image.
-
----
-
-## AI provider TLS / certificate errors
-
-Log example:
-
-```text
-AI provider connection check failed: tls: failed to verify certificate: x509: certificate signed by unknown authority
-```
-
-For **trusted homelab** endpoints with a private CA (e.g. OpenClaw on HTTPS):
-
-```yaml
-ai_insecure_skip_tls_verify: true
-```
-
-Or `BUGBOT_AI_INSECURE_SKIP_TLS_VERIFY=true` in `.env`. Prefer installing the CA on the host instead when possible.
-
----
-
-## Bulk scan stopped after a few repositories
-
-Earlier versions cancelled queued scans when the `/api/v1/analyze/all` HTTP response returned. Upgrade to the latest build (detached scan context) and re-run:
+**Check:**
 
 ```bash
-./deploy.sh --scan-all-quick
+time curl -s http://127.0.0.1:8081/health >/dev/null
 ```
 
-Use `./deploy.sh --scan` for a full-profile dogfood pass on `commstech/Bugbot` only.
+---
+
+## Gitea webhooks fail
+
+Gitea cannot reach private IPs. Repository Detective needs a **public URL** — [NETWORKING.md](NETWORKING.md).
+
+1. Confirm external access: `curl https://detective.example.com/health`
+2. Set `REPOSITORY_DETECTIVE_PUBLIC_URL` in `.env`, restart container
+3. Webhook URL: `{PUBLIC_URL}/webhook`
+4. Secret in Gitea must match `REPOSITORY_DETECTIVE_WEBHOOK_SECRET`
+5. Gitea sends HMAC-SHA256 in `X-Gitea-Signature` — verified automatically
+
+**401 on webhook test:** Secret mismatch or missing signature header.
 
 ---
 
-## Too many false-positive Gitea issues
+## Gitea token permissions
 
-Static heuristics can flag safe patterns (shell env vars, `data-api-key` in templates, SQL fragments with `?` placeholders). See [FALSE_POSITIVES.md](FALSE_POSITIVES.md).
+Token needs:
 
-Quick mitigations:
+- Read repository
+- Write webhooks (onboarding)
+- Write issues (if `auto_create_issues: true`)
 
-- Raise `min_issue_confidence` (e.g. `0.7`)
-- Lower `max_issues_per_run`
-- Rebuild after analyzer updates and re-run `./deploy.sh --scan-all`
-- Close stale tickets #33-style with a comment referencing the fix commit
+**Symptoms:** Empty repo list, webhook registration fails, issues not created.
 
 ---
 
-## No issues after push
+## Scanner missing binary
 
-- `BUGBOT_AUTO_CREATE_ISSUES=true`
-- Token needs issue write permission
-- Check `docker logs gitea-bugbot`
-- Repo may match `repository_exclude_patterns` in `config/config.yaml`
+**Symptoms:**
+
+```text
+[SCANNER:trivy] binary not found
+tools_summary.missing: ["trivy", ...]
+```
+
+**Fix:**
+
+- Use **all-in-one** image (`docker-compose.yml` default)
+- Rebuild: `docker compose build repository-detective`
+- Verify inside container:
+
+  ```bash
+  docker exec repository-detective sh -c \
+    'for t in trivy grype gitleaks semgrep govulncheck gosec staticcheck hadolint checkov; do command -v $t || echo MISSING:$t; done'
+  ```
+
+See [SCANNERS.md](SCANNERS.md), [DOCKER.md](DOCKER.md).
+
+---
+
+## Gitleaks parse failures
+
+**Symptoms:** Scanner status `parse_failed` despite findings on disk.
+
+**Cause:** gitleaks 8.x ignores `--report-path -` (stdout).
+
+**Fix:** Included in main — writes temp report file. Confirm image has gitleaks **8.21.2+**. Rebuild from current `main`.
+
+---
+
+## Scanner timeouts
+
+**Symptoms:** Scanner status `timeout`, partial results.
+
+**Fix:**
+
+- Increase `scanner_timeout_seconds` or per-scanner timeout in config
+- Reduce repo scope / use `beta_standard` profile
+- checkov/grype on large monorepos — retry or exclude paths
+
+---
+
+## Qdrant disabled / mismatch
+
+**Symptoms:** Semantic dedup inactive; logs mention Qdrant unavailable.
+
+**Expected for beta:** `qdrant_enabled: false`.
+
+If enabling locally:
+
+- Embedding dimension must match collection (1024 vs 768 issues documented)
+- Point IDs must be UUID-compatible
+- See [QDRANT.md](QDRANT.md) — **not beta-ready**
+
+---
+
+## Database locked / SQLite errors
+
+**Symptoms:** `database is locked`, dashboard empty.
+
+**Fix:**
+
+1. Only one writer — stop duplicate containers binding same `./data`
+2. Check permissions: container user must read/write `data/bugbot.db`
+3. Restore from backup if corrupted — [BACKUP_RESTORE.md](BACKUP_RESTORE.md)
+
+**Restore:**
+
+```bash
+docker compose stop repository-detective
+cp /backups/bugbot-YYYY-MM-DD.db data/bugbot.db
+docker compose start repository-detective
+```
+
+---
+
+## Docker permissions
+
+**Symptoms:** Cannot write DB, config read errors.
+
+**Fix:**
+
+- Ensure `./data` owned or writable by UID **1001** (`repositorydetective`) or run with matching volume permissions
+- Config mount is `:ro` — edit on host, not inside container
+
+**Security:** Default compose does **not** mount Docker socket or use `privileged: true`.
+
+---
+
+## Archive / workspace mode failure
+
+**Symptoms:** Scan fails cloning or extracting repo archive.
+
+**Fix:**
+
+- Confirm Gitea token can read repo
+- Check disk space under scanner workspace temp dir
+- Large repos — adjust timeouts and `max_file_size`
+
+---
+
+## Pre-install private network rejection
+
+**Symptoms:** Pre-install audit rejects URL with private IP / localhost.
+
+**Expected:** SSRF protection — HTTPS public URLs only.
+
+**Override (homelab only):** `preinstall_allow_private_networks: true` — see [PREINSTALL_AUDIT.md](PREINSTALL_AUDIT.md).
+
+---
+
+## Theme not persisting
+
+**Symptoms:** Light/dark resets on navigation.
+
+**Fix:** Included in beta — `ui/static/theme.js` + localStorage. Hard-refresh browser; clear stale cache. Test: `go test ./ui/ -run Theme`.
+
+---
+
+## Legacy Bugbot naming confusion
+
+| You see | Meaning |
+|---------|---------|
+| `BUGBOT_*` in old docs | Use `REPOSITORY_DETECTIVE_*` — both work |
+| `X-Bugbot-API-Key` | Legacy — prefer `X-Repository-Detective-API-Key` |
+| `bugbot.db` | Database filename — intentional |
+| `commstech/Bugbot` git repo | Forge repo name — not product name |
+| Container `gitea-bugbot` | Old name — current is `repository-detective` |
+
+See [BRANDING_MIGRATION.md](BRANDING_MIGRATION.md), [BRANDING_COMPATIBILITY_AUDIT.md](BRANDING_COMPATIBILITY_AUDIT.md).
 
 ---
 
 ## Wizard API returns 401
 
-`X-Repository-Detective-API-Key` must match `REPOSITORY_DETECTIVE_API_KEY` in `.env` (legacy `X-Bugbot-API-Key` / `BUGBOT_API_KEY` still accepted).
+Same as [API key authentication](#api-key-authentication).
 
 ---
 
 ## Labels not attached to issues
 
-Bugbot uses `POST /issues/{index}/labels` with body `{"labels":["security",1080]}`. If Gitea returns `[]`, Bugbot re-fetches labels via GET to verify attachment.
-
-Check token issue-write permission. Missing label names are auto-created on the repository.
-
----
-
-## Scanner tools missing in logs
-
-```
-[SCANNER:trivy] binary not found
-[SCANNER:grype] binary not found
-```
-
-Rebuild using the current `Dockerfile` (installs Trivy, Grype, linters) or install binaries on `PATH` manually. See [SCANNERS.md](SCANNERS.md).
-
-Verify inside the container:
-
-```bash
-docker exec gitea-bugbot sh -c 'command -v trivy && command -v grype && command -v golangci-lint'
-```
+Repository Detective uses Gitea label API. Check token issue-write permission. Missing labels auto-created.
 
 ---
 
 ## Scans run but no LLM output
 
-Expected when `BUGBOT_ENABLE_LLM_AUDITORS=false` or when deterministic scanners found no flagged files. Check `[CAH:SCAN] External scanners found N candidate(s)` in logs.
+Expected when `enable_llm_auditors: false` (beta default) or no flagged files for LLM stage.
+
+---
+
+## Too many false-positive Gitea issues
+
+See [FALSE_POSITIVES.md](FALSE_POSITIVES.md). Raise `min_issue_confidence`, use `beta_standard`, apply suppressions.
+
+---
+
+## AI provider TLS errors
+
+For homelab private CA:
+
+```yaml
+ai_insecure_skip_tls_verify: true
+```
+
+Prefer installing CA on host when possible.
 
 ---
 
 ## Cannot build image on target host
 
-Build elsewhere, transfer image:
-
 ```bash
-docker build -t gitea-bugbot:latest .
-docker save gitea-bugbot:latest -o gitea-bugbot-image.tar
-# copy to target
-docker load -i gitea-bugbot-image.tar
-docker compose -f docker-compose.offline.yml up -d
+./scripts/vendor-deps.sh   # DNS-filtered networks
+docker save / docker load  # transfer pre-built image
 ```
+
+See [DOCKER.md](DOCKER.md), [DEPLOYMENT.md](DEPLOYMENT.md).
+
+---
+
+## Bulk scan stopped early
+
+Upgrade to latest build; use detached scan context. `./deploy.sh --scan-all-quick`.
+
+---
+
+## `cannot unmarshal array into RepositoryContent`
+
+Pull latest and rebuild.
+
+---
+
+## Getting more help
+
+1. `./scripts/operator-smoke-test.sh`
+2. [BETA_SMOKE_TEST.md](BETA_SMOKE_TEST.md)
+3. [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md)
+4. [TEST_MATRIX.md](TEST_MATRIX.md)
