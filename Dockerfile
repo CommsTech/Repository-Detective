@@ -126,6 +126,8 @@ CMD ["/app/repository-detective"]
 # ---------------------------------------------------------------------------
 FROM scanner-tools AS runner
 
+USER root
+
 ARG VERSION=dev
 ARG COMMIT=unknown
 ARG BUILD_DATE=unknown
@@ -156,6 +158,8 @@ ENTRYPOINT ["/usr/local/bin/repository-detective-runner"]
 # all-in-one — homelab / simple single-container deploy (default target)
 # ---------------------------------------------------------------------------
 FROM scanner-tools AS all-in-one
+
+USER root
 
 ARG VERSION=dev
 ARG COMMIT=unknown
