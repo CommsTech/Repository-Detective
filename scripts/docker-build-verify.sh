@@ -46,6 +46,8 @@ smoke_all_in_one() {
   local tag=repository-detective:all-in-one-verify
   SMOKE_CONTAINER_NAME="rd-verify-$$"
 
+  # Remove stale verify containers that may still hold VERIFY_PORT.
+  docker ps -aq --filter "name=rd-verify-" 2>/dev/null | xargs -r docker rm -f 2>/dev/null || true
   docker rm -f "$SMOKE_CONTAINER_NAME" 2>/dev/null || true
   log "starting smoke container on port $PORT"
   docker run -d --name "$SMOKE_CONTAINER_NAME" \
