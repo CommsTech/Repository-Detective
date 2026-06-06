@@ -16,3 +16,11 @@ func TestEnrichIssuesSetsFingerprint(t *testing.T) {
 		t.Fatal("expected fingerprint after enrich")
 	}
 }
+
+func TestHadolintNotMarkedFromAI(t *testing.T) {
+	issue := ai.CodeIssue{Title: "pin apk", Source: "hadolint", Severity: "medium", File: "Dockerfile", LineNumber: 10}
+	issues.EnrichIssue("commstech/demo", &issue, "scan-1")
+	if issue.FromAI {
+		t.Fatal("hadolint findings must not be treated as AI-generated")
+	}
+}

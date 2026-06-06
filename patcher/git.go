@@ -103,6 +103,9 @@ func CreateBranch(ctx context.Context, workspaceDir, branchName string) error {
 
 // CommitAll stages all changes and commits with message.
 func CommitAll(ctx context.Context, workspaceDir, message string) (string, error) {
+	if err := ensureLocalGitIdentity(ctx, workspaceDir); err != nil {
+		return "", err
+	}
 	if out, err := runGit(ctx, []string{"-C", workspaceDir, "add", "-A"}); err != nil {
 		return "", fmt.Errorf("git add: %w", sanitizeGitError(string(out), err))
 	}
@@ -124,6 +127,18 @@ func PushBranch(ctx context.Context, cloneURL, token, workspaceDir, branchName s
 	}
 	if out, err := runGit(ctx, []string{"-C", workspaceDir, "push", authURL, branchName+":"+branchName}); err != nil {
 		return fmt.Errorf("git push: %w", sanitizeGitError(string(out), err))
+	}
+	return nil
+}
+
+func ensureLocalGitIdentity(ctx context.Context, workspaceDir string) error {
+	for _, args := range [][]string{
+		{"-C", workspaceDir, "config", "user.name", "Repository Detective"},
+		{"-C", workspaceDir, "config", "user.email", "repository-detective@noreply.local"},
+	} {
+		if out, err := runGit(ctx, args); err != nil {
+			return fmt.Errorf("git config: %w", sanitizeGitError(string(out), err))
+		}
 	}
 	return nil
 }

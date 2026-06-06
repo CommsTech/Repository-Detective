@@ -225,6 +225,9 @@ func findingContextFromDetail(detail store.FindingDetail, repo store.Repository)
 			fromAI, _ = meta["from_ai"].(bool)
 		}
 	}
+	if !issues.IsAIAuditorSource(detail.Source) {
+		fromAI = false
+	}
 	return remediation.FindingContext{
 		FindingID:     detail.ID,
 		RepositoryID:  detail.RepositoryID,

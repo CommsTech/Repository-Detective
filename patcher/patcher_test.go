@@ -145,6 +145,29 @@ func TestHadolintDL3018ApkPinPatch(t *testing.T) {
 	}
 }
 
+func TestHadolintDL3018ApkPinPatchIfBlock(t *testing.T) {
+	dir := t.TempDir()
+	df := filepath.Join(dir, "Dockerfile")
+	content := "RUN if [ \"$INSTALL\" = \"true\" ]; then \\\n      apk add --no-cache git ca-certificates; \\\n    fi\n"
+	if err := os.WriteFile(df, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	plan := EligiblePlan()
+	plan.Source = "hadolint"
+	plan.RuleID = "DL3018"
+	plan.AffectedFiles = []string{"Dockerfile"}
+	if _, err := ApplyPatch(plan, dir, 3, 100); err != nil {
+		t.Fatal(err)
+	}
+	updated, _ := os.ReadFile(df)
+	if !strings.Contains(string(updated), "git=*") || !strings.Contains(string(updated), "ca-certificates=*") {
+		t.Fatalf("expected pinned packages, got %q", updated)
+	}
+	if strings.Contains(string(updated), "ca-certificates;=*") {
+		t.Fatalf("semicolon must stay outside pinned package token, got %q", updated)
+	}
+}
+
 func TestHadolintDL3018ApkPinPatchTargetLineOnly(t *testing.T) {
 	dir := t.TempDir()
 	df := filepath.Join(dir, "Dockerfile")
@@ -165,16 +188,13 @@ func TestHadolintDL3018ApkPinPatchTargetLineOnly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if result.DiffLines != 1 {
-		t.Fatalf("expected single-line diff, got %d", result.DiffLines)
+	if result.DiffLines != 2 {
+		t.Fatalf("expected all apk add lines patched for hadolint validation, got %d", result.DiffLines)
 	}
 	updated, _ := os.ReadFile(df)
 	lines := strings.Split(string(updated), "\n")
-	if strings.Contains(lines[1], "=*") {
-		t.Fatalf("line 2 should remain unpinned, got %q", lines[1])
-	}
-	if !strings.Contains(lines[2], "wget=*") {
-		t.Fatalf("line 3 should be pinned, got %q", lines[2])
+	if !strings.Contains(lines[1], "git=*") || !strings.Contains(lines[2], "wget=*") {
+		t.Fatalf("expected all apk add lines pinned, got %q", updated)
 	}
 }
 

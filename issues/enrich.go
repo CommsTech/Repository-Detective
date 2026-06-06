@@ -106,12 +106,18 @@ func EnrichIssue(repository string, issue *ai.CodeIssue, scanID string) {
 		issue.LifecycleState = LifecycleOpen
 	}
 
-	issue.FromAI = isAIAuditor(issue.Source)
+	issue.FromAI = IsAIAuditorSource(issue.Source)
+}
+
+// IsAIAuditorSource reports whether findings from this source are AI-generated rather than deterministic scanners.
+func IsAIAuditorSource(source string) bool {
+	return isAIAuditor(source)
 }
 
 func isAIAuditor(source string) bool {
 	switch strings.ToLower(strings.TrimSpace(source)) {
-	case "static", "trivy", "grype", "gitleaks", "semgrep", "golangci-lint", "ruff", "shellcheck":
+	case "static", "trivy", "grype", "gitleaks", "semgrep", "golangci-lint", "ruff", "shellcheck",
+		"hadolint", "staticcheck", "checkov", "gosec", "govulncheck":
 		return false
 	default:
 		return source != "" && source != "unknown"
