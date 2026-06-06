@@ -20,7 +20,8 @@ ARG GO_VERSION=1.23
 
 FROM golang:${GO_VERSION}-alpine AS builder
 
-RUN apk add --no-cache git ca-certificates tzdata
+COPY scripts/apk-retry.sh /tmp/apk-retry.sh
+RUN chmod +x /tmp/apk-retry.sh && . /tmp/apk-retry.sh && apk_retry git ca-certificates tzdata
 
 WORKDIR /app
 
@@ -47,11 +48,12 @@ RUN if [ -d vendor/modules.txt ]; then \
     else \
       CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w -X main.version=${VERSION}" -o repository-detective . && \
       CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o repository-detective-runner ./cmd/repository-detective-runner; \
-    fi
-
-RUN go install golang.org/x/vuln/cmd/govulncheck@v1.1.3 && \
-    go install github.com/securego/gosec/v2/cmd/gosec@v2.21.4 && \
-    go install honnef.co/go/tools/cmd/staticcheck@v0.5.1
+    fi && \
+    for attempt in 1 2 3 4 5; do \
+      go install golang.org/x/vuln/cmd/govulncheck@v1.1.3 && \
+      go install github.com/securego/gosec/v2/cmd/gosec@v2.21.4 && \
+      go install honnef.co/go/tools/cmd/staticcheck@v0.5.1 && break || sleep 15; \
+    done
 
 # Satisfy image scanners (build artifacts copied out before this stage is discarded).
 USER nobody
@@ -67,13 +69,14 @@ ARG COMMIT=unknown
 ARG BUILD_DATE=unknown
 
 COPY deploy/bin /tmp/deploy-bin
+COPY scripts/apk-retry.sh /tmp/apk-retry.sh /usr/local/lib/rd/apk-retry.sh
 COPY scripts/install-scanner-tools.sh /tmp/install-scanner-tools.sh
 
-RUN chmod +x /tmp/install-scanner-tools.sh && \
+RUN chmod +x /tmp/apk-retry.sh /usr/local/lib/rd/apk-retry.sh /tmp/install-scanner-tools.sh && \
     if [ "$INSTALL_EXTERNAL_TOOLS" = "true" ]; then \
       /tmp/install-scanner-tools.sh; \
     else \
-      apk add --no-cache git ca-certificates ;\
+      . /tmp/apk-retry.sh && apk_retry git ca-certificates ;\
     fi
 
 COPY --from=builder /go/bin/govulncheck /go/bin/gosec /go/bin/staticcheck /usr/local/bin/
@@ -99,7 +102,8 @@ LABEL org.opencontainers.image.title="Repository Detective (core)" \
       org.opencontainers.image.created="${BUILD_DATE}" \
       com.commsnet.repository-detective.variant="core"
 
-RUN apk add --no-cache ca-certificates tzdata wget su-exec git && \
+COPY scripts/apk-retry.sh /usr/local/lib/rd/apk-retry.sh
+RUN chmod +x /usr/local/lib/rd/apk-retry.sh && . /usr/local/lib/rd/apk-retry.sh && apk_retry ca-certificates tzdata wget su-exec git && \
     addgroup -g 1001 -S repositorydetective && \
     adduser -u 1001 -S repositorydetective -G repositorydetective
 
@@ -141,7 +145,7 @@ LABEL org.opencontainers.image.title="Repository Detective (runner)" \
       org.opencontainers.image.created="${BUILD_DATE}" \
       com.commsnet.repository-detective.variant="runner"
 
-RUN apk add --no-cache wget su-exec && \
+RUN . /usr/local/lib/rd/apk-retry.sh && apk_retry wget su-exec && \
     addgroup -g 1001 -S repositorydetective && \
     adduser -u 1001 -S repositorydetective -G repositorydetective
 
@@ -174,7 +178,7 @@ LABEL org.opencontainers.image.title="Repository Detective (all-in-one)" \
       org.opencontainers.image.created="${BUILD_DATE}" \
       com.commsnet.repository-detective.variant="all-in-one"
 
-RUN apk add --no-cache wget su-exec && \
+RUN . /usr/local/lib/rd/apk-retry.sh && apk_retry wget su-exec && \
     addgroup -g 1001 -S repositorydetective && \
     adduser -u 1001 -S repositorydetective -G repositorydetective
 

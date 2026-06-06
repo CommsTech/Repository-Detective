@@ -61,7 +61,8 @@ install_golangci() {
     | sh -s -- -b /usr/local/bin "v${GOLANGCI_VERSION}"
 }
 
-apk add --no-cache curl bash tar python3 py3-pip git ca-certificates
+. /tmp/apk-retry.sh
+apk_retry curl bash tar python3 py3-pip git ca-certificates
 
 install_trivy
 install_grype
