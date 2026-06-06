@@ -124,6 +124,7 @@ type QueryStore interface {
 	ListExternalIssuesByRepository(ctx context.Context, repositoryID int64, opts ListOptions) ([]ExternalIssue, error)
 	ListExternalIssuesByFinding(ctx context.Context, findingID int64) ([]ExternalIssue, error)
 	GetExternalIssueByFingerprint(ctx context.Context, repositoryID int64, forgeType, fingerprint string) (ExternalIssue, error)
+	GetExternalIssueByIssueNumber(ctx context.Context, repositoryID int64, forgeType string, issueNumber int) (ExternalIssue, error)
 
 	ListScheduledRepositories(ctx context.Context) ([]ScheduledRepository, error)
 	HasRunningScanForRepository(ctx context.Context, repositoryID int64) (bool, error)

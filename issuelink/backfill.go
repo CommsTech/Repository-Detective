@@ -35,7 +35,7 @@ func BackfillExternalIssueMappings(ctx context.Context, db *Store, forge issues.
 	}
 	forgeType = normalizeForgeType(forgeType)
 
-	allIssues, err := issues.ListAllOpenLabeledIssues(ctx, forge, owner, repo)
+	allIssues, err := issues.ListAllOpenIssues(ctx, forge, owner, repo)
 	if err != nil {
 		return result, fmt.Errorf("list forge issues: %w", err)
 	}
@@ -49,7 +49,7 @@ func BackfillExternalIssueMappings(ctx context.Context, db *Store, forge issues.
 		}
 		result.Examined++
 
-		if _, err := db.Query.GetExternalIssueByFingerprint(ctx, repositoryID, forgeType, fp); err == nil {
+		if _, err := db.Query.GetExternalIssueByIssueNumber(ctx, repositoryID, forgeType, issue.Number); err == nil {
 			result.Skipped++
 			continue
 		}
