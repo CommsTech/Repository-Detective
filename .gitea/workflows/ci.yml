@@ -96,14 +96,28 @@ jobs:
 
       - name: Verify container starts
         run: |
-          cid=$(docker run -d --rm -p 18080:8080 \
-            -e REPOSITORY_DETECTIVE_PORT=8080 \
+          PORT=18080
+          NAME=rd-ci-smoke-$$
+          docker rm -f "$NAME" 2>/dev/null || true
+          cid=$(docker run -d --name "$NAME" \
+            -e REPOSITORY_DETECTIVE_PORT="$PORT" \
+            -e REPOSITORY_DETECTIVE_LISTEN_HOST=0.0.0.0 \
             -e REPOSITORY_DETECTIVE_SKIP_STARTUP_CHECKS=true \
+            -e REPOSITORY_DETECTIVE_DATABASE_PATH=/app/data/bugbot.db \
             -e REPOSITORY_DETECTIVE_GITEA_URL=http://example.com \
-            -e REPOSITORY_DETECTIVE_GITEA_TOKEN=test \
+            -e REPOSITORY_DETECTIVE_GITEA_TOKEN=ci-smoke \
+            -e REPOSITORY_DETECTIVE_API_KEY=ci-smoke-key \
             -e REPOSITORY_DETECTIVE_AI_PROVIDER=ollama \
             -e REPOSITORY_DETECTIVE_AI_BASE_URL=http://127.0.0.1:11434/v1 \
+            -p "${PORT}:${PORT}" \
             repository-detective:ci)
-          sleep 5
-          curl -sf http://127.0.0.1:18080/health
-          docker stop "$cid"
+          trap 'docker rm -f "$NAME" 2>/dev/null || true' EXIT
+          for i in $(seq 1 30); do
+            if curl -sf "http://127.0.0.1:${PORT}/health"; then
+              echo
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs "$NAME" 2>&1 | tail -40
+          exit 1
