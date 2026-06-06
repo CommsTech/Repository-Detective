@@ -135,6 +135,8 @@ config/config.yaml.bak-*
 # Root-level build outputs (use build/ or Docker images)
 /repository-detective
 /repository-detective-build
+/bugbot
+bugbot
 
 # Vendored modules (generate via scripts/vendor-deps.sh when needed)
 vendor/
