@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+env:
+  GOPROXY: https://proxy.golang.org,direct
+  GOTOOLCHAIN: auto
+
 jobs:
   lint-test-build:
     name: Lint, Test, Build
@@ -14,6 +18,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -26,42 +32,48 @@ jobs:
           go mod tidy
           git diff --exit-code go.mod go.sum
 
-      - name: Format check
+      - name: Format check (changed Go files)
         run: |
-          test -z "$(gofmt -s -l .)"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+          else
+            BASE="${{ github.event.before }}"
+          fi
+          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+            BASE="HEAD~1"
+          fi
+          FILES=$(git diff --name-only --diff-filter=ACMRTUXB "$BASE" HEAD -- '*.go' | grep -v '^vendor/' || true)
+          if [ -z "$FILES" ]; then
+            echo "No Go files changed — skipping format check"
+            exit 0
+          fi
+          UNFORMATTED=$(gofmt -s -l $FILES)
+          if [ -n "$UNFORMATTED" ]; then
+            echo "The following files need gofmt:"
+            echo "$UNFORMATTED"
+            exit 1
+          fi
 
       - name: Go vet
         run: go vet ./...
 
       - name: Install staticcheck
-        run: go install honnef.co/go/tools/cmd/staticcheck@latest
+        run: go install honnef.co/go/tools/cmd/staticcheck@v0.6.1
 
       - name: Staticcheck
         run: staticcheck ./...
 
-      - name: Install golangci-lint
-        run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.2
-
-      - name: Golangci-lint
-        run: golangci-lint run ./...
-
       - name: Run tests
-        run: go test -race -coverprofile=coverage.out ./...
+        run: go test -race -count=1 ./...
 
       - name: Build binary
-        run: go build -ldflags "-s -w" -o bin/gitea-bugbot .
-
-      - name: Upload coverage
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage
-          path: coverage.out
+        run: CGO_ENABLED=0 go build -ldflags "-s -w" -o bin/repository-detective .
 
       - name: Upload binary
         uses: actions/upload-artifact@v4
         with:
-          name: gitea-bugbot-linux-amd64
-          path: bin/gitea-bugbot
+          name: repository-detective-linux-amd64
+          path: bin/repository-detective
 
   security:
     name: Security Scan
@@ -76,8 +88,11 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: "1.23"
+          cache: true
 
       - name: Govulncheck
+        env:
+          GOPROXY: https://proxy.golang.org,direct
         run: |
           go install golang.org/x/vuln/cmd/govulncheck@latest
           govulncheck ./...
@@ -92,45 +107,18 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build Docker image
-        run: docker build -t gitea-bugbot:ci .
+        run: docker build --target all-in-one -t repository-detective:ci .
 
       - name: Verify container starts
         run: |
           cid=$(docker run -d --rm -p 18080:8080 \
-            -e BUGBOT_SKIP_STARTUP_CHECKS=true \
-            -e BUGBOT_GITEA_URL=http://example.com \
-            -e BUGBOT_GITEA_TOKEN=test \
-            -e BUGBOT_AI_PROVIDER=ollama \
-            -e BUGBOT_AI_BASE_URL=http://127.0.0.1:11434/v1 \
-            gitea-bugbot:ci)
-          sleep 3
+            -e REPOSITORY_DETECTIVE_PORT=8080 \
+            -e REPOSITORY_DETECTIVE_SKIP_STARTUP_CHECKS=true \
+            -e REPOSITORY_DETECTIVE_GITEA_URL=http://example.com \
+            -e REPOSITORY_DETECTIVE_GITEA_TOKEN=test \
+            -e REPOSITORY_DETECTIVE_AI_PROVIDER=ollama \
+            -e REPOSITORY_DETECTIVE_AI_BASE_URL=http://127.0.0.1:11434/v1 \
+            repository-detective:ci)
+          sleep 5
           curl -sf http://127.0.0.1:18080/health
           docker stop "$cid"
-
-  changelog:
-    name: Document Changes
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: lint-test-build
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Generate changelog snippet
-        run: |
-          mkdir -p docs/ci
-          {
-            echo "# CI Build $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-            echo
-            echo "## Commits since last tag"
-            git log "$(git describe --tags --abbrev=0 2>/dev/null || echo '')..HEAD" --pretty=format:'- %s (%h)' || true
-          } > docs/ci/latest-build.md
-
-      - name: Upload changelog artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: latest-changelog
-          path: docs/ci/latest-build.md

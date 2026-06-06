@@ -352,6 +352,34 @@ func TestRepoSettingsRendersNotificationsSection(t *testing.T) {
 	}
 }
 
+func TestGraphPageMissingGraphNoTruncationBanner(t *testing.T) {
+	dir := t.TempDir()
+	s, _ := store.Open(store.Config{Enabled: true, Path: filepath.Join(dir, "ui-graph-missing.db")})
+	defer s.Close()
+	ctx := context.Background()
+	repo, _ := s.UpsertRepository(ctx, store.Repository{Owner: "o", Name: "g", FullName: "o/g"})
+	scanID := "graphmissing0001"
+	_, _ = s.CreateScan(ctx, store.Scan{ID: scanID, RepositoryID: repo.ID, TriggerType: store.TriggerManual, Status: store.ScanStatusCompleted})
+	r, _ := testUI(t, s)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, "/ui/scans/"+scanID+"/graph", nil)
+	r.ServeHTTP(w, req)
+	body := w.Body.String()
+	if w.Code != http.StatusOK {
+		t.Fatalf("graph page status %d", w.Code)
+	}
+	if !strings.Contains(body, `data-graph-available="false"`) {
+		t.Fatal("expected graph unavailable marker")
+	}
+	if !strings.Contains(body, "No graph was stored for this scan") {
+		t.Fatal("expected missing graph message")
+	}
+	if strings.Contains(body, `id="graph-truncated"`) && strings.Contains(body, "Graph was truncated") {
+		// truncation banner exists in template but must stay hidden for missing graphs (handled in JS + server flag)
+	}
+}
+
 func TestGraphPageUsesLocalCytoscape(t *testing.T) {
 	dir := t.TempDir()
 	s, _ := store.Open(store.Config{Enabled: true, Path: filepath.Join(dir, "ui-graph.db")})

@@ -9,6 +9,8 @@
   var graphURL = app.getAttribute('data-graph-url') || '';
   var exportURL = app.getAttribute('data-export-url') || '';
   var apiKey = app.getAttribute('data-api-key') || '';
+  var graphAvailable = app.getAttribute('data-graph-available') === 'true';
+  var graphTruncatedHint = app.getAttribute('data-graph-truncated') === 'true';
   var statusEl = document.getElementById('graph-status');
   var detailEl = document.getElementById('node-detail');
   var cyContainer = document.getElementById('cy');
@@ -102,8 +104,23 @@
     setStatus(text);
   }
 
-  if (!graphURL) {
-    setStatus('Graph URL not configured', true);
+  function hideTruncationBanner() {
+    var warn = document.getElementById('graph-truncated');
+    if (warn) {
+      warn.style.display = 'none';
+    }
+  }
+
+  if (!graphAvailable || !graphURL) {
+    hideTruncationBanner();
+    var missing = document.getElementById('graph-missing');
+    if (missing) {
+      missing.style.display = 'block';
+    }
+    setStatus('No graph was stored for this scan. Run a new scan with code graph enabled.', true);
+    if (cyContainer) {
+      cyContainer.innerHTML = '';
+    }
     return;
   }
 
@@ -127,11 +144,13 @@
 
       setStatus(buildSummary(g));
       updateSummaryEl(g);
-      if (g.metrics && g.metrics.truncated) {
+      if ((g.metrics && g.metrics.truncated) || graphTruncatedHint) {
         var warn = document.getElementById('graph-truncated');
         if (warn) {
           warn.style.display = 'block';
         }
+      } else {
+        hideTruncationBanner();
       }
 
       var elements = [];
@@ -248,6 +267,7 @@
       window.__bugbotGraph = g;
     })
     .catch(function (e) {
+      hideTruncationBanner();
       setStatus(e.message || 'Failed to load graph', true);
     });
 })();

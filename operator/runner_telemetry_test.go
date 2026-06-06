@@ -7,6 +7,9 @@ import (
 )
 
 func TestToolStatusStates(t *testing.T) {
+	emptyPath := t.TempDir()
+	t.Setenv("PATH", emptyPath)
+
 	tests := []struct {
 		name     string
 		cfg      operator.ScannerConfig

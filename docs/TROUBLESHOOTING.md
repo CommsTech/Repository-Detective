@@ -21,7 +21,7 @@ Operator-focused fixes for private beta deployments. Prefer `REPOSITORY_DETECTIV
    ```
 
 3. Legacy header `X-Bugbot-API-Key` still accepted.
-4. Query string `?api_key=` works for UI links — **homelab only**; do not share URLs.
+4. Prefer the `X-Repository-Detective-API-Key` header for API calls. Legacy query `?api_key=` is **deprecated** (leaks into logs/history); the UI stores it in an HttpOnly cookie and redirects to a clean URL when used once.
 5. Restart container after changing `.env`.
 
 See [CONFIGURATION.md](CONFIGURATION.md), [BRANDING_MIGRATION.md](BRANDING_MIGRATION.md).

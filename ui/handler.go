@@ -251,6 +251,9 @@ func clientAPIKeyFromRequest(c *gin.Context) string {
 	if key := c.GetHeader("X-Bugbot-API-Key"); key != "" {
 		return key
 	}
+	if key := apiKeyFromCookie(c); key != "" {
+		return key
+	}
 	return c.Query("api_key")
 }
 
@@ -782,10 +785,21 @@ func (h *Handler) ScanGraph(c *gin.Context) {
 		return
 	}
 	repo, _ := h.store.GetRepository(c.Request.Context(), scan.RepositoryID)
-	graphURL, exportURL := h.graphAPIURLs(c, scanID, 0)
+	graphAvailable := false
+	graphTruncated := scanSummaryGraphTruncated(scan.SummaryJSON)
+	if _, err := h.store.GetScanGraph(c.Request.Context(), scanID); err == nil {
+		graphAvailable = true
+	}
+	var graphURL, exportURL string
+	if graphAvailable {
+		graphURL, exportURL = h.graphAPIURLs(c, scanID, 0)
+	}
+	settingsURL := fmt.Sprintf("%s/repos/%d/settings", h.basePath, scan.RepositoryID)
 	h.render(c, "graph.html", "Repository Map — Scan", map[string]any{
 		"Scan": scan, "Repo": repo, "GraphScanID": scanID,
 		"GraphURL": graphURL, "ExportURL": exportURL,
+		"GraphAvailable": graphAvailable, "GraphTruncated": graphTruncated,
+		"GraphSettingsURL": settingsURL,
 	})
 }
 
@@ -802,23 +816,33 @@ func (h *Handler) RepoGraph(c *gin.Context) {
 		c.String(http.StatusNotFound, "repository not found")
 		return
 	}
-	graphURL, exportURL := h.graphAPIURLs(c, "", id)
+	graphAvailable := false
+	graphTruncated := false
+	if record, err := h.store.GetLatestScanGraphForRepo(c.Request.Context(), id); err == nil {
+		graphAvailable = true
+		if scan, err := h.store.GetScan(c.Request.Context(), record.ScanID); err == nil {
+			graphTruncated = scanSummaryGraphTruncated(scan.SummaryJSON)
+		}
+	}
+	var graphURL, exportURL string
+	if graphAvailable {
+		graphURL, exportURL = h.graphAPIURLs(c, "", id)
+	}
+	settingsURL := fmt.Sprintf("%s/repos/%d/settings", h.basePath, id)
 	h.render(c, "graph.html", "Repository Map — "+repo.FullName, map[string]any{
 		"Repo": repo, "GraphRepoID": id,
 		"GraphURL": graphURL, "ExportURL": exportURL,
+		"GraphAvailable": graphAvailable, "GraphTruncated": graphTruncated,
+		"GraphSettingsURL": settingsURL,
 	})
 }
 
 func (h *Handler) graphAPIURLs(c *gin.Context, scanID string, repoID int64) (graphURL, exportURL string) {
-	q := ""
-	if key := clientAPIKeyFromRequest(c); key != "" {
-		q = "?api_key=" + url.QueryEscape(key)
-	}
 	if scanID != "" {
-		return "/api/v1/scans/" + scanID + "/graph" + q, "/api/v1/scans/" + scanID + "/graph/export" + q
+		return "/api/v1/scans/" + scanID + "/graph", "/api/v1/scans/" + scanID + "/graph/export"
 	}
 	id := strconv.FormatInt(repoID, 10)
-	return "/api/v1/repos/" + id + "/graph" + q, "/api/v1/repos/" + id + "/graph/export" + q
+	return "/api/v1/repos/" + id + "/graph", "/api/v1/repos/" + id + "/graph/export"
 }
 
 func (h *Handler) Findings(c *gin.Context) {

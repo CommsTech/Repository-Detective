@@ -133,6 +133,9 @@ func (r *Recorder) FinishScan(ctx context.Context, scanID string, data *ScanComp
 			summary["graph_nodes"] = data.GraphNodeCount
 			summary["graph_edges"] = data.GraphEdgeCount
 		}
+		if data.GraphTruncated {
+			summary["graph_truncated"] = true
+		}
 	}
 
 	summaryJSON, _ := json.Marshal(summary)

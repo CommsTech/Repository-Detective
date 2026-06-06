@@ -8,6 +8,10 @@ on:
 permissions:
   contents: write
 
+env:
+  GOPROXY: https://proxy.golang.org,direct
+  GOTOOLCHAIN: auto
+
 jobs:
   validate:
     name: Validate Release
@@ -20,7 +24,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.21"
+          go-version: "1.23"
           cache: true
 
       - name: Run tests
@@ -44,21 +48,22 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.21"
+          go-version: "1.23"
+          cache: true
 
       - name: Build multi-platform binaries
         run: |
           VERSION="${GITHUB_REF_NAME}"
           mkdir -p dist
-          GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -X main.version=${VERSION}" -o dist/gitea-bugbot-linux-amd64 .
-          GOOS=linux GOARCH=arm64 go build -ldflags "-s -w -X main.version=${VERSION}" -o dist/gitea-bugbot-linux-arm64 .
-          GOOS=windows GOARCH=amd64 go build -ldflags "-s -w -X main.version=${VERSION}" -o dist/gitea-bugbot-windows-amd64.exe .
-          GOOS=darwin GOARCH=amd64 go build -ldflags "-s -w -X main.version=${VERSION}" -o dist/gitea-bugbot-darwin-amd64 .
-          GOOS=darwin GOARCH=arm64 go build -ldflags "-s -w -X main.version=${VERSION}" -o dist/gitea-bugbot-darwin-arm64 .
+          GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X main.version=${VERSION}" -o dist/repository-detective-linux-amd64 .
+          GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -ldflags "-s -w -X main.version=${VERSION}" -o dist/repository-detective-linux-arm64 .
+          GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X main.version=${VERSION}" -o dist/repository-detective-windows-amd64.exe .
+          GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X main.version=${VERSION}" -o dist/repository-detective-darwin-amd64 .
+          GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -ldflags "-s -w -X main.version=${VERSION}" -o dist/repository-detective-darwin-arm64 .
           (cd dist && sha256sum * > SHA256SUMS)
 
       - name: Build Docker image
-        run: docker build -t gitea-bugbot:${GITHUB_REF_NAME} .
+        run: docker build --target all-in-one -t repository-detective:${GITHUB_REF_NAME} .
 
       - name: Generate release notes
         run: |
@@ -113,7 +118,7 @@ jobs:
 
           jq -n \
             --arg tag "$VERSION" \
-            --arg name "Gitea Bugbot ${VERSION}" \
+            --arg name "Repository Detective ${VERSION}" \
             --rawfile body dist/RELEASE_NOTES.md \
             '{tag_name:$tag,name:$name,body:$body,draft:false,prerelease:false}' > release-body.json
 
@@ -129,7 +134,7 @@ jobs:
             exit 1
           fi
 
-          for file in dist/gitea-bugbot-* dist/SHA256SUMS dist/RELEASE_NOTES.md; do
+          for file in dist/repository-detective-* dist/SHA256SUMS dist/RELEASE_NOTES.md; do
             [ -f "$file" ] || continue
             curl -sS -X POST "${API}/repos/${OWNER}/${REPO}/releases/${RELEASE_ID}/assets?name=$(basename "$file")" \
               -H "Authorization: token ${GITEA_TOKEN}" \

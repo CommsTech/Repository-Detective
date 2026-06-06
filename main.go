@@ -23,6 +23,7 @@ import (
 	"git.commsnet.org/commstech/bugbot/handlers"
 	"git.commsnet.org/commstech/bugbot/health"
 	"git.commsnet.org/commstech/bugbot/internal/config/envcompat"
+	"git.commsnet.org/commstech/bugbot/internal/middleware"
 	"git.commsnet.org/commstech/bugbot/internal/scanid"
 	"git.commsnet.org/commstech/bugbot/internal/security"
 	"git.commsnet.org/commstech/bugbot/issues"
@@ -283,7 +284,7 @@ func main() {
 	// Initialize Gin router and bind HTTP before blocking startup checks.
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.New()
-	router.Use(gin.Logger(), gin.Recovery())
+	router.Use(middleware.RedactingAccessLogger(), gin.Recovery())
 	setupRoutes(router)
 
 	listenAddr := config.ListenHost + ":" + config.Port
@@ -1539,6 +1540,7 @@ func finishPersistedScan(ctx context.Context, scanCtx *store.ScanContext, reposi
 				data.GraphJSON = raw
 				data.GraphNodeCount = result.Graph.Metrics.NodeCount
 				data.GraphEdgeCount = result.Graph.Metrics.EdgeCount
+				data.GraphTruncated = result.Graph.Metrics.Truncated
 			}
 		}
 	}
@@ -2196,6 +2198,7 @@ func registerControlPlaneRoutes(router *gin.Engine) {
 	}
 	uiGroup := router.Group(operatorUI.BasePath())
 	uiGroup.Use(requireComponentsReady())
+	uiGroup.Use(operatorUI.UIAPIKeyCookieMiddleware())
 	operatorUI.RegisterPublicRoutes(uiGroup)
 	if config.AuthMode == "local" {
 		operatorUI.RegisterAuthRoutes(uiGroup)

@@ -17,6 +17,7 @@ type ScanCompletion struct {
 	ScannerResults    []ScanCompletionScanner
 	GraphNodeCount    int
 	GraphEdgeCount    int
+	GraphTruncated    bool
 	GraphJSON         []byte
 	RepoProfile       any
 }
