@@ -41,6 +41,7 @@ type FindingContext struct {
 	Summary      string
 	Confidence   float64
 	FilePath     string
+	Line         int
 	PackageName  string
 	FromAI       bool
 	RepoFullName string
@@ -62,6 +63,7 @@ type Plan struct {
 	Summary             string
 	FixStrategy         string
 	AffectedFiles       []string
+	TargetLine          int
 	RequiredTests       []string
 	ValidationCommands  []string
 	RegressionRisk      string

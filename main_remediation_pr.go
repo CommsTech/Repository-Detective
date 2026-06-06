@@ -119,6 +119,11 @@ func attemptRemediationPR(ctx context.Context, planID string) (patcher.PatchAtte
 	if err != nil {
 		return patcher.PatchAttempt{}, err
 	}
+	if plan.FindingID > 0 && plan.TargetLine == 0 {
+		if detail, derr := bugbotStore.GetFindingDetail(ctx, plan.FindingID); derr == nil && detail.Line > 0 {
+			plan.TargetLine = detail.Line
+		}
+	}
 	repoCtx := repoContextFromStore(repo)
 	eligibility := patcher.CheckPREligibility(plan, repoCtx, cfg)
 	if !eligibility.Eligible {

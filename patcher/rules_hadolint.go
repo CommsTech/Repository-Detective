@@ -82,8 +82,12 @@ func applyHadolintApkPinPatch(plan remediation.Plan, workspaceDir string, maxFil
 		return PatchResult{}, fmt.Errorf("read file: %w", err)
 	}
 	lines := strings.Split(string(data), "\n")
+	targetLine := plan.TargetLine
 	changed := false
 	for i, line := range lines {
+		if targetLine > 0 && i+1 != targetLine {
+			continue
+		}
 		if !strings.Contains(strings.ToLower(line), "apk add") {
 			continue
 		}
@@ -112,11 +116,12 @@ func applyHadolintApkPinPatch(plan remediation.Plan, workspaceDir string, maxFil
 }
 
 func pinApkAddPackages(line string) (string, bool) {
-	m := apkAddLinePattern.FindStringSubmatch(line)
-	if len(m) < 3 {
+	loc := apkAddLinePattern.FindStringSubmatchIndex(line)
+	if loc == nil || len(loc) < 6 {
 		return line, false
 	}
-	prefix, pkgPart := m[1], strings.TrimSpace(m[2])
+	pkgStart, pkgEnd := loc[4], loc[5]
+	pkgPart := strings.TrimSpace(line[pkgStart:pkgEnd])
 	pkgPart = strings.TrimSuffix(pkgPart, `\`)
 	pkgPart = strings.TrimSpace(strings.TrimSuffix(pkgPart, "&&"))
 	if pkgPart == "" {
@@ -134,7 +139,5 @@ func pinApkAddPackages(line string) (string, bool) {
 	if !changed {
 		return line, false
 	}
-	suffix := strings.TrimPrefix(line, prefix+strings.TrimSpace(m[2]))
-	rebuilt := prefix + strings.Join(tokens, " ") + suffix
-	return rebuilt, true
+	return line[:pkgStart] + strings.Join(tokens, " ") + line[pkgEnd:], true
 }

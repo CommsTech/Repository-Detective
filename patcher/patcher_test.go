@@ -140,6 +140,42 @@ func TestHadolintDL3018ApkPinPatch(t *testing.T) {
 	if !strings.Contains(string(updated), "ca-certificates=*") || !strings.Contains(string(updated), "git=*") {
 		t.Fatalf("expected pinned packages, got %q", updated)
 	}
+	if !strings.HasPrefix(string(updated), "RUN ") {
+		t.Fatalf("expected RUN prefix preserved, got %q", updated)
+	}
+}
+
+func TestHadolintDL3018ApkPinPatchTargetLineOnly(t *testing.T) {
+	dir := t.TempDir()
+	df := filepath.Join(dir, "Dockerfile")
+	content := strings.Join([]string{
+		"FROM alpine",
+		"RUN apk add --no-cache git ca-certificates tzdata",
+		"RUN apk add --no-cache wget su-exec && \\",
+	}, "\n")
+	if err := os.WriteFile(df, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	plan := EligiblePlan()
+	plan.Source = "hadolint"
+	plan.RuleID = "DL3018"
+	plan.AffectedFiles = []string{"Dockerfile"}
+	plan.TargetLine = 3
+	result, err := ApplyPatch(plan, dir, 3, 100)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.DiffLines != 1 {
+		t.Fatalf("expected single-line diff, got %d", result.DiffLines)
+	}
+	updated, _ := os.ReadFile(df)
+	lines := strings.Split(string(updated), "\n")
+	if strings.Contains(lines[1], "=*") {
+		t.Fatalf("line 2 should remain unpinned, got %q", lines[1])
+	}
+	if !strings.Contains(lines[2], "wget=*") {
+		t.Fatalf("line 3 should be pinned, got %q", lines[2])
+	}
 }
 
 func TestStaticcheckPatchGenerated(t *testing.T) {

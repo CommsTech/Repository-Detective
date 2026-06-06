@@ -54,6 +54,7 @@ func ApplyRecipe(ctx FindingContext) Plan {
 		Summary:             summary,
 		FixStrategy:         r.fixStrategy,
 		AffectedFiles:       affected,
+		TargetLine:          ctx.Line,
 		RequiredTests:       requiredTests,
 		ValidationCommands:  validationCommands,
 		RegressionRisk:      regressionRisk,
