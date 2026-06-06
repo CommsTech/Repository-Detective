@@ -20,7 +20,7 @@ ARG GO_VERSION=1.23
 
 FROM golang:${GO_VERSION}-alpine AS builder
 
-RUN apk add --no-cache git ca-certificates tzdata
+RUN apk add --no-cache git=* ca-certificates=* tzdata=*
 
 WORKDIR /app
 
@@ -73,7 +73,7 @@ RUN chmod +x /tmp/install-scanner-tools.sh && \
     if [ "$INSTALL_EXTERNAL_TOOLS" = "true" ]; then \
       /tmp/install-scanner-tools.sh; \
     else \
-      apk add --no-cache git ca-certificates; \
+      apk add --no-cache git=* ca-certificates=* ;\
     fi
 
 COPY --from=builder /go/bin/govulncheck /go/bin/gosec /go/bin/staticcheck /usr/local/bin/
@@ -97,7 +97,7 @@ LABEL org.opencontainers.image.title="Repository Detective (core)" \
       org.opencontainers.image.created="${BUILD_DATE}" \
       com.commsnet.repository-detective.variant="core"
 
-RUN apk add --no-cache ca-certificates tzdata wget su-exec git && \
+RUN apk add --no-cache ca-certificates=* tzdata=* wget=* su-exec=* git=*&& \
     addgroup -g 1001 -S repositorydetective && \
     adduser -u 1001 -S repositorydetective -G repositorydetective
 
@@ -139,7 +139,7 @@ LABEL org.opencontainers.image.title="Repository Detective (runner)" \
       org.opencontainers.image.created="${BUILD_DATE}" \
       com.commsnet.repository-detective.variant="runner"
 
-RUN apk add --no-cache wget su-exec && \
+RUN apk add --no-cache wget=* su-exec=*&& \
     addgroup -g 1001 -S repositorydetective && \
     adduser -u 1001 -S repositorydetective -G repositorydetective
 
@@ -172,7 +172,7 @@ LABEL org.opencontainers.image.title="Repository Detective (all-in-one)" \
       org.opencontainers.image.created="${BUILD_DATE}" \
       com.commsnet.repository-detective.variant="all-in-one"
 
-RUN apk add --no-cache wget su-exec && \
+RUN apk add --no-cache wget=* su-exec=*&& \
     addgroup -g 1001 -S repositorydetective && \
     adduser -u 1001 -S repositorydetective -G repositorydetective
 
