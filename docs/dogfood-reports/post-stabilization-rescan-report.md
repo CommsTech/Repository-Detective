@@ -1,8 +1,8 @@
-# Post-stabilization rescan report — 2026-06-06
+# Post-stabilization rescan report — 2026-06-06 (final)
 
 ## Trigger
 
-After gate-unblock fixes (Docker build + API auth), rescanned product repo:
+After gate-unblock fixes (Docker build + API auth):
 
 ```bash
 POST /api/v1/analyze
@@ -11,48 +11,75 @@ POST /api/v1/analyze
 
 Auth: `X-Repository-Detective-API-Key` header (from `.env` `BUGBOT_API_KEY`)
 
-## Scan result
+## Scan results
+
+| Field | Scan 1 | Scan 2 (post-stabilization) |
+|-------|--------|----------------------------|
+| Scan ID | `4a6dadc9b1132982` | **`f85f8e66e3c9fc9a`** |
+| Status | completed | **completed** |
+| Started | — | 2026-06-06T15:59:02Z |
+| Finished | — | 2026-06-06T16:04:02Z |
+| Duration | — | ~299s |
+| Findings | 1035 | **1036** |
+| Files analyzed | — | 618 |
+| Overall score | — | 0.6 |
+
+## Scanner status
+
+All 10 configured scanners enabled and ran:
+
+`trivy`, `grype`, `gitleaks`, `semgrep`, `govulncheck`, `gosec`, `staticcheck`, `hadolint`, `checkov`, `linters`
+
+No scan-level failure; results persisted to database.
+
+## Graph status
 
 | Field | Value |
 |-------|-------|
-| Scan ID | `4a6dadc9b1132982` |
-| Status | **completed** |
-| Raw findings (scan summary) | 1035 |
-| Gitea open issues (before) | 241 |
-| Gitea open issues (after) | **243** (+2, no auto-close) |
+| Code graph enabled | yes |
+| Graph nodes | **3062** |
+| Graph edges | **5026** |
+| Graph state | **populated** (scan summary includes graph counts) |
 
-## Scanner / graph status
+## Executive report / system health
 
-- Rescan **started and completed** successfully via API
-- Graph fields on scan API response: not populated on summary endpoint (verify via `/ui/scans/{id}/graph` after deploy of stabilization UI)
-- Container running image built during gate-unblock (includes stabilization UI commits in source tree at build time)
+From operator smoke + dashboard:
 
-## Health / capabilities
+| Capability | Status |
+|------------|--------|
+| Database | healthy |
+| Scanners | 10/10 configured, 10/10 available |
+| Remediation PR | disabled (intentional) |
+| Runner delegation | disabled |
+| Notifications | disabled |
+| Evidence closure | enabled (`evidence_closure_close_issues=false`) |
 
-From `/health` and operator smoke:
+## Gitea issue count
 
-- Database: healthy
-- Scanners configured/available: 10/10
-- Remediation PR: disabled (intentional)
-- Runner delegation: disabled (default-off)
-- Notifications: disabled (no channels configured)
+| Metric | Value |
+|--------|-------|
+| Open issues (before gate-unblock) | 241 |
+| Open issues (after rescan) | **244** |
+| Manual closes | **none** |
 
-## Evidence lifecycle
+## Comparison vs prior scan
 
-- **No issues manually closed** (`evidence_closure_close_issues=false`)
-- Issue count increased slightly — expected without evidence closure
-- Next: after Batch 2 fixes, verify fingerprints via `POST /api/v1/findings/{id}/verify-closure`
+| Metric | Delta |
+|--------|-------|
+| Findings | +1 (1035 → 1036) |
+| Graph nodes | populated (3062) |
+| API auth | fixed — rescan no longer returns `Invalid API key` |
 
 ## Blockers resolved
 
 | Blocker | Status |
 |---------|--------|
 | Docker build (`apk add git=*`) | **Fixed** |
-| API key mismatch | **Fixed** (config loading + container recreate) |
+| API key mismatch | **Fixed** |
 | Rescan API | **Working** |
+| Scanner persistence | **Verified** |
 
 ## Remaining
 
-- Rebuild container from `de879ce` for fully aligned runtime
 - CI green gate before Batch 2
-- Graph UI verification on scan page post-deploy
+- Container rebuild from latest `main` optional (runtime functional on current image)
