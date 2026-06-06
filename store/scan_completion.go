@@ -4,22 +4,22 @@ import "time"
 
 // ScanCompletion carries scan finish data without importing analyzers.
 type ScanCompletion struct {
-	IssuesFound       int
-	FilesAnalyzed     int
-	AnalysisTime      time.Duration
+	IssuesFound           int
+	FilesAnalyzed         int
+	AnalysisTime          time.Duration
 	OverallScore          float64
 	ScoreComplete         bool
 	ScoreIncompleteReason string
 	ScoreExplanation      string
 	CommitSHA             string
-	WorkspaceModeUsed string
-	PolicySnapshot    any
-	ScannerResults    []ScanCompletionScanner
-	GraphNodeCount    int
-	GraphEdgeCount    int
-	GraphTruncated    bool
-	GraphJSON         []byte
-	RepoProfile       any
+	WorkspaceModeUsed     string
+	PolicySnapshot        any
+	ScannerResults        []ScanCompletionScanner
+	GraphNodeCount        int
+	GraphEdgeCount        int
+	GraphTruncated        bool
+	GraphJSON             []byte
+	RepoProfile           any
 }
 
 // ScanCompletionScanner is a scanner outcome for persistence.

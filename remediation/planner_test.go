@@ -169,10 +169,10 @@ func TestAIAdvisoryWhenEnabled(t *testing.T) {
 
 func TestRenderIssueCommentSafe(t *testing.T) {
 	body := RenderIssueComment(Plan{
-		FixStrategy: "Remove secret and rotate credential",
-		RequiredTests: []string{"Re-run secret scanner"},
+		FixStrategy:    "Remove secret and rotate credential",
+		RequiredTests:  []string{"Re-run secret scanner"},
 		RegressionRisk: RiskHigh,
-		SafeForAutoPR: false,
+		SafeForAutoPR:  false,
 	})
 	if body == "" || !contains(body, "Planning only") {
 		t.Fatal("expected safe issue comment")

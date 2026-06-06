@@ -28,27 +28,27 @@ const settingsNotice = "Per-repo settings are enforced on scans (Phase 8). Runne
 
 // Handler serves server-rendered operator UI pages.
 type Handler struct {
-	store             store.QueryStore
-	global            store.GlobalSettingsSnapshot
-	notifyGlobal      notify.Config
-	basePath          string
-	logger            *logrus.Logger
-	tmpl              *template.Template
-	preinstallRunner  *preinstall.Runner
-	preinstallEnabled bool
-	apiKeySecret      string
-	auth              AuthConfig
-	remediationEnabled bool
-	remediation       RemediationBackend
+	store                store.QueryStore
+	global               store.GlobalSettingsSnapshot
+	notifyGlobal         notify.Config
+	basePath             string
+	logger               *logrus.Logger
+	tmpl                 *template.Template
+	preinstallRunner     *preinstall.Runner
+	preinstallEnabled    bool
+	apiKeySecret         string
+	auth                 AuthConfig
+	remediationEnabled   bool
+	remediation          RemediationBackend
 	remediationPREnabled bool
-	remediationPR       RemediationPRBackend
-	closureEnabled      bool
-	closure             ClosureBackend
-	suppressionEnabled  bool
-	suppression         SuppressionBackend
-	reconcileEnabled    bool
-	reconciler          IssueReconciler
-	readinessFn         func() operator.Readiness
+	remediationPR        RemediationPRBackend
+	closureEnabled       bool
+	closure              ClosureBackend
+	suppressionEnabled   bool
+	suppression          SuppressionBackend
+	reconcileEnabled     bool
+	reconciler           IssueReconciler
+	readinessFn          func() operator.Readiness
 }
 
 // IssueReconciler previews and applies existing issue reconciliation.
@@ -625,11 +625,11 @@ func (h *Handler) RepoSettings(c *gin.Context) {
 	h.renderNav(c, "repo_settings.html", "Settings — "+repo.FullName, "policies", map[string]any{
 		"Repo": repo, "Settings": settings, "Effective": effective, "ProfileMeta": meta,
 		"SelectedProfile": selectedProfile,
-		"Profiles": store.AllowedScanProfiles, "ProfileDescriptions": store.ProfileDescriptions,
+		"Profiles":        store.AllowedScanProfiles, "ProfileDescriptions": store.ProfileDescriptions,
 		"Allowed": allowedSettingsDoc(), "CronInfo": cronInfo,
 		"NotificationGlobal": h.notifyGlobal, "EffectiveNotifications": notifyEff,
 		"NotificationEvents": store.AllowedNotificationEvents,
-		"Suppressions": suppressions,
+		"Suppressions":       suppressions,
 	})
 }
 
@@ -731,7 +731,7 @@ func (h *Handler) SaveRepoSettings(c *gin.Context) {
 			"Error": err.Error(), "Repo": repo, "Settings": settings, "Effective": effective,
 			"ProfileMeta": meta, "Profiles": store.AllowedScanProfiles,
 			"ProfileDescriptions": store.ProfileDescriptions,
-			"Allowed": allowedSettingsDoc(),
+			"Allowed":             allowedSettingsDoc(),
 		})
 		return
 	}
@@ -908,7 +908,7 @@ func (h *Handler) FindingDetail(c *gin.Context) {
 		"Finding": detail, "RemediationPlan": plan, "PlannerEnabled": h.remediationEnabled,
 		"PREnabled": h.remediationPREnabled, "PREligibility": prEligibility, "PatchAttempts": patchAttempts,
 		"ClosureEnabled": h.closureEnabled, "ClosureEvidence": h.closureEvidenceForUI(c.Request.Context(), id),
-		"LifecycleLabel": lifecycleStageLabel(plan, patchAttempts, h.closureEvidenceForUI(c.Request.Context(), id)),
+		"LifecycleLabel":     lifecycleStageLabel(plan, patchAttempts, h.closureEvidenceForUI(c.Request.Context(), id)),
 		"SuppressionEnabled": h.suppressionEnabled, "RepoSuppressions": suppressions,
 		"GraphDetail": buildGraphFindingView(detail),
 		"GraphMapURL": graphMapURL(h.basePath, detail.RepositoryID, detail.FilePath, detail.Source, clientAPIKeyFromRequest(c)),
@@ -1270,16 +1270,16 @@ func intPtr(v string) *int {
 
 func allowedSettingsDoc() map[string][]string {
 	return map[string][]string{
-		"scan_profile":       store.AllowedScanProfiles,
-		"policy_level":       store.AllowedPolicyLevels,
-		"workspace_mode":     store.AllowedWorkspaceModes,
-		"severity_gate":      store.AllowedSeverities,
+		"scan_profile":              store.AllowedScanProfiles,
+		"policy_level":              store.AllowedPolicyLevels,
+		"workspace_mode":            store.AllowedWorkspaceModes,
+		"severity_gate":             store.AllowedSeverities,
 		"notification_min_severity": store.AllowedSeverities,
-		"notification_events":     store.AllowedNotificationEvents,
-		"issue_policy":       store.AllowedIssuePolicies,
-		"remediation_policy": store.AllowedRemediationPolicies,
-		"runner_policy":      store.AllowedRunnerPolicies,
-		"ai_policy":          store.AllowedAIPolicies,
+		"notification_events":       store.AllowedNotificationEvents,
+		"issue_policy":              store.AllowedIssuePolicies,
+		"remediation_policy":        store.AllowedRemediationPolicies,
+		"runner_policy":             store.AllowedRunnerPolicies,
+		"ai_policy":                 store.AllowedAIPolicies,
 	}
 }
 

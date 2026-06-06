@@ -189,9 +189,9 @@ func TestScanDetailRenders(t *testing.T) {
 	repo, _ := s.UpsertRepository(ctx, store.Repository{Owner: "o", Name: "r", FullName: "o/r"})
 	scanID := "34a0c0d5698a5da1"
 	summary, _ := json.Marshal(map[string]any{
-		"issues_found":     804,
-		"files_analyzed":   362,
-		"analysis_time_ms": 234000,
+		"issues_found":       804,
+		"files_analyzed":     362,
+		"analysis_time_ms":   234000,
 		"effective_settings": map[string]any{"scan_profile": "standard"},
 	})
 	finished := time.Now().UTC()

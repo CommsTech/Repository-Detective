@@ -31,12 +31,17 @@ func templateFuncs() template.FuncMap {
 		"issuesFromScan": issuesFromScanSummary,
 		"add":            func(a, b int) int { return a + b },
 		"sub":            func(a, b int) int { return a - b },
-		"min":            func(a, b int) int { if a < b { return a }; return b },
-		"gt":             func(a, b int) bool { return a > b },
-		"lt":             func(a, b int) bool { return a < b },
-		"eq":             func(a, b interface{}) bool { return a == b },
-		"dict":           templateDict,
-		"jsonScript":     jsonScriptContent,
+		"min": func(a, b int) int {
+			if a < b {
+				return a
+			}
+			return b
+		},
+		"gt":         func(a, b int) bool { return a > b },
+		"lt":         func(a, b int) bool { return a < b },
+		"eq":         func(a, b interface{}) bool { return a == b },
+		"dict":       templateDict,
+		"jsonScript": jsonScriptContent,
 	}
 }
 

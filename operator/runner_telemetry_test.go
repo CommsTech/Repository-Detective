@@ -11,21 +11,21 @@ func TestToolStatusStates(t *testing.T) {
 	t.Setenv("PATH", emptyPath)
 
 	tests := []struct {
-		name     string
-		cfg      operator.ScannerConfig
-		tool     string
+		name      string
+		cfg       operator.ScannerConfig
+		tool      string
 		wantState string
 	}{
 		{
-			name: "disabled by config",
-			cfg:  operator.ScannerConfig{},
-			tool: "checkov",
+			name:      "disabled by config",
+			cfg:       operator.ScannerConfig{},
+			tool:      "checkov",
 			wantState: operator.StatusDisabledByConfig,
 		},
 		{
-			name: "enabled missing binary",
-			cfg: operator.ScannerConfig{EnableGosec: true},
-			tool: "gosec",
+			name:      "enabled missing binary",
+			cfg:       operator.ScannerConfig{EnableGosec: true},
+			tool:      "gosec",
 			wantState: operator.StatusEnabledMissingBinary,
 		},
 	}
