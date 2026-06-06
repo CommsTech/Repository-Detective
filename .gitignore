@@ -19,6 +19,8 @@ go.work
 
 # Build output
 bin/
+!deploy/bin/
+!deploy/bin/README.md
 dist/
 build/
 
