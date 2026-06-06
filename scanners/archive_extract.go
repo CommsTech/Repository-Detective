@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -78,7 +79,7 @@ func ExtractZipArchive(zipPath, destRoot string, maxFiles int, maxTotalBytes int
 			return fileCount, totalBytes, truncated, err
 		}
 
-		if totalBytes+int64(file.UncompressedSize64) > maxTotalBytes {
+		if uncompressedSizeWouldExceed(totalBytes, file.UncompressedSize64, maxTotalBytes) {
 			truncated = true
 			break
 		}
@@ -109,6 +110,21 @@ func ExtractZipArchive(zipPath, destRoot string, maxFiles int, maxTotalBytes int
 	}
 
 	return fileCount, totalBytes, truncated, nil
+}
+
+// uncompressedSizeWouldExceed checks byte limits without unsafe uint64→int64 casts (gosec G115).
+func uncompressedSizeWouldExceed(totalBytes int64, size uint64, maxTotalBytes int64) bool {
+	if maxTotalBytes <= 0 || totalBytes >= maxTotalBytes {
+		return true
+	}
+	if size > uint64(maxTotalBytes) {
+		return true
+	}
+	if size > uint64(math.MaxInt64) {
+		return true
+	}
+	addend := int64(size)
+	return addend > maxTotalBytes-totalBytes
 }
 
 func commonZipRootPrefix(files []*zip.File) string {

@@ -7,7 +7,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const uiAPIKeyCookie = "rd_ui_api_key"
+// uiSessionCookieName is the HttpOnly cookie name for UI API key transport (not a secret).
+const uiSessionCookieName = "rd_ui_sess"
 
 // UIAPIKeyCookieMiddleware stores ?api_key= in an HttpOnly cookie and redirects to a clean URL.
 // Legacy query-string auth still works for one hop; subsequent requests use the cookie.
@@ -29,7 +30,7 @@ func (h *Handler) UIAPIKeyCookieMiddleware() gin.HandlerFunc {
 		}
 		secure := c.Request.TLS != nil || strings.EqualFold(c.GetHeader("X-Forwarded-Proto"), "https")
 		http.SetCookie(c.Writer, &http.Cookie{
-			Name:     uiAPIKeyCookie,
+			Name:     uiSessionCookieName,
 			Value:    key,
 			Path:     h.basePath,
 			MaxAge:   86400 * 7,
@@ -50,7 +51,7 @@ func (h *Handler) UIAPIKeyCookieMiddleware() gin.HandlerFunc {
 }
 
 func apiKeyFromCookie(c *gin.Context) string {
-	if key, err := c.Cookie(uiAPIKeyCookie); err == nil {
+	if key, err := c.Cookie(uiSessionCookieName); err == nil {
 		return strings.TrimSpace(key)
 	}
 	return ""

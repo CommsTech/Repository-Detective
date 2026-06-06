@@ -122,7 +122,7 @@ func (h *Handler) UnlockSubmit(c *gin.Context) {
 func (h *Handler) setUIAPIKeyCookie(c *gin.Context, key string) {
 	secure := c.Request.TLS != nil || strings.EqualFold(c.GetHeader("X-Forwarded-Proto"), "https")
 	http.SetCookie(c.Writer, &http.Cookie{
-		Name:     uiAPIKeyCookie,
+		Name:     uiSessionCookieName,
 		Value:    key,
 		Path:     h.basePath,
 		MaxAge:   86400 * 7,

@@ -76,7 +76,7 @@ func TestDashboardWithValidAPIKeyCookie(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "/ui/", nil)
-	req.AddCookie(&http.Cookie{Name: "rd_ui_api_key", Value: "test-secret-key"})
+	req.AddCookie(&http.Cookie{Name: "rd_ui_sess", Value: "test-secret-key"})
 	r.ServeHTTP(w, req)
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected 200 with cookie auth, got %d", w.Code)
