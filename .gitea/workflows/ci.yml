@@ -82,7 +82,15 @@ jobs:
           ./scripts/ci-govulncheck.sh
 
       - name: Build Docker image
-        run: docker build --target all-in-one -t repository-detective:ci .
+        run: |
+          for attempt in 1 2 3; do
+            echo "docker build attempt ${attempt}/3"
+            if docker build --target all-in-one -t repository-detective:ci .; then
+              exit 0
+            fi
+            sleep 30
+          done
+          exit 1
 
       - name: Verify container starts
         run: |
