@@ -13,13 +13,16 @@ env:
   GOTOOLCHAIN: auto
 
 jobs:
-  validate:
-    name: Validate Release
+  release:
+    name: Release
     runs-on: ubuntu-latest
+    timeout-minutes: 90
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -35,21 +38,6 @@ jobs:
           TAG="${GITHUB_REF_NAME}"
           echo "Release tag: ${TAG}"
           test "${TAG#v}" != "${TAG}"
-
-  build-release:
-    name: Build Release Assets
-    runs-on: ubuntu-latest
-    needs: validate
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: "1.23"
-          cache: true
 
       - name: Build multi-platform binaries
         run: |
@@ -79,27 +67,6 @@ jobs:
             fi
           } > dist/RELEASE_NOTES.md
 
-      - name: Upload release artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-assets
-          path: dist/
-
-  publish:
-    name: Publish Gitea Release
-    runs-on: ubuntu-latest
-    needs: build-release
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: release-assets
-          path: dist
-
       - name: Create Gitea release
         env:
           GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
@@ -112,7 +79,8 @@ jobs:
 
           if [ -z "$GITEA_TOKEN" ]; then
             echo "GITEA_TOKEN secret not set — skipping remote release upload"
-            echo "Artifacts are available in the workflow run."
+            echo "Release assets built in dist/ on this runner."
+            ls -la dist/
             exit 0
           fi
 
