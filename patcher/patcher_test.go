@@ -221,6 +221,67 @@ func main() { _ = fmt.Sprintf("hello") }
 	if strings.Contains(string(updated), `fmt.Sprintf("hello")`) {
 		t.Fatal("expected fmt.Sprintf removed")
 	}
+	if strings.Contains(string(updated), `"fmt"`) {
+		t.Fatal("expected unused fmt import removed")
+	}
+}
+
+func TestStaticcheckS1039RemovesGroupedFmtImport(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "marker.go")
+	content := `package dogfood
+
+import (
+	"fmt"
+)
+
+func StaticcheckE2EMarker() string {
+	return fmt.Sprintf("repository-detective-staticcheck-e2e")
+}
+`
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	plan := EligiblePlan()
+	plan.AffectedFiles = []string{"marker.go"}
+	if _, err := ApplyPatch(plan, dir, 3, 100); err != nil {
+		t.Fatal(err)
+	}
+	updated, _ := os.ReadFile(path)
+	text := string(updated)
+	if strings.Contains(text, "fmt.") || strings.Contains(text, `"fmt"`) {
+		t.Fatalf("expected fmt usage and import removed, got %q", text)
+	}
+	if !strings.Contains(text, `"repository-detective-staticcheck-e2e"`) {
+		t.Fatalf("expected string literal, got %q", text)
+	}
+}
+
+func TestStaticcheckS1039RemovesFmtImportWhenCommentMentionsFmt(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "marker.go")
+	content := `package dogfood
+
+import "fmt"
+
+// Replace fmt.Sprintf with a plain string literal.
+func StaticcheckE2EMarker() string {
+	return fmt.Sprintf("repository-detective-staticcheck-e2e")
+}
+`
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	plan := EligiblePlan()
+	plan.AffectedFiles = []string{"marker.go"}
+	if _, err := ApplyPatch(plan, dir, 3, 100); err != nil {
+		t.Fatal(err)
+	}
+	updated, _ := os.ReadFile(path)
+	text := string(updated)
+	if strings.Contains(text, `"fmt"`) {
+		t.Fatalf("expected fmt import removed despite comment mentioning fmt.Sprintf, got %q", text)
+	}
 }
 
 func TestPatchBoundedByMaxDiffLines(t *testing.T) {
@@ -241,6 +302,13 @@ func TestPatchBoundedByMaxDiffLines(t *testing.T) {
 	_, err := ApplyPatch(plan, dir, 3, 5)
 	if err == nil {
 		t.Fatal("expected max diff lines error")
+	}
+}
+
+func TestAllowedPackageScopedGoTest(t *testing.T) {
+	argv, err := ParseAllowedCommand("go test ./internal/dogfood/...")
+	if err != nil || len(argv) != 3 {
+		t.Fatalf("unexpected: %v %v", argv, err)
 	}
 }
 

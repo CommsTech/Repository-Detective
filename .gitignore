@@ -82,6 +82,9 @@ docs/dogfood-reports/*
 !docs/dogfood-reports/issue-resolution-batch-plan-current.md
 !docs/dogfood-reports/core-application-remediation-sprint.md
 !docs/dogfood-reports/rd-self-remediation-dl3018-test.md
+!docs/dogfood-reports/rd-self-remediation-staticcheck-e2e-test.md
+!docs/dogfood-reports/ci-release-fix-report.md
+!docs/dogfood-reports/product-repo-issue-burndown-plan.md
 
 # Private operator dogfood (unsanitized — keep local)
 docs/DOGFOOD_REPORT_FIRST_39_REPOS.md

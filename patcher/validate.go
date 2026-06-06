@@ -39,16 +39,16 @@ func ParseAllowedCommand(raw string) ([]string, error) {
 		}
 		switch parts[1] {
 		case "test", "vet":
-			if len(parts) != 3 || parts[2] != "./..." {
-				return nil, fmt.Errorf("only go test ./... or go vet ./... allowed")
+			if len(parts) != 3 || !isSafeGoPackagePattern(parts[2]) {
+				return nil, fmt.Errorf("only go test or go vet with safe package pattern allowed")
 			}
 			return parts, nil
 		default:
 			return nil, fmt.Errorf("unsupported go subcommand")
 		}
 	case "staticcheck":
-		if len(parts) != 2 || parts[1] != "./..." {
-			return nil, fmt.Errorf("only staticcheck ./... allowed")
+		if len(parts) != 2 || !isSafeGoPackagePattern(parts[1]) {
+			return nil, fmt.Errorf("only staticcheck with safe package pattern allowed")
 		}
 		return parts, nil
 	case "hadolint":
@@ -73,6 +73,32 @@ func isSafeRelativePath(p string) bool {
 	clean := filepath.Clean(p)
 	if strings.HasPrefix(clean, "..") || strings.Contains(clean, "..") {
 		return false
+	}
+	return true
+}
+
+func isSafeGoPackagePattern(pattern string) bool {
+	pattern = strings.TrimSpace(pattern)
+	if pattern == "./..." {
+		return true
+	}
+	if !strings.HasPrefix(pattern, "./") || !strings.HasSuffix(pattern, "/...") {
+		return false
+	}
+	base := strings.TrimSuffix(strings.TrimPrefix(pattern, "./"), "/...")
+	if base == "" || strings.Contains(base, "..") {
+		return false
+	}
+	for _, seg := range strings.Split(base, "/") {
+		if seg == "" || seg == "." || seg == ".." {
+			return false
+		}
+		for _, r := range seg {
+			if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '_' || r == '-' {
+				continue
+			}
+			return false
+		}
 	}
 	return true
 }

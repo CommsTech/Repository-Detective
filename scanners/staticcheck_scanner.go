@@ -69,7 +69,7 @@ func parseStaticcheckOutput(output []byte, dir string, cfg Config) (cappedFindin
 	parsedAny := false
 	for _, line := range strings.Split(string(output), "\n") {
 		line = strings.TrimSpace(line)
-		if line == "" {
+		if line == "" || !strings.HasPrefix(line, "{") {
 			continue
 		}
 		var msg staticcheckMessage

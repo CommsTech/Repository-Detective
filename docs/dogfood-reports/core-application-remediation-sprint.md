@@ -116,7 +116,7 @@ Fleet repos are **test targets**, not manual Cursor fix projects.
 ### 5. Safe remediation PR expansion
 
 - [x] DL3018 patcher (Batch 2) — **E2E PASS 2026-06-06**
-- [ ] staticcheck S1039-style mechanical patcher (Batch 3)
+- [x] staticcheck S1039-style mechanical patcher (Batch 3) — **E2E PASS 2026-06-06**
 - **Never:** secret rotation, dependency bumps, auth rewrites
 
 #### DL3018 self-remediation E2E: PASS
@@ -135,7 +135,23 @@ Repository Detective created remediation PR → human merged → main rescanned 
 
 **First successful product-managed fix** — RD core created the plan, opened the PR, and verified closure after human merge; no manual fleet-repo patching by Cursor.
 
-**Next controlled test (before broad auto-PR):** staticcheck S1039 or simple fmt.Sprintf literal cleanup. Avoid secrets, dependency upgrades, auth logic, critical/high security, architecture/graph cleanup.
+#### Staticcheck S1039 self-remediation E2E: PASS
+
+Repository Detective created remediation PR → human merged → main rescanned → finding verified resolved. No linked Gitea issue (backfilled finding); `close_issues=false`.
+
+| Artifact | Value |
+|----------|-------|
+| Finding | 11658 (`bugbot-c68376af29742113`, `internal/dogfood/staticcheck_e2e_marker.go:8`) |
+| Plan | `rp-08270977049e02e8` |
+| Patch attempt | `pa-12474c8d554fbbf5` |
+| PR | [#288](https://git.commsnet.org/commstech/Bugbot/pulls/288) |
+| Merge commit | `a0d32599ff21ab94bbbef905791ebf920d542d84` |
+| Rescan | `6bdad6c92f1c8a0c` |
+| Report | [rd-self-remediation-staticcheck-e2e-test.md](rd-self-remediation-staticcheck-e2e-test.md) |
+
+**Second successful remediation class** — proves mechanical staticcheck fixes after DL3018. **Do not enable staticcheck auto-PR in beta by default** until Go-in-image, archive workspace, ingest, and package-scoped validation ship.
+
+**Remediation expansion stopped** — two E2Es are enough proof for beta. Next: private beta ops (1 week), then Auth/RBAC Slice 2.
 
 **DB access note:** avoid host-side SQLite against live `bugbot.db` while RD is scanning/writing (`database is locked`). Prefer API, `docker exec`, backup copy, or read-only with `busy_timeout`.
 

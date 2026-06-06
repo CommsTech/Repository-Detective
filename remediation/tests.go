@@ -1,6 +1,7 @@
 package remediation
 
 import (
+	"path"
 	"strings"
 )
 
@@ -20,8 +21,10 @@ func SuggestTests(ctx FindingContext, hints RepoHints) (tests []string, commands
 	category := strings.ToLower(ctx.Category)
 
 	if hints.HasGoMod || strings.HasSuffix(strings.ToLower(ctx.FilePath), ".go") {
-		tests = append(tests, "Run Go unit tests for affected packages")
-		commands = append(commands, "go test ./...")
+		if source != "staticcheck" && source != "golangci-lint" {
+			tests = append(tests, "Run Go unit tests for affected packages")
+			commands = append(commands, "go test ./...")
+		}
 	}
 
 	if hints.HasPackageJSON {
@@ -58,10 +61,10 @@ func SuggestTests(ctx FindingContext, hints RepoHints) (tests []string, commands
 			commands = append(commands, "go test ./...")
 		}
 	case "staticcheck", "golangci-lint":
-		if hints.HasGoMod {
-			commands = append(commands, "go test ./...")
-			commands = append(commands, "staticcheck ./...")
-		}
+		pkg := goPackagePattern(ctx.FilePath)
+		tests = append(tests, "Run Go tests and staticcheck for affected package")
+		commands = append(commands, "go test "+pkg)
+		commands = append(commands, "staticcheck "+pkg)
 	case "gosec":
 		tests = append(tests, "Add regression test proving unsafe pattern is removed")
 		if hints.HasGoMod {
@@ -78,6 +81,18 @@ func SuggestTests(ctx FindingContext, hints RepoHints) (tests []string, commands
 	}
 
 	return uniqueStrings(tests), uniqueStrings(commands)
+}
+
+func goPackagePattern(filePath string) string {
+	filePath = strings.TrimSpace(filePath)
+	if filePath == "" {
+		return "./..."
+	}
+	dir := path.Dir(strings.ReplaceAll(filePath, `\`, `/`))
+	if dir == "." || dir == "" {
+		return "./..."
+	}
+	return "./" + dir + "/..."
 }
 
 // InferRepoHints builds best-effort repo hints from file paths (no filesystem access).

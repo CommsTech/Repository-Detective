@@ -77,6 +77,8 @@ RUN chmod +x /tmp/install-scanner-tools.sh && \
     fi
 
 COPY --from=builder /go/bin/govulncheck /go/bin/gosec /go/bin/staticcheck /usr/local/bin/
+COPY --from=builder /usr/local/go /usr/local/go
+ENV PATH="/usr/local/go/bin:${PATH}"
 
 RUN adduser -D -u 65532 scanner
 USER scanner

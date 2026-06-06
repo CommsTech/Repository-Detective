@@ -11,6 +11,7 @@ import (
 )
 
 var fmtSprintfLiteral = regexp.MustCompile(`fmt\.Sprintf\("([^"\\]|\\.)*"\)`)
+var fmtPackageUse = regexp.MustCompile(`\bfmt\.`)
 
 func applyStaticcheckPatch(plan remediation.Plan, workspaceDir string, maxFiles, maxLines int) (PatchResult, error) {
 	if len(plan.AffectedFiles) == 0 {
@@ -42,6 +43,7 @@ func applyStaticcheckPatch(plan remediation.Plan, workspaceDir string, maxFiles,
 			}
 			return match
 		})
+		updated = removeUnusedFmtImport(updated)
 	default:
 		return PatchResult{}, fmt.Errorf("staticcheck rule %s not patchable", plan.RuleID)
 	}
@@ -87,4 +89,96 @@ func countChangedLines(before, after string) int {
 		n = 1
 	}
 	return n
+}
+
+func removeUnusedFmtImport(content string) string {
+	if fmtPackageUse.MatchString(stripGoComments(content)) {
+		return content
+	}
+	lines := strings.Split(content, "\n")
+	out := make([]string, 0, len(lines))
+	inImportBlock := false
+	blockStart := -1
+	blockLines := make([]string, 0, 4)
+
+	flushBlock := func() {
+		if blockStart < 0 {
+			return
+		}
+		kept := make([]string, 0, len(blockLines))
+		for _, bl := range blockLines {
+			trimmed := strings.TrimSpace(bl)
+			if trimmed == `"fmt"` || strings.HasPrefix(trimmed, `"fmt" `) {
+				continue
+			}
+			kept = append(kept, bl)
+		}
+		// Drop empty import blocks when fmt was the only import.
+		if len(kept) <= 2 {
+			blockStart = -1
+			blockLines = blockLines[:0]
+			inImportBlock = false
+			return
+		}
+		out = append(out, kept...)
+		blockStart = -1
+		blockLines = blockLines[:0]
+		inImportBlock = false
+	}
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == `import "fmt"` {
+			continue
+		}
+		if strings.HasPrefix(trimmed, "import (") {
+			inImportBlock = true
+			blockStart = len(out)
+			blockLines = append(blockLines, line)
+			continue
+		}
+		if inImportBlock {
+			blockLines = append(blockLines, line)
+			if trimmed == ")" {
+				flushBlock()
+			}
+			continue
+		}
+		out = append(out, line)
+	}
+	if inImportBlock {
+		out = append(out, blockLines...)
+	}
+	return strings.Join(out, "\n")
+}
+
+func stripGoComments(content string) string {
+	var b strings.Builder
+	inBlock := false
+	for _, line := range strings.Split(content, "\n") {
+		if inBlock {
+			if idx := strings.Index(line, "*/"); idx >= 0 {
+				inBlock = false
+				line = line[idx+2:]
+			} else {
+				continue
+			}
+		}
+		if idx := strings.Index(line, "/*"); idx >= 0 {
+			before := line[:idx]
+			after := line[idx+2:]
+			if end := strings.Index(after, "*/"); end >= 0 {
+				line = before + after[end+2:]
+			} else {
+				inBlock = true
+				line = before
+			}
+		}
+		if idx := strings.Index(line, "//"); idx >= 0 {
+			line = line[:idx]
+		}
+		b.WriteString(line)
+		b.WriteByte('\n')
+	}
+	return b.String()
 }

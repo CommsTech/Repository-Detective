@@ -24,14 +24,19 @@ var sensitiveEnvPrefixes = []string{
 
 // MinimalSubprocessEnv returns a whitelist-only environment for scanner/git subprocesses.
 func MinimalSubprocessEnv() []string {
+	path := os.Getenv("PATH")
+	if _, err := os.Stat("/usr/local/go/bin"); err == nil {
+		path = "/usr/local/go/bin:" + path
+	}
 	env := []string{
 		"GIT_TERMINAL_PROMPT=0",
 		"GIT_ASKPASS=true",
 		"GIT_SSH_COMMAND=disabled",
 		"GIT_CONFIG_NOSYSTEM=1",
 		"GIT_CONFIG_NOGLOBAL=1",
+		"GOTOOLCHAIN=auto",
 	}
-	if path := os.Getenv("PATH"); path != "" {
+	if path != "" {
 		env = append(env, "PATH="+path)
 	}
 	for _, key := range []string{"HOME", "USERPROFILE", "SystemRoot", "TEMP", "TMP", "APPDATA", "LOCALAPPDATA", "LANG", "LC_ALL"} {

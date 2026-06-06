@@ -73,6 +73,26 @@ func TestHadolintDockerfilePlan(t *testing.T) {
 	}
 }
 
+func TestStaticcheckPackageScopedValidation(t *testing.T) {
+	plan := ApplyRecipe(FindingContext{
+		Category: "code_quality", Source: "staticcheck", Severity: "low", RuleID: "S1039",
+		FilePath: "internal/dogfood/staticcheck_e2e_marker.go", Confidence: 0.9,
+	})
+	want := []string{"go test ./internal/dogfood/...", "staticcheck ./internal/dogfood/..."}
+	for _, cmd := range want {
+		found := false
+		for _, got := range plan.ValidationCommands {
+			if got == cmd {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Fatalf("expected %q in validation commands, got %v", cmd, plan.ValidationCommands)
+		}
+	}
+}
+
 func TestCheckovIACPlan(t *testing.T) {
 	plan := ApplyRecipe(FindingContext{Category: "misconfiguration", Source: "checkov", Severity: "high", Confidence: 0.9})
 	found := false

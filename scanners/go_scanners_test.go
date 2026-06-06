@@ -182,6 +182,18 @@ func TestParseStaticcheckNDJSON(t *testing.T) {
 	}
 }
 
+func TestParseStaticcheckSkipsNonJSONLines(t *testing.T) {
+	dir := t.TempDir()
+	raw := "err: go command required\n" + staticcheckFoundJSON + "\nwarning: ignored\n"
+	parsed, err := scanners.ParseStaticcheckOutputForTest([]byte(raw), dir, scanners.Config{GoScannerMaxFindings: 100})
+	if err != nil {
+		t.Fatalf("parse error: %v", err)
+	}
+	if len(parsed.Findings) != 1 {
+		t.Fatalf("expected 1 finding, got %d", len(parsed.Findings))
+	}
+}
+
 func TestStaticcheckCodeMappings(t *testing.T) {
 	cases := map[string]string{
 		"ST1000": "maintainability",
