@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"syscall"
@@ -236,6 +237,12 @@ type Config struct {
 	IssueReconciliationComment              bool                                 `mapstructure:"issue_reconciliation_comment"`
 	IssueReconciliationCloseVerified        bool                                 `mapstructure:"issue_reconciliation_close_verified"`
 	IssueReconciliationMaxCommentsPerIssue  int                                  `mapstructure:"issue_reconciliation_max_comments_per_issue"`
+	IssueReconciliationCloseDuplicates      bool                                 `mapstructure:"issue_reconciliation_close_duplicates"`
+	DogfoodBacklogControlEnabled            bool                                 `mapstructure:"dogfood_backlog_control_enabled"`
+	DogfoodBacklogMaxOpenIssues             int                                  `mapstructure:"dogfood_backlog_max_open_issues"`
+	DogfoodBacklogAllowNewIssueSeverity     []string                             `mapstructure:"dogfood_backlog_allow_new_issue_severity"`
+	DogfoodBacklogAllowNewIssueConfidence   string                               `mapstructure:"dogfood_backlog_allow_new_issue_confidence"`
+	DogfoodBacklogUpdateExistingOnly        bool                                 `mapstructure:"dogfood_backlog_update_existing_only"`
 	AIStartupTestEnabled                    bool                                 `mapstructure:"ai_startup_test_enabled"`
 	AIConnectionTestMode                    string                               `mapstructure:"ai_connection_test_mode"`
 	AIConnectionTestCacheMinutes            int                                  `mapstructure:"ai_connection_test_cache_minutes"`
@@ -341,6 +348,34 @@ func main() {
 	}
 
 	logger.Info("Server exited")
+}
+
+func buildBacklogControlConfig(cfg Config) issues.BacklogControlConfig {
+	bc := issues.DefaultBacklogControlConfig()
+	bc.Enabled = cfg.DogfoodBacklogControlEnabled
+	bc.MaxOpenIssues = cfg.DogfoodBacklogMaxOpenIssues
+	bc.UpdateExistingOnly = cfg.DogfoodBacklogUpdateExistingOnly
+	if len(cfg.DogfoodBacklogAllowNewIssueSeverity) > 0 {
+		bc.AllowNewIssueSeverity = cfg.DogfoodBacklogAllowNewIssueSeverity
+	}
+	level := strings.TrimSpace(cfg.DogfoodBacklogAllowNewIssueConfidence)
+	if level != "" {
+		switch strings.ToLower(level) {
+		case "critical":
+			bc.AllowMinConfidence = 0.95
+		case "high":
+			bc.AllowMinConfidence = 0.85
+		case "medium":
+			bc.AllowMinConfidence = 0.70
+		case "low":
+			bc.AllowMinConfidence = 0.50
+		default:
+			if f, err := strconv.ParseFloat(level, 64); err == nil && f > 0 && f <= 1 {
+				bc.AllowMinConfidence = f
+			}
+		}
+	}
+	return bc
 }
 
 func loadConfig() error {
@@ -479,7 +514,13 @@ func loadConfig() error {
 	viper.SetDefault("issue_reconciliation_enabled", true)
 	viper.SetDefault("issue_reconciliation_comment", true)
 	viper.SetDefault("issue_reconciliation_close_verified", false)
+	viper.SetDefault("issue_reconciliation_close_duplicates", false)
 	viper.SetDefault("issue_reconciliation_max_comments_per_issue", 3)
+	viper.SetDefault("dogfood_backlog_control_enabled", false)
+	viper.SetDefault("dogfood_backlog_max_open_issues", 0)
+	viper.SetDefault("dogfood_backlog_allow_new_issue_severity", []string{"high", "critical"})
+	viper.SetDefault("dogfood_backlog_allow_new_issue_confidence", "high")
+	viper.SetDefault("dogfood_backlog_update_existing_only", true)
 	viper.SetDefault("ai_startup_test_enabled", false)
 	viper.SetDefault("ai_connection_test_mode", "metadata_only")
 	viper.SetDefault("ai_connection_test_cache_minutes", 60)
@@ -1075,6 +1116,7 @@ func initializeComponents() error {
 	issueConfig := &issues.Config{
 		AutoCreateIssues:   config.AutoCreateIssues,
 		Reporting:          config.Reporting,
+		BacklogControl:     buildBacklogControlConfig(config),
 		GiteaBaseURL:       config.GiteaURL,
 		IssueLabels:        issues.DefaultIssueBaseLabels(),
 		MaxIssuesPerRun:    config.MaxIssuesPerRun,
@@ -1680,6 +1722,9 @@ func createIssuesFromResult(ctx context.Context, forgeType, owner, repo string, 
 			if err != nil {
 				logger.Errorf("Failed to create issues: %v", err)
 			} else {
+				if issueResult.BacklogControlActive {
+					logger.Infof("%s blocked %d new issues", issues.BacklogControlNote, issueResult.BacklogControlBlocked)
+				}
 				logger.Infof("Created %d issues, updated %d, skipped %d", issueResult.IssuesCreated, issueResult.IssuesUpdated, issueResult.IssuesSkipped)
 				processed = issueResult.ProcessedIssues
 			}

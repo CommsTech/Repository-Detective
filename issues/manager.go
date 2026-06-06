@@ -46,6 +46,7 @@ type Manager struct {
 type Config struct {
 	AutoCreateIssues   bool
 	Reporting          profile.ReportingConfig
+	BacklogControl     BacklogControlConfig
 	GiteaBaseURL       string
 	GitHubBaseURL      string
 	IssueLabels        []string
@@ -86,12 +87,15 @@ type ProcessedIssueRecord struct {
 
 // IssueCreationResult represents the result of issue creation
 type IssueCreationResult struct {
-	IssuesCreated   int
-	IssuesSkipped   int
-	IssuesUpdated   int
-	Errors          []string
-	IssueURLs       []string
-	ProcessedIssues []ProcessedIssueRecord
+	IssuesCreated          int
+	IssuesSkipped          int
+	IssuesUpdated          int
+	BacklogControlBlocked  int
+	BacklogControlActive   bool
+	BacklogControlNote     string
+	Errors                 []string
+	IssueURLs              []string
+	ProcessedIssues        []ProcessedIssueRecord
 }
 
 // NewManager creates a new issue manager.
@@ -231,7 +235,12 @@ func (m *Manager) CreateIssuesFromAnalysis(ctx context.Context, req *IssueCreati
 	}
 
 	if m.config.GroupSimilarIssues && req.AnalysisResult != nil && shouldCreateSummaryIssue(req.AnalysisResult.Issues) {
-		if err := m.createSummaryIssue(ctx, req, result); err != nil {
+		if m.config.BacklogControl.ShouldBlockSummaryIssue() {
+			m.logger.Infof("%s Skipping summary issue creation.", BacklogControlNote)
+			result.BacklogControlActive = true
+			result.BacklogControlNote = BacklogControlNote
+			result.BacklogControlBlocked++
+		} else if err := m.createSummaryIssue(ctx, req, result); err != nil {
 			errorMsg := fmt.Sprintf("Failed to create summary issue: %v", err)
 			result.Errors = append(result.Errors, errorMsg)
 			m.logger.Errorf(errorMsg)
@@ -335,6 +344,17 @@ func (m *Manager) updateExistingIssue(ctx context.Context, forge IssueForge, req
 }
 
 func (m *Manager) createIssueForProblem(ctx context.Context, forge IssueForge, req *IssueCreationRequest, issue *ai.CodeIssue, result *IssueCreationResult) error {
+	if m.config.BacklogControl.Enabled {
+		result.BacklogControlActive = true
+		result.BacklogControlNote = BacklogControlNote
+		if blocked, reason := m.config.BacklogControl.ShouldBlockNewIssue(issue, 0); blocked {
+			m.logger.Infof("%s Skipping new issue for %q: %s", BacklogControlNote, issue.Title, reason)
+			result.BacklogControlBlocked++
+			result.IssuesSkipped++
+			return nil
+		}
+	}
+
 	repository := fmt.Sprintf("%s/%s", req.Owner, req.Repository)
 
 	title := m.createIssueTitle(issue, req)
@@ -596,6 +616,7 @@ func GetDefaultConfig() *Config {
 	return &Config{
 		AutoCreateIssues:   true,
 		Reporting:          profile.DefaultReportingConfig(),
+		BacklogControl:     DefaultBacklogControlConfig(),
 		IssueLabels:        DefaultIssueBaseLabels(),
 		MaxIssuesPerRun:    50,
 		SkipLowSeverity:    false,

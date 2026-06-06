@@ -62,6 +62,7 @@ func initReconcileEngine() {
 		Enabled:             true,
 		Comment:             config.IssueReconciliationComment,
 		CloseVerified:       config.IssueReconciliationCloseVerified,
+		CloseDuplicates:     config.IssueReconciliationCloseDuplicates,
 		MaxCommentsPerIssue: config.IssueReconciliationMaxCommentsPerIssue,
 		PublicBasePath:      basePath,
 	})

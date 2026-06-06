@@ -23,6 +23,7 @@ const (
 	LifecyclePendingRescan        = "repository-detective/pending-rescan"
 	LifecycleResolvedVerified     = "repository-detective/resolved-verified"
 	LifecycleClosureBlocked       = "repository-detective/closure-blocked"
+	LifecycleDuplicate            = "repository-detective/duplicate"
 )
 
 // StillPresentCommentBody formats an update when a fingerprint is detected again.

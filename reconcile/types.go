@@ -22,6 +22,7 @@ const (
 	ActionMarkFalsePositive = "mark_false_positive"
 	ActionSuppress          = "suppress"
 	ActionCloseVerified     = "close_verified"
+	ActionCloseDuplicate    = "close_duplicate"
 )
 
 // Item is one external issue reconciliation result.

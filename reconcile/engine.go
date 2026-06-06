@@ -26,6 +26,7 @@ type Config struct {
 	Enabled              bool
 	Comment              bool
 	CloseVerified        bool
+	CloseDuplicates      bool
 	MaxCommentsPerIssue  int
 	PublicBasePath       string
 	BetaNoiseRuleIDs     map[string]bool
@@ -230,8 +231,13 @@ func (e *Engine) classify(ic issueContext, dupes []store.ExternalIssue) Item {
 			item.Status = StatusDuplicate
 			item.CanonicalIssue = canonical
 			item.Reason = fmt.Sprintf("Duplicate fingerprint; canonical issue #%d", canonical)
-			item.ProposedAction = ActionLabel
-			item.LabelsToAdd = issues.ExpandLifecycleLabels(issues.LifecycleNeedsHumanReview)
+			if e.cfg.CloseDuplicates {
+				item.ProposedAction = ActionCloseDuplicate
+				item.LabelsToAdd = issues.ExpandLifecycleLabels(issues.LifecycleDuplicate)
+			} else {
+				item.ProposedAction = ActionLabel
+				item.LabelsToAdd = issues.ExpandLifecycleLabels(issues.LifecycleDuplicate)
+			}
 			return item
 		}
 	}
@@ -370,6 +376,39 @@ func (e *Engine) applyItem(ctx context.Context, repo store.Repository, item *Ite
 			IssueNumber: item.IssueNumber, IssueURL: item.IssueURL, State: "closed",
 		})
 		_ = e.store.UpdateFindingStatus(ctx, item.FindingID, store.FindingStatusResolvedVerified)
+	case ActionCloseDuplicate:
+		if !e.cfg.CloseDuplicates {
+			return nil
+		}
+		if item.Status != StatusDuplicate {
+			return nil
+		}
+		if len(item.LabelsToAdd) > 0 {
+			_ = e.forge.AddIssueLabels(ctx, owner, name, item.IssueNumber, item.LabelsToAdd)
+		}
+		comment := fmt.Sprintf(
+			"Repository Detective closed this issue as a **duplicate** of #%d.\n\n"+
+				"- Same fingerprint: `%s`\n"+
+				"- Latest scan: `%s`\n"+
+				"- Canonical issue remains open for active tracking.",
+			item.CanonicalIssue, item.Fingerprint, item.LatestScanID,
+		)
+		if e.cfg.Comment {
+			_ = e.forge.CreateIssueComment(ctx, owner, name, item.IssueNumber, comment)
+		}
+		if err := e.forge.CloseIssue(ctx, owner, name, item.IssueNumber); err != nil {
+			return err
+		}
+		_, _ = e.store.UpsertExternalIssue(ctx, store.ExternalIssue{
+			FindingID: item.FindingID, ForgeType: forgeType,
+			IssueNumber: item.IssueNumber, IssueURL: item.IssueURL, State: "closed",
+		})
+		_ = e.store.AddLifecycleEvent(ctx, store.LifecycleEvent{
+			FindingID: &item.FindingID,
+			ScanID:    item.LatestScanID,
+			EventType: "external_issue_closed_duplicate",
+			Message:   item.Reason,
+		})
 	}
 	return nil
 }
