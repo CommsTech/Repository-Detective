@@ -1,6 +1,7 @@
 package envcompat_test
 
 import (
+	"os"
 	"strings"
 	"testing"
 
@@ -23,8 +24,21 @@ func TestNewPrefixWinsOverLegacy(t *testing.T) {
 	}
 }
 
+func TestLegacyAPIKeyAppliedWhenNewPrefixUnset(t *testing.T) {
+	t.Setenv("REPOSITORY_DETECTIVE_API_KEY", "")
+	os.Unsetenv("REPOSITORY_DETECTIVE_API_KEY")
+	t.Setenv("BUGBOT_API_KEY", "legacy-test-key")
+
+	v := viper.New()
+	envcompat.Apply(v, logrus.New())
+
+	if got := v.GetString("api_key"); got != "legacy-test-key" {
+		t.Fatalf("expected legacy api_key, got %q", got)
+	}
+}
+
 func TestLegacyPrefixStillWorks(t *testing.T) {
-	t.Setenv("REPOSITORY_DETECTIVE_ENABLE_TRIVY", "")
+	os.Unsetenv("REPOSITORY_DETECTIVE_ENABLE_TRIVY")
 	t.Setenv("BUGBOT_ENABLE_TRIVY", "false")
 
 	v := viper.New()

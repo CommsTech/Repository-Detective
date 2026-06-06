@@ -524,8 +524,9 @@ func loadConfig() error {
 	viper.SetDefault("false_positive_reduction.require_line_match", fpDefaults.RequireLineMatch)
 
 	// Environment variables — legacy BUGBOT_* plus REPOSITORY_DETECTIVE_* aliases.
-	viper.AutomaticEnv()
 	viper.SetEnvPrefix("BUGBOT")
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	viper.AutomaticEnv()
 
 	// Read config file
 	if err := viper.ReadInConfig(); err != nil {

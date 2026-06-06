@@ -56,7 +56,10 @@ func Apply(v *viper.Viper, logger *logrus.Logger) {
 			v.Set(configKey, value)
 
 		case strings.HasPrefix(key, LegacyEnvPrefix):
-			if _, newSet := os.LookupEnv(NewEnvPrefix + strings.TrimPrefix(key, LegacyEnvPrefix)); !newSet {
+			suffix := strings.TrimPrefix(key, LegacyEnvPrefix)
+			configKey := configKeyFromSuffix(suffix)
+			if _, newSet := os.LookupEnv(NewEnvPrefix + suffix); !newSet {
+				v.Set(configKey, value)
 				legacyOnlyUsed = true
 			}
 		}
