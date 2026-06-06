@@ -115,9 +115,29 @@ Fleet repos are **test targets**, not manual Cursor fix projects.
 
 ### 5. Safe remediation PR expansion
 
-- [ ] DL3018 patcher (Batch 2)
+- [x] DL3018 patcher (Batch 2) — **E2E PASS 2026-06-06**
 - [ ] staticcheck S1039-style mechanical patcher (Batch 3)
 - **Never:** secret rotation, dependency bumps, auth rewrites
+
+#### DL3018 self-remediation E2E: PASS
+
+Repository Detective created remediation PR → human merged → main rescanned → finding verified resolved → issue left open with `repository-detective/resolved-verified` label because `close_issues=false`.
+
+| Artifact | Value |
+|----------|-------|
+| Finding | 9971 (`bugbot-2e9bfe809e79bcf0`, Dockerfile:100) |
+| Plan | `rp-59815d80d8d32abb` |
+| Patch attempt | `pa-6cbc72da69690560` |
+| PR | [#274](https://git.commsnet.org/commstech/Bugbot/pulls/274) |
+| Merge commit | `6f42552233ed15521085b51dca26fb82dfb86d6f` |
+| Rescan | `09a44ba983243aab` |
+| Report | [rd-self-remediation-dl3018-test.md](rd-self-remediation-dl3018-test.md) |
+
+**First successful product-managed fix** — RD core created the plan, opened the PR, and verified closure after human merge; no manual fleet-repo patching by Cursor.
+
+**Next controlled test (before broad auto-PR):** staticcheck S1039 or simple fmt.Sprintf literal cleanup. Avoid secrets, dependency upgrades, auth logic, critical/high security, architecture/graph cleanup.
+
+**DB access note:** avoid host-side SQLite against live `bugbot.db` while RD is scanning/writing (`database is locked`). Prefer API, `docker exec`, backup copy, or read-only with `busy_timeout`.
 
 ### 6. Auth/RBAC stabilization
 
@@ -183,6 +203,6 @@ curl -X POST http://localhost:8081/api/v1/analyze \
 
 | Batch | Focus |
 |-------|--------|
-| **2** | Default-branch absent-fingerprint auto-verify; DL3018 patcher; reconcile→closure bridge |
-| **3** | staticcheck parser + mechanical patcher; access-log API key redaction middleware |
-| **4** | Auth Slice 1 staging validation; dashboard auto-fixable count |
+| **2** | ~~Default-branch absent-fingerprint auto-verify; DL3018 patcher; reconcile→closure bridge~~ DL3018 E2E **done**; remaining: default-branch auto-verify, reconcile→closure bridge |
+| **3** | staticcheck S1039 second E2E remediation test; parser + mechanical patcher; access-log API key redaction middleware |
+| **4** | Auth Slice 1 staging validation; Auth/RBAC Slice 2 or private beta ops (after two passing E2E remediation tests) |
