@@ -1,11 +1,15 @@
 # Open issues export — commstech/Bugbot
 
-Generated: 2026-06-06 22:17 UTC
+Generated: 2026-06-06 22:26 UTC
 
-Total open: 283
+Total open: 288
 
 | # | Title | Fingerprint | Labels |
 |---|-------|-------------|--------|
+| #337 | [MEDIUM] Potential reliability issue: ignored error return | bugbot-b918d8cd2ba1b | automated-review, repository-detective, repository-detective/open |
+| #336 | [MEDIUM] Potential reliability issue: ignored error return | bugbot-370385224afc1 | automated-review, repository-detective, repository-detective/open |
+| #335 | [MEDIUM] Potential reliability issue: ignored error return | bugbot-c87d40514a506 | automated-review, repository-detective, repository-detective/open |
+| #334 | [MEDIUM] Potential reliability issue: ignored error return | bugbot-b521b37a3eaf1 | automated-review, repository-detective, repository-detective/open |
 | #333 | Code Review Summary - 41 Issues Found |  | automated-review, repository-detective |
 | #332 | [MEDIUM] Potential file inclusion via variable | bugbot-3e397af3dbef8 | automated-review, repository-detective, repository-detective/open |
 | #331 | [MEDIUM] Expect directory permissions to be 0750 or less | bugbot-0949597907210 | automated-review, repository-detective, repository-detective/open |
@@ -101,6 +105,7 @@ Total open: 283
 | #238 | [MEDIUM] Potential reliability issue: ignored error return | bugbot-97fd762e5505b | automated-review, repository-detective, repository-detective/open |
 | #237 | [MEDIUM] Potential reliability issue: ignored error return | bugbot-6905bb78b070c | automated-review, repository-detective, repository-detective/open |
 | #236 | [MEDIUM] Potential reliability issue: ignored error return | bugbot-6d38bc4d3577c | automated-review, repository-detective, repository-detective/open |
+| #235 | [MEDIUM] Potential reliability issue: ignored error return | bugbot-280d0f0fe4596 | automated-review, repository-detective, repository-detective/open |
 | #235 | [MEDIUM] Potential reliability issue: ignored error return | bugbot-280d0f0fe4596 | automated-review, repository-detective, repository-detective/open |
 | #234 | [MEDIUM] Pin versions in apk add. Instead of `apk add <package>` use `apk add <p | bugbot-2b43e81d5d93f | automated-review, repository-detective, repository-detective/code-quality |
 | #233 | [MEDIUM] Pin versions in apk add. Instead of `apk add <package>` use `apk add <p | bugbot-e3584a4f91ff4 | automated-review, repository-detective, repository-detective/code-quality |

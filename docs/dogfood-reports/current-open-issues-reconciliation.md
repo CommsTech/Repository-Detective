@@ -1,19 +1,20 @@
 # Current open issues reconciliation — commstech/Bugbot
 
-Generated: 2026-06-06 22:17 UTC
+Generated: 2026-06-06 22:26 UTC
 
-Reconciled against scan **`2b335070099f8936`** (1104 finding instances).
+Reconciled against scan **`a8bb4cddd72ab80c`** (1101 finding instances).
 
 ## Summary
 
 | Metric | Count |
 |--------|------:|
-| Gitea open issues exported | 283 |
-| active_present_in_latest_scan | 48 |
-| duplicate_existing_fingerprint | 68 |
+| Gitea open issues exported | 288 |
+| active_present_in_latest_scan | 41 |
+| duplicate_existing_fingerprint | 69 |
+| missing_local_mapping_backfilled | 4 |
 | needs_human_review | 2 |
 | out_of_scope_for_current_batch | 29 |
-| resolved_absent_from_latest_scan | 136 |
+| resolved_absent_from_latest_scan | 143 |
 
 ## Detail
 
@@ -54,7 +55,7 @@ Reconciled against scan **`2b335070099f8936`** (1104 finding instances).
 | #80 | [MEDIUM] Potentially disconnected package/module — | `bugbot-8a46979f3a28183a` | graph (AI auditor) | medium | absent | resolved_absent_from_latest_scan | 80 | evidence_closure | pending_verify |
 | #81 | [MEDIUM] Potentially disconnected package/module — | `bugbot-8fec2eee8721a604` | graph (AI auditor) | medium | absent | resolved_absent_from_latest_scan | 81 | evidence_closure | pending_verify |
 | #82 | [MEDIUM] Possible suspicious code island — disconn | `bugbot-999ad0b7228342bd` | graph (AI auditor) | medium | absent | resolved_absent_from_latest_scan | 82 | evidence_closure | pending_verify |
-| #83 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-280d0f0fe459669f` | reliability (AI auditor) | medium | present | active_present_in_latest_scan | 83 | fix_in_code_batch | unverified |
+| #83 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-280d0f0fe459669f` | reliability (AI auditor) | medium | absent | resolved_absent_from_latest_scan | 83 | evidence_closure | pending_verify |
 | #84 | [MEDIUM] Potentially disconnected package/module — | `bugbot-762f59ef98441dd1` | graph (AI auditor) | medium | absent | resolved_absent_from_latest_scan | 84 | evidence_closure | pending_verify |
 | #85 | [MEDIUM] Potentially disconnected package/module — | `bugbot-fcc59bc710efe03b` | graph (AI auditor) | medium | absent | resolved_absent_from_latest_scan |  | evidence_closure | pending_verify |
 | #86 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-6d38bc4d3577c0d6` | reliability (AI auditor) | medium | absent | resolved_absent_from_latest_scan | 86 | evidence_closure | pending_verify |
@@ -91,7 +92,7 @@ Reconciled against scan **`2b335070099f8936`** (1104 finding instances).
 | #117 | [MEDIUM] Potentially disconnected package/module — | `bugbot-4a8b0d8577647376` | graph (AI auditor) | medium | absent | resolved_absent_from_latest_scan |  | evidence_closure | pending_verify |
 | #118 | [MEDIUM] Potentially disconnected package/module — | `bugbot-a8347903413814b6` | graph (AI auditor) | medium | absent | resolved_absent_from_latest_scan |  | evidence_closure | pending_verify |
 | #119 | [MEDIUM] Potentially disconnected package/module — | `bugbot-5a686df8c4112b0f` | graph (AI auditor) | medium | absent | resolved_absent_from_latest_scan |  | evidence_closure | pending_verify |
-| #120 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-14ab8e7406280f9e` | reliability (AI auditor) | medium | absent | resolved_absent_from_latest_scan | 120 | evidence_closure | pending_verify |
+| #120 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-14ab8e7406280f9e` | reliability (AI auditor) | medium | present | active_present_in_latest_scan | 120 | fix_in_code_batch | unverified |
 | #121 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-1a163256ff13cf90` | reliability (AI auditor) | medium | absent | resolved_absent_from_latest_scan | 121 | evidence_closure | pending_verify |
 | #122 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-0170bee0566f8e87` | reliability (AI auditor) | medium | absent | resolved_absent_from_latest_scan | 122 | evidence_closure | pending_verify |
 | #123 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-f4baf545376d3fe4` | reliability (AI auditor) | medium | absent | resolved_absent_from_latest_scan | 123 | evidence_closure | pending_verify |
@@ -149,7 +150,7 @@ Reconciled against scan **`2b335070099f8936`** (1104 finding instances).
 | #175 | [MEDIUM] Potentially disconnected package/module — | `bugbot-8a46979f3a28183a` | graph (AI auditor) | medium | absent | duplicate_existing_fingerprint | 80 | link_canonical | pending_verify |
 | #176 | [MEDIUM] Potentially disconnected package/module — | `bugbot-8fec2eee8721a604` | graph (AI auditor) | medium | absent | duplicate_existing_fingerprint | 81 | link_canonical | pending_verify |
 | #177 | [MEDIUM] Possible suspicious code island — disconn | `bugbot-999ad0b7228342bd` | graph (AI auditor) | medium | absent | duplicate_existing_fingerprint | 82 | link_canonical | pending_verify |
-| #178 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-280d0f0fe459669f` | reliability (AI auditor) | medium | present | duplicate_existing_fingerprint | 83 | link_canonical | unverified |
+| #178 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-280d0f0fe459669f` | reliability (AI auditor) | medium | absent | duplicate_existing_fingerprint | 83 | link_canonical | pending_verify |
 | #179 | [MEDIUM] Potentially disconnected package/module — | `bugbot-762f59ef98441dd1` | graph (AI auditor) | medium | absent | duplicate_existing_fingerprint | 84 | link_canonical | pending_verify |
 | #180 | [MEDIUM] Possible suspicious code island — disconn | `bugbot-854f7cad983b2393` | graph (AI auditor) | medium | absent | resolved_absent_from_latest_scan |  | evidence_closure | pending_verify |
 | #181 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-6d38bc4d3577c0d6` | reliability (AI auditor) | medium | absent | duplicate_existing_fingerprint | 86 | link_canonical | pending_verify |
@@ -158,7 +159,7 @@ Reconciled against scan **`2b335070099f8936`** (1104 finding instances).
 | #184 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-80bd0c20a2fa9d1f` | reliability (AI auditor) | medium | absent | duplicate_existing_fingerprint | 90 | link_canonical | pending_verify |
 | #185 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-11c7e16270f942db` | reliability (AI auditor) | medium | absent | duplicate_existing_fingerprint | 91 | link_canonical | pending_verify |
 | #186 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-567499d75f8db670` | reliability (AI auditor) | medium | absent | duplicate_existing_fingerprint | 92 | link_canonical | pending_verify |
-| #187 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-14ab8e7406280f9e` | reliability (AI auditor) | medium | absent | duplicate_existing_fingerprint | 120 | link_canonical | pending_verify |
+| #187 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-14ab8e7406280f9e` | reliability (AI auditor) | medium | present | duplicate_existing_fingerprint | 120 | link_canonical | unverified |
 | #188 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-1a163256ff13cf90` | reliability (AI auditor) | medium | absent | duplicate_existing_fingerprint | 121 | link_canonical | pending_verify |
 | #189 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-0170bee0566f8e87` | reliability (AI auditor) | medium | absent | duplicate_existing_fingerprint | 122 | link_canonical | pending_verify |
 | #190 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-f4baf545376d3fe4` | reliability (AI auditor) | medium | absent | duplicate_existing_fingerprint | 123 | link_canonical | pending_verify |
@@ -206,12 +207,13 @@ Reconciled against scan **`2b335070099f8936`** (1104 finding instances).
 | #232 | [MEDIUM] Pin versions in apk add. Instead of `apk  | `bugbot-fd4a569728dcf7bc` | hadolint (AI auditor) | medium | present | active_present_in_latest_scan |  | fix_in_code_batch | unverified |
 | #233 | [MEDIUM] Pin versions in apk add. Instead of `apk  | `bugbot-e3584a4f91ff4415` | hadolint (AI auditor) | medium | absent | resolved_absent_from_latest_scan |  | evidence_closure | pending_verify |
 | #234 | [MEDIUM] Pin versions in apk add. Instead of `apk  | `bugbot-2b43e81d5d93f4ce` | hadolint (AI auditor) | medium | absent | resolved_absent_from_latest_scan |  | evidence_closure | pending_verify |
-| #235 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-280d0f0fe459669f` | reliability (AI auditor) | medium | present | duplicate_existing_fingerprint | 83 | link_canonical | unverified |
+| #235 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-280d0f0fe459669f` | reliability (AI auditor) | medium | absent | duplicate_existing_fingerprint | 83 | link_canonical | pending_verify |
+| #235 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-280d0f0fe459669f` | reliability (AI auditor) | medium | absent | duplicate_existing_fingerprint | 83 | link_canonical | pending_verify |
 | #236 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-6d38bc4d3577c0d6` | reliability (AI auditor) | medium | absent | duplicate_existing_fingerprint | 86 | link_canonical | pending_verify |
 | #237 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-6905bb78b070c1c5` | reliability (AI auditor) | medium | absent | resolved_absent_from_latest_scan |  | evidence_closure | pending_verify |
 | #238 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-97fd762e5505baae` | reliability (AI auditor) | medium | absent | resolved_absent_from_latest_scan |  | evidence_closure | pending_verify |
 | #239 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-52c4e356ddf75410` | reliability (AI auditor) | medium | absent | resolved_absent_from_latest_scan |  | evidence_closure | pending_verify |
-| #240 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-14ab8e7406280f9e` | reliability (AI auditor) | medium | absent | duplicate_existing_fingerprint | 120 | link_canonical | pending_verify |
+| #240 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-14ab8e7406280f9e` | reliability (AI auditor) | medium | present | duplicate_existing_fingerprint | 120 | link_canonical | unverified |
 | #241 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-1a163256ff13cf90` | reliability (AI auditor) | medium | absent | duplicate_existing_fingerprint | 121 | link_canonical | unverified |
 | #242 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-0170bee0566f8e87` | reliability (AI auditor) | medium | absent | duplicate_existing_fingerprint | 122 | link_canonical | pending_verify |
 | #243 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-f4baf545376d3fe4` | reliability (AI auditor) | medium | absent | duplicate_existing_fingerprint | 123 | link_canonical | pending_verify |
@@ -234,21 +236,21 @@ Reconciled against scan **`2b335070099f8936`** (1104 finding instances).
 | #260 | [MEDIUM] Pin versions in apk add. Instead of `apk  | `bugbot-0795da088fd0a316` | hadolint (AI auditor) | medium | present | active_present_in_latest_scan |  | fix_in_code_batch | unverified |
 | #261 | [MEDIUM] Pin versions in apk add. Instead of `apk  | `bugbot-cb25db2e1eddfde9` | hadolint (AI auditor) | medium | present | active_present_in_latest_scan |  | fix_in_code_batch | unverified |
 | #262 | [MEDIUM] Pin versions in apk add. Instead of `apk  | `bugbot-ce523a08645d494c` | hadolint (AI auditor) | medium | present | active_present_in_latest_scan |  | fix_in_code_batch | unverified |
-| #263 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-d056a692fd1bac9d` | reliability (AI auditor) | medium | present | active_present_in_latest_scan |  | fix_in_code_batch | unverified |
-| #264 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-2974aefb37ddc89e` | reliability (AI auditor) | medium | present | active_present_in_latest_scan |  | fix_in_code_batch | unverified |
+| #263 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-d056a692fd1bac9d` | reliability (AI auditor) | medium | absent | resolved_absent_from_latest_scan |  | evidence_closure | pending_verify |
+| #264 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-2974aefb37ddc89e` | reliability (AI auditor) | medium | absent | resolved_absent_from_latest_scan |  | evidence_closure | pending_verify |
 | #265 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-387c218566982f4c` | reliability (AI auditor) | medium | absent | resolved_absent_from_latest_scan |  | evidence_closure | pending_verify |
 | #266 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-df2dac8f1e732f73` | reliability (AI auditor) | medium | absent | resolved_absent_from_latest_scan |  | evidence_closure | pending_verify |
-| #267 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-e1686003172885fb` | reliability (AI auditor) | medium | present | active_present_in_latest_scan |  | fix_in_code_batch | unverified |
+| #267 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-e1686003172885fb` | reliability (AI auditor) | medium | absent | resolved_absent_from_latest_scan |  | evidence_closure | pending_verify |
 | #268 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-f2e10a38d86cef25` | reliability (AI auditor) | medium | absent | resolved_absent_from_latest_scan |  | evidence_closure | pending_verify |
 | #269 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-c5c638f6ce1d42b8` | reliability (AI auditor) | medium | absent | resolved_absent_from_latest_scan |  | evidence_closure | pending_verify |
 | #270 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-e316d4a117e143e7` | reliability (AI auditor) | medium | absent | resolved_absent_from_latest_scan |  | evidence_closure | pending_verify |
 | #271 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-2ae4f55b097c1089` | reliability (AI auditor) | medium | absent | resolved_absent_from_latest_scan |  | evidence_closure | pending_verify |
 | #272 | Code Review Summary - 20 Issues Found | `` |  |  | unknown | out_of_scope_for_current_batch |  | ignore_summary | unverified |
 | #275 | [MEDIUM] Base64 High Entropy String | `bugbot-a7fb8b9ed08e7f8f` | checkov | medium | present | duplicate_existing_fingerprint | 205 | link_canonical | unverified |
-| #276 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-174988cbdb2011b7` | reliability (AI auditor) | medium | present | active_present_in_latest_scan |  | fix_in_code_batch | unverified |
+| #276 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-174988cbdb2011b7` | reliability (AI auditor) | medium | absent | resolved_absent_from_latest_scan |  | evidence_closure | pending_verify |
 | #277 | Code Review Summary - 14 Issues Found | `` |  |  | unknown | out_of_scope_for_current_batch |  | ignore_summary | unverified |
-| #278 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-1d71468a43c21301` | reliability (AI auditor) | medium | present | active_present_in_latest_scan |  | fix_in_code_batch | unverified |
-| #279 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-b00bbe25b3689ff8` | reliability (AI auditor) | medium | present | active_present_in_latest_scan |  | fix_in_code_batch | unverified |
+| #278 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-1d71468a43c21301` | reliability (AI auditor) | medium | absent | resolved_absent_from_latest_scan |  | evidence_closure | pending_verify |
+| #279 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-b00bbe25b3689ff8` | reliability (AI auditor) | medium | absent | resolved_absent_from_latest_scan |  | evidence_closure | pending_verify |
 | #280 | [MEDIUM] Possible internal infrastructure referenc | `bugbot-794b38b4d1a0a43a` | static | medium | present | active_present_in_latest_scan |  | fix_in_code_batch | unverified |
 | #281 | Code Review Summary - 15 Issues Found | `` |  |  | unknown | out_of_scope_for_current_batch |  | ignore_summary | unverified |
 | #282 | Code Review Summary - 15 Issues Found | `` |  |  | unknown | out_of_scope_for_current_batch |  | ignore_summary | unverified |
@@ -257,10 +259,10 @@ Reconciled against scan **`2b335070099f8936`** (1104 finding instances).
 | #285 | Code Review Summary - 14 Issues Found | `` |  |  | unknown | out_of_scope_for_current_batch |  | ignore_summary | unverified |
 | #286 | Code Review Summary - 14 Issues Found | `` |  |  | unknown | out_of_scope_for_current_batch |  | ignore_summary | unverified |
 | #287 | Code Review Summary - 15 Issues Found | `` |  |  | unknown | out_of_scope_for_current_batch |  | ignore_summary | unverified |
-| #289 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-280d0f0fe459669f` | reliability (AI auditor) | medium | present | duplicate_existing_fingerprint | 83 | link_canonical | unverified |
+| #289 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-280d0f0fe459669f` | reliability (AI auditor) | medium | absent | duplicate_existing_fingerprint | 83 | link_canonical | pending_verify |
 | #290 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-6d38bc4d3577c0d6` | reliability (AI auditor) | medium | absent | duplicate_existing_fingerprint | 86 | link_canonical | pending_verify |
 | #291 | Code Review Summary - 15 Issues Found | `` |  |  | unknown | out_of_scope_for_current_batch |  | ignore_summary | unverified |
-| #292 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-65cd4062677c9321` | reliability (AI auditor) | medium | present | active_present_in_latest_scan |  | fix_in_code_batch | unverified |
+| #292 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-65cd4062677c9321` | reliability (AI auditor) | medium | absent | resolved_absent_from_latest_scan |  | evidence_closure | pending_verify |
 | #293 | Code Review Summary - 11 Issues Found | `` |  |  | unknown | out_of_scope_for_current_batch |  | ignore_summary | unverified |
 | #294 | Code Review Summary - 11 Issues Found | `` |  |  | unknown | out_of_scope_for_current_batch |  | ignore_summary | unverified |
 | #295 | [LOW] Large commented-out code block | `bugbot-bc6f72145bde322f` | tech_debt (AI auditor) | low | absent | resolved_absent_from_latest_scan |  | evidence_closure | pending_verify |
@@ -302,3 +304,7 @@ Reconciled against scan **`2b335070099f8936`** (1104 finding instances).
 | #331 | [MEDIUM] Expect directory permissions to be 0750 o | `bugbot-094959790721052d` | gosec | medium | present | active_present_in_latest_scan |  | fix_in_code_batch | unverified |
 | #332 | [MEDIUM] Potential file inclusion via variable | `bugbot-3e397af3dbef8964` | gosec | medium | present | active_present_in_latest_scan |  | fix_in_code_batch | unverified |
 | #333 | Code Review Summary - 41 Issues Found | `` |  |  | unknown | out_of_scope_for_current_batch |  | ignore_summary | unverified |
+| #334 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-b521b37a3eaf1747` | reliability (AI auditor) | medium | unknown | missing_local_mapping_backfilled |  | backfill_mapping | unverified |
+| #335 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-c87d40514a506c05` | reliability (AI auditor) | medium | unknown | missing_local_mapping_backfilled |  | backfill_mapping | unverified |
+| #336 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-370385224afc13ec` | reliability (AI auditor) | medium | unknown | missing_local_mapping_backfilled |  | backfill_mapping | unverified |
+| #337 | [MEDIUM] Potential reliability issue: ignored erro | `bugbot-b918d8cd2ba1b13d` | reliability (AI auditor) | medium | unknown | missing_local_mapping_backfilled |  | backfill_mapping | unverified |

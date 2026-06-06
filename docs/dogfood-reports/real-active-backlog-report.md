@@ -1,21 +1,21 @@
 # Real active backlog — commstech/Bugbot
 
-Generated: 2026-06-06 22:17 UTC
+Generated: 2026-06-06 22:26 UTC
 
-Scan: **`2b335070099f8936`**
+Scan: **`a8bb4cddd72ab80c`**
 
 ## Summary
 
 | Metric | Count |
 |--------|------:|
-| Gitea open (exported) | 283 |
-| active_present_in_latest_scan | 48 |
-| resolved_absent_from_latest_scan | 136 |
+| Gitea open (exported) | 288 |
+| active_present_in_latest_scan | 41 |
+| resolved_absent_from_latest_scan | 143 |
 | resolved_verified_open_by_policy | 0 |
-| duplicate_existing_fingerprint | 68 |
+| duplicate_existing_fingerprint | 69 |
 | out_of_scope_for_current_batch | 29 |
 | needs_human_review | 2 |
-| HEALTH-IGNORED-ERROR (active) | 9 |
+| HEALTH-IGNORED-ERROR (active) | 2 |
 
 ## Why open count grows
 
@@ -34,7 +34,7 @@ Scan: **`2b335070099f8936`**
 |--:|------|--------|-------|
 | #53 | REL-INTERNAL-INFRA-REF | static | [MEDIUM] Possible internal infrastructure reference |
 | #66 | REL-INTERNAL-INFRA-REF | static | [MEDIUM] Possible internal infrastructure reference |
-| #83 | HEALTH-IGNORED-ERROR | reliability (AI auditor) | [MEDIUM] Potential reliability issue: ignored error ret |
+| #120 | HEALTH-IGNORED-ERROR | reliability (AI auditor) | [MEDIUM] Potential reliability issue: ignored error ret |
 | #143 | REL-INTERNAL-INFRA-REF | static | [MEDIUM] Possible internal infrastructure reference |
 | #144 | REL-INTERNAL-INFRA-REF | static | [MEDIUM] Possible internal infrastructure reference |
 | #145 | REL-INTERNAL-INFRA-REF | static | [MEDIUM] Possible internal infrastructure reference |
@@ -45,14 +45,7 @@ Scan: **`2b335070099f8936`**
 | #260 | DL3018 | hadolint (AI auditor) | [MEDIUM] Pin versions in apk add. Instead of `apk add < |
 | #261 | DL3018 | hadolint (AI auditor) | [MEDIUM] Pin versions in apk add. Instead of `apk add < |
 | #262 | DL3018 | hadolint (AI auditor) | [MEDIUM] Pin versions in apk add. Instead of `apk add < |
-| #263 | HEALTH-IGNORED-ERROR | reliability (AI auditor) | [MEDIUM] Potential reliability issue: ignored error ret |
-| #264 | HEALTH-IGNORED-ERROR | reliability (AI auditor) | [MEDIUM] Potential reliability issue: ignored error ret |
-| #267 | HEALTH-IGNORED-ERROR | reliability (AI auditor) | [MEDIUM] Potential reliability issue: ignored error ret |
-| #276 | HEALTH-IGNORED-ERROR | reliability (AI auditor) | [MEDIUM] Potential reliability issue: ignored error ret |
-| #278 | HEALTH-IGNORED-ERROR | reliability (AI auditor) | [MEDIUM] Potential reliability issue: ignored error ret |
-| #279 | HEALTH-IGNORED-ERROR | reliability (AI auditor) | [MEDIUM] Potential reliability issue: ignored error ret |
 | #280 | REL-INTERNAL-INFRA-REF | static | [MEDIUM] Possible internal infrastructure reference |
-| #292 | HEALTH-IGNORED-ERROR | reliability (AI auditor) | [MEDIUM] Potential reliability issue: ignored error ret |
 | #296 | REL-INTERNAL-INFRA-REF | static | [MEDIUM] Possible internal infrastructure reference |
 | #301 | G304 | gosec | [MEDIUM] Potential file inclusion via variable |
 | #302 | G304 | gosec | [MEDIUM] Potential file inclusion via variable |
@@ -62,3 +55,10 @@ Scan: **`2b335070099f8936`**
 | #306 | G306 | gosec | [MEDIUM] Expect WriteFile permissions to be 0600 or les |
 | #307 | G304 | gosec | [MEDIUM] Potential file inclusion via variable |
 | #308 | G304 | gosec | [MEDIUM] Potential file inclusion via variable |
+| #309 | G306 | gosec | [MEDIUM] Expect WriteFile permissions to be 0600 or les |
+| #310 | G304 | gosec | [MEDIUM] Potential file inclusion via variable |
+| #311 | G304 | gosec | [MEDIUM] Potential file inclusion via variable |
+| #312 | G304 | gosec | [MEDIUM] Potential file inclusion via variable |
+| #313 | G304 | gosec | [MEDIUM] Potential file inclusion via variable |
+| #318 | G304 | gosec | [MEDIUM] Potential file inclusion via variable |
+| #319 | G301 | gosec | [MEDIUM] Expect directory permissions to be 0750 or les |
