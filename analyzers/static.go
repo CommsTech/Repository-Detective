@@ -230,6 +230,10 @@ func isFalsePositiveSQLConcat(path, line string) bool {
 	if strings.Contains(trimmed, "sqlmock") || strings.Contains(trimmed, "SELECT 1") {
 		return true
 	}
+	// Field access such as db.Query == nil is not SQL string building.
+	if strings.Contains(trimmed, ".Query") && strings.Contains(trimmed, "==") {
+		return true
+	}
 	return false
 }
 

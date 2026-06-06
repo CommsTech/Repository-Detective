@@ -195,7 +195,9 @@ func (e *Executor) Run(ctx context.Context, input AttemptInput) (PatchAttempt, e
 
 	if e.IssueNumber > 0 {
 		comment := RenderIssuePRComment(branch, pr.HTMLURL, attempt.ValidationSummary)
-		_ = e.Gitea.CreateIssueComment(ctx, owner, name, e.IssueNumber, comment)
+		if err := e.Gitea.CreateIssueComment(ctx, owner, name, e.IssueNumber, comment); err != nil {
+			attempt.ValidationSummary = strings.TrimSpace(attempt.ValidationSummary + "; issue comment failed: " + err.Error())
+		}
 	}
 
 	return attempt, nil

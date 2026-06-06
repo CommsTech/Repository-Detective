@@ -29,7 +29,7 @@ func ExtractZipArchive(zipPath, destRoot string, maxFiles int, maxTotalBytes int
 	if err != nil {
 		return 0, 0, false, err
 	}
-	if err := os.MkdirAll(absRoot, 0o755); err != nil {
+	if err := os.MkdirAll(absRoot, 0o750); err != nil {
 		return 0, 0, false, err
 	}
 
@@ -69,13 +69,13 @@ func ExtractZipArchive(zipPath, destRoot string, maxFiles int, maxTotalBytes int
 
 		target := filepath.Join(absRoot, filepath.FromSlash(safeRel))
 		if file.FileInfo().IsDir() || strings.HasSuffix(file.Name, "/") {
-			if err := os.MkdirAll(target, 0o755); err != nil {
+			if err := os.MkdirAll(target, 0o750); err != nil {
 				return fileCount, totalBytes, truncated, err
 			}
 			continue
 		}
 
-		if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(target), 0o750); err != nil {
 			return fileCount, totalBytes, truncated, err
 		}
 

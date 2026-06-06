@@ -127,6 +127,18 @@ func TestRunStaticAnalysisSkipsStoreINClauseSprintf(t *testing.T) {
 	}
 }
 
+func TestRunStaticAnalysisSkipsDBQueryNilCheck(t *testing.T) {
+	findings := RunStaticAnalysis([]FileContent{{
+		Path:    "issuelink/backfill.go",
+		Content: "if db == nil || db.Query == nil || repositoryID <= 0 {",
+	}}, true, false)
+	for _, f := range findings {
+		if f.ID == "SEC-SQL-CONCAT" {
+			t.Fatalf("expected db.Query nil check to be skipped, got SEC-SQL-CONCAT")
+		}
+	}
+}
+
 func TestStaticRuleConfidenceOrdering(t *testing.T) {
 	eval := staticRuleConfidence(staticRule{ID: "SEC-EVAL"})
 	secret := staticRuleConfidence(staticRule{ID: "SEC-HARDCODED-SECRET"})

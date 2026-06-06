@@ -70,7 +70,9 @@ func (c *WebhookChannel) Send(ctx context.Context, msg Message) error {
 	headers := map[string]string{}
 	if c.secret != "" {
 		mac := hmac.New(sha256.New, []byte(c.secret))
-		_, _ = mac.Write(body)
+		if _, err := mac.Write(body); err != nil {
+			return fmt.Errorf("sign webhook body: %w", err)
+		}
 		headers[signatureHeader] = hex.EncodeToString(mac.Sum(nil))
 	}
 	code, err := c.poster.Post(ctx, c.url, "application/json", body, headers)
@@ -86,6 +88,6 @@ func (c *WebhookChannel) Send(ctx context.Context, msg Message) error {
 // SignWebhookBody computes HMAC-SHA256 hex for tests and verification docs.
 func SignWebhookBody(secret string, body []byte) string {
 	mac := hmac.New(sha256.New, []byte(secret))
-	_, _ = mac.Write(body)
+	_, _ = mac.Write(body) // hash.Hash.Write never fails; signature helper for tests/docs
 	return hex.EncodeToString(mac.Sum(nil))
 }

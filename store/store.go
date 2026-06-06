@@ -80,7 +80,7 @@ func Open(cfg Config) (QueryStore, error) {
 		if path == "" {
 			path = "./data/bugbot.db"
 		}
-		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 			return nil, fmt.Errorf("create database directory: %w", err)
 		}
 		return OpenSQLite(path)

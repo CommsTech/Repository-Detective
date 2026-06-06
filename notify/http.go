@@ -33,7 +33,9 @@ func (p *defaultHTTPPoster) Post(ctx context.Context, url string, contentType st
 		return 0, err
 	}
 	defer resp.Body.Close()
-	_, _ = io.Copy(io.Discard, resp.Body)
+	if _, err := io.Copy(io.Discard, resp.Body); err != nil {
+		return resp.StatusCode, fmt.Errorf("drain response body: %w", err)
+	}
 	return resp.StatusCode, nil
 }
 

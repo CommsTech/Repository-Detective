@@ -35,7 +35,7 @@ func RunStaticChecks(workspace string, repoRef string, maxFindings int) []store.
 		maxFindings = 200
 	}
 	var findings []store.AuditFinding
-	_ = filepath.WalkDir(workspace, func(path string, d os.DirEntry, err error) error {
+	if err := filepath.WalkDir(workspace, func(path string, d os.DirEntry, err error) error {
 		if err != nil || d.IsDir() {
 			return nil
 		}
@@ -67,7 +67,9 @@ func RunStaticChecks(workspace string, repoRef string, maxFindings int) []store.
 			return filepath.SkipAll
 		}
 		return nil
-	})
+	}); err != nil {
+		return findings
+	}
 
 	findings = append(findings, checkMissingLockfiles(workspace, repoRef)...)
 	if len(findings) > maxFindings {
@@ -190,8 +192,11 @@ func checkMissingLockfiles(workspace, repoRef string) []store.AuditFinding {
 
 func findFile(root, name string) string {
 	var found string
-	_ = filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
-		if err != nil || !d.Type().IsRegular() {
+	if err := filepath.WalkDir(root, func(path string, d os.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if d.IsDir() || !d.Type().IsRegular() {
 			return nil
 		}
 		if strings.EqualFold(filepath.Base(path), name) {
@@ -202,7 +207,9 @@ func findFile(root, name string) string {
 			return filepath.SkipAll
 		}
 		return nil
-	})
+	}); err != nil {
+		return found
+	}
 	return found
 }
 

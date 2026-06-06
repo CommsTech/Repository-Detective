@@ -84,12 +84,14 @@ func BackfillExternalIssueMappings(ctx context.Context, db *Store, forge issues.
 			continue
 		}
 
-		_ = db.Query.AddLifecycleEvent(ctx, store.LifecycleEvent{
+		if err := db.Query.AddLifecycleEvent(ctx, store.LifecycleEvent{
 			FindingID: findingIDPtr(finding.ID), ScanID: scanID,
 			EventType: store.LifecycleEventExternalIssueMappingBackfilled,
 			Message:   fmt.Sprintf("Backfilled mapping to %s issue #%d", forgeType, issue.Number),
 			CreatedAt: now,
-		})
+		}); err != nil {
+			logger.Warnf("backfill lifecycle event for #%d: %v", issue.Number, err)
+		}
 		result.Backfilled++
 		logger.Infof("Backfilled external issue mapping: fingerprint=%s issue=#%d", fp, issue.Number)
 	}
@@ -115,12 +117,14 @@ func LinkForgeIssue(ctx context.Context, db *Store, repositoryID int64, forgeTyp
 	}); err != nil {
 		return
 	}
-	_ = db.Query.AddLifecycleEvent(ctx, store.LifecycleEvent{
+	if err := db.Query.AddLifecycleEvent(ctx, store.LifecycleEvent{
 		FindingID: findingIDPtr(finding.ID), ScanID: scanID,
 		EventType: store.LifecycleEventExternalIssueMappingBackfilled,
 		Message:   fmt.Sprintf("Linked forge issue #%d from live fingerprint search", issueNumber),
 		CreatedAt: time.Now().UTC(),
-	})
+	}); err != nil {
+		return
+	}
 }
 
 // MappedIssue returns a local mapping for a fingerprint if present.
