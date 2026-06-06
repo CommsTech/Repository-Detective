@@ -185,6 +185,7 @@ func (h *Handler) RegisterPublicRoutes(g *gin.RouterGroup) {
 	if sub, err := fs.Sub(staticFS, "static"); err == nil {
 		g.StaticFS("/static", http.FS(sub))
 	}
+	h.RegisterUnlockRoutes(g)
 }
 
 // RegisterRoutes mounts protected UI routes (caller applies auth middleware).
@@ -266,11 +267,32 @@ func clientAPIKeyFromRequest(c *gin.Context) string {
 	return c.Query("api_key")
 }
 
+// displayAPIKey returns the key for template embedding. Cookie-based sessions omit the key from HTML.
+func displayAPIKey(c *gin.Context) string {
+	key := clientAPIKeyFromRequest(c)
+	cookieKey := apiKeyFromCookie(c)
+	if cookieKey != "" && key == cookieKey {
+		return ""
+	}
+	return key
+}
+
+func csrfClientKey(c *gin.Context) string {
+	key := clientAPIKeyFromRequest(c)
+	if key != "" {
+		return key
+	}
+	if cookieKey := apiKeyFromCookie(c); cookieKey != "" {
+		return "cookie"
+	}
+	return ""
+}
+
 func (h *Handler) page(c *gin.Context, title string, data map[string]any) pageData {
 	if data == nil {
 		data = map[string]any{}
 	}
-	apiKey := clientAPIKeyFromRequest(c)
+	apiKey := displayAPIKey(c)
 	var csrf string
 	var currentUser *store.User
 	if h.auth.IsLocal() {
@@ -286,7 +308,7 @@ func (h *Handler) page(c *gin.Context, title string, data map[string]any) pageDa
 			}
 		}
 	} else if h.auth.CSRFEnabled || h.apiKeySecret != "" {
-		csrf = security.CSRFToken(h.apiKeySecret, apiKey)
+		csrf = security.CSRFToken(h.apiKeySecret, csrfClientKey(c))
 	}
 	return pageData{
 		Title:         title,
@@ -330,7 +352,7 @@ func (h *Handler) requireCSRF(c *gin.Context) bool {
 		return true
 	}
 	token := c.PostForm("csrf_token")
-	if !security.ValidCSRFToken(h.apiKeySecret, h.clientAPIKey(c), token) {
+	if !security.ValidCSRFToken(h.apiKeySecret, csrfClientKey(c), token) {
 		c.String(http.StatusForbidden, "invalid or missing CSRF token")
 		return false
 	}
