@@ -77,7 +77,11 @@ func RunStaticChecks(workspace string, repoRef string, maxFindings int) []store.
 }
 
 func checkPackageJSON(workspace, rel, repoRef string) []store.AuditFinding {
-	data, err := os.ReadFile(filepath.Join(workspace, rel))
+	safe, err := scanners.ValidateWorkspacePath(workspace, rel)
+	if err != nil {
+		return nil
+	}
+	data, err := os.ReadFile(filepath.Join(workspace, filepath.FromSlash(safe)))
 	if err != nil {
 		return nil
 	}
