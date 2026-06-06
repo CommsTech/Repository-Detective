@@ -113,7 +113,7 @@ func applyHadolintApkPinPatch(plan remediation.Plan, workspaceDir string, maxFil
 
 func pinApkAddPackages(line string) (string, bool) {
 	loc := apkAddLinePattern.FindStringSubmatchIndex(line)
-	if loc == nil || len(loc) < 6 {
+	if len(loc) < 6 {
 		return line, false
 	}
 	pkgStart, pkgEnd := loc[4], loc[5]
