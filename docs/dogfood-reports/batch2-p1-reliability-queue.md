@@ -51,6 +51,7 @@ Rescan → verify absent fingerprints → `resolved-verified` label only; keep i
 
 ## Status
 
-**Batch 2 started:** NO  
-**Batch 2 completed:** NO  
-**Batch 2 allowed:** YES
+**Batch 2 started:** YES (2026-06-06)  
+**Batch 2 completed:** YES — see `batch2-p1-reliability-report.md`  
+**Batch 2 allowed:** YES  
+**Post-rescan:** `84a96d5ad8458965` — store `HEALTH-IGNORED-ERROR` **0**
