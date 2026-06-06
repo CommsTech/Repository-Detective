@@ -1093,6 +1093,7 @@ func initializeComponents() error {
 		issueConfig.GitHubBaseURL = "https://github.com"
 	}
 	issueManager = issues.NewManager(giteaClient, githubIssueClient, issueConfig, logger, semanticStore)
+	initIssueLinkBridge()
 	initReconcileEngine()
 	if operatorUI != nil && reconcileEngine != nil {
 		operatorUI.SetIssueReconciler(config.IssueReconciliationEnabled, uiReconcileBridge{})
@@ -1616,17 +1617,48 @@ func createIssuesFromResult(ctx context.Context, forgeType, owner, repo string, 
 	}
 
 	var processed []issues.ProcessedIssueRecord
+	var findingIDs map[string]int64
 
+	// Phase 1: persist findings + instances before any forge API calls.
+	if scanRecorder != nil && scanRecorder.Enabled() && repositoryID > 0 && result.ScanID != "" {
+		var err error
+		findingIDs, err = scanRecorder.RecordFindings(postCtx, repositoryID, result.ScanID, result.Issues)
+		if err != nil {
+			logger.Errorf("Failed to persist findings for scan %s: %v — skipping issue filing", result.ScanID, err)
+			scanRecorder.MarkPersistenceFailed(postCtx, result.ScanID, len(result.Issues), 0, err)
+			return
+		}
+		if !scanRecorder.IsPersistenceComplete(postCtx, result.ScanID) {
+			logger.Warnf("Scan %s persistence incomplete — skipping issue filing", result.ScanID)
+			return
+		}
+	}
+
+	// Phase 2: backfill missing mappings, then file forge issues only after persistence is complete.
 	forgeType = normalizeForgeType(forgeType)
 	forgeReady := (forgeType == store.ForgeTypeGitHub && githubClient != nil) ||
 		(forgeType == store.ForgeTypeGitea && giteaClient != nil)
 	if store.ShouldCreateForgeIssues(effective) && forgeReady && issueManager != nil {
+		backfillReq := &issues.IssueCreationRequest{
+			ForgeType:    forgeType,
+			Owner:        owner,
+			Repository:   repo,
+			RepositoryID: repositoryID,
+			ScanID:       result.ScanID,
+		}
+		if backfill, err := issueManager.BackfillMissingMappings(postCtx, backfillReq); err != nil {
+			logger.Warnf("External issue mapping backfill failed: %v", err)
+		} else if backfill.Backfilled > 0 {
+			logger.Infof("Backfilled %d external issue mappings (examined %d)", backfill.Backfilled, backfill.Examined)
+		}
+
 		forgeIssues := filterIssuesForForge(actionIssues, effective, config.Reporting)
 		if len(forgeIssues) > 0 {
 			issueReq := &issues.IssueCreationRequest{
-				ForgeType:  forgeType,
-				Owner:      owner,
-				Repository: repo,
+				ForgeType:    forgeType,
+				Owner:        owner,
+				Repository:   repo,
+				RepositoryID: repositoryID,
 				AnalysisResult: &ai.CodeAnalysisResult{
 					Issues:                forgeIssues,
 					OverallScore:          result.OverallScore,
@@ -1654,14 +1686,19 @@ func createIssuesFromResult(ctx context.Context, forgeType, owner, repo string, 
 		}
 	} else {
 		logger.Infof("Forge issue creation skipped (policy_level=%s issue_policy=%s)", effective.PolicyLevel, effective.IssuePolicy)
+		if scanRecorder != nil && scanRecorder.Enabled() && result.ScanID != "" {
+			scanRecorder.MarkIssueSyncSkipped(postCtx, result.ScanID)
+		}
 	}
 
+	// Phase 3: link external issues in DB after forge filing.
 	if scanRecorder != nil && scanRecorder.Enabled() && repositoryID > 0 && result.ScanID != "" {
-		if err := scanRecorder.RecordIssues(postCtx, repositoryID, result.ScanID, forgeType, result.Issues, processed); err != nil {
-			logger.Warnf("Failed to persist findings: %v", err)
-		} else {
-			maybeGenerateRemediationPlans(postCtx, repositoryID, actionIssues, processed)
+		if len(processed) > 0 {
+			if err := scanRecorder.RecordExternalIssues(postCtx, result.ScanID, forgeType, processed, findingIDs); err != nil {
+				logger.Warnf("Failed to link external issues: %v", err)
+			}
 		}
+		maybeGenerateRemediationPlans(postCtx, repositoryID, actionIssues, processed)
 	}
 	maybeProcessEvidenceClosure(postCtx, owner, repo, repositoryID, result)
 }

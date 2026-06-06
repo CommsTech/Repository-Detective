@@ -17,7 +17,8 @@ type ForgeIssue struct {
 
 // IssueForge creates and updates issues on a code hosting platform.
 type IssueForge interface {
-	ListOpenLabeledIssues(ctx context.Context, owner, repo string, labels []string, limit int) ([]ForgeIssue, error)
+	ListOpenLabeledIssues(ctx context.Context, owner, repo string, labels []string, limit, page int) ([]ForgeIssue, error)
+	ListOpenIssues(ctx context.Context, owner, repo string, limit, page int) ([]ForgeIssue, error)
 	CreateIssue(ctx context.Context, owner, repo, title, body string, labelNames []string) (*ForgeIssue, error)
 	CreateIssueComment(ctx context.Context, owner, repo string, issueNumber int, body string) error
 	AddIssueLabels(ctx context.Context, owner, repo string, issueNumber int, labelNames []string) error
@@ -28,14 +29,21 @@ type GiteaForge struct {
 	Client *gitea.Client
 }
 
-func (f *GiteaForge) ListOpenLabeledIssues(ctx context.Context, owner, repo string, labels []string, limit int) ([]ForgeIssue, error) {
+func (f *GiteaForge) ListOpenLabeledIssues(ctx context.Context, owner, repo string, labels []string, limit, page int) ([]ForgeIssue, error) {
 	if f == nil || f.Client == nil {
 		return nil, nil
+	}
+	if limit <= 0 {
+		limit = 50
+	}
+	if page <= 0 {
+		page = 1
 	}
 	issues, err := f.Client.ListIssues(ctx, owner, repo, gitea.ListIssuesOptions{
 		State:  "open",
 		Labels: labels,
 		Limit:  limit,
+		Page:   page,
 	})
 	if err != nil {
 		return nil, err
@@ -49,6 +57,10 @@ func (f *GiteaForge) ListOpenLabeledIssues(ctx context.Context, owner, repo stri
 		})
 	}
 	return out, nil
+}
+
+func (f *GiteaForge) ListOpenIssues(ctx context.Context, owner, repo string, limit, page int) ([]ForgeIssue, error) {
+	return f.ListOpenLabeledIssues(ctx, owner, repo, nil, limit, page)
 }
 
 func (f *GiteaForge) CreateIssue(ctx context.Context, owner, repo, title, body string, labelNames []string) (*ForgeIssue, error) {
@@ -95,14 +107,21 @@ type GitHubForge struct {
 	Client *github.Client
 }
 
-func (f *GitHubForge) ListOpenLabeledIssues(ctx context.Context, owner, repo string, labels []string, limit int) ([]ForgeIssue, error) {
+func (f *GitHubForge) ListOpenLabeledIssues(ctx context.Context, owner, repo string, labels []string, limit, page int) ([]ForgeIssue, error) {
 	if f == nil || f.Client == nil {
 		return nil, nil
+	}
+	if limit <= 0 {
+		limit = 50
+	}
+	if page <= 0 {
+		page = 1
 	}
 	issues, err := f.Client.ListIssues(ctx, owner, repo, github.ListIssuesOptions{
 		State:  "open",
 		Labels: labels,
 		Limit:  limit,
+		Page:   page,
 	})
 	if err != nil {
 		return nil, err
@@ -116,6 +135,10 @@ func (f *GitHubForge) ListOpenLabeledIssues(ctx context.Context, owner, repo str
 		})
 	}
 	return out, nil
+}
+
+func (f *GitHubForge) ListOpenIssues(ctx context.Context, owner, repo string, limit, page int) ([]ForgeIssue, error) {
+	return f.ListOpenLabeledIssues(ctx, owner, repo, nil, limit, page)
 }
 
 func (f *GitHubForge) CreateIssue(ctx context.Context, owner, repo, title, body string, labelNames []string) (*ForgeIssue, error) {

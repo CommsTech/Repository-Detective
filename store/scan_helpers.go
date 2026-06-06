@@ -2,39 +2,12 @@ package store
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 )
 
-// GetLatestCompletedScanForRepository returns the most recent completed scan.
+// GetLatestCompletedScanForRepository returns the most recent fully persisted scan.
 func (s *SQLiteStore) GetLatestCompletedScanForRepository(ctx context.Context, repositoryID int64) (Scan, error) {
-	row := s.db.QueryRowContext(ctx, `
-		SELECT id, repository_id, trigger_type, status, started_at, finished_at, summary_json
-		FROM scans
-		WHERE repository_id = ? AND status = ?
-		ORDER BY started_at DESC
-		LIMIT 1
-	`, repositoryID, ScanStatusCompleted)
-	var scan Scan
-	var started, finished sql.NullString
-	var summary []byte
-	if err := row.Scan(&scan.ID, &scan.RepositoryID, &scan.TriggerType, &scan.Status, &started, &finished, &summary); err != nil {
-		if err == sql.ErrNoRows {
-			return Scan{}, nil
-		}
-		return Scan{}, fmt.Errorf("latest scan: %w", err)
-	}
-	if started.Valid {
-		scan.StartedAt = parseTime(started.String)
-	}
-	if finished.Valid {
-		t := parseTime(finished.String)
-		scan.FinishedAt = &t
-	}
-	if len(summary) > 0 {
-		scan.SummaryJSON = summary
-	}
-	return scan, nil
+	return s.GetLatestReconcilableScanForRepository(ctx, repositoryID)
 }
 
 // ListFingerprintsInScan returns fingerprints seen in a scan for a repository.

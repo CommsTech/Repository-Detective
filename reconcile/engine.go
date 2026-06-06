@@ -82,7 +82,19 @@ func (e *Engine) run(ctx context.Context, repositoryID int64, preview bool) (Res
 	if err != nil {
 		return Result{}, err
 	}
-	latestScan, _ := e.store.GetLatestCompletedScanForRepository(ctx, repositoryID)
+	latestScan, err := e.store.GetLatestReconcilableScanForRepository(ctx, repositoryID)
+	if err != nil {
+		return Result{}, fmt.Errorf("latest reconcilable scan: %w", err)
+	}
+	if latestScan.ID == "" {
+		return Result{}, fmt.Errorf("no fully persisted scan available for reconciliation")
+	}
+	pipeline := store.PipelineStateFromSummary(latestScan.SummaryJSON)
+	instanceCount, _ := e.store.CountFindingInstancesForScan(ctx, latestScan.ID)
+	if !pipeline.IsReconcilable(instanceCount) {
+		return Result{}, fmt.Errorf("scan %s persistence incomplete (%d/%d instances) — reconciliation blocked",
+			latestScan.ID, instanceCount, pipeline.IssuesFound)
+	}
 	scannerResults := map[string]string{}
 	if latestScan.ID != "" {
 		rows, _ := e.store.ListScannerResultsByScan(ctx, latestScan.ID)

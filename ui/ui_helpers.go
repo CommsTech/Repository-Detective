@@ -97,6 +97,10 @@ func scanStatusBadgeClass(status string) string {
 	switch status {
 	case "completed":
 		return "completed"
+	case "analysis_complete":
+		return "running"
+	case "persistence_incomplete":
+		return "failed"
 	case "running", "started":
 		return "running"
 	case "failed":
@@ -270,12 +274,18 @@ func buildGraphFindingView(detail store.FindingDetail) GraphFindingView {
 }
 
 type scanDetailView struct {
-	IssuesFound    int
-	FilesAnalyzed  int
-	AnalysisTimeMS int64
-	GraphNodes     int
-	GraphEdges     int
-	ScanProfile    string
+	IssuesFound              int
+	FilesAnalyzed            int
+	AnalysisTimeMS           int64
+	GraphNodes               int
+	GraphEdges               int
+	ScanProfile              string
+	PersistenceStatus        string
+	PersistenceExpectedCount int
+	PersistencePersistedCount int
+	PersistenceError         string
+	IssueSyncStatus          string
+	PersistenceIncomplete    bool
 }
 
 func buildScanDetailView(raw json.RawMessage) scanDetailView {
@@ -294,6 +304,18 @@ func buildScanDetailView(raw json.RawMessage) scanDetailView {
 	view.GraphEdges = intFromAny(summary["graph_edges"])
 	if settings, ok := summary["effective_settings"].(map[string]any); ok {
 		view.ScanProfile = stringFromAny(settings["scan_profile"])
+	}
+	view.PersistenceStatus = stringFromAny(summary["persistence_status"])
+	view.PersistenceExpectedCount = intFromAny(summary["persistence_expected_count"])
+	view.PersistencePersistedCount = intFromAny(summary["persistence_persisted_count"])
+	view.PersistenceError = stringFromAny(summary["persistence_error"])
+	view.IssueSyncStatus = stringFromAny(summary["issue_sync_status"])
+	if view.PersistenceStatus == store.PersistenceStatusPending ||
+		view.PersistenceStatus == store.PersistenceStatusFailed ||
+		view.PersistenceStatus == store.PersistenceStatusIncomplete {
+		view.PersistenceIncomplete = true
+	} else if view.PersistenceExpectedCount > 0 && view.PersistencePersistedCount < view.PersistenceExpectedCount {
+		view.PersistenceIncomplete = true
 	}
 	return view
 }

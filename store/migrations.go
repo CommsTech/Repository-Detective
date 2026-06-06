@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-const currentSchemaVersion = 17
+const currentSchemaVersion = 18
 
 var migrationStatements = map[int][]string{
 	1: {
@@ -511,6 +511,9 @@ var migrationStatements = map[int][]string{
 			created_at TEXT NOT NULL
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_auth_audit_events_created_at ON auth_audit_events(created_at)`,
+	},
+	18: {
+		`CREATE INDEX IF NOT EXISTS idx_finding_instances_scan_id ON finding_instances(scan_id)`,
 	},
 }
 

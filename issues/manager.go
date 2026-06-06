@@ -13,13 +13,33 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// IssueMappingLookup resolves local fingerprint → forge issue links.
+type IssueMappingLookup interface {
+	MappedIssueNumber(ctx context.Context, repositoryID int64, forgeType, fingerprint string) (issueNumber int, issueURL string, ok bool)
+	LinkForgeIssue(ctx context.Context, repositoryID int64, forgeType, fingerprint, scanID string, issueNumber int, issueURL string)
+}
+
+// BackfillRunner repairs missing local mappings from open forge issues.
+type BackfillRunner interface {
+	BackfillMissingMappings(ctx context.Context, req *IssueCreationRequest) (BackfillOutcome, error)
+}
+
+// BackfillOutcome summarizes mapping repair.
+type BackfillOutcome struct {
+	Examined   int
+	Backfilled int
+	Skipped    int
+}
+
 // Manager handles issue creation and management on Gitea and GitHub.
 type Manager struct {
-	giteaForge    IssueForge
-	githubForge   IssueForge
-	logger        *logrus.Logger
-	config        *Config
-	semanticStore *SemanticStore
+	giteaForge     IssueForge
+	githubForge    IssueForge
+	logger         *logrus.Logger
+	config         *Config
+	semanticStore  *SemanticStore
+	mappingLookup  IssueMappingLookup
+	backfillRunner BackfillRunner
 }
 
 // Config holds issue manager configuration
@@ -44,6 +64,7 @@ type IssueCreationRequest struct {
 	ForgeType          string // gitea (default) or github
 	Owner              string
 	Repository         string
+	RepositoryID       int64
 	AnalysisResult     *ai.CodeAnalysisResult
 	Context            string
 	Commit             string
@@ -90,6 +111,24 @@ func NewManager(giteaClient *gitea.Client, githubClient *github.Client, config *
 		m.githubForge = &GitHubForge{Client: githubClient}
 	}
 	return m
+}
+
+// SetIssueMappingLookup enables local fingerprint → external issue lookup for idempotent filing.
+func (m *Manager) SetIssueMappingLookup(lookup IssueMappingLookup) {
+	m.mappingLookup = lookup
+}
+
+// SetBackfillRunner enables pre-filing mapping repair from open forge issues.
+func (m *Manager) SetBackfillRunner(runner BackfillRunner) {
+	m.backfillRunner = runner
+}
+
+// BackfillMissingMappings repairs local external_issues rows from open forge issues.
+func (m *Manager) BackfillMissingMappings(ctx context.Context, req *IssueCreationRequest) (BackfillOutcome, error) {
+	if m == nil || req == nil || m.backfillRunner == nil {
+		return BackfillOutcome{}, nil
+	}
+	return m.backfillRunner.BackfillMissingMappings(ctx, req)
 }
 
 func (m *Manager) forgeFor(forgeType string) IssueForge {
@@ -215,9 +254,24 @@ func (m *Manager) createOrUpdateIssue(ctx context.Context, req *IssueCreationReq
 	if forge == nil {
 		return "", fmt.Errorf("no issue forge configured for %s", m.normalizeForgeType(req.ForgeType))
 	}
+
+	forgeType := m.normalizeForgeType(req.ForgeType)
+	if m.mappingLookup != nil && req.RepositoryID > 0 && issue.Fingerprint != "" {
+		if num, url, ok := m.mappingLookup.MappedIssueNumber(ctx, req.RepositoryID, forgeType, issue.Fingerprint); ok {
+			match := &ExistingIssueMatch{IssueNumber: num, IssueURL: url}
+			if err := m.updateExistingIssue(ctx, forge, req, issue, match, result); err != nil {
+				return "", err
+			}
+			return "updated", nil
+		}
+	}
+
 	if match, err := FindIssueByFingerprint(ctx, forge, req.Owner, req.Repository, issue.Fingerprint); err != nil {
 		m.logger.Warnf("Fingerprint lookup failed: %v", err)
 	} else if match != nil {
+		if m.mappingLookup != nil && req.RepositoryID > 0 {
+			m.mappingLookup.LinkForgeIssue(ctx, req.RepositoryID, forgeType, issue.Fingerprint, req.ScanID, match.IssueNumber, match.IssueURL)
+		}
 		if err := m.updateExistingIssue(ctx, forge, req, issue, match, result); err != nil {
 			return "", err
 		}

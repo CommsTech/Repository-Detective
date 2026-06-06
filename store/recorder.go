@@ -13,6 +13,15 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// scanBatchStore extends Store with batched scan persistence operations.
+type scanBatchStore interface {
+	Store
+	PersistScanFindingsBatch(ctx context.Context, repositoryID int64, scanID string, codeIssues []ai.CodeIssue, now time.Time) (int, map[string]int64, error)
+	RecordExternalIssuesBatch(ctx context.Context, scanID string, forgeType string, processed []issues.ProcessedIssueRecord, findingIDs map[string]int64, now time.Time) error
+	CountFindingInstancesForScan(ctx context.Context, scanID string) (int, error)
+	UpdateScanPipelineState(ctx context.Context, scanID string, status string, fields map[string]any) error
+}
+
 // ScanContext describes a scan for persistence.
 type ScanContext struct {
 	Owner         string
@@ -42,6 +51,11 @@ func NewRecorder(s Store, logger *logrus.Logger) *Recorder {
 // Enabled reports whether persistence is active.
 func (r *Recorder) Enabled() bool {
 	return r != nil && r.store != nil
+}
+
+func (r *Recorder) batchStore() scanBatchStore {
+	bs, _ := r.store.(scanBatchStore)
+	return bs
 }
 
 // BeginScan upserts the repository and creates a started scan row.
@@ -84,13 +98,13 @@ func (r *Recorder) BeginScan(ctx context.Context, scanCtx ScanContext) (Reposito
 	return repo, nil
 }
 
-// FinishScan records scan completion, scanner results, and optional summary.
+// FinishScan records scanner completion and marks analysis complete; findings persist separately.
 func (r *Recorder) FinishScan(ctx context.Context, scanID string, data *ScanCompletion, analysisErr error) error {
 	if !r.Enabled() || scanID == "" {
 		return nil
 	}
 
-	status := ScanStatusCompleted
+	status := ScanStatusAnalysisComplete
 	errMsg := ""
 	if analysisErr != nil {
 		status = ScanStatusFailed
@@ -98,9 +112,11 @@ func (r *Recorder) FinishScan(ctx context.Context, scanID string, data *ScanComp
 	}
 
 	summary := map[string]any{
-		"issues_found":     0,
-		"files_analyzed":   0,
-		"analysis_time_ms": 0,
+		"issues_found":        0,
+		"files_analyzed":      0,
+		"analysis_time_ms":    0,
+		"persistence_status":  PersistenceStatusPending,
+		"issue_sync_status":   IssueSyncStatusPending,
 	}
 	workspaceMode := ""
 	commitPinned := false
@@ -113,7 +129,9 @@ func (r *Recorder) FinishScan(ctx context.Context, scanID string, data *ScanComp
 		workspaceMode = data.WorkspaceModeUsed
 	}
 
+	expectedCount := 0
 	if data != nil {
+		expectedCount = data.IssuesFound
 		summary["issues_found"] = data.IssuesFound
 		summary["files_analyzed"] = data.FilesAnalyzed
 		summary["analysis_time_ms"] = data.AnalysisTime.Milliseconds()
@@ -136,6 +154,7 @@ func (r *Recorder) FinishScan(ctx context.Context, scanID string, data *ScanComp
 		if data.GraphTruncated {
 			summary["graph_truncated"] = true
 		}
+		summary["persistence_expected_count"] = expectedCount
 	}
 
 	summaryJSON, err := json.Marshal(summary)
@@ -168,7 +187,7 @@ func (r *Recorder) FinishScan(ctx context.Context, scanID string, data *ScanComp
 		}
 	}
 
-	if data == nil {
+	if data == nil || analysisErr != nil {
 		return nil
 	}
 
@@ -185,139 +204,121 @@ func (r *Recorder) FinishScan(ctx context.Context, scanID string, data *ScanComp
 	return r.store.AddScannerResults(ctx, scannerRecords)
 }
 
-// RecordIssues persists findings, instances, external issue links, and lifecycle events.
-func (r *Recorder) RecordIssues(ctx context.Context, repositoryID int64, scanID string, forgeType string, codeIssues []ai.CodeIssue, processed []issues.ProcessedIssueRecord) error {
+// RecordFindings persists findings and instances before forge issue filing.
+func (r *Recorder) RecordFindings(ctx context.Context, repositoryID int64, scanID string, codeIssues []ai.CodeIssue) (map[string]int64, error) {
 	if !r.Enabled() || repositoryID == 0 || scanID == "" {
-		return nil
+		return nil, nil
 	}
-
-	processedByFingerprint := make(map[string]issues.ProcessedIssueRecord, len(processed))
-	for _, item := range processed {
-		if item.Fingerprint != "" {
-			processedByFingerprint[item.Fingerprint] = item
-		}
+	bs := r.batchStore()
+	if bs == nil {
+		return nil, fmt.Errorf("batch persistence not supported by store")
 	}
 
 	now := time.Now().UTC()
-	for _, issue := range codeIssues {
-		if issue.Fingerprint == "" {
-			continue
-		}
-
-		stored, err := r.store.UpsertFinding(ctx, Finding{
-			RepositoryID:    repositoryID,
-			Fingerprint:     issue.Fingerprint,
-			Category:        issue.Category,
-			Severity:        issue.Severity,
-			Confidence:      issue.Confidence,
-			Source:          issue.Source,
-			RuleID:          issue.RuleID,
-			PackageName:     issue.PackageName,
-			FilePath:        issue.File,
-			Line:            issue.LineNumber,
-			Title:           issue.Title,
-			Status:          mapLifecycleToStatus(issue.LifecycleState),
-			FirstSeenScanID: scanID,
-			LastSeenScanID:  scanID,
-			FirstSeenAt:     now,
-			LastSeenAt:      now,
+	expected := len(codeIssues)
+	persisted, byFingerprint, err := bs.PersistScanFindingsBatch(ctx, repositoryID, scanID, codeIssues, now)
+	if err != nil {
+		_ = bs.UpdateScanPipelineState(ctx, scanID, ScanStatusPersistenceIncomplete, map[string]any{
+			"persistence_status":          PersistenceStatusFailed,
+			"persistence_expected_count":    expected,
+			"persistence_persisted_count":   persisted,
+			"persistence_error":           err.Error(),
+			"issue_sync_status":             IssueSyncStatusSkipped,
 		})
-		if err != nil {
-			return fmt.Errorf("upsert finding %s: %w", issue.Fingerprint, err)
-		}
-
-		locationJSON, err := json.Marshal(map[string]any{
-			"file":         issue.File,
-			"line":         issue.LineNumber,
-			"column":       issue.ColumnNumber,
-			"code_snippet": redactSnippet(issue.CodeSnippet),
-		})
-		if err != nil {
-			return fmt.Errorf("marshal finding location %s: %w", issue.Fingerprint, err)
-		}
-		metaJSON, err := json.Marshal(map[string]any{
-			"source":  issue.Source,
-			"rule_id": issue.RuleID,
-			"from_ai": issue.FromAI,
-			"fixable": issue.Fixable,
-			"scan_id": scanID,
-		})
-		if err != nil {
-			return fmt.Errorf("marshal finding meta %s: %w", issue.Fingerprint, err)
-		}
-		if issue.Source == "graph" && strings.TrimSpace(issue.Evidence) != "" {
-			var meta map[string]any
-			if err := json.Unmarshal(metaJSON, &meta); err != nil {
-				return fmt.Errorf("unmarshal finding meta %s: %w", issue.Fingerprint, err)
-			}
-			if meta == nil {
-				meta = map[string]any{}
-			}
-			meta["graph_detail"] = json.RawMessage(issue.Evidence)
-			metaJSON, err = json.Marshal(meta)
-			if err != nil {
-				return fmt.Errorf("marshal graph meta %s: %w", issue.Fingerprint, err)
-			}
-		}
-
-		evidenceText := redactSnippet(issue.Description)
-
-		if err := r.store.AddFindingInstance(ctx, FindingInstance{
-			FindingID:        stored.ID,
-			ScanID:           scanID,
-			EvidenceRedacted: evidenceText,
-			LocationJSON:     locationJSON,
-			RawMetadataJSON:  metaJSON,
-			CreatedAt:        now,
-		}); err != nil {
-			return fmt.Errorf("add finding instance %s: %w", issue.Fingerprint, err)
-		}
-
-		if processedItem, ok := processedByFingerprint[issue.Fingerprint]; ok && processedItem.IssueNumber > 0 {
-			ft := strings.TrimSpace(forgeType)
-			if ft == "" {
-				ft = strings.TrimSpace(processedItem.ForgeType)
-			}
-			if ft == "" {
-				ft = ForgeTypeGitea
-			}
-			if _, err := r.store.UpsertExternalIssue(ctx, ExternalIssue{
-				FindingID:   stored.ID,
-				ForgeType:   ft,
-				IssueNumber: processedItem.IssueNumber,
-				IssueURL:    processedItem.IssueURL,
-				State:       "open",
-			}); err != nil {
-				return fmt.Errorf("upsert external issue: %w", err)
-			}
-
-			findingID := stored.ID
-			eventType := "issue_created"
-			if processedItem.Action == "updated" {
-				eventType = "issue_updated"
-			}
-			metaJSON, err := mustJSON(map[string]any{
-				"issue_number": processedItem.IssueNumber,
-				"issue_url":    processedItem.IssueURL,
-				"action":       processedItem.Action,
-			})
-			if err != nil {
-				return fmt.Errorf("marshal lifecycle metadata: %w", err)
-			}
-			if err := r.store.AddLifecycleEvent(ctx, LifecycleEvent{
-				FindingID: &findingID,
-				ScanID:    scanID,
-				EventType: eventType,
-				Message:   fmt.Sprintf("forge issue #%d (%s)", processedItem.IssueNumber, processedItem.Action),
-				MetadataJSON: metaJSON,
-				CreatedAt: now,
-			}); err != nil {
-				return fmt.Errorf("add lifecycle event: %w", err)
-			}
-		}
+		return nil, err
 	}
 
-	return nil
+	fields := map[string]any{
+		"persistence_status":          PersistenceStatusComplete,
+		"persistence_expected_count":  expected,
+		"persistence_persisted_count": persisted,
+		"persistence_error":         "",
+	}
+	if err := bs.UpdateScanPipelineState(ctx, scanID, ScanStatusCompleted, fields); err != nil {
+		return byFingerprint, fmt.Errorf("mark persistence complete: %w", err)
+	}
+	return byFingerprint, nil
+}
+
+// MarkPersistenceFailed records a failed persistence attempt without filing issues.
+func (r *Recorder) MarkPersistenceFailed(ctx context.Context, scanID string, expected, persisted int, persistErr error) {
+	bs := r.batchStore()
+	if bs == nil || scanID == "" {
+		return
+	}
+	msg := ""
+	if persistErr != nil {
+		msg = persistErr.Error()
+	}
+	_ = bs.UpdateScanPipelineState(ctx, scanID, ScanStatusPersistenceIncomplete, map[string]any{
+		"persistence_status":          PersistenceStatusFailed,
+		"persistence_expected_count":  expected,
+		"persistence_persisted_count": persisted,
+		"persistence_error":           msg,
+		"issue_sync_status":             IssueSyncStatusSkipped,
+	})
+}
+
+// IsPersistenceComplete checks whether finding persistence finished for a scan.
+func (r *Recorder) IsPersistenceComplete(ctx context.Context, scanID string) bool {
+	if !r.Enabled() || scanID == "" {
+		return false
+	}
+	bs := r.batchStore()
+	if bs == nil {
+		return true
+	}
+	scan, err := r.store.GetScan(ctx, scanID)
+	if err != nil {
+		return false
+	}
+	pipeline := PipelineStateFromSummary(scan.SummaryJSON)
+	count, err := bs.CountFindingInstancesForScan(ctx, scanID)
+	if err != nil {
+		return false
+	}
+	return pipeline.IsReconcilable(count)
+}
+
+// RecordExternalIssues links forge issues after successful persistence and filing.
+func (r *Recorder) RecordExternalIssues(ctx context.Context, scanID string, forgeType string, processed []issues.ProcessedIssueRecord, findingIDs map[string]int64) error {
+	if !r.Enabled() || scanID == "" || len(processed) == 0 {
+		return nil
+	}
+	bs := r.batchStore()
+	if bs == nil {
+		return fmt.Errorf("batch persistence not supported by store")
+	}
+	if err := bs.RecordExternalIssuesBatch(ctx, scanID, forgeType, processed, findingIDs, time.Now().UTC()); err != nil {
+		return err
+	}
+	return bs.UpdateScanPipelineState(ctx, scanID, ScanStatusCompleted, map[string]any{
+		"issue_sync_status": IssueSyncStatusComplete,
+	})
+}
+
+// MarkIssueSyncSkipped records that forge issue filing was intentionally skipped.
+func (r *Recorder) MarkIssueSyncSkipped(ctx context.Context, scanID string) {
+	bs := r.batchStore()
+	if bs == nil || scanID == "" {
+		return
+	}
+	_ = bs.UpdateScanPipelineState(ctx, scanID, ScanStatusCompleted, map[string]any{
+		"issue_sync_status": IssueSyncStatusSkipped,
+	})
+}
+
+// RecordIssues persists findings then external issue links (legacy entry — prefer RecordFindings + RecordExternalIssues).
+func (r *Recorder) RecordIssues(ctx context.Context, repositoryID int64, scanID string, forgeType string, codeIssues []ai.CodeIssue, processed []issues.ProcessedIssueRecord) error {
+	findingIDs, err := r.RecordFindings(ctx, repositoryID, scanID, codeIssues)
+	if err != nil {
+		return err
+	}
+	if len(processed) == 0 {
+		r.MarkIssueSyncSkipped(ctx, scanID)
+		return nil
+	}
+	return r.RecordExternalIssues(ctx, scanID, forgeType, processed, findingIDs)
 }
 
 func mapLifecycleToStatus(lifecycle string) string {
@@ -335,14 +336,6 @@ func redactSnippet(value string) string {
 		return value[:2000] + "…"
 	}
 	return value
-}
-
-func mustJSON(v any) (json.RawMessage, error) {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return nil, err
-	}
-	return b, nil
 }
 
 // ScannerResultsFromRun converts scanner run results for tests/integration.

@@ -204,6 +204,23 @@ func TestPreviewReliabilityScannerNotRunWhenHealthMissing(t *testing.T) {
 	}
 }
 
+func TestPreviewBlocksPartialPersistence(t *testing.T) {
+	ctx := context.Background()
+	s := openTestStore(t)
+	repo, _ := s.UpsertRepository(ctx, store.Repository{Owner: "o", Name: "r", FullName: "o/r", ConnectedRepo: true})
+	now := time.Now().UTC()
+	partialSummary := []byte(`{"issues_found":2,"persistence_status":"pending","persistence_expected_count":2}`)
+	_, _ = s.CreateScan(ctx, store.Scan{
+		ID: "partial-scan-001", RepositoryID: repo.ID, Status: store.ScanStatusAnalysisComplete,
+		StartedAt: now, TriggerType: store.TriggerManual, SummaryJSON: partialSummary,
+	})
+	eng := reconcile.NewEngine(s, calibration.NewMatcher(s), &fakeForge{}, reconcile.Config{})
+	_, err := eng.Preview(ctx, repo.ID)
+	if err == nil {
+		t.Fatal("expected reconciliation to block on partial persistence")
+	}
+}
+
 func openTestStore(t *testing.T) store.QueryStore {
 	t.Helper()
 	dir := t.TempDir()

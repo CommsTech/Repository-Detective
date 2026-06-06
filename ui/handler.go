@@ -825,6 +825,16 @@ func (h *Handler) ScanDetail(c *gin.Context) {
 	repo, _ := h.store.GetRepository(c.Request.Context(), scan.RepositoryID)
 	runnerJob, _ := h.store.GetRunnerJobByScanID(c.Request.Context(), scanID)
 	summaryView := buildScanDetailView(scan.SummaryJSON)
+	instanceCount, _ := h.store.CountFindingInstancesForScan(c.Request.Context(), scanID)
+	if summaryView.PersistenceExpectedCount == 0 && summaryView.IssuesFound > 0 {
+		summaryView.PersistenceExpectedCount = summaryView.IssuesFound
+	}
+	if summaryView.PersistencePersistedCount == 0 && instanceCount > 0 {
+		summaryView.PersistencePersistedCount = instanceCount
+	}
+	if instanceCount > 0 && summaryView.PersistenceExpectedCount > 0 && instanceCount < summaryView.PersistenceExpectedCount {
+		summaryView.PersistenceIncomplete = true
+	}
 	repoName := ""
 	if repo.FullName != "" {
 		repoName = repo.FullName

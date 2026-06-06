@@ -40,6 +40,19 @@
   <p><strong>Started:</strong> {{.StartedAt.Format "2006-01-02 15:04:05 UTC"}}
      · <strong>Finished:</strong> {{formatTime .FinishedAt}}</p>
 
+  {{if $.Data.Summary.PersistenceIncomplete}}
+  <div class="rd-alert rd-alert-danger" role="alert">
+    <strong>Persistence incomplete.</strong>
+    Findings are still being written or failed to persist fully.
+    Expected {{$.Data.Summary.PersistenceExpectedCount}} instances;
+    persisted {{$.Data.Summary.PersistencePersistedCount}}.
+    Issue filing and reconciliation are blocked until persistence completes.
+    {{if $.Data.Summary.PersistenceError}}<br><span class="rd-muted">{{$.Data.Summary.PersistenceError}}</span>{{end}}
+  </div>
+  {{else if eq $.Data.Summary.PersistenceStatus "complete"}}
+  <div class="rd-alert info">Finding persistence complete{{if $.Data.Summary.IssueSyncStatus}} · issue sync: {{$.Data.Summary.IssueSyncStatus}}{{end}}.</div>
+  {{end}}
+
   {{if eq .Status "completed"}}
   <div class="rd-pipeline">
     <div class="rd-pipeline-step done">Prepare</div>

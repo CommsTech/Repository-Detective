@@ -38,7 +38,9 @@ func OpenSQLite(path string) (*SQLiteStore, error) {
 	}
 
 	pragmas := []string{
-		"PRAGMA busy_timeout = 5000",
+		"PRAGMA busy_timeout = 30000",
+		"PRAGMA journal_mode = WAL",
+		"PRAGMA synchronous = NORMAL",
 	}
 	if runningInTestBinary() {
 		// Keep test runs fast and avoid host fsync stalls in CI.

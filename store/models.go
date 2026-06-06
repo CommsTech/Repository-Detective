@@ -9,9 +9,11 @@ const (
 	ForgeTypeGitea   = "gitea"
 	ForgeTypeGitHub  = "github"
 
-	ScanStatusStarted   = "started"
-	ScanStatusCompleted = "completed"
-	ScanStatusFailed    = "failed"
+	ScanStatusStarted              = "started"
+	ScanStatusAnalysisComplete     = "analysis_complete"
+	ScanStatusCompleted            = "completed"
+	ScanStatusPersistenceIncomplete = "persistence_incomplete"
+	ScanStatusFailed               = "failed"
 	ScanStatusCancelled = "cancelled"
 	ScanStatusSkipped   = "skipped"
 
@@ -35,7 +37,8 @@ const (
 	LifecycleEventSuppressed          = "suppressed"
 	LifecycleEventUnsuppressed          = "unsuppressed"
 	LifecycleEventFalsePositiveMarked   = "false_positive_marked"
-	LifecycleEventReconciled            = "reconciled"
+	LifecycleEventReconciled                    = "reconciled"
+	LifecycleEventExternalIssueMappingBackfilled = "external_issue_mapping_backfilled"
 )
 
 // Repository is a tracked forge repository.

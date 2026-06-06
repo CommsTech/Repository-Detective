@@ -123,6 +123,7 @@ type QueryStore interface {
 	CountActiveScans(ctx context.Context) (int, error)
 	ListExternalIssuesByRepository(ctx context.Context, repositoryID int64, opts ListOptions) ([]ExternalIssue, error)
 	ListExternalIssuesByFinding(ctx context.Context, findingID int64) ([]ExternalIssue, error)
+	GetExternalIssueByFingerprint(ctx context.Context, repositoryID int64, forgeType, fingerprint string) (ExternalIssue, error)
 
 	ListScheduledRepositories(ctx context.Context) ([]ScheduledRepository, error)
 	HasRunningScanForRepository(ctx context.Context, repositoryID int64) (bool, error)
@@ -180,6 +181,9 @@ type QueryStore interface {
 	UpdatePatchAttemptMerged(ctx context.Context, attemptID, mergeSHA string, mergedAt time.Time) error
 
 	GetLatestCompletedScanForRepository(ctx context.Context, repositoryID int64) (Scan, error)
+	GetLatestReconcilableScanForRepository(ctx context.Context, repositoryID int64) (Scan, error)
+	CountFindingInstancesForScan(ctx context.Context, scanID string) (int, error)
+	UpdateScanPipelineState(ctx context.Context, scanID string, status string, fields map[string]any) error
 	ListFingerprintsInScan(ctx context.Context, scanID string, repositoryID int64) (map[string]bool, error)
 	SaveReconciliationRun(ctx context.Context, run ReconciliationRun, items []ReconciliationItemRecord) error
 	GetReconciliationRun(ctx context.Context, runID string) (ReconciliationRun, []ReconciliationItemRecord, error)
