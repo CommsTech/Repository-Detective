@@ -15,6 +15,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 EXPORT_PATH = ROOT / "docs/dogfood-reports/current-open-issues-export.md"
 RECON_PATH = ROOT / "docs/dogfood-reports/current-open-issues-reconciliation.md"
+BACKLOG_PATH = ROOT / "docs/dogfood-reports/real-active-backlog-report.md"
 DB_PATH = ROOT / "data/bugbot.db"
 
 
@@ -183,6 +184,12 @@ def classify_issue(issue: dict, fp: str, fps_in_scan: set[str], ext_by_num: dict
         classification = "out_of_scope_for_current_batch"
         action = "ignore_summary"
 
+    if "resolved-verified" in labels or "lifecycle/resolved-verified" in labels:
+        if classification == "resolved_absent_from_latest_scan":
+            classification = "resolved_verified_open_by_policy"
+            action = "keep_open_by_policy"
+            evidence = "verified"
+
     return {
         "issue_number": num,
         "title": title,
@@ -261,7 +268,40 @@ def main() -> int:
             f"{c['latest_scan_presence']} | {c['classification']} | {c['canonical_issue']} | {c['action_taken']} | {c['evidence_status']} |"
         )
     RECON_PATH.write_text("\n".join(recon_lines) + "\n")
-    print(json.dumps({"open": len(issues), "scan_id": scan_id, "instances": inst_count, "counts": dict(counts)}))
+
+    active = [c for c in classified if c["classification"] == "active_present_in_latest_scan"]
+    health_ignored = [c for c in active if c.get("rule_id") == "HEALTH-IGNORED-ERROR"]
+    backlog_lines = [
+        f"# Real active backlog — commstech/Bugbot\n",
+        f"Generated: {now}\n",
+        f"Scan: **`{scan_id or 'none'}`**\n",
+        "## Summary\n",
+        "| Metric | Count |",
+        "|--------|------:|",
+        f"| Gitea open (exported) | {len(issues)} |",
+        f"| active_present_in_latest_scan | {counts.get('active_present_in_latest_scan', 0)} |",
+        f"| resolved_absent_from_latest_scan | {counts.get('resolved_absent_from_latest_scan', 0)} |",
+        f"| resolved_verified_open_by_policy | {counts.get('resolved_verified_open_by_policy', 0)} |",
+        f"| duplicate_existing_fingerprint | {counts.get('duplicate_existing_fingerprint', 0)} |",
+        f"| out_of_scope_for_current_batch | {counts.get('out_of_scope_for_current_batch', 0)} |",
+        f"| needs_human_review | {counts.get('needs_human_review', 0)} |",
+        f"| HEALTH-IGNORED-ERROR (active) | {len(health_ignored)} |",
+        "\n## Why open count grows\n",
+        "- Scanner coverage expanded (more rules/tools per scan).\n",
+        "- Evidence closure keeps issues open when `close_issues=false`.\n",
+        "- Duplicates are labeled, not deleted.\n",
+        "- New scanner availability creates variance findings.\n",
+        "\n## Active code-fix queue (top 30 by issue #)\n",
+        "| # | Rule | Source | Title |",
+        "|--:|------|--------|-------|",
+    ]
+    for c in sorted(active, key=lambda x: x["issue_number"])[:30]:
+        backlog_lines.append(
+            f"| #{c['issue_number']} | {c.get('rule_id','')} | {c.get('source','')} | {c['title'][:55].replace('|','/')} |"
+        )
+    BACKLOG_PATH.write_text("\n".join(backlog_lines) + "\n")
+
+    print(json.dumps({"open": len(issues), "scan_id": scan_id, "instances": inst_count, "counts": dict(counts), "active": len(active)}))
     return 0
 
 

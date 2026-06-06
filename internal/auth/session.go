@@ -53,8 +53,12 @@ func ParseSessionCookie(secret, cookieValue string) (string, bool) {
 
 func sign(secret, sessionID string) string {
 	mac := hmac.New(sha256.New, []byte(secret))
-	_, _ = mac.Write([]byte("rd-session-v1:"))
-	_, _ = mac.Write([]byte(sessionID))
+	if _, err := mac.Write([]byte("rd-session-v1:")); err != nil {
+		return ""
+	}
+	if _, err := mac.Write([]byte(sessionID)); err != nil {
+		return ""
+	}
 	return hex.EncodeToString(mac.Sum(nil))
 }
 

@@ -14,8 +14,12 @@ func CSRFToken(apiSecret, clientKey string) string {
 		return ""
 	}
 	mac := hmac.New(sha256.New, []byte(apiSecret))
-	_, _ = mac.Write([]byte("bugbot-csrf-v1:"))
-	_, _ = mac.Write([]byte(clientKey))
+	if _, err := mac.Write([]byte("bugbot-csrf-v1:")); err != nil {
+		return ""
+	}
+	if _, err := mac.Write([]byte(clientKey)); err != nil {
+		return ""
+	}
 	sum := mac.Sum(nil)
 	return hex.EncodeToString(sum[:16])
 }
@@ -36,9 +40,15 @@ func SessionCSRFToken(sessionSecret, sessionID string, userID int64) string {
 		return ""
 	}
 	mac := hmac.New(sha256.New, []byte(sessionSecret))
-	_, _ = mac.Write([]byte("rd-csrf-session-v1:"))
-	_, _ = mac.Write([]byte(sessionID))
-	_, _ = mac.Write([]byte(fmt.Sprintf(":%d", userID)))
+	if _, err := mac.Write([]byte("rd-csrf-session-v1:")); err != nil {
+		return ""
+	}
+	if _, err := mac.Write([]byte(sessionID)); err != nil {
+		return ""
+	}
+	if _, err := mac.Write([]byte(fmt.Sprintf(":%d", userID))); err != nil {
+		return ""
+	}
 	sum := mac.Sum(nil)
 	return hex.EncodeToString(sum[:16])
 }

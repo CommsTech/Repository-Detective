@@ -3,15 +3,16 @@ package closure
 import "time"
 
 const (
-	StatusPendingRescan  = "pending_rescan"
-	StatusVerified       = "verified"
-	StatusBlocked        = "blocked"
-	StatusStillPresent   = "still_present"
+	StatusPendingRescan = "pending_rescan"
+	StatusVerified      = "verified"
+	StatusBlocked       = "blocked"
+	StatusStillPresent  = "still_present"
 
-	EventFixPRMerged           = "fix_pr_merged"
-	EventClosureVerified       = "closure_verified"
-	EventClosureBlocked        = "closure_blocked"
+	EventFixPRMerged             = "fix_pr_merged"
+	EventClosureVerified         = "closure_verified"
+	EventClosureBlocked          = "closure_blocked"
 	EventRemediationStillPresent = "remediation_still_present"
+	EventClosureIssueCloseFailed = "closure_issue_close_failed"
 )
 
 // Config holds evidence-based closure settings.

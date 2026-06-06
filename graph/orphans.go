@@ -1,7 +1,6 @@
 package graph
 
 import (
-	"path/filepath"
 	"strings"
 )
 
@@ -153,6 +152,5 @@ func isLikelyGeneratedOrExample(path string) bool {
 	if lower == "deploy.sh" || lower == "docker-compose.yml" || strings.HasPrefix(lower, "docker-compose.") {
 		return true
 	}
-	_ = filepath.Base(path)
 	return false
 }

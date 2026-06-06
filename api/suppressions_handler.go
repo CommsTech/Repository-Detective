@@ -85,7 +85,10 @@ func (h *SuppressionsHandler) SuppressFinding(c *gin.Context) {
 		return
 	}
 	var req SuppressionRequest
-	_ = c.ShouldBindJSON(&req)
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
 	sup, err := h.service.SuppressFinding(c, id, req)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -103,7 +106,10 @@ func (h *SuppressionsHandler) MarkFalsePositive(c *gin.Context) {
 		return
 	}
 	var req SuppressionRequest
-	_ = c.ShouldBindJSON(&req)
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
 	sup, err := h.service.MarkFalsePositive(c, id, req)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -209,30 +215,30 @@ func toSuppressionResponse(sup store.FindingSuppression) suppressionResponse {
 }
 
 type scanQualityReportResponse struct {
-	ReposScanned              int            `json:"repos_scanned"`
-	TotalFindings             int            `json:"total_findings"`
-	OpenFindings              int            `json:"open_findings"`
-	SuppressedFindings        int            `json:"suppressed_findings"`
-	FalsePositiveFindings     int            `json:"false_positive_findings"`
-	FindingsBySeverity        map[string]int `json:"findings_by_severity"`
-	FindingsByCategory        map[string]int `json:"findings_by_category"`
-	FindingsBySource          map[string]int `json:"findings_by_source"`
-	ExternalIssuesOpen        int            `json:"external_issues_open"`
-	RemediationPlansGenerated int            `json:"remediation_plans_generated"`
-	PatchAttemptsOpened       int            `json:"patch_attempts_opened"`
-	PatchAttemptsVerified     int            `json:"patch_attempts_verified"`
-	ScannerFailures           int            `json:"scanner_failures"`
-	ReposWithNoFindings       int            `json:"repos_with_no_findings"`
-	ReposWithCriticalHigh     int            `json:"repos_with_critical_high"`
-	ActionableFindings        int            `json:"actionable_findings"`
-	ActionableRatio           float64        `json:"actionable_ratio"`
-	StrictActionableFindings  int            `json:"strict_actionable_findings"`
-	StrictActionableRatio     float64        `json:"strict_actionable_ratio"`
-	GraphFindingsOpen         int            `json:"graph_findings_open"`
-	ReportOnlyEstimate        int            `json:"report_only_estimate"`
-	EnabledMissingScanners    int            `json:"enabled_missing_scanners"`
-	TopNoisyRules             []store.RuleCount `json:"top_noisy_rules"`
-	TopSuppressedRules        []store.RuleCount `json:"top_suppressed_rules"`
+	ReposScanned              int                        `json:"repos_scanned"`
+	TotalFindings             int                        `json:"total_findings"`
+	OpenFindings              int                        `json:"open_findings"`
+	SuppressedFindings        int                        `json:"suppressed_findings"`
+	FalsePositiveFindings     int                        `json:"false_positive_findings"`
+	FindingsBySeverity        map[string]int             `json:"findings_by_severity"`
+	FindingsByCategory        map[string]int             `json:"findings_by_category"`
+	FindingsBySource          map[string]int             `json:"findings_by_source"`
+	ExternalIssuesOpen        int                        `json:"external_issues_open"`
+	RemediationPlansGenerated int                        `json:"remediation_plans_generated"`
+	PatchAttemptsOpened       int                        `json:"patch_attempts_opened"`
+	PatchAttemptsVerified     int                        `json:"patch_attempts_verified"`
+	ScannerFailures           int                        `json:"scanner_failures"`
+	ReposWithNoFindings       int                        `json:"repos_with_no_findings"`
+	ReposWithCriticalHigh     int                        `json:"repos_with_critical_high"`
+	ActionableFindings        int                        `json:"actionable_findings"`
+	ActionableRatio           float64                    `json:"actionable_ratio"`
+	StrictActionableFindings  int                        `json:"strict_actionable_findings"`
+	StrictActionableRatio     float64                    `json:"strict_actionable_ratio"`
+	GraphFindingsOpen         int                        `json:"graph_findings_open"`
+	ReportOnlyEstimate        int                        `json:"report_only_estimate"`
+	EnabledMissingScanners    int                        `json:"enabled_missing_scanners"`
+	TopNoisyRules             []store.RuleCount          `json:"top_noisy_rules"`
+	TopSuppressedRules        []store.RuleCount          `json:"top_suppressed_rules"`
 	ScannerFailureBreakdown   []store.ScannerStatusCount `json:"scanner_failure_breakdown"`
 }
 
@@ -249,7 +255,7 @@ func toScanQualityReportResponse(r store.ScanQualityReport) scanQualityReportRes
 		StrictActionableFindings: r.StrictActionableFindings, StrictActionableRatio: r.StrictActionableRatio,
 		GraphFindingsOpen: r.GraphFindingsOpen, ReportOnlyEstimate: r.ReportOnlyEstimate,
 		EnabledMissingScanners: r.EnabledMissingScanners,
-		TopNoisyRules: r.TopNoisyRules, TopSuppressedRules: r.TopSuppressedRules,
+		TopNoisyRules:          r.TopNoisyRules, TopSuppressedRules: r.TopSuppressedRules,
 		ScannerFailureBreakdown: r.ScannerFailureBreakdown,
 	}
 }

@@ -71,11 +71,11 @@ type EvidenceRow struct {
 
 // FindingRow is a minimal finding record.
 type FindingRow struct {
-	ID            int64
-	RepositoryID  int64
-	Fingerprint   string
-	Source        string
-	Status        string
+	ID           int64
+	RepositoryID int64
+	Fingerprint  string
+	Source       string
+	Status       string
 }
 
 // RepositoryRow is minimal repo metadata.
@@ -93,11 +93,11 @@ type ExternalIssueRow struct {
 
 // Engine orchestrates evidence-based closure.
 type Engine struct {
-	Config  Config
-	Store   Store
-	PR      PRClient
-	Issues  IssueActions
-	Notify  Notifier
+	Config Config
+	Store  Store
+	PR     PRClient
+	Issues IssueActions
+	Notify Notifier
 }
 
 // OnScanFinish checks PR merges and verifies pending closure evidence after a scan.
@@ -336,7 +336,10 @@ func (e *Engine) commentAndLabel(ctx context.Context, repo RepositoryRow, issueN
 		comment = VerifiedComment(scanID, row.Fingerprint, scanner)
 		label = issues.LifecycleResolvedVerified
 		if e.Config.CloseIssues {
-			_ = e.Issues.CloseIssue(ctx, repo.Owner, repo.Name, issueNum)
+			if err := e.Issues.CloseIssue(ctx, repo.Owner, repo.Name, issueNum); err != nil {
+				_ = e.Store.AddLifecycleEvent(ctx, row.FindingID, scanID, EventClosureIssueCloseFailed,
+					fmt.Sprintf("close issue #%d: %v", issueNum, err))
+			}
 		}
 	case StatusBlocked:
 		comment = BlockedComment(scanner, scanID)
