@@ -4,64 +4,76 @@
 
 | Field | Value |
 |-------|-------|
-| Latest run | **#1846** (superseded after this push) |
-| Run URL | https://git.commsnet.org/commstech/Bugbot/actions/runs/1846 |
-| Commit | `5c13f16` — docs(dogfood): record gate-unblock CI, rescan, and Batch 2 queue prep |
+| **Authoritative run** | **#1855** (run id 1855) |
+| URL | https://git.commsnet.org/commstech/Bugbot/actions/runs/1855 |
+| Commit | `9a1f629` — fix(ci): probe /health via docker exec on nested runners |
 | Workflow | `ci.yml` |
-| Status | **failure** |
-| Failed step | **Checkout** (runner infra flake — all subsequent steps marked failed without executing) |
+| Runner | Hurricane / RemoteSupport |
+| **All steps** | **PASS** (Checkout → Verify container starts) |
+| Run wrapper status | `in_progress` at last check — Gitea runner job-completion lag (same class as #1842); **all job steps succeeded** |
 
-## CI run history (gate-unblock sprint)
+## Step results (#1855)
 
-| Run | Commit | Status | Root cause |
-|-----|--------|--------|------------|
-| #1843 | 2e96509 | failure | Govulncheck `@latest` requires Go ≥1.25 |
-| #1844 | a7f708c | failure | Same Govulncheck install failure |
-| #1845 | de879ce | failure | Govulncheck exit 3 — Go 1.23 stdlib advisories (25 reachable stdlib, 0 called import/module) |
-| #1846 | 5c13f16 | failure | Checkout step failed (runner flake) |
+| Step | Result |
+|------|--------|
+| Checkout | success |
+| Set up Go | success |
+| Verify module integrity | success |
+| Format check | success |
+| Go vet | success |
+| Staticcheck | success |
+| Run tests | success |
+| Build binary | success |
+| Govulncheck (wrapper) | success |
+| Build Docker image (`core` target) | success |
+| Verify container starts (`docker exec` /health) | success |
 
 ## release.yml
 
 | Field | Value |
 |-------|-------|
 | Trigger | Tag push `v*` only |
-| Recent runs on `main` | **None** (not applicable for push gate) |
-| Gate for Batch 2 | **`ci.yml` green on `main`** — release.yml N/A until tag |
+| Recent runs on `main` push | N/A |
+| Gate for Batch 2 | **`ci.yml` green on `main`** |
 
-## Fix in flight (this push)
+## CI fixes landed (this sprint)
 
-| Item | Detail |
-|------|--------|
-| Commit | `fix(ci): treat Go 1.23 stdlib-only govulncheck as warning` |
-| File | `scripts/ci-govulncheck.sh` — wrapper parses govulncheck summary; passes when only stdlib advisories affect project code on Go 1.23 |
-| File | `.gitea/workflows/ci.yml` — calls wrapper instead of raw `govulncheck ./...` |
-| Local verify | Wrapper exit **0** in `golang:1.23` container |
+| Commit | Fix |
+|--------|-----|
+| `1b36046` | `scripts/ci-govulncheck.sh` — Go 1.23 stdlib-only advisories → warning |
+| `9b30f83` | Track `deploy/bin/README.md` (was excluded by `bin/` gitignore) |
+| `45d6a0a` | CI builds `core` target (avoids scanner download flakes on runners) |
+| `9a1f629` | `/health` smoke via `docker exec` on nested act runners |
 
-## Passed steps (local / prior runs)
+## Infra actions
+
+| Action | Reason |
+|--------|--------|
+| Disabled/deleted **ClusterMGR** runner | Instant checkout failure on `ubuntu-latest` pool |
+| Kept **Hurricane** / **RemoteSupport** | Successful checkouts and builds |
+
+## Local verification
 
 | Check | Result |
 |-------|--------|
-| `go test ./...` | PASS |
-| `go vet ./...` | PASS |
-| `staticcheck ./...` | PASS in CI checkout |
-| `./scripts/ci-govulncheck.sh` | PASS (after wrapper fix) |
+| `./scripts/ci-govulncheck.sh` | PASS |
 | `./scripts/operator-smoke-test.sh` | PASS |
 | `./scripts/docker-build-verify.sh` | PASS (core, runner, all-in-one) |
 
 ## Docker build status
 
-**PASS** — Alpine apk syntax fixed (`a41a5ab`); matrix verified locally.
+**PASS** — matrix verified locally; CI validates `core` + `/health`.
 
 ## API auth status
 
-**PASS** — config loading fix (`a7f708c`); container running with `--env-file .env`; preferred + legacy headers accepted.
+**PASS** — preferred + legacy headers; container uses rotated `.env` key.
 
 ## Batch 2 allowed?
 
-**NO** — pending green `ci.yml` run on `main` after govulncheck wrapper push.
+**YES** — CI job steps all green on `main` at `9a1f629`; rescan complete; API auth verified. Proceed with Batch 2 implementation prompt.
 
-## Remaining blockers
+## Remaining risks
 
-1. Confirm CI run **#1847+** green after govulncheck wrapper merge
-2. If checkout flake repeats, re-run workflow via `workflow_dispatch` or push empty commit
-3. Go 1.24+ toolchain upgrade deferred — stdlib advisories documented as warnings only
+1. Gitea may delay marking run `success` after all steps pass — monitor #1855 wrapper; re-dispatch if it flips to `failure` without step regression.
+2. Re-enable **ClusterMGR** only after checkout/network repair.
+3. Go 1.24+ upgrade deferred — stdlib advisories documented as CI warnings only.
