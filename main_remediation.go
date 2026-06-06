@@ -107,7 +107,9 @@ func generateRemediationPlan(ctx context.Context, findingID int64) (remediation.
 	if !remediationPlanner.ShouldPlan(fctx) {
 		return remediation.Plan{}, fmt.Errorf("finding not eligible for remediation planning")
 	}
-	_ = bugbotStore.SupersedeRemediationPlansForFinding(ctx, findingID)
+	if err := bugbotStore.SupersedeRemediationPlansForFinding(ctx, findingID); err != nil {
+		logger.Warnf("supersede remediation plans for finding %d: %v", findingID, err)
+	}
 	plan, err := remediationPlanner.Generate(ctx, fctx)
 	if err != nil {
 		return remediation.Plan{}, err
@@ -191,7 +193,9 @@ func maybeGenerateRemediationPlans(ctx context.Context, repositoryID int64, code
 		if !remediationPlanner.ShouldPlan(fctx) {
 			continue
 		}
-		_ = bugbotStore.SupersedeRemediationPlansForFinding(ctx, finding.ID)
+		if err := bugbotStore.SupersedeRemediationPlansForFinding(ctx, finding.ID); err != nil {
+			logger.Warnf("supersede remediation plans for finding %d: %v", finding.ID, err)
+		}
 		plan, err := remediationPlanner.Generate(ctx, fctx)
 		if err != nil {
 			logger.Warnf("remediation plan for finding %d: %v", finding.ID, err)
@@ -253,12 +257,14 @@ func addRemediationLifecycle(ctx context.Context, findingID int64, planID, event
 		return
 	}
 	fid := findingID
-	_ = bugbotStore.AddLifecycleEvent(ctx, store.LifecycleEvent{
+	if err := bugbotStore.AddLifecycleEvent(ctx, store.LifecycleEvent{
 		FindingID:    &fid,
 		EventType:    eventType,
 		Message:      message,
 		MetadataJSON: remediationLifecycleMeta(planID),
-	})
+	}); err != nil {
+		logger.Warnf("remediation lifecycle event %s for finding %d: %v", eventType, findingID, err)
+	}
 }
 
 func remediationLifecycleMeta(planID string) []byte {

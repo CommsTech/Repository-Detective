@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -55,7 +56,7 @@ func runGitleaksWithCommand(ctx context.Context, logger *logrus.Logger, dir stri
 	timeout := gitleaksTimeout(cfg)
 	output, err := runCommand(ctx, timeout, dir, commandName, args...)
 
-	reportBytes, readErr := os.ReadFile(reportPath)
+	reportBytes, readErr := os.ReadFile(filepath.Clean(reportPath)) //nosec G304 -- reportPath from os.CreateTemp in this function
 	if readErr != nil {
 		reportBytes = nil
 	}

@@ -176,6 +176,9 @@ func collectWorkspaceFiles(root string, skipPatterns []string, maxFiles int) ([]
 		if shouldSkipPath(rel, skipPatterns) {
 			return nil
 		}
+		if _, err := scanners.ValidateWorkspacePath(root, rel); err != nil {
+			return nil
+		}
 		content, err := os.ReadFile(path)
 		if err != nil {
 			return nil

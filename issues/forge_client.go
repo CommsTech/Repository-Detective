@@ -81,7 +81,9 @@ func (f *GiteaForge) CreateIssue(ctx context.Context, owner, repo, title, body s
 		for _, name := range labelNames {
 			payload = append(payload, name)
 		}
-		_, _ = f.Client.AddIssueLabels(ctx, owner, repo, created.Number, payload)
+		if _, err := f.Client.AddIssueLabels(ctx, owner, repo, created.Number, payload); err != nil {
+			return &ForgeIssue{Number: created.Number, HTMLURL: created.HTMLURL}, fmt.Errorf("attach labels to issue #%d: %w", created.Number, err)
+		}
 	}
 	return &ForgeIssue{Number: created.Number, HTMLURL: created.HTMLURL}, nil
 }

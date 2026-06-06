@@ -55,9 +55,9 @@ func RunStaticChecks(workspace string, repoRef string, maxFindings int) []store.
 		case base == "package.json":
 			findings = append(findings, checkPackageJSON(workspace, rel, repoRef)...)
 		case base == "dockerfile" || strings.HasPrefix(base, "dockerfile."):
-			findings = append(findings, checkDockerfile(path, rel, repoRef)...)
+			findings = append(findings, checkDockerfile(workspace, rel, repoRef)...)
 		case strings.Contains(rel, ".github/workflows/") && (strings.HasSuffix(base, ".yml") || strings.HasSuffix(base, ".yaml")):
-			findings = append(findings, checkWorkflow(path, rel, repoRef)...)
+			findings = append(findings, checkWorkflow(workspace, rel, repoRef)...)
 		case base == "install.sh" || base == "setup.sh" || base == "bootstrap.sh":
 			findings = append(findings, makePreinstallFinding(repoRef, rel, 1, "medium", 0.85,
 				"supply_chain", "preinstall.install_script", "Risky install script present",
@@ -108,8 +108,12 @@ func checkPackageJSON(workspace, rel, repoRef string) []store.AuditFinding {
 	return out
 }
 
-func checkDockerfile(path, rel, repoRef string) []store.AuditFinding {
-	content, err := os.ReadFile(path)
+func checkDockerfile(workspace, rel, repoRef string) []store.AuditFinding {
+	safe, err := scanners.ValidateWorkspacePath(workspace, rel)
+	if err != nil {
+		return nil
+	}
+	content, err := os.ReadFile(filepath.Join(workspace, filepath.FromSlash(safe)))
 	if err != nil {
 		return nil
 	}
@@ -124,8 +128,12 @@ func checkDockerfile(path, rel, repoRef string) []store.AuditFinding {
 	return nil
 }
 
-func checkWorkflow(path, rel, repoRef string) []store.AuditFinding {
-	content, err := os.ReadFile(path)
+func checkWorkflow(workspace, rel, repoRef string) []store.AuditFinding {
+	safe, err := scanners.ValidateWorkspacePath(workspace, rel)
+	if err != nil {
+		return nil
+	}
+	content, err := os.ReadFile(filepath.Join(workspace, filepath.FromSlash(safe)))
 	if err != nil {
 		return nil
 	}

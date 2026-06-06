@@ -76,11 +76,13 @@ func (suppressionBridge) DisableSuppression(c *gin.Context, id int64) (store.Fin
 		suppressionMatcher.Invalidate(*prev.RepositoryID)
 	}
 	meta, _ := json.Marshal(map[string]any{"suppression_id": id})
-	_ = bugbotStore.AddLifecycleEvent(c.Request.Context(), store.LifecycleEvent{
+	if err := bugbotStore.AddLifecycleEvent(c.Request.Context(), store.LifecycleEvent{
 		EventType:    store.LifecycleEventUnsuppressed,
 		Message:      "Suppression rule disabled",
 		MetadataJSON: meta,
-	})
+	}); err != nil {
+		logger.Warnf("suppression disable lifecycle event: %v", err)
+	}
 	return disabled, nil
 }
 
@@ -124,20 +126,26 @@ func applyFindingSuppression(ctx context.Context, findingID int64, req api.Suppr
 		"scope":          created.Scope,
 		"reason":         created.Reason,
 	})
-	_ = bugbotStore.AddLifecycleEvent(ctx, store.LifecycleEvent{
+	if err := bugbotStore.AddLifecycleEvent(ctx, store.LifecycleEvent{
 		FindingID:    &fid,
 		EventType:    lifecycleEvent,
 		Message:      created.Reason,
 		MetadataJSON: meta,
-	})
+	}); err != nil {
+		logger.Warnf("suppression lifecycle event for finding %d: %v", findingID, err)
+	}
 	if suppressionMatcher != nil {
 		suppressionMatcher.Invalidate(detail.RepositoryID)
-		_ = suppressionMatcher.LoadRepository(ctx, detail.RepositoryID)
+		if err := suppressionMatcher.LoadRepository(ctx, detail.RepositoryID); err != nil {
+			logger.Warnf("reload suppression policy for repo %d: %v", detail.RepositoryID, err)
+		}
 	}
 	if issueManager != nil && detail.ExternalIssueNumber > 0 {
 		repo, rerr := bugbotStore.GetRepository(ctx, detail.RepositoryID)
 		if rerr == nil {
-			_ = issueManager.AnnotateCalibration(ctx, repo.ForgeType, repo.Owner, repo.Name, detail.ExternalIssueNumber, falsePositive, created.Reason)
+			if err := issueManager.AnnotateCalibration(ctx, repo.ForgeType, repo.Owner, repo.Name, detail.ExternalIssueNumber, falsePositive, created.Reason); err != nil {
+				logger.Warnf("annotate calibration on issue #%d: %v", detail.ExternalIssueNumber, err)
+			}
 		}
 	}
 	return created, nil
@@ -147,7 +155,9 @@ func loadSuppressionPolicy(ctx context.Context, repositoryID int64) {
 	if suppressionMatcher == nil || repositoryID <= 0 {
 		return
 	}
-	_ = suppressionMatcher.LoadRepository(ctx, repositoryID)
+	if err := suppressionMatcher.LoadRepository(ctx, repositoryID); err != nil {
+		logger.Warnf("load suppression policy for repo %d: %v", repositoryID, err)
+	}
 }
 
 func filterIssuesWithSuppression(repositoryID int64, issues []ai.CodeIssue) []ai.CodeIssue {
@@ -210,16 +220,22 @@ func suppressRepoRule(ctx context.Context, findingID int64, reason, createdBy st
 			sup.Reason = "intentional standalone: " + sup.Reason
 		}
 	}
-	_ = bugbotStore.UpdateFindingStatus(ctx, findingID, status)
+	if err := bugbotStore.UpdateFindingStatus(ctx, findingID, status); err != nil {
+		return err
+	}
 	fid := findingID
-	_ = bugbotStore.AddLifecycleEvent(ctx, store.LifecycleEvent{
+	if err := bugbotStore.AddLifecycleEvent(ctx, store.LifecycleEvent{
 		FindingID: &fid,
 		EventType: event,
 		Message:   sup.Reason,
-	})
+	}); err != nil {
+		logger.Warnf("standalone suppression lifecycle for finding %d: %v", findingID, err)
+	}
 	if suppressionMatcher != nil {
 		suppressionMatcher.Invalidate(detail.RepositoryID)
-		_ = suppressionMatcher.LoadRepository(ctx, detail.RepositoryID)
+		if err := suppressionMatcher.LoadRepository(ctx, detail.RepositoryID); err != nil {
+			logger.Warnf("reload suppression policy for repo %d: %v", detail.RepositoryID, err)
+		}
 	}
 	return nil
 }

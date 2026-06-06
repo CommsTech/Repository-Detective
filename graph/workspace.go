@@ -21,7 +21,11 @@ func LoadWorkspaceFiles(root string, entries []scanners.FileEntry, maxFileBytes 
 			out = append(out, FileInput{Path: entry.Path, Content: entry.Content, Language: detectLanguage(entry.Path)})
 			continue
 		}
-		abs := filepath.Join(root, filepath.FromSlash(entry.Path))
+		safePath, err := scanners.ValidateWorkspacePath(root, entry.Path)
+		if err != nil {
+			continue
+		}
+		abs := filepath.Join(root, filepath.FromSlash(safePath))
 		info, err := os.Stat(abs)
 		if err != nil || info.IsDir() || info.Size() > maxFileBytes {
 			continue

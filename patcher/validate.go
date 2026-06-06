@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"git.commsnet.org/commstech/bugbot/internal/security"
+	"git.commsnet.org/commstech/bugbot/scanners"
 )
 
 var forbiddenSubstrings = []string{
@@ -32,36 +33,45 @@ func ParseAllowedCommand(raw string) ([]string, error) {
 	if len(parts) == 0 {
 		return nil, fmt.Errorf("empty command")
 	}
-	switch parts[0] {
+	if err := validateArgv(parts); err != nil {
+		return nil, err
+	}
+	return parts, nil
+}
+
+func validateArgv(argv []string) error {
+	if len(argv) == 0 {
+		return fmt.Errorf("empty command")
+	}
+	switch argv[0] {
 	case "go":
-		if len(parts) < 2 {
-			return nil, fmt.Errorf("invalid go command")
+		if len(argv) < 2 {
+			return fmt.Errorf("invalid go command")
 		}
-		switch parts[1] {
+		switch argv[1] {
 		case "test", "vet":
-			if len(parts) != 3 || !isSafeGoPackagePattern(parts[2]) {
-				return nil, fmt.Errorf("only go test or go vet with safe package pattern allowed")
+			if len(argv) != 3 || !isSafeGoPackagePattern(argv[2]) {
+				return fmt.Errorf("only go test or go vet with safe package pattern allowed")
 			}
-			return parts, nil
+			return nil
 		default:
-			return nil, fmt.Errorf("unsupported go subcommand")
+			return fmt.Errorf("unsupported go subcommand")
 		}
 	case "staticcheck":
-		if len(parts) != 2 || !isSafeGoPackagePattern(parts[1]) {
-			return nil, fmt.Errorf("only staticcheck with safe package pattern allowed")
+		if len(argv) != 2 || !isSafeGoPackagePattern(argv[1]) {
+			return fmt.Errorf("only staticcheck with safe package pattern allowed")
 		}
-		return parts, nil
+		return nil
 	case "hadolint":
-		if len(parts) != 2 {
-			return nil, fmt.Errorf("hadolint requires exactly one file path")
+		if len(argv) != 2 {
+			return fmt.Errorf("hadolint requires exactly one file path")
 		}
-		path := parts[1]
-		if !isSafeRelativePath(path) {
-			return nil, fmt.Errorf("unsafe hadolint path")
+		if !isSafeRelativePath(argv[1]) {
+			return fmt.Errorf("unsafe hadolint path")
 		}
-		return parts, nil
+		return nil
 	default:
-		return nil, fmt.Errorf("command not allowlisted")
+		return fmt.Errorf("command not allowlisted")
 	}
 }
 
@@ -75,6 +85,17 @@ func isSafeRelativePath(p string) bool {
 		return false
 	}
 	return true
+}
+
+func patchWorkspaceFile(workspaceDir, relPath string) (string, error) {
+	if !isSafeRelativePath(relPath) {
+		return "", fmt.Errorf("unsafe file path")
+	}
+	safe, err := scanners.ValidateWorkspacePath(workspaceDir, relPath)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(workspaceDir, filepath.FromSlash(safe)), nil
 }
 
 func isSafeGoPackagePattern(pattern string) bool {

@@ -1116,7 +1116,7 @@ func initializeComponents() error {
 	issueConfig := &issues.Config{
 		AutoCreateIssues:   config.AutoCreateIssues,
 		Reporting:          config.Reporting,
-		BacklogControl:     buildBacklogControlConfig(config),
+		BacklogControl:     buildBacklogControlConfig(*config),
 		GiteaBaseURL:       config.GiteaURL,
 		IssueLabels:        issues.DefaultIssueBaseLabels(),
 		MaxIssuesPerRun:    config.MaxIssuesPerRun,
@@ -2073,7 +2073,10 @@ func handleBulkAnalysis(c *gin.Context) {
 		DryRun      bool     `json:"dry_run"`
 		Forge       string   `json:"forge"` // gitea, github, or all (default)
 	}
-	_ = c.ShouldBindJSON(&req)
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
 
 	if giteaClient == nil && githubClient == nil {
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "no forge client configured (set gitea_token and/or github_token)"})

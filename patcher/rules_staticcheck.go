@@ -3,7 +3,6 @@ package patcher
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -21,10 +20,10 @@ func applyStaticcheckPatch(plan remediation.Plan, workspaceDir string, maxFiles,
 		return PatchResult{}, fmt.Errorf("too many files to patch")
 	}
 	path := plan.AffectedFiles[0]
-	if !isSafeRelativePath(path) {
-		return PatchResult{}, fmt.Errorf("unsafe file path")
+	full, err := patchWorkspaceFile(workspaceDir, path)
+	if err != nil {
+		return PatchResult{}, err
 	}
-	full := filepath.Join(workspaceDir, filepath.FromSlash(path))
 	data, err := os.ReadFile(full)
 	if err != nil {
 		return PatchResult{}, fmt.Errorf("read file: %w", err)
@@ -55,7 +54,7 @@ func applyStaticcheckPatch(plan remediation.Plan, workspaceDir string, maxFiles,
 	if diffLines > maxLines {
 		return PatchResult{}, fmt.Errorf("patch exceeds max diff lines (%d)", maxLines)
 	}
-	if err := os.WriteFile(full, []byte(updated), 0o644); err != nil {
+	if err := os.WriteFile(full, []byte(updated), 0o600); err != nil {
 		return PatchResult{}, fmt.Errorf("write file: %w", err)
 	}
 	return PatchResult{

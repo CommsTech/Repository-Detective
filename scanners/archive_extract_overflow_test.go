@@ -8,10 +8,10 @@ import (
 func TestUncompressedSizeWouldExceed(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
-		name      string
-		total     int64
-		size      uint64
-		max       int64
+		name       string
+		total      int64
+		size       uint64
+		max        int64
 		wantExceed bool
 	}{
 		{"within limit", 100, 50, 200, false},

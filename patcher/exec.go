@@ -11,12 +11,18 @@ import (
 )
 
 func execFixed(argv []string, dir string, timeout time.Duration) ([]byte, error) {
+	if err := validateArgv(argv); err != nil {
+		return nil, err
+	}
 	if timeout <= 0 {
 		timeout = 2 * time.Minute
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
+	cmd, err := fixedCommand(ctx, argv)
+	if err != nil {
+		return nil, err
+	}
 	cmd.Dir = dir
 	cmd.Env = security.MinimalSubprocessEnv()
 	out, err := cmd.CombinedOutput()
@@ -27,6 +33,28 @@ func execFixed(argv []string, dir string, timeout time.Duration) ([]byte, error)
 		out = out[:256<<10]
 	}
 	return out, err
+}
+
+func fixedCommand(ctx context.Context, argv []string) (*exec.Cmd, error) {
+	switch argv[0] {
+	case "go":
+		if len(argv) < 3 {
+			return nil, fmt.Errorf("invalid go command")
+		}
+		return exec.CommandContext(ctx, "go", argv[1], argv[2]), nil
+	case "staticcheck":
+		if len(argv) != 2 {
+			return nil, fmt.Errorf("invalid staticcheck command")
+		}
+		return exec.CommandContext(ctx, "staticcheck", argv[1]), nil
+	case "hadolint":
+		if len(argv) != 2 {
+			return nil, fmt.Errorf("invalid hadolint command")
+		}
+		return exec.CommandContext(ctx, "hadolint", argv[1]), nil
+	default:
+		return nil, fmt.Errorf("command not allowlisted")
+	}
 }
 
 func redactOutput(s string) string {

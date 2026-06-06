@@ -220,7 +220,9 @@ func maybeProcessEvidenceClosure(ctx context.Context, owner, repo string, reposi
 		return
 	}
 	scanCtx := buildClosureScanContext(ctx, owner, repo, repositoryID, result)
-	_ = closureEngine.OnScanFinish(ctx, scanCtx)
+	if err := closureEngine.OnScanFinish(ctx, scanCtx); err != nil {
+		logger.Warnf("Evidence closure on scan finish failed: %v", err)
+	}
 }
 
 func buildClosureScanContext(ctx context.Context, owner, repo string, repositoryID int64, result *analyzers.AnalysisResult) closure.ScanContext {
@@ -390,5 +392,7 @@ func markFixPROpened(ctx context.Context, owner, repo string, issueNumber int) {
 	if !config.EvidenceClosureComment || giteaClient == nil || issueNumber <= 0 {
 		return
 	}
-	_, _ = giteaClient.AddIssueLabels(ctx, owner, repo, issueNumber, issues.ExpandLifecycleLabel(issues.LifecycleFixPROpened))
+	if _, err := giteaClient.AddIssueLabels(ctx, owner, repo, issueNumber, issues.ExpandLifecycleLabel(issues.LifecycleFixPROpened)); err != nil {
+		logger.Warnf("Failed to label fix PR opened on issue #%d: %v", issueNumber, err)
+	}
 }
