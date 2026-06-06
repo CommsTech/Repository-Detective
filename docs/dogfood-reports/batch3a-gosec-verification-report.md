@@ -28,7 +28,7 @@
 | Phase | Scan ID |
 |-------|---------|
 | Before (reference) | `852f2fb850b2b56d` |
-| After | *Pending post-push rescan* |
+| After | **`2b335070099f8936`** (completed, 1104 findings) |
 
 ## Gosec status
 
@@ -36,7 +36,8 @@ Local targeted gosec on changed files: **clean** for G115/G101.
 
 ## Fingerprints absent
 
-*To be confirmed after rescan on `main` post-push.*
+Post-rescan API check: no HIGH findings on `archive_extract.go` or `api_key_cookie.go`.  
+Gitea issues **#316** and **#323** remain **open** (expected — `evidence_closure_close_issues=false`; verify via verify-closure after deploy aligns).
 
 ## Active backlog (pre-Batch-3a)
 
