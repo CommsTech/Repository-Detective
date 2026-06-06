@@ -2,23 +2,21 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>{{template "head" .}}</head>
-<body class="rd-app">
+<body class="rd-app rd-print-report">
 {{template "nav" .}}
 
 {{with .Data.Repo}}
-<nav class="rd-breadcrumb" aria-label="Breadcrumb">
+<nav class="rd-breadcrumb rd-no-print" aria-label="Breadcrumb">
   <a href="{{$.BasePath}}/reports{{apiKeyQS $.APIKey}}">Reports</a>
   <span>/</span>
   <span>{{.FullName}}</span>
 </nav>
 
-<div class="rd-report">
+{{template "executive_summary.html" (dict "Executive" $.Data.Executive)}}
+
+<div class="rd-report rd-print-block">
   <h2>Repository audit report — {{.FullName}}</h2>
   <p class="rd-report-meta">{{.ForgeType}} · Policy: {{$.Data.Effective.PolicyLevel}} · Profile: {{$.Data.ProfileMeta.ScanProfile}}</p>
-  <p class="rd-report-exec">
-    This report summarizes the security and quality posture of <strong>{{.FullName}}</strong> based on
-    persisted findings and recent scan activity in Repository Detective.
-  </p>
   <div class="rd-kpi-row">
     {{range $sev, $count := $.Data.SeverityCounts}}
     <div class="rd-kpi"><strong>{{$count}}</strong><span>{{$sev}} open</span></div>
@@ -26,6 +24,13 @@
     <div class="rd-kpi"><strong>{{$.Data.FindingsTotal}}</strong><span>Matching findings</span></div>
     <div class="rd-kpi"><strong>{{len $.Data.Scans}}</strong><span>Recent scans</span></div>
     <div class="rd-kpi"><strong>{{len $.Data.ExternalIssues}}</strong><span>Forge issues</span></div>
+  </div>
+</div>
+
+<div class="rd-chart-card rd-print-block">
+  <div class="rd-card-head"><h2>Category radar</h2><span class="rd-chip">Open findings</span></div>
+  <div class="rd-chart-canvas-wrap rd-chart-radar">
+    <canvas id="rd-report-radar" role="img" aria-label="Finding categories radar"></canvas>
   </div>
 </div>
 
@@ -56,14 +61,14 @@
       <li>Apply approved remediation plans via safe PR workflow</li>
       <li>Verify closure with post-merge rescan evidence</li>
     </ol>
-    <div class="rd-actions">
+    <div class="rd-actions rd-no-print">
       <a class="rd-btn" href="{{$.BasePath}}/findings?repo_id={{.ID}}{{if $.APIKey}}&amp;api_key={{$.APIKey}}{{end}}">Open triage queue</a>
       <a class="rd-btn rd-btn-secondary" href="{{$.BasePath}}/repos/{{.ID}}/settings{{apiKeyQS $.APIKey}}">Adjust policy</a>
     </div>
   </div>
 </div>
 
-<form method="get" class="rd-card" action="{{$.BasePath}}/repos/{{.ID}}/report">
+<form method="get" class="rd-card rd-no-print" action="{{$.BasePath}}/repos/{{.ID}}/report">
   <div class="rd-card-head">
     <h2>Technical findings</h2>
     <span class="rd-chip">{{$.Data.FindingsTotal}} total · showing {{len $.Data.Findings}}</span>
@@ -102,7 +107,7 @@
   {{$size := $.Data.FindingsPageSize}}
   {{$offset := $.Data.FindingsFilter.Offset}}
   {{if gt $total $size}}
-  <nav class="rd-pagination" aria-label="Findings pages">
+  <nav class="rd-pagination rd-no-print" aria-label="Findings pages">
     {{if gt $offset 0}}
     <a class="rd-btn rd-btn-sm rd-btn-ghost" href="{{$.BasePath}}/repos/{{.ID}}/report?offset={{sub $offset $size}}{{if $.Data.FindingsFilter.Severity}}&amp;severity={{$.Data.FindingsFilter.Severity}}{{end}}{{if $.Data.FindingsFilter.Category}}&amp;category={{$.Data.FindingsFilter.Category}}{{end}}{{if $.Data.FindingsFilter.Status}}&amp;status={{$.Data.FindingsFilter.Status}}{{end}}{{if $.Data.FindingsFilter.Source}}&amp;source={{$.Data.FindingsFilter.Source}}{{end}}{{apiKeyQS $.APIKey}}">← Previous</a>
     {{end}}
@@ -161,11 +166,14 @@
   </table>
 </div>
 
-<div class="rd-actions">
-  <button type="button" class="rd-btn rd-btn-ghost" onclick="window.print()">Print report</button>
+<div class="rd-actions rd-no-print">
+  <button type="button" class="rd-btn" onclick="window.print()">Print / Save PDF</button>
 </div>
 {{end}}
 
+<script type="application/json" id="rd-report-chart-data">{{jsonScript .Data.ChartJSON}}</script>
+<script src="{{.BasePath}}/static/chart.umd.min.js" defer></script>
+<script src="{{.BasePath}}/static/repo-report-charts.js" defer></script>
 {{template "foot" .}}
 </body></html>
 {{end}}

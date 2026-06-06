@@ -53,8 +53,8 @@ type FindingDetail struct {
 
 // DashboardSummary powers the operator dashboard.
 type DashboardSummary struct {
-	TotalRepositories      int
-	RecentScans            []ScanWithRepo
+	TotalRepositories        int
+	RecentScans              []ScanWithRepo
 	FailedScansCount         int
 	ScannerFailuresCount     int
 	ScannerToolsMissingCount int
@@ -63,19 +63,19 @@ type DashboardSummary struct {
 	IssuesDetectedInScans    int
 	OpenFindingsBySeverity   map[string]int
 	OpenFindingsByCategory   map[string]int
-	RecentLifecycleEvents  []LifecycleEvent
-	ScheduledScansCount    int
-	LastScheduledScanAt    *time.Time
-	RecentScheduledScans   []ScanWithRepo
-	RunnerJobsByStatus     map[string]int
-	Remediation            RemediationSummary
-	Closure                ClosureSummary
-	Lifecycle              LifecycleSummary
-	Backlog                FindingBacklogSummary
-	Platform               ScannerPlatformSummary
-	ScanHealth             ScanHealthSummary
+	RecentLifecycleEvents    []LifecycleEvent
+	ScheduledScansCount      int
+	LastScheduledScanAt      *time.Time
+	RecentScheduledScans     []ScanWithRepo
+	RunnerJobsByStatus       map[string]int
+	Remediation              RemediationSummary
+	Closure                  ClosureSummary
+	Lifecycle                LifecycleSummary
+	Backlog                  FindingBacklogSummary
+	Platform                 ScannerPlatformSummary
+	ScanHealth               ScanHealthSummary
 	RemediationInsight       RemediationInsight
-	platformRollups        map[string]scannerDBRollup
+	platformRollups          map[string]scannerDBRollup
 }
 
 // ListOptions bounds list query size.
@@ -112,6 +112,8 @@ type QueryStore interface {
 	ListFindings(ctx context.Context, filter FindingFilter) ([]FindingListItem, error)
 	CountFindings(ctx context.Context, filter FindingFilter) (int, error)
 	OpenFindingsBySeverityForRepository(ctx context.Context, repositoryID int64) (map[string]int, error)
+	OpenFindingsByCategoryForRepository(ctx context.Context, repositoryID int64) (map[string]int, error)
+	OpenFindingsConfidenceBandsForRepository(ctx context.Context, repositoryID int64, confidenceGate float64) (map[string]int, error)
 	GetFindingDetail(ctx context.Context, id int64) (FindingDetail, error)
 	ListFindingsByIDs(ctx context.Context, ids []int64) (map[int64]Finding, error)
 	ListLifecycleEventsByFinding(ctx context.Context, findingID int64) ([]LifecycleEvent, error)

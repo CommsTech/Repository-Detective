@@ -56,6 +56,18 @@ func AdjustConfidence(base float64, issue ai.CodeIssue, in NormalizeInput) float
 		conf = raiseConfidence(conf, 0.05)
 	}
 
+	rule := strings.ToUpper(strings.TrimSpace(issue.RuleID))
+	if strings.HasPrefix(rule, "GRAPH-") {
+		conf = lowerConfidence(conf, 0.12)
+		if issue.SourceType == SourceTypeTest {
+			conf = lowerConfidence(conf, 0.2)
+		}
+		switch rule {
+		case "GRAPH-ORPHAN-FILE", "GRAPH-DISCONNECTED-PACKAGE", "GRAPH-ORPHAN-FUNCTION":
+			conf = lowerConfidence(conf, 0.08)
+		}
+	}
+
 	return clampConfidence(conf)
 }
 

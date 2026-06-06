@@ -1,12 +1,11 @@
 version: '3.7'
 
-# Default production deploy — builds from Dockerfile, host networking, port 8081.
+# Default production deploy — bridge networking, localhost bind via port mapping.
 #
 #   cp .env.example .env && edit .env
 #   docker compose up -d --build
-#   # or: ./deploy.sh
 #
-# On DNS-filtered networks, run ./scripts/vendor-deps.sh first.
+# For host networking (homelab / legacy): docker compose -f docker-compose.yml -f docker-compose.host-network.yml up -d
 # See DEPLOYMENT.md and docs/SETUP.md
 
 services:
@@ -22,7 +21,8 @@ services:
         BUILD_DATE: ${RD_BUILD_DATE:-unknown}
     image: repository-detective:all-in-one
     container_name: repository-detective
-    network_mode: host
+    ports:
+      - "127.0.0.1:${REPOSITORY_DETECTIVE_PORT:-8081}:8081"
     env_file:
       - .env
     environment:
@@ -32,7 +32,6 @@ services:
       REPOSITORY_DETECTIVE_SKIP_STARTUP_CHECKS: "true"
       REPOSITORY_DETECTIVE_STARTUP_CHECK_TIMEOUT: "10"
       REPOSITORY_DETECTIVE_DATABASE_PATH: /app/data/bugbot.db
-      # Legacy aliases (still read by envcompat)
       BUGBOT_PORT: "8081"
       BUGBOT_LISTEN_HOST: "0.0.0.0"
       BUGBOT_LOG_LEVEL: info
@@ -50,3 +49,9 @@ services:
       start_period: 20s
       retries: 3
     restart: unless-stopped
+    networks:
+      - rd-net
+
+networks:
+  rd-net:
+    driver: bridge

@@ -137,3 +137,52 @@ func TestLoginFormUsesGenericErrorQuery(t *testing.T) {
 		t.Fatal("expected generic invalid error param")
 	}
 }
+
+func TestQueryStringAPIKeyRejectedWhenHardened(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	saved := config
+	defer func() { config = saved }()
+	config = &Config{
+		APIKey:                  "test-secret-key",
+		RejectQueryStringAPIKey: true,
+	}
+
+	r := gin.New()
+	r.GET("/protected", requireAPIKeyAuth(), func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/protected?api_key=test-secret-key", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 for query key in hardened mode, got %d", w.Code)
+	}
+
+	req2 := httptest.NewRequest(http.MethodGet, "/protected", nil)
+	req2.Header.Set("X-Repository-Detective-API-Key", "test-secret-key")
+	w2 := httptest.NewRecorder()
+	r.ServeHTTP(w2, req2)
+	if w2.Code != http.StatusOK {
+		t.Fatalf("expected header auth to work, got %d", w2.Code)
+	}
+}
+
+func TestQueryStringAPIKeyAcceptedInCompatibilityMode(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	saved := config
+	defer func() { config = saved }()
+	config = &Config{APIKey: "test-secret-key", RejectQueryStringAPIKey: false}
+
+	r := gin.New()
+	r.GET("/protected", requireAPIKeyAuth(), func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/protected?api_key=test-secret-key", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected compatibility mode to accept query key, got %d", w.Code)
+	}
+}

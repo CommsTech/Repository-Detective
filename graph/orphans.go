@@ -98,8 +98,12 @@ func analyzeOrphans(b *builder) []GraphFinding {
 		if pkgImported[info.packageName] {
 			continue
 		}
+		nonTestFiles := nonTestPackageFiles(pkgFiles[info.packageName])
+		if len(nonTestFiles) == 0 {
+			continue
+		}
 		findings = append(findings, formatDisconnectedPackageFinding(
-			b, info.packageName, pkgFiles[info.packageName],
+			b, info.packageName, nonTestFiles,
 			pkgInbound[info.packageName], pkgOutbound[info.packageName],
 		))
 	}
@@ -117,6 +121,17 @@ func analyzeOrphans(b *builder) []GraphFinding {
 	}
 
 	return findings
+}
+
+func nonTestPackageFiles(files []string) []string {
+	out := make([]string, 0, len(files))
+	for _, path := range files {
+		if strings.HasSuffix(path, "_test.go") {
+			continue
+		}
+		out = append(out, path)
+	}
+	return out
 }
 
 func isLikelyGeneratedOrExample(path string) bool {

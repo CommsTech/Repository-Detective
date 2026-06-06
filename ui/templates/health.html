@@ -48,6 +48,27 @@
   {{if .AIProvider}}<p class="rd-muted">AI provider: {{.AIProvider}}{{if .AIModel}} · model {{.AIModel}}{{end}}</p>{{end}}
 </div>
 
+{{if $.Data.Capabilities}}
+<div class="rd-card">
+  <div class="rd-card-head"><h2>Platform capabilities</h2><span class="rd-chip">Actionable status</span></div>
+  <p class="rd-muted">Each capability reports why it is enabled, disabled, or degraded — not a generic badge.</p>
+  <table class="rd-table">
+    <tr><th scope="col">Capability</th><th scope="col">Status</th><th scope="col">Reason</th><th scope="col">Action</th></tr>
+    {{range $.Data.Capabilities}}
+    <tr>
+      <td><strong>{{.Name}}</strong></td>
+      <td><span class="rd-badge {{if eq .State "enabled"}}completed{{else if eq .State "degraded"}}medium{{else}}skipped{{end}}">{{.State}}</span></td>
+      <td class="rd-muted">{{.Reason}}{{if .SafetyNote}} <em>{{.SafetyNote}}</em>{{end}}</td>
+      <td>
+        {{if .SettingsURL}}<a class="rd-link" href="{{.SettingsURL}}{{apiKeyQS $.APIKey}}">{{.SettingsLabel}}</a>{{else}}—{{end}}
+        {{if .ConfigKeys}}<p class="rd-muted rd-scanner-hint">Config: {{join .ConfigKeys ", "}}</p>{{end}}
+      </td>
+    </tr>
+    {{end}}
+  </table>
+</div>
+{{end}}
+
 <div class="rd-card">
   <div class="rd-card-head"><h2>Scanner availability</h2><span class="rd-chip">Runtime probe · 2s timeout per binary</span></div>
   <p class="rd-muted">Configured = enabled in effective profile. Installed = binary on PATH. Missing configured scanners reduce coverage but do not stop the service.</p>

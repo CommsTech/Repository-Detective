@@ -252,6 +252,8 @@ type Config struct {
 	SessionTTLHours                         int                                  `mapstructure:"session_ttl_hours"`
 	CSRFEnabled                             bool                                 `mapstructure:"csrf_enabled"`
 	LocalAdminBootstrapEnabled              bool                                 `mapstructure:"local_admin_bootstrap_enabled"`
+	RejectQueryStringAPIKey                 bool                                 `mapstructure:"reject_query_string_api_key"`
+	WarnQueryStringAPIKey                   bool                                 `mapstructure:"warn_query_string_api_key"`
 }
 
 func main() {
@@ -492,6 +494,8 @@ func loadConfig() error {
 	viper.SetDefault("session_ttl_hours", 12)
 	viper.SetDefault("csrf_enabled", true)
 	viper.SetDefault("local_admin_bootstrap_enabled", true)
+	viper.SetDefault("reject_query_string_api_key", false)
+	viper.SetDefault("warn_query_string_api_key", true)
 
 	reportingDefaults := profile.DefaultReportingConfig()
 	viper.SetDefault("reporting.mode", reportingDefaults.Mode)
@@ -710,13 +714,27 @@ func requireAPIKeyAuth() gin.HandlerFunc {
 				apiKey = strings.TrimSpace(strings.TrimPrefix(auth, "Bearer "))
 			}
 		}
+		fromQuery := false
 		if apiKey == "" {
 			apiKey = c.Query("api_key")
+			fromQuery = apiKey != ""
 		}
 
 		if apiKey == "" {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "API key required"})
 			return
+		}
+
+		if fromQuery {
+			if config.RejectQueryStringAPIKey {
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+					"error": "Query string API keys are disabled; use X-Repository-Detective-API-Key or Authorization: Bearer",
+				})
+				return
+			}
+			if config.WarnQueryStringAPIKey {
+				logger.Warn("Query string API key accepted (deprecated); prefer header authentication")
+			}
 		}
 
 		// Constant-time comparison to prevent timing attacks
@@ -864,6 +882,17 @@ func initializeComponents() error {
 				CSRFEnabled:                config.CSRFEnabled,
 				LocalAdminBootstrapEnabled: config.LocalAdminBootstrapEnabled,
 				PublicURL:                  config.PublicURL,
+				RejectQueryStringAPIKey:    config.RejectQueryStringAPIKey,
+				WarnQueryStringAPIKey:      config.WarnQueryStringAPIKey,
+			})
+			uiHandler.SetPlatformContext(ui.PlatformContext{
+				GiteaURLConfigured:           strings.TrimSpace(config.GiteaURL) != "",
+				GiteaTokenConfigured:         strings.TrimSpace(config.GiteaToken) != "",
+				APIKeyConfigured:             strings.TrimSpace(config.APIKey) != "",
+				RunnerSharedSecretSet:        strings.TrimSpace(config.RunnerSharedSecret) != "",
+				RunnerCallbackBaseURL:        config.RunnerCallbackBaseURL,
+				PublicURL:                    config.PublicURL,
+				RemediationPRRequireApproval: config.RemediationPRRequireApproval,
 			})
 		}
 		if err != nil {

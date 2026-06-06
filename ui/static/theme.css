@@ -1277,12 +1277,50 @@ button:disabled, .rd-btn.disabled {
 
 /* ── Print (reports) ── */
 @media print {
-  .rd-sidebar, .rd-topbar, .rd-hero-actions, .rd-actions, .rd-filter-pills { display: none !important; }
+  .rd-sidebar, .rd-topbar, .rd-hero-actions, .rd-actions, .rd-filter-pills,
+  .rd-no-print, .rd-theme-switch, .rd-breadcrumb, .rd-toolbar, .rd-pagination,
+  .rd-nav-secondary { display: none !important; }
   .rd-layout { display: block; }
-  .rd-main { width: 100%; }
-  body.rd-app { background: #fff; color: #000; }
-  .rd-card, .rd-report { box-shadow: none; border: 1px solid #ccc; break-inside: avoid; }
+  .rd-main { width: 100%; margin: 0; padding: 0; }
+  body.rd-app, body.rd-print-report { background: #fff !important; color: #000 !important; }
+  .rd-card, .rd-report, .rd-report-exec-section { box-shadow: none; border: 1px solid #ccc; break-inside: avoid; }
   .rd-badge { border: 1px solid #999; color: #000 !important; background: #f5f5f5 !important; }
+  .rd-chart-canvas-wrap { height: 220px; page-break-inside: avoid; }
+  canvas { max-height: 200px !important; }
+}
+
+.rd-nav-secondary {
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+
+.rd-report-exec-section {
+  margin-bottom: 24px;
+}
+
+.rd-report-exec-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.rd-exec-dl dt {
+  font-weight: 600;
+}
+
+.rd-card-inset {
+  background: var(--rd-overlay);
+  margin-top: 12px;
+}
+
+.rd-risk-list {
+  margin: 8px 0 0;
+  padding-left: 1.25rem;
+}
+
+.rd-risk-list li {
+  margin: 8px 0;
 }
 
 /* ── Dashboard charts ── */

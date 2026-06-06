@@ -75,7 +75,7 @@ func TestTestFileNotOrphan(t *testing.T) {
 	}, testCfg(), nil)
 	for _, f := range findings {
 		if strings.Contains(f.File, "_test.go") {
-			t.Fatal("test file should not be flagged orphan")
+			t.Fatalf("test file should not be flagged orphan/disconnected: %s %s", f.RuleID, f.File)
 		}
 	}
 }

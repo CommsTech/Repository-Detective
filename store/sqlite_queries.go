@@ -241,6 +241,52 @@ func (s *SQLiteStore) OpenFindingsBySeverityForRepository(ctx context.Context, r
 	return out, rows.Err()
 }
 
+func (s *SQLiteStore) OpenFindingsByCategoryForRepository(ctx context.Context, repositoryID int64) (map[string]int, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT LOWER(COALESCE(category, 'unknown')), COUNT(1) FROM findings
+		WHERE repository_id = ? AND status = 'open'
+		GROUP BY LOWER(COALESCE(category, 'unknown'))
+	`, repositoryID)
+	if err != nil {
+		return nil, fmt.Errorf("open findings by category: %w", err)
+	}
+	defer rows.Close()
+
+	out := map[string]int{}
+	for rows.Next() {
+		var cat string
+		var count int
+		if err := rows.Scan(&cat, &count); err != nil {
+			return nil, err
+		}
+		out[cat] = count
+	}
+	return out, rows.Err()
+}
+
+func (s *SQLiteStore) OpenFindingsConfidenceBandsForRepository(ctx context.Context, repositoryID int64, confidenceGate float64) (map[string]int, error) {
+	if confidenceGate <= 0 {
+		confidenceGate = 0.7
+	}
+	row := s.db.QueryRowContext(ctx, `
+		SELECT
+			SUM(CASE WHEN confidence >= ? OR LOWER(severity) IN ('critical', 'high') AND confidence >= 0.5 THEN 1 ELSE 0 END),
+			SUM(CASE WHEN NOT (confidence >= ? OR LOWER(severity) IN ('critical', 'high') AND confidence >= 0.5) THEN 1 ELSE 0 END),
+			COUNT(1)
+		FROM findings
+		WHERE repository_id = ? AND status = 'open'
+	`, confidenceGate, confidenceGate, repositoryID)
+	var actionable, review, total int
+	if err := row.Scan(&actionable, &review, &total); err != nil {
+		return nil, fmt.Errorf("open findings confidence bands: %w", err)
+	}
+	return map[string]int{
+		"actionable": actionable,
+		"review":     review,
+		"total":      total,
+	}, nil
+}
+
 func (s *SQLiteStore) GetFindingDetail(ctx context.Context, id int64) (FindingDetail, error) {
 	row := s.db.QueryRowContext(ctx, `
 		SELECT f.id, f.repository_id, f.fingerprint, f.category, f.severity, f.confidence,

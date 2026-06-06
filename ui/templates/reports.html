@@ -2,20 +2,15 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>{{template "head" .}}</head>
-<body class="rd-app">
+<body class="rd-app rd-print-report">
 {{template "nav" .}}
 
 {{with .Data.Summary}}
-<div class="rd-report rd-report-section">
-  <h2>Executive summary</h2>
+{{template "executive_summary.html" (dict "Executive" $.Data.Executive)}}
+
+<div class="rd-report rd-print-block">
+  <h2>Fleet executive report</h2>
   <p class="rd-report-meta">Generated from live control-plane data · {{.TotalRepositories}} repositories monitored</p>
-  <p class="rd-report-exec">
-    Repository Detective currently tracks <strong>{{.TotalRepositories}}</strong> repositories with
-    <strong>{{.OpenFindingsCount}}</strong> open findings across all severity levels.
-    In the last 7 days, completed scans detected <strong>{{.IssuesDetectedInScans}}</strong> raw issues.
-    {{if gt .FailedScansCount 0}}<strong>{{.FailedScansCount}}</strong> repository scans failed and require operator attention.{{end}}
-    {{if gt .Lifecycle.ResolvedVerified 0}}<strong>{{.Lifecycle.ResolvedVerified}}</strong> findings have been verified resolved through evidence-based closure.{{end}}
-  </p>
   <div class="rd-kpi-row">
     <div class="rd-kpi"><strong>{{.OpenFindingsCount}}</strong><span>Open findings</span></div>
     <div class="rd-kpi"><strong>{{index .OpenFindingsBySeverity "critical"}}</strong><span>Critical</span></div>
@@ -80,8 +75,8 @@
   </table>
 </div>
 
-<div class="rd-actions">
-  <button type="button" class="rd-btn rd-btn-ghost" onclick="window.print()">Print report</button>
+<div class="rd-actions rd-no-print">
+  <button type="button" class="rd-btn" onclick="window.print()">Print / Save PDF</button>
 </div>
 {{end}}
 

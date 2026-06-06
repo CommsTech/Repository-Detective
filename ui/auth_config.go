@@ -9,6 +9,8 @@ type AuthConfig struct {
 	CSRFEnabled                bool
 	LocalAdminBootstrapEnabled bool
 	PublicURL                  string
+	RejectQueryStringAPIKey    bool
+	WarnQueryStringAPIKey      bool
 }
 
 // IsLocal returns true when browser sessions are required for the UI.

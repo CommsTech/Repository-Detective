@@ -10,7 +10,10 @@
     var valid = { system: 1, light: 1, dark: 1 };
     var stored = localStorage.getItem(key);
     var theme = valid[stored] ? stored : "system";
+    var dark = theme === "dark" || (theme === "system" && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
     document.documentElement.dataset.theme = theme;
+    document.documentElement.style.colorScheme = dark ? "dark" : "light";
+    document.documentElement.style.backgroundColor = dark ? "#0a1018" : "#f0f4f8";
   } catch (e) {
     document.documentElement.dataset.theme = "system";
   }
@@ -45,7 +48,12 @@
       <span class="rd-nav-label">Platform</span>
       <a href="{{.BasePath}}/health{{apiKeyQS .APIKey}}" class="{{navActive "health" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">♥</span> System Health</a>
       <a href="{{.BasePath}}/preinstall{{apiKeyQS .APIKey}}"><span class="rd-nav-icon" aria-hidden="true">🔍</span> Pre-install audit</a>
+      {{if .SetupComplete}}
+      <a href="{{.BasePath}}/repos{{apiKeyQS .APIKey}}" class="{{navActive "settings" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">⚙</span> Configure</a>
+      <a href="/onboard/" target="_blank" rel="noopener" class="rd-nav-secondary"><span class="rd-nav-icon" aria-hidden="true">↗</span> Setup diagnostics</a>
+      {{else}}
       <a href="/onboard/" target="_blank" rel="noopener"><span class="rd-nav-icon" aria-hidden="true">↗</span> Setup wizard</a>
+      {{end}}
     </nav>
     <div class="rd-sidebar-foot">
       Repository Detective<br>

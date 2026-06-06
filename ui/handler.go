@@ -49,6 +49,7 @@ type Handler struct {
 	reconcileEnabled     bool
 	reconciler           IssueReconciler
 	readinessFn          func() operator.Readiness
+	platform             PlatformContext
 }
 
 // IssueReconciler previews and applies existing issue reconciliation.
@@ -161,6 +162,13 @@ func (h *Handler) SetReadinessFn(fn func() operator.Readiness) {
 	}
 }
 
+// SetPlatformContext wires non-secret platform state for setup detection and health capability cards.
+func (h *Handler) SetPlatformContext(ctx PlatformContext) {
+	if h != nil {
+		h.platform = ctx
+	}
+}
+
 func normalizeBasePath(path string) string {
 	path = strings.TrimSpace(path)
 	if path == "" {
@@ -233,15 +241,16 @@ func (h *Handler) requireStore(c *gin.Context) bool {
 }
 
 type pageData struct {
-	Title       string
-	BasePath    string
-	APIKey      string
-	CSRFToken   string
-	Notice      string
-	NavSection  string
-	AuthLocal   bool
-	CurrentUser *store.User
-	Data        map[string]any
+	Title         string
+	BasePath      string
+	APIKey        string
+	CSRFToken     string
+	Notice        string
+	NavSection    string
+	AuthLocal     bool
+	SetupComplete bool
+	CurrentUser   *store.User
+	Data          map[string]any
 }
 
 func clientAPIKeyFromRequest(c *gin.Context) string {
@@ -280,15 +289,30 @@ func (h *Handler) page(c *gin.Context, title string, data map[string]any) pageDa
 		csrf = security.CSRFToken(h.apiKeySecret, apiKey)
 	}
 	return pageData{
-		Title:       title,
-		BasePath:    h.basePath,
-		APIKey:      apiKey,
-		CSRFToken:   csrf,
-		Notice:      settingsNotice,
-		AuthLocal:   h.auth.IsLocal(),
-		CurrentUser: currentUser,
-		Data:        data,
+		Title:         title,
+		BasePath:      h.basePath,
+		APIKey:        apiKey,
+		CSRFToken:     csrf,
+		Notice:        settingsNotice,
+		AuthLocal:     h.auth.IsLocal(),
+		SetupComplete: h.isSetupComplete(c.Request.Context()),
+		CurrentUser:   currentUser,
+		Data:          data,
 	}
+}
+
+func (h *Handler) isSetupComplete(ctx context.Context) bool {
+	if h.auth.IsLocal() {
+		return h.store != nil
+	}
+	if !h.platform.APIKeyConfigured || !h.platform.GiteaURLConfigured || !h.platform.GiteaTokenConfigured {
+		return false
+	}
+	if h.store == nil {
+		return false
+	}
+	repos, err := h.store.ListRepositoriesWithSummary(ctx, store.ListOptions{Limit: 1})
+	return err == nil && len(repos) > 0
 }
 
 func (h *Handler) clientAPIKey(c *gin.Context) string {
@@ -440,6 +464,7 @@ func (h *Handler) Reports(c *gin.Context) {
 	})
 	h.renderNav(c, "reports.html", "Reports", "reports", map[string]any{
 		"Summary": summary, "Repositories": repos,
+		"Executive": buildFleetExecutiveSummary(summary),
 	})
 }
 
@@ -481,9 +506,24 @@ func (h *Handler) RepoReport(c *gin.Context) {
 	if severityCounts == nil {
 		severityCounts = map[string]int{}
 	}
+	categoryCounts, _ := h.store.OpenFindingsByCategoryForRepository(c.Request.Context(), id)
+	if categoryCounts == nil {
+		categoryCounts = map[string]int{}
+	}
+	confidenceBands, _ := h.store.OpenFindingsConfidenceBandsForRepository(c.Request.Context(), id, effective.ConfidenceGate)
+	if confidenceBands == nil {
+		confidenceBands = map[string]int{}
+	}
+	topFindings, _ := h.store.ListFindings(c.Request.Context(), store.FindingFilter{
+		RepositoryID: id, Status: "open", Limit: 20,
+	})
+	sortFindingsBySeverity(topFindings)
+	executive := buildRepoExecutiveSummary(repo, severityCounts, categoryCounts, confidenceBands, topFindings, scans, effective, meta.ScanProfile)
 	h.renderNav(c, "repo_report.html", "Report — "+repo.FullName, "reports", map[string]any{
 		"Repo": repo, "Scans": scans, "Findings": findings, "ExternalIssues": external,
 		"Effective": effective, "ProfileMeta": meta, "SeverityCounts": severityCounts,
+		"CategoryCounts": categoryCounts, "ConfidenceBands": confidenceBands,
+		"Executive": executive, "ChartJSON": buildRepoReportChartJSON(severityCounts, categoryCounts),
 		"FindingsFilter": findingsFilter, "FindingsTotal": findingsTotal, "FindingsPageSize": findingsPageSize,
 	})
 }
@@ -537,6 +577,9 @@ func (h *Handler) SystemHealth(c *gin.Context) {
 		}
 	}
 	data["RunnerTelemetry"] = operator.BuildRunnerTelemetry(delegationEnabled, runnerJobs, lastJob, lastErr)
+	if r, ok := data["Readiness"].(operator.Readiness); ok {
+		data["Capabilities"] = buildCapabilityStatuses(r, h.notifyGlobal, h.platform, h.basePath)
+	}
 	h.renderNav(c, "health.html", "System Health", "health", data)
 }
 
