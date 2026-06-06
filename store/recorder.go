@@ -138,7 +138,10 @@ func (r *Recorder) FinishScan(ctx context.Context, scanID string, data *ScanComp
 		}
 	}
 
-	summaryJSON, _ := json.Marshal(summary)
+	summaryJSON, err := json.Marshal(summary)
+	if err != nil {
+		return fmt.Errorf("marshal scan summary: %w", err)
+	}
 
 	if err := r.store.FinishScan(ctx, scanID, ScanResult{
 		Status:            status,
@@ -223,27 +226,38 @@ func (r *Recorder) RecordIssues(ctx context.Context, repositoryID int64, scanID 
 			return fmt.Errorf("upsert finding %s: %w", issue.Fingerprint, err)
 		}
 
-		locationJSON, _ := json.Marshal(map[string]any{
+		locationJSON, err := json.Marshal(map[string]any{
 			"file":         issue.File,
 			"line":         issue.LineNumber,
 			"column":       issue.ColumnNumber,
 			"code_snippet": redactSnippet(issue.CodeSnippet),
 		})
-		metaJSON, _ := json.Marshal(map[string]any{
+		if err != nil {
+			return fmt.Errorf("marshal finding location %s: %w", issue.Fingerprint, err)
+		}
+		metaJSON, err := json.Marshal(map[string]any{
 			"source":  issue.Source,
 			"rule_id": issue.RuleID,
 			"from_ai": issue.FromAI,
 			"fixable": issue.Fixable,
 			"scan_id": scanID,
 		})
+		if err != nil {
+			return fmt.Errorf("marshal finding meta %s: %w", issue.Fingerprint, err)
+		}
 		if issue.Source == "graph" && strings.TrimSpace(issue.Evidence) != "" {
 			var meta map[string]any
-			_ = json.Unmarshal(metaJSON, &meta)
+			if err := json.Unmarshal(metaJSON, &meta); err != nil {
+				return fmt.Errorf("unmarshal finding meta %s: %w", issue.Fingerprint, err)
+			}
 			if meta == nil {
 				meta = map[string]any{}
 			}
 			meta["graph_detail"] = json.RawMessage(issue.Evidence)
-			metaJSON, _ = json.Marshal(meta)
+			metaJSON, err = json.Marshal(meta)
+			if err != nil {
+				return fmt.Errorf("marshal graph meta %s: %w", issue.Fingerprint, err)
+			}
 		}
 
 		evidenceText := redactSnippet(issue.Description)
@@ -282,16 +296,20 @@ func (r *Recorder) RecordIssues(ctx context.Context, repositoryID int64, scanID 
 			if processedItem.Action == "updated" {
 				eventType = "issue_updated"
 			}
+			metaJSON, err := mustJSON(map[string]any{
+				"issue_number": processedItem.IssueNumber,
+				"issue_url":    processedItem.IssueURL,
+				"action":       processedItem.Action,
+			})
+			if err != nil {
+				return fmt.Errorf("marshal lifecycle metadata: %w", err)
+			}
 			if err := r.store.AddLifecycleEvent(ctx, LifecycleEvent{
 				FindingID: &findingID,
 				ScanID:    scanID,
 				EventType: eventType,
 				Message:   fmt.Sprintf("forge issue #%d (%s)", processedItem.IssueNumber, processedItem.Action),
-				MetadataJSON: mustJSON(map[string]any{
-					"issue_number": processedItem.IssueNumber,
-					"issue_url":    processedItem.IssueURL,
-					"action":       processedItem.Action,
-				}),
+				MetadataJSON: metaJSON,
 				CreatedAt: now,
 			}); err != nil {
 				return fmt.Errorf("add lifecycle event: %w", err)
@@ -319,9 +337,12 @@ func redactSnippet(value string) string {
 	return value
 }
 
-func mustJSON(v any) json.RawMessage {
-	b, _ := json.Marshal(v)
-	return b
+func mustJSON(v any) (json.RawMessage, error) {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 
 // ScannerResultsFromRun converts scanner run results for tests/integration.

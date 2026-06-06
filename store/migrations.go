@@ -543,6 +543,7 @@ func applyMigrations(db *sql.DB) error {
 
 		for _, stmt := range stmts {
 			if _, err := tx.Exec(stmt); err != nil {
+				// Rollback after failed statement; ignore Rollback error (tx may already be invalid).
 				_ = tx.Rollback()
 				return fmt.Errorf("migration %d failed: %w", version, err)
 			}

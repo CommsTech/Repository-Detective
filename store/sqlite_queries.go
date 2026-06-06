@@ -623,10 +623,22 @@ func (s *SQLiteStore) DashboardSummary(ctx context.Context, recentLimit int) (Da
 		summary.RecentScheduledScans = append(summary.RecentScheduledScans, item)
 	}
 
-	summary.RunnerJobsByStatus, _ = s.CountRunnerJobsByStatus(ctx)
-	summary.Remediation, _ = s.RemediationSummary(ctx)
-	summary.Closure, _ = s.ClosureSummary(ctx)
-	summary.Lifecycle, _ = s.LifecycleSummary(ctx)
+	summary.RunnerJobsByStatus, err = s.CountRunnerJobsByStatus(ctx)
+	if err != nil {
+		return summary, fmt.Errorf("runner jobs by status: %w", err)
+	}
+	summary.Remediation, err = s.RemediationSummary(ctx)
+	if err != nil {
+		return summary, fmt.Errorf("remediation summary: %w", err)
+	}
+	summary.Closure, err = s.ClosureSummary(ctx)
+	if err != nil {
+		return summary, fmt.Errorf("closure summary: %w", err)
+	}
+	summary.Lifecycle, err = s.LifecycleSummary(ctx)
+	if err != nil {
+		return summary, fmt.Errorf("lifecycle summary: %w", err)
+	}
 
 	if err := s.enrichOperatorDashboard(ctx, &summary); err != nil {
 		return summary, err
@@ -844,6 +856,9 @@ func (s *SQLiteStore) ReapStaleScans(ctx context.Context, olderThan time.Duratio
 	if err != nil {
 		return 0, fmt.Errorf("reap stale scans: %w", err)
 	}
-	n, _ := res.RowsAffected()
+	n, err := res.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("reap stale scans rows affected: %w", err)
+	}
 	return int(n), nil
 }

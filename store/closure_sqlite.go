@@ -87,9 +87,9 @@ func (s *SQLiteStore) ClosureSummary(ctx context.Context) (ClosureSummary, error
 	var summary ClosureSummary
 	row := s.db.QueryRowContext(ctx, `
 		SELECT
-			SUM(CASE WHEN status = ? THEN 1 ELSE 0 END),
-			SUM(CASE WHEN status = ? THEN 1 ELSE 0 END),
-			SUM(CASE WHEN status = ? THEN 1 ELSE 0 END)
+			COALESCE(SUM(CASE WHEN status = ? THEN 1 ELSE 0 END), 0),
+			COALESCE(SUM(CASE WHEN status = ? THEN 1 ELSE 0 END), 0),
+			COALESCE(SUM(CASE WHEN status = ? THEN 1 ELSE 0 END), 0)
 		FROM closure_evidence
 	`, ClosureStatusPendingRescan, ClosureStatusVerified, ClosureStatusBlocked)
 	if err := row.Scan(&summary.PendingRescan, &summary.Verified, &summary.Blocked); err != nil {

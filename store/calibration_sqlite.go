@@ -9,7 +9,6 @@ import (
 
 // SaveReconciliationRun persists a reconciliation run and its items.
 func (s *SQLiteStore) SaveReconciliationRun(ctx context.Context, run ReconciliationRun, items []ReconciliationItemRecord) error {
-	now := time.Now().UTC().Format(time.RFC3339)
 	if run.CreatedAt.IsZero() {
 		run.CreatedAt = time.Now().UTC()
 	}
@@ -21,6 +20,7 @@ func (s *SQLiteStore) SaveReconciliationRun(ctx context.Context, run Reconciliat
 	if err != nil {
 		return fmt.Errorf("save reconciliation run: %w", err)
 	}
+	// defer Rollback is safe after Commit; ignored error is intentional on success path.
 	defer func() { _ = tx.Rollback() }()
 
 	if _, err := tx.ExecContext(ctx, `
@@ -48,7 +48,6 @@ func (s *SQLiteStore) SaveReconciliationRun(ctx context.Context, run Reconciliat
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit reconciliation run: %w", err)
 	}
-	_ = now
 	return nil
 }
 
@@ -148,6 +147,7 @@ func (s *SQLiteStore) RecomputeCalibrationRuleStats(ctx context.Context) (int, e
 	if err != nil {
 		return 0, err
 	}
+	// defer Rollback is safe after Commit; ignored error is intentional on success path.
 	defer func() { _ = tx.Rollback() }()
 
 	stmt, err := tx.PrepareContext(ctx, `
@@ -230,10 +230,12 @@ func (s *SQLiteStore) GenerateCalibrationRecommendations(ctx context.Context, mi
 		}
 		reason := fmt.Sprintf("%d findings, %.0f%% false-positive/suppression rate", total, fpRate*100)
 		var exists int
-		_ = s.db.QueryRowContext(ctx, `
+		if err := s.db.QueryRowContext(ctx, `
 			SELECT COUNT(1) FROM calibration_recommendations
 			WHERE scope = 'global' AND rule_id = ? AND source = ? AND status = 'proposed'
-		`, ruleID, source).Scan(&exists)
+		`, ruleID, source).Scan(&exists); err != nil {
+			return count, fmt.Errorf("check existing recommendation: %w", err)
+		}
 		if exists > 0 {
 			continue
 		}
@@ -307,9 +309,15 @@ func (s *SQLiteStore) UpdateCalibrationRecommendationStatus(ctx context.Context,
 func (s *SQLiteStore) CalibrationSummary(ctx context.Context) (map[string]any, error) {
 	out := map[string]any{}
 	var proposed, accepted, rejected int
-	_ = s.db.QueryRowContext(ctx, `SELECT COUNT(1) FROM calibration_recommendations WHERE status = 'proposed'`).Scan(&proposed)
-	_ = s.db.QueryRowContext(ctx, `SELECT COUNT(1) FROM calibration_recommendations WHERE status = 'accepted'`).Scan(&accepted)
-	_ = s.db.QueryRowContext(ctx, `SELECT COUNT(1) FROM calibration_recommendations WHERE status = 'rejected'`).Scan(&rejected)
+	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(1) FROM calibration_recommendations WHERE status = 'proposed'`).Scan(&proposed); err != nil {
+		return nil, fmt.Errorf("count proposed recommendations: %w", err)
+	}
+	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(1) FROM calibration_recommendations WHERE status = 'accepted'`).Scan(&accepted); err != nil {
+		return nil, fmt.Errorf("count accepted recommendations: %w", err)
+	}
+	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(1) FROM calibration_recommendations WHERE status = 'rejected'`).Scan(&rejected); err != nil {
+		return nil, fmt.Errorf("count rejected recommendations: %w", err)
+	}
 	out["proposed_recommendations"] = proposed
 	out["accepted_recommendations"] = accepted
 	out["rejected_recommendations"] = rejected
