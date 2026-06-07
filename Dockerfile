@@ -80,7 +80,9 @@ RUN cp /usr/local/lib/rd/apk-retry.sh /tmp/apk-retry.sh && \
       . /tmp/apk-retry.sh && apk_retry git ca-certificates ;\
     fi
 
-COPY --from=builder /go/bin/govulncheck /go/bin/gosec /go/bin/staticcheck /usr/local/bin/
+COPY --from=builder /go/bin/govulncheck /usr/local/bin/govulncheck
+COPY --from=builder /go/bin/gosec /usr/local/bin/gosec
+COPY --from=builder /go/bin/staticcheck /usr/local/bin/staticcheck
 COPY --from=builder /usr/local/go /usr/local/go
 ENV PATH="/usr/local/go/bin:${PATH}"
 
@@ -104,9 +106,10 @@ LABEL org.opencontainers.image.title="Repository Detective (core)" \
       com.commsnet.repository-detective.variant="core"
 
 COPY scripts/apk-retry.sh /usr/local/lib/rd/apk-retry.sh
-RUN chmod +x /usr/local/lib/rd/apk-retry.sh && . /usr/local/lib/rd/apk-retry.sh && apk_retry ca-certificates tzdata wget su-exec git && \
-    addgroup -g 1001 -S repositorydetective && \
-    adduser -u 1001 -S repositorydetective -G repositorydetective
+COPY scripts/docker-alpine-runtime-setup.sh /usr/local/lib/rd/docker-alpine-runtime-setup.sh
+
+RUN chmod +x /usr/local/lib/rd/apk-retry.sh /usr/local/lib/rd/docker-alpine-runtime-setup.sh && \
+    /usr/local/lib/rd/docker-alpine-runtime-setup.sh ca-certificates tzdata wget su-exec git
 
 WORKDIR /app
 
@@ -115,7 +118,9 @@ COPY --from=builder /app/config ./config
 COPY scripts/docker-entrypoint.sh scripts/docker-healthcheck.sh /usr/local/bin/
 
 RUN chmod +x repository-detective /usr/local/bin/docker-entrypoint.sh /usr/local/bin/docker-healthcheck.sh && \
-    mkdir -p /app/data && chown -R repositorydetective:repositorydetective /app
+    /usr/local/lib/rd/docker-alpine-runtime-setup.sh && \
+    mkdir -p /app/data && \
+    chown -R repositorydetective:repositorydetective /app
 
 VOLUME ["/app/data"]
 EXPOSE 8080
@@ -146,15 +151,17 @@ LABEL org.opencontainers.image.title="Repository Detective (runner)" \
       org.opencontainers.image.created="${BUILD_DATE}" \
       com.commsnet.repository-detective.variant="runner"
 
-RUN . /usr/local/lib/rd/apk-retry.sh && apk_retry wget su-exec && \
-    addgroup -g 1001 -S repositorydetective && \
-    adduser -u 1001 -S repositorydetective -G repositorydetective
+COPY scripts/docker-alpine-runtime-setup.sh /usr/local/lib/rd/docker-alpine-runtime-setup.sh
+
+RUN chmod +x /usr/local/lib/rd/docker-alpine-runtime-setup.sh && \
+    /usr/local/lib/rd/docker-alpine-runtime-setup.sh wget su-exec
 
 WORKDIR /app
 
 COPY --from=builder /app/repository-detective-runner /usr/local/bin/repository-detective-runner
 
 RUN chmod +x /usr/local/bin/repository-detective-runner && \
+    /usr/local/lib/rd/docker-alpine-runtime-setup.sh && \
     mkdir -p /workspace && chown -R repositorydetective:repositorydetective /app /workspace
 
 USER repositorydetective
@@ -179,9 +186,10 @@ LABEL org.opencontainers.image.title="Repository Detective (all-in-one)" \
       org.opencontainers.image.created="${BUILD_DATE}" \
       com.commsnet.repository-detective.variant="all-in-one"
 
-RUN . /usr/local/lib/rd/apk-retry.sh && apk_retry wget su-exec && \
-    addgroup -g 1001 -S repositorydetective && \
-    adduser -u 1001 -S repositorydetective -G repositorydetective
+COPY scripts/docker-alpine-runtime-setup.sh /usr/local/lib/rd/docker-alpine-runtime-setup.sh
+
+RUN chmod +x /usr/local/lib/rd/docker-alpine-runtime-setup.sh && \
+    /usr/local/lib/rd/docker-alpine-runtime-setup.sh wget su-exec
 
 WORKDIR /app
 
@@ -192,6 +200,7 @@ COPY scripts/docker-entrypoint.sh scripts/docker-healthcheck.sh /usr/local/bin/
 
 RUN chmod +x repository-detective /usr/local/bin/repository-detective-runner \
     /usr/local/bin/docker-entrypoint.sh /usr/local/bin/docker-healthcheck.sh && \
+    /usr/local/lib/rd/docker-alpine-runtime-setup.sh && \
     mkdir -p /app/data && chown -R repositorydetective:repositorydetective /app
 
 VOLUME ["/app/data"]
