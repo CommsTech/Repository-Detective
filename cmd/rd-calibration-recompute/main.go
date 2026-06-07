@@ -24,14 +24,13 @@ func main() {
 	ctx := context.Background()
 	stats, _ := s.RecomputeCalibrationRuleStats(ctx)
 	global, _ := s.GenerateCalibrationRecommendations(ctx, 5)
-	qs := s.(store.QueryStore)
-	repos, _ := qs.ListRepositoriesWithSummary(ctx, store.ListOptions{Limit: 100})
+	repos, _ := s.ListRepositoriesWithSummary(ctx, store.ListOptions{Limit: 100})
 	repoRecs := 0
 	for _, r := range repos {
 		if r.FullName != "commstech/netmapper" && r.FullName != "commstech/commsnet_optimizer" && r.FullName != "commstech/nextcloud_scripts" {
 			continue
 		}
-		n, _ := qs.GenerateRepoScopedRecommendations(ctx, r.ID, 3)
+		n, _ := s.GenerateRepoScopedRecommendations(ctx, r.ID, 3)
 		repoRecs += n
 	}
 	recs, _ := s.ListCalibrationRecommendations(ctx, "proposed", 50)

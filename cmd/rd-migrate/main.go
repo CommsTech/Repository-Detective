@@ -24,11 +24,9 @@ func main() {
 		os.Exit(1)
 	}
 	defer s.Close()
-	if qs, ok := s.(store.QueryStore); ok {
-		if _, err := qs.LearningHealthSummary(context.Background()); err != nil {
-			fmt.Fprintf(os.Stderr, "learning tables verify failed: %v\n", err)
-			os.Exit(1)
-		}
+	if _, err := s.LearningHealthSummary(context.Background()); err != nil {
+		fmt.Fprintf(os.Stderr, "learning tables verify failed: %v\n", err)
+		os.Exit(1)
 	}
 	fmt.Printf("database migrated: %s\n", path)
 }
