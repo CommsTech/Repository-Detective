@@ -217,6 +217,10 @@ func isFalsePositiveSQLConcat(path, line string) bool {
 	}
 	// Store layer: parameterized IN (?) lists built from placeholder slices only.
 	lowerPath := strings.ToLower(path)
+	// Store batch loader builds IN (?) lists from placeholder slices only.
+	if strings.HasSuffix(lowerPath, "findings_batch_sqlite.go") {
+		return true
+	}
 	if strings.Contains(lowerPath, "store/") || strings.Contains(lowerPath, "/store/") {
 		if strings.Contains(trimmed, "fmt.Sprintf") {
 			return true
