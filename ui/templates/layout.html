@@ -2,7 +2,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#0d1b2a">
-<title>{{.Title}} — Repository Detective</title>
+<title>{{.Title}} — Repository Detective — Inspect. Analyze. Improve.</title>
+<link rel="icon" href="{{.BasePath}}/static/favicon.svg" type="image/svg+xml">
 <script>
 (function () {
   try {
@@ -47,10 +48,10 @@
       <a href="{{.BasePath}}/repos{{apiKeyQS .APIKey}}" class="{{navActive "policies" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">⚙</span> Policies</a>
       <span class="rd-nav-label">Platform</span>
       <a href="{{.BasePath}}/health{{apiKeyQS .APIKey}}" class="{{navActive "health" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">♥</span> System Health</a>
-      <a href="{{.BasePath}}/preinstall{{apiKeyQS .APIKey}}"><span class="rd-nav-icon" aria-hidden="true">🔍</span> Pre-install audit</a>
+      <a href="{{.BasePath}}/preinstall{{apiKeyQS .APIKey}}" class="{{navActive "preinstall" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">🔍</span> Pre-install audit</a>
+      <a href="{{.BasePath}}/projects{{apiKeyQS .APIKey}}" class="{{navActive "projects" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">◫</span> Project groups</a>
       {{if .SetupComplete}}
-      <a href="{{.BasePath}}/repos{{apiKeyQS .APIKey}}" class="{{navActive "settings" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">⚙</span> Configure</a>
-      <a href="/onboard/" target="_blank" rel="noopener" class="rd-nav-secondary"><span class="rd-nav-icon" aria-hidden="true">↗</span> Setup diagnostics</a>
+      <a href="{{.BasePath}}/configure{{apiKeyQS .APIKey}}" class="{{navActive "settings" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">⚙</span> Configure</a>
       {{else}}
       <a href="/onboard/" target="_blank" rel="noopener"><span class="rd-nav-icon" aria-hidden="true">↗</span> Setup wizard</a>
       {{end}}

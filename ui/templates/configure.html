@@ -1,0 +1,50 @@
+{{define "configure.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>{{template "head" .}}</head>
+<body class="rd-app">
+{{template "nav" .}}
+{{if .Notice}}<div class="rd-alert info" role="status">{{.Notice}}</div>{{end}}
+
+<div class="rd-card">
+  <div class="rd-card-head"><h2>Platform configuration</h2><span class="rd-chip">Settings</span></div>
+  <p class="rd-muted">Configure forge credentials, feature flags, and scanner coverage. Secrets belong in <code>config/config.yaml</code> or environment variables — never in git.</p>
+  <ul class="rd-quicklink-list">
+    <li><a href="{{.BasePath}}/health{{apiKeyQS .APIKey}}">System Health — feature flags &amp; scanners</a></li>
+    <li><a href="{{.BasePath}}/repos{{apiKeyQS .APIKey}}">Repositories — per-repo scan policy</a></li>
+    <li><a href="{{.BasePath}}/preinstall{{apiKeyQS .APIKey}}">Pre-install audit</a></li>
+    <li><a href="{{.BasePath}}/projects{{apiKeyQS .APIKey}}">Project groups</a></li>
+    {{if not .Data.SetupComplete}}<li><a href="/onboard/" target="_blank" rel="noopener">Setup wizard (first launch)</a></li>{{end}}
+  </ul>
+</div>
+
+{{with .Data.Readiness}}
+<div class="rd-card">
+  <div class="rd-card-head"><h2>Feature flags</h2></div>
+  <table class="rd-table">
+    <tr><th>Feature</th><th>Status</th></tr>
+    <tr><td>Database</td><td>{{if .Features.DatabaseEnabled}}enabled{{else}}disabled{{end}}</td></tr>
+    <tr><td>Scheduler</td><td>{{if .Features.SchedulerEnabled}}enabled{{else}}disabled{{end}}</td></tr>
+    <tr><td>Runner delegation</td><td>{{if .Features.RunnerDelegationEnabled}}enabled{{else}}disabled{{end}}</td></tr>
+    <tr><td>Pre-install audit</td><td>{{if .Features.PreinstallAuditEnabled}}enabled{{else}}disabled{{end}}</td></tr>
+    <tr><td>Remediation PR</td><td>{{if .Features.RemediationPREnabled}}enabled{{else}}disabled{{end}}</td></tr>
+    <tr><td>Scan profile</td><td>{{.Features.ScanProfile}}</td></tr>
+  </table>
+</div>
+{{end}}
+
+{{if .Data.Capabilities}}
+<div class="rd-card">
+  <div class="rd-card-head"><h2>Capabilities</h2></div>
+  <table class="rd-table">
+    <tr><th>Capability</th><th>State</th><th>Reason</th></tr>
+    {{range .Data.Capabilities}}
+    <tr><td>{{.Name}}</td><td>{{.State}}</td><td class="rd-muted">{{.Reason}}</td></tr>
+    {{end}}
+  </table>
+</div>
+{{end}}
+
+{{template "foot" .}}
+</body></html>
+{{end}}

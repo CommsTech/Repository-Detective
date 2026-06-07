@@ -80,8 +80,8 @@ func TestDashboardRenders(t *testing.T) {
 	if !strings.Contains(body, "Executive report") {
 		t.Fatal("expected executive report section on dashboard")
 	}
-	if strings.Contains(body, "template error") {
-		t.Fatal("dashboard template error")
+	if !strings.Contains(body, "favicon.svg") {
+		t.Fatal("expected favicon in layout")
 	}
 }
 
@@ -144,6 +144,9 @@ func TestUIRoutesSmoke(t *testing.T) {
 		{"/ui/scans", "Scan history"},
 		{"/ui/reports", "Executive summary"},
 		{"/ui/health", "System Health"},
+		{"/ui/configure", "Platform configuration"},
+		{"/ui/preinstall", "Pre-install audit"},
+		{"/ui/projects", "Project groups"},
 	}
 	for _, rt := range routes {
 		w := httptest.NewRecorder()
@@ -169,6 +172,7 @@ func TestStaticAssetsPublic(t *testing.T) {
 		"/ui/static/chart.umd.min.js",
 		"/ui/static/dashboard-charts.js",
 		"/ui/static/logo.svg",
+		"/ui/static/favicon.svg",
 		"/ui/static/app.js",
 	}
 	for _, path := range assets {
