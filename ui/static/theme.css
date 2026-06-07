@@ -1818,3 +1818,61 @@ table td { padding: 12px; border-bottom: 1px solid var(--rd-border); }
 .rd-scan-result.error {
   border-color: rgba(239, 68, 68, 0.45);
 }
+
+body.rd-modal-open {
+  overflow: hidden;
+}
+
+.rd-repos-control-lead {
+  margin: 4px 0 0;
+  font-size: 0.9rem;
+}
+
+.rd-table-wrap {
+  overflow-x: auto;
+}
+
+.rd-table-control {
+  min-width: 1100px;
+}
+
+.rd-table-control th,
+.rd-table-control td {
+  vertical-align: top;
+  font-size: 0.85rem;
+}
+
+.rd-repo-id-inline {
+  font-size: 0.78rem;
+  margin-top: 2px;
+}
+
+.rd-badge-xs {
+  font-size: 0.72rem;
+  padding: 2px 6px;
+}
+
+.rd-link-sm {
+  font-size: 0.78rem;
+}
+
+.rd-actions-cell {
+  min-width: 220px;
+}
+
+.rd-actions-compact {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  margin-top: 0;
+}
+
+.rd-actions-compact .rd-btn {
+  margin-top: 0;
+  width: 100%;
+}
+
+.rd-inline-form {
+  display: block;
+  margin: 0;
+}

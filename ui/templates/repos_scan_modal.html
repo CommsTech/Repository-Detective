@@ -1,0 +1,52 @@
+{{define "repos_scan_modal.html"}}
+<div class="rd-modal" id="rd-repos-scan-modal" hidden aria-hidden="true">
+  <div class="rd-modal-backdrop" data-scan-cancel tabindex="-1"></div>
+  <div class="rd-modal-panel" role="dialog" aria-modal="true" aria-labelledby="rd-repos-scan-title">
+    <div class="rd-modal-head">
+      <h2 id="rd-repos-scan-title">Scan now</h2>
+      <button type="button" class="rd-modal-close" data-scan-cancel aria-label="Close">&times;</button>
+    </div>
+    <div class="rd-alert info rd-modal-beta-note">Private beta: keep <strong>report-only</strong> enabled unless issue filing is explicitly approved.</div>
+
+    <form class="rd-scan-form" id="rd-repos-scan-form" method="post" data-scan-form data-base-path="{{.BasePath}}" data-confirm="">
+      <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+      <input type="hidden" name="format" value="json">
+
+      <dl class="rd-dl rd-scan-meta">
+        <dt>Repository</dt><dd><strong id="rd-repos-scan-name">—</strong></dd>
+        <dt>Repo ID</dt><dd><code id="rd-repos-scan-id">—</code></dd>
+        <dt>Trigger</dt><dd>manual</dd>
+      </dl>
+
+      <label>Branch / ref<input name="ref" id="rd-repos-scan-ref" value="main" required></label>
+      <label>Scan profile (optional)<select name="scan_profile" id="rd-repos-scan-profile">
+        <option value="">inherit</option>
+        {{range .Data.ControlPage.Profiles}}<option value="{{.}}">{{.}}</option>{{end}}
+      </select></label>
+
+      <label class="rd-checkbox-row">
+        <input type="checkbox" name="report_only_dry_run" id="rd-repos-scan-report-only" value="true" checked>
+        Report-only dry-run (no forge issues, no PRs)
+      </label>
+      <p class="rd-muted" id="rd-repos-scan-filing-note">Issue filing is disabled — report-only is enforced.</p>
+
+      <div class="rd-scan-safety-summary">
+        <p class="rd-scan-safety-head">Safety summary</p>
+        <ul class="rd-scan-safety-list">
+          <li class="rd-safe" id="rd-repos-scan-issues-line"><strong>Issues will not be created</strong> — report-only is enabled.</li>
+          <li class="rd-safe">Remediation PRs are {{if .Data.ControlPage.RemediationPREnabled}}enabled{{else}}<strong>disabled</strong>{{end}}.</li>
+          <li class="rd-safe">LLM sanity gate is {{if .Data.ControlPage.LLMSanityGateEnabled}}enabled{{else}}<strong>disabled</strong>{{end}}.</li>
+          <li class="rd-safe">Backlog-control is {{if .Data.ControlPage.BacklogControlEnabled}}<strong>active</strong>{{else}}off{{end}}.</li>
+          <li>This is a <strong>manual scan</strong>.</li>
+        </ul>
+      </div>
+
+      <div class="rd-scan-form-actions">
+        <button type="submit" class="rd-btn rd-btn-primary">Start scan</button>
+        <button type="button" class="rd-btn rd-btn-ghost" data-scan-cancel>Cancel</button>
+      </div>
+      <div class="rd-scan-result" data-scan-result hidden></div>
+    </form>
+  </div>
+</div>
+{{end}}

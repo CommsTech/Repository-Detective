@@ -772,6 +772,71 @@ func TestRepoScanStartJSON(t *testing.T) {
 	}
 }
 
+func TestReposControlPage(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	s, _ := store.Open(store.Config{Enabled: true, Path: filepath.Join(dir, "repos-control.db")})
+	defer s.Close()
+	repo, _ := s.UpsertRepository(ctx, store.Repository{Owner: "amber", Name: "app", FullName: "amber/app"})
+	hEngine, h := testUI(t, s)
+	h.SetScanTrigger(func(_ context.Context, _ ui.ScanTriggerRequest) (ui.ScanTriggerResult, error) {
+		return ui.ScanTriggerResult{ScanID: "x"}, nil
+	})
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, "/ui/repos", nil)
+	hEngine.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status %d", w.Code)
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "Repository fleet control") {
+		t.Fatal("expected fleet control heading")
+	}
+	if !strings.Contains(body, "data-scan-open") {
+		t.Fatal("expected Scan now buttons")
+	}
+	if !strings.Contains(body, "disable-scanning") && !strings.Contains(body, "enable-scanning") {
+		t.Fatal("expected enable/disable controls")
+	}
+	if !strings.Contains(body, "Scan findings and forge issues can differ") {
+		t.Fatal("expected reconciliation explainer")
+	}
+	if !strings.Contains(body, repo.FullName) {
+		t.Fatal("expected repo in list")
+	}
+}
+
+func TestRepoDisableScanningUI(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	s, _ := store.Open(store.Config{Enabled: true, Path: filepath.Join(dir, "disable-ui.db")})
+	defer s.Close()
+	repo, _ := s.UpsertRepository(ctx, store.Repository{Owner: "o", Name: "r", FullName: "o/r"})
+	on := true
+	_ = s.SaveRepoSettings(ctx, store.RepoSettings{RepositoryID: repo.ID, Enabled: &on})
+	r, _ := testUI(t, s)
+
+	csrf := security.CSRFToken("test-secret", "toggle-key")
+	form := url.Values{}
+	form.Set("csrf_token", csrf)
+	form.Set("format", "json")
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodPost, "/ui/repos/"+strconv.FormatInt(repo.ID, 10)+"/disable-scanning", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("X-Repository-Detective-API-Key", "toggle-key")
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status %d body=%s", w.Code, w.Body.String())
+	}
+	settings, _ := s.GetRepoSettings(ctx, repo.ID)
+	effective := store.ResolveEffectiveSettings(betaTestGlobal(), settings)
+	if effective.Enabled {
+		t.Fatal("expected scanning disabled")
+	}
+}
+
 func TestRepoSettingsSectionsExplainPolicies(t *testing.T) {
 	ctx := context.Background()
 	dir := t.TempDir()

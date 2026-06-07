@@ -227,6 +227,7 @@ func (h *Handler) RegisterRoutes(g *gin.RouterGroup) {
 	g.POST("/projects", h.CreateProjectGroup)
 	g.GET("/learning", h.Learning)
 	h.registerScanRoutes(g)
+	h.registerRepoControlRoutes(g)
 }
 
 // BasePath returns the configured UI mount path.
@@ -611,15 +612,17 @@ func (h *Handler) Repositories(c *gin.Context) {
 	if !h.requireStore(c) {
 		return
 	}
-	repos, err := h.store.ListRepositoriesWithSummary(c.Request.Context(), store.ListOptions{Limit: 100})
+	rows, err := h.store.ListRepositoryControlRows(c.Request.Context(), store.ListOptions{Limit: 100})
 	if err != nil {
 		c.String(http.StatusInternalServerError, "failed to list repositories")
 		return
 	}
-	h.renderNav(c, "repos.html", "Repositories", "repos", map[string]any{
-		"Repositories": repos,
-		"ScanTriggerEnabled": h.ScanTriggerEnabled(),
-	})
+	page := h.buildRepoControlPage(rows)
+	data := map[string]any{"ControlPage": page}
+	if n := strings.TrimSpace(c.Query("notice")); n != "" {
+		data["Notice"] = n
+	}
+	h.renderNav(c, "repos.html", "Repositories", "repos", data)
 }
 
 func (h *Handler) RepoDetail(c *gin.Context) {

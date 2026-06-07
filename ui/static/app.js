@@ -75,27 +75,12 @@
     }
   }
 
-  function initScanNowModal() {
-    var modal = document.getElementById("rd-scan-now-modal");
-    var openBtn = document.getElementById("rd-scan-now-open");
+  function wireScanFormModal(modal) {
     if (!modal) return;
-
-    if (openBtn) {
-      openBtn.addEventListener("click", function () {
-        openModal(modal);
-      });
-    }
-
     modal.querySelectorAll("[data-scan-cancel]").forEach(function (el) {
       el.addEventListener("click", function () {
         closeModal(modal);
       });
-    });
-
-    document.addEventListener("keydown", function (e) {
-      if (e.key === "Escape" && !modal.hidden) {
-        closeModal(modal);
-      }
     });
 
     var form = modal.querySelector("[data-scan-form]");
@@ -157,6 +142,77 @@
             submitBtn.disabled = false;
           }
         });
+    });
+  }
+
+  function initScanNowModal() {
+    var detailModal = document.getElementById("rd-scan-now-modal");
+    var listModal = document.getElementById("rd-repos-scan-modal");
+    var openBtn = document.getElementById("rd-scan-now-open");
+
+    if (openBtn && detailModal) {
+      openBtn.addEventListener("click", function () {
+        openModal(detailModal);
+      });
+    }
+
+    wireScanFormModal(detailModal);
+    wireScanFormModal(listModal);
+
+    document.querySelectorAll("[data-scan-open]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        if (!listModal) return;
+        var repoID = btn.getAttribute("data-repo-id");
+        var repoName = btn.getAttribute("data-repo-name") || "";
+        var ref = btn.getAttribute("data-default-ref") || "main";
+        var profile = btn.getAttribute("data-scan-profile") || "";
+        var issueFiling = btn.getAttribute("data-issue-filing") === "true";
+        var reportOnly = btn.getAttribute("data-report-only") !== "false";
+        var form = document.getElementById("rd-repos-scan-form");
+        if (!form || !repoID) return;
+
+        var basePath = form.getAttribute("data-base-path") || "";
+        var qs = window.location.search || "";
+        form.action = basePath + "/repos/" + repoID + "/scan" + qs;
+        form.setAttribute("data-confirm", "Start manual scan for " + repoName + "?");
+
+        var nameEl = document.getElementById("rd-repos-scan-name");
+        var idEl = document.getElementById("rd-repos-scan-id");
+        var refEl = document.getElementById("rd-repos-scan-ref");
+        var profileEl = document.getElementById("rd-repos-scan-profile");
+        var reportEl = document.getElementById("rd-repos-scan-report-only");
+        var filingNote = document.getElementById("rd-repos-scan-filing-note");
+        var issuesLine = document.getElementById("rd-repos-scan-issues-line");
+
+        if (nameEl) nameEl.textContent = repoName;
+        if (idEl) idEl.textContent = repoID;
+        if (refEl) refEl.value = ref;
+        if (profileEl) profileEl.value = profile;
+        if (reportEl) {
+          reportEl.checked = reportOnly || !issueFiling;
+          reportEl.disabled = !issueFiling;
+        }
+        if (filingNote) {
+          filingNote.hidden = issueFiling;
+        }
+        if (issuesLine) {
+          if (issueFiling && !reportOnly) {
+            issuesLine.className = "rd-warn";
+            issuesLine.innerHTML = "Issue filing may create forge issues when report-only is off.";
+          } else {
+            issuesLine.className = "rd-safe";
+            issuesLine.innerHTML = "<strong>Issues will not be created</strong> — report-only is enabled.";
+          }
+        }
+        openModal(listModal);
+      });
+    });
+
+    document.addEventListener("keydown", function (e) {
+      if (e.key !== "Escape") return;
+      [detailModal, listModal].forEach(function (m) {
+        if (m && !m.hidden) closeModal(m);
+      });
     });
   }
 
