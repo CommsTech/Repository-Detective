@@ -186,8 +186,21 @@ release: clean deps test build-all
 	@cp README.md release/
 	@echo "Release prepared in release/ directory"
 
+beta-release:
+	@chmod +x scripts/build-beta-release.sh
+	@./scripts/build-beta-release.sh
+
 # Help
 help:
+	@echo "Available targets:"
+	@echo "  all          - Build for all platforms"
+	@echo "  build        - Build binary"
+	@echo "  test         - Run tests"
+	@echo "  beta-release - Build prepackaged beta artifacts locally"
+	@echo "  docker-build - Build Docker image"
+	@echo "  release      - Prepare release directory"
+
+.PHONY: all build clean test coverage deps lint fmt docker-build docker-run docker-push help release beta-release
 	@echo "Available targets:"
 	@echo "  all          - Clean, deps, test, and build"
 	@echo "  build        - Build the application"
