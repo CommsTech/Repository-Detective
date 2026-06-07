@@ -109,6 +109,7 @@ func Build(ctx context.Context, input BuildInput, cfg Config, skipPatterns []str
 
 	// Entrypoints
 	detectEntrypoints(b, files)
+	detectOperationalEntrypoints(b, files)
 
 	// Finding overlay
 	if cfg.IncludeFindings {
@@ -116,7 +117,7 @@ func Build(ctx context.Context, input BuildInput, cfg Config, skipPatterns []str
 	}
 
 	// Orphan / disconnected analysis
-	graphFindings := analyzeOrphans(b)
+	graphFindings := calibrateGraphFindings(b, analyzeOrphans(b), input.Repo)
 
 	g := b.finalize(input, false)
 	return g, graphFindings
@@ -186,8 +187,26 @@ func (b *builder) resolveImport(fromFile, target string) string {
 		return candidate
 	}
 	for path := range b.fileInfos {
-		if strings.HasSuffix(path, "/"+target+".go") || strings.HasSuffix(path, "/"+target+".js") {
+		if strings.HasSuffix(path, "/"+target+".go") || strings.HasSuffix(path, "/"+target+".js") ||
+			strings.HasSuffix(path, "/"+target+".py") || strings.HasSuffix(path, "/"+target+"/__init__.py") {
 			return path
+		}
+	}
+	// Python module paths: utils.helper -> utils.py or utils/helper.py
+	if strings.Contains(target, ".") {
+		parts := strings.Split(target, ".")
+		modPath := strings.Join(parts, "/") + ".py"
+		if _, ok := b.fileInfos[modPath]; ok {
+			return modPath
+		}
+		if _, ok := b.fileInfos[parts[0]+".py"]; ok {
+			return parts[0] + ".py"
+		}
+	}
+	if !strings.Contains(target, "/") && !strings.Contains(target, ".") {
+		candidatePy := target + ".py"
+		if _, ok := b.fileInfos[candidatePy]; ok {
+			return candidatePy
 		}
 	}
 	return ""

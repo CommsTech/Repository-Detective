@@ -414,7 +414,12 @@ func (e *Engine) Scan(ctx context.Context, prepare *PrepareReport) ([]CandidateF
 
 	// Stage 2a: deterministic static analysis (depth >= 1)
 	if depth >= 1 && (cfg.EnableSecurity || cfg.EnableQuality) {
-		staticFindings := RunStaticAnalysis(fileContents, cfg.EnableSecurity, cfg.EnableQuality)
+		staticPaths := make([]string, 0, len(analyzableFiles))
+		for _, f := range analyzableFiles {
+			staticPaths = append(staticPaths, f.Path)
+		}
+		repoProfile := profile.DetectProfile(staticPaths)
+		staticFindings := RunStaticAnalysisWithProfile(fileContents, cfg.EnableSecurity, cfg.EnableQuality, repoProfile)
 		for _, f := range staticFindings {
 			allCandidates = append(allCandidates, CandidateFinding(f))
 		}
@@ -454,11 +459,18 @@ func (e *Engine) Scan(ctx context.Context, prepare *PrepareReport) ([]CandidateF
 			graphFiles = append(graphFiles, graph.FileInput{Path: f.Path, Content: f.Content, Language: f.Language})
 		}
 		overlays := graphOverlaysFromCandidates(allCandidates)
+		repoProfile := profile.DetectProfile(allPaths)
 		g, graphFindings := graph.Build(ctx, graph.BuildInput{
 			ScanID:   scanid.From(ctx),
 			Files:    graphFiles,
 			AllPaths: allPaths,
 			Findings: overlays,
+			Repo: graph.RepoContext{
+				FileCount:        repoProfile.FileCount,
+				Layout:           repoProfile.Layout,
+				PrimaryEcosystem: repoProfile.PrimaryEcosystem,
+				HomelabInfra:     profile.IsHomelabInfra(repoProfile),
+			},
 		}, cfg.Graph, cfg.SkipPatterns)
 		repoGraph = &g
 		for _, f := range graph.ToCandidateFindings(graphFindings) {

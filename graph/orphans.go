@@ -1,6 +1,7 @@
 package graph
 
 import (
+	"path/filepath"
 	"strings"
 )
 
@@ -142,6 +143,13 @@ func isLikelyGeneratedOrExample(path string) bool {
 	if strings.HasPrefix(lower, "ui/templates/") || strings.HasPrefix(lower, "ui/static/") ||
 		strings.HasPrefix(lower, "web/static/") || strings.HasPrefix(lower, "docs/") ||
 		strings.HasPrefix(lower, "scripts/") {
+		return true
+	}
+	if strings.Contains(lower, "/tests/") || strings.HasSuffix(lower, "conftest.py") {
+		return true
+	}
+	base := filepath.Base(lower)
+	if base == "setup.py" || base == "setup.cfg" || base == "pyproject.toml" {
 		return true
 	}
 	if strings.HasSuffix(lower, ".sh") || strings.HasSuffix(lower, ".bash") ||

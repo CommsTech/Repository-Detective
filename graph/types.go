@@ -125,6 +125,7 @@ type BuildInput struct {
 	Files        []FileInput
 	AllPaths     []string
 	Findings     []FindingOverlay
+	Repo         RepoContext
 }
 
 // GraphFinding is a disconnected-code finding from graph analysis.

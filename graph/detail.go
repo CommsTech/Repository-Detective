@@ -32,6 +32,8 @@ type FindingDetail struct {
 	TestsPresent        string   `json:"tests_present,omitempty"`
 	Exported            *bool    `json:"exported,omitempty"`
 	CallerCount         int      `json:"caller_count,omitempty"`
+	CalibrationNote     string   `json:"calibration_note,omitempty"`
+	ConfidenceBasis     string   `json:"confidence_basis,omitempty"`
 }
 
 const (
