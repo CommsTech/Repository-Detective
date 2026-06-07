@@ -102,6 +102,12 @@ docs/dogfood-reports/*
 !docs/dogfood-reports/historical-summary-rollup-disposition-report.md
 !docs/dogfood-reports/non-product-repo-dry-run-plan.md
 !docs/dogfood-reports/batch6-final-verification.md
+!docs/dogfood-reports/non-product-dry-run-baseline.md
+!docs/dogfood-reports/non-product-dry-run-repo-selection.md
+!docs/dogfood-reports/non-product-small-repo-dry-run-report.md
+!docs/dogfood-reports/non-product-medium-repo-dry-run-report.md
+!docs/dogfood-reports/non-product-dry-run-learning-evaluation.md
+!docs/dogfood-reports/non-product-dry-run-next-gate.md
 
 # Private operator dogfood (unsanitized — keep local)
 docs/DOGFOOD_REPORT_FIRST_39_REPOS.md
