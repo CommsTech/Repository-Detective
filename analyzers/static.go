@@ -215,10 +215,13 @@ func isFalsePositiveSQLConcat(path, line string) bool {
 	if safeSQLConcatSuffix.MatchString(trimmed) {
 		return true
 	}
-	// Store layer: fmt.Sprintf for IN (?) lists with bound args (strings.Join of "?" placeholders).
-	if strings.Contains(trimmed, "fmt.Sprintf") {
-		lowerPath := strings.ToLower(path)
-		if strings.Contains(lowerPath, "store/") || strings.Contains(lowerPath, "/store/") {
+	// Store layer: parameterized IN (?) lists built from placeholder slices only.
+	lowerPath := strings.ToLower(path)
+	if strings.Contains(lowerPath, "store/") || strings.Contains(lowerPath, "/store/") {
+		if strings.Contains(trimmed, "fmt.Sprintf") {
+			return true
+		}
+		if strings.Contains(trimmed, "strings.Join(placeholders") && strings.Contains(trimmed, "IN (") {
 			return true
 		}
 	}

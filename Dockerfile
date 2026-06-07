@@ -1,20 +1,6 @@
 # syntax=docker/dockerfile:1
-# Repository Detective — multi-target image build.
-#
-# Targets:
-#   core       — control plane only (smallest; git for clones; no scanner binaries)
-#   runner     — repository-detective-runner + scanner toolchain (Gitea Actions workers)
-#   all-in-one — core + runner + scanners (homelab default)
-#
-# Examples:
-#   docker build --target core -t repository-detective:core .
-#   docker build --target runner -t repository-detective:runner .
-#   docker build --target all-in-one -t repository-detective:all-in-one .
-#
-# Offline / DNS-filtered builds:
-#   ./scripts/vendor-deps.sh
-#   cp ~/.local/bin/trivy deploy/bin/trivy   # optional
-#   docker build --target all-in-one --build-arg INSTALL_EXTERNAL_TOOLS=true .
+# Repository Detective multi-target image: core | runner | all-in-one
+# See README and scripts/docker-build-verify.sh for build examples.
 
 ARG GO_VERSION=1.23
 

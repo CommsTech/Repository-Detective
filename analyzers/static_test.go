@@ -127,6 +127,18 @@ func TestRunStaticAnalysisSkipsStoreINClauseSprintf(t *testing.T) {
 	}
 }
 
+func TestRunStaticAnalysisSkipsStoreINClauseJoin(t *testing.T) {
+	findings := RunStaticAnalysis([]FileContent{{
+		Path: "store/findings_batch_sqlite.go",
+		Content: "query := \"SELECT id FROM findings WHERE id IN (\" + strings.Join(placeholders, \",\") + \")\"",
+	}}, true, false)
+	for _, f := range findings {
+		if f.ID == "SEC-SQL-CONCAT" {
+			t.Fatalf("expected store IN-clause strings.Join to be skipped, got SEC-SQL-CONCAT")
+		}
+	}
+}
+
 func TestRunStaticAnalysisSkipsDBQueryNilCheck(t *testing.T) {
 	findings := RunStaticAnalysis([]FileContent{{
 		Path:    "issuelink/backfill.go",
