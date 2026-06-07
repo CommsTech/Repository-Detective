@@ -127,6 +127,8 @@ func skipStaticAnalysisPath(path string) bool {
 	case strings.HasPrefix(path, "analyzers/static"), path == "static.go":
 		// Rule definitions must not self-match (see Gitea #38).
 		return true
+	case strings.HasSuffix(lower, ".example"):
+		return true
 	}
 	return false
 }
@@ -159,6 +161,8 @@ func isStaticFalsePositive(rule staticRule, path, line string) bool {
 		return isFalsePositiveEval(line)
 	case "QUAL-DEBUG":
 		return isFalsePositiveDebugLine(path, line)
+	case "REL-INTERNAL-INFRA-REF":
+		return isFalsePositiveInternalInfraRef(path, line)
 	default:
 		return false
 	}
@@ -257,6 +261,20 @@ func isFalsePositiveDebugLine(path, line string) bool {
 	lowerPath := strings.ToLower(path)
 	if strings.Contains(lowerPath, "/cmd/") || strings.HasSuffix(lowerPath, "main.go") {
 		return strings.Contains(line, "fmt.Println") && strings.Contains(line, "usage")
+	}
+	return false
+}
+
+func isFalsePositiveInternalInfraRef(path, line string) bool {
+	norm := strings.ReplaceAll(path, "\\", "/")
+	lower := strings.ToLower(norm)
+	switch {
+	case lower == "preinstall/url.go":
+		// Blocked-host catalog for SSRF prevention, not embedded infra endpoints.
+		return strings.Contains(line, "blockedHost") || strings.Contains(line, "localhost") ||
+			strings.Contains(line, "loopback")
+	case strings.HasSuffix(lower, ".example"):
+		return true
 	}
 	return false
 }

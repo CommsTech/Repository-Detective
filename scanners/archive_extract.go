@@ -68,6 +68,9 @@ func ExtractZipArchive(zipPath, destRoot string, maxFiles int, maxTotalBytes int
 		}
 
 		target := filepath.Join(absRoot, filepath.FromSlash(safeRel))
+		if !pathWithinRoot(absRoot, target) {
+			return fileCount, totalBytes, truncated, fmt.Errorf("unsafe zip entry %q: path outside dest root", file.Name)
+		}
 		if file.FileInfo().IsDir() || strings.HasSuffix(file.Name, "/") {
 			if err := os.MkdirAll(target, 0o750); err != nil {
 				return fileCount, totalBytes, truncated, err

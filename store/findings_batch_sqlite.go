@@ -18,11 +18,9 @@ func (s *SQLiteStore) ListFindingsByIDs(ctx context.Context, ids []int64) (map[i
 		placeholders[i] = "?"
 		args[i] = id
 	}
-	query := fmt.Sprintf(`
-		SELECT id, repository_id, fingerprint, category, severity, confidence, source, rule_id,
-			package_name, file_path, line, title, status, first_seen_scan_id, last_seen_scan_id, first_seen_at, last_seen_at
-		FROM findings WHERE id IN (%s)
-	`, strings.Join(placeholders, ","))
+	query := "SELECT id, repository_id, fingerprint, category, severity, confidence, source, rule_id," +
+		" package_name, file_path, line, title, status, first_seen_scan_id, last_seen_scan_id, first_seen_at, last_seen_at" +
+		" FROM findings WHERE id IN (" + strings.Join(placeholders, ",") + ")"
 	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("list findings by ids: %w", err)

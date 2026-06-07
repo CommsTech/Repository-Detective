@@ -112,7 +112,9 @@ func (r *Runner) runAudit(auditID string, parsed ParsedRepoURL, depth string) {
 		req.Recommendation = store.AuditRecommendationUnknown
 		req.FinishedAt = &finished
 		req.Error = msg
-		_ = r.store.UpdateAuditRequest(ctx, req)
+		if err := r.store.UpdateAuditRequest(ctx, req); err != nil {
+			r.logger.Errorf("preinstall audit %s mark failed: %v", auditID, err)
+		}
 	}
 
 	clone, err := ShallowClone(ctx, parsed, r.cfg)

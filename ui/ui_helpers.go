@@ -47,6 +47,9 @@ func templateFuncs() template.FuncMap {
 
 // jsonScriptContent marks pre-encoded JSON safe for embedding in application/json script tags.
 func jsonScriptContent(raw string) template.JS {
+	if !json.Valid([]byte(raw)) {
+		return template.JS("{}")
+	}
 	return template.JS(raw)
 }
 

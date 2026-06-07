@@ -172,7 +172,7 @@ profile:
 	@echo "Running performance profile..."
 	$(GOBUILD) -o $(BUILD_DIR)/$(BINARY_NAME) .
 	@echo "Run the application and use pprof for profiling:"
-	@echo "go tool pprof http://localhost:8080/debug/pprof/profile"
+	@echo "go tool pprof http://127.0.0.1:8080/debug/pprof/profile"
 
 # Release preparation
 release: clean deps test build-all

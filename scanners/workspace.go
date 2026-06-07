@@ -95,6 +95,20 @@ func ValidateWorkspacePath(workspaceRoot, relPath string) (string, error) {
 	return cleaned, nil
 }
 
+// pathWithinRoot reports whether target resolves inside workspaceRoot (zip-slip guard after join).
+func pathWithinRoot(workspaceRoot, target string) bool {
+	absRoot, err := filepath.Abs(workspaceRoot)
+	if err != nil {
+		return false
+	}
+	absTarget, err := filepath.Abs(target)
+	if err != nil {
+		return false
+	}
+	rootPrefix := absRoot + string(os.PathSeparator)
+	return absTarget == absRoot || strings.HasPrefix(absTarget, rootPrefix)
+}
+
 func pathClean(path string) string {
 	parts := strings.Split(path, "/")
 	var clean []string

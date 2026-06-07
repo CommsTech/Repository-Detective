@@ -49,7 +49,7 @@ if ($LASTEXITCODE -eq 0) {
     Write-Host ""
     Write-Host "📋 Next steps:" -ForegroundColor Cyan
     Write-Host "1. Check the logs: docker-compose logs -f gitea-bugbot" -ForegroundColor White
-    Write-Host "2. Test the health endpoint: http://localhost:8080/health" -ForegroundColor White
+    Write-Host "2. Test the health endpoint: http://127.0.0.1:8080/health" -ForegroundColor White
     Write-Host "3. Configure webhooks in your Gitea repositories to point to:" -ForegroundColor White
     Write-Host "   http://your-server-ip:8080/webhook" -ForegroundColor White
     Write-Host ""

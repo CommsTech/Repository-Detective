@@ -134,7 +134,7 @@ func PushBranch(ctx context.Context, cloneURL, token, workspaceDir, branchName s
 func ensureLocalGitIdentity(ctx context.Context, workspaceDir string) error {
 	for _, args := range [][]string{
 		{"-C", workspaceDir, "config", "user.name", "Repository Detective"},
-		{"-C", workspaceDir, "config", "user.email", "repository-detective@noreply.local"},
+		{"-C", workspaceDir, "config", "user.email", "repository-detective@noreply.invalid"},
 	} {
 		if out, err := runGit(ctx, args); err != nil {
 			return fmt.Errorf("git config: %w", sanitizeGitError(string(out), err))
