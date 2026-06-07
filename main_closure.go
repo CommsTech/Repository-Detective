@@ -132,9 +132,18 @@ func (closureStoreAdapter) UpdateFindingStatus(ctx context.Context, findingID in
 
 func (closureStoreAdapter) AddLifecycleEvent(ctx context.Context, findingID int64, scanID, eventType, message string) error {
 	fid := findingID
-	return bugbotStore.AddLifecycleEvent(ctx, store.LifecycleEvent{
+	err := bugbotStore.AddLifecycleEvent(ctx, store.LifecycleEvent{
 		FindingID: &fid, ScanID: scanID, EventType: eventType, Message: message,
 	})
+	if err != nil {
+		return err
+	}
+	if eventType == "closure_verified" {
+		if detail, derr := bugbotStore.GetFindingDetail(ctx, findingID); derr == nil {
+			emitClosureVerified(ctx, detail.RepositoryID, scanID, findingID, detail.Fingerprint, detail.Source, detail.RuleID)
+		}
+	}
+	return nil
 }
 
 func (closureStoreAdapter) ListExternalIssuesByFinding(ctx context.Context, findingID int64) ([]closure.ExternalIssueRow, error) {

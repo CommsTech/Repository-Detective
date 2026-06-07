@@ -148,6 +148,9 @@ func applyFindingSuppression(ctx context.Context, findingID int64, req api.Suppr
 			}
 		}
 	}
+	if falsePositive {
+		emitFalsePositiveMarked(ctx, detail.RepositoryID, findingID, detail.Fingerprint, detail.Source, detail.RuleID, created.CreatedBy)
+	}
 	return created, nil
 }
 

@@ -81,7 +81,21 @@ func (reconcileBridge) Apply(c *gin.Context, repositoryID int64) (reconcile.Resu
 	if reconcileEngine == nil {
 		return reconcile.Result{}, fmt.Errorf("issue reconciliation disabled")
 	}
-	return reconcileEngine.Apply(c.Request.Context(), repositoryID)
+	result, err := reconcileEngine.Apply(c.Request.Context(), repositoryID)
+	if err == nil {
+		recordReconcileLearning(c.Request.Context(), repositoryID, result)
+	}
+	return result, err
+}
+
+func recordReconcileLearning(ctx context.Context, repositoryID int64, result reconcile.Result) {
+	for _, item := range result.Items {
+		if item.Status != reconcile.StatusDuplicate {
+			continue
+		}
+		emitDuplicateLinked(ctx, repositoryID, item.LatestScanID, item.FindingID,
+			item.Fingerprint, item.Source, item.RuleID, item.CanonicalIssue)
+	}
 }
 
 func (reconcileBridge) GetRun(c *gin.Context, runID string) (store.ReconciliationRun, []store.ReconciliationItemRecord, error) {

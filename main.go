@@ -253,6 +253,10 @@ type Config struct {
 	CalibrationIntervalHours                int                                  `mapstructure:"calibration_interval_hours"`
 	CalibrationMinFindingsForRecommendation int                                  `mapstructure:"calibration_min_findings_for_recommendation"`
 	CalibrationAutoApply                    bool                                 `mapstructure:"calibration_auto_apply"`
+	LLMSanityGateEnabled                    bool                                 `mapstructure:"llm_sanity_gate_enabled"`
+	LLMSanityGateMaxTokensPerScan           int                                  `mapstructure:"llm_sanity_gate_max_tokens_per_scan"`
+	LLMSanityGateApplyActions               bool                                 `mapstructure:"llm_sanity_gate_apply_actions"`
+	LLMSanityGateLowMediumOnly              bool                                 `mapstructure:"llm_sanity_gate_low_medium_only"`
 	Reporting                               profile.ReportingConfig              `mapstructure:"reporting"`
 	FalsePositiveReduction                  profile.FalsePositiveReductionConfig `mapstructure:"false_positive_reduction"`
 	AuthMode                                string                               `mapstructure:"auth_mode"`
@@ -531,6 +535,10 @@ func loadConfig() error {
 	viper.SetDefault("calibration_interval_hours", 24)
 	viper.SetDefault("calibration_min_findings_for_recommendation", 20)
 	viper.SetDefault("calibration_auto_apply", false)
+	viper.SetDefault("llm_sanity_gate_enabled", false)
+	viper.SetDefault("llm_sanity_gate_max_tokens_per_scan", 0)
+	viper.SetDefault("llm_sanity_gate_apply_actions", false)
+	viper.SetDefault("llm_sanity_gate_low_medium_only", true)
 	viper.SetDefault("auth_mode", "api_key_only")
 	viper.SetDefault("session_cookie_name", "rd_session")
 	viper.SetDefault("session_secret", "")
@@ -1646,6 +1654,9 @@ func finishPersistedScan(ctx context.Context, scanCtx *store.ScanContext, reposi
 		logger.Warnf("Failed to finish scan persistence: %v", err)
 	}
 	persistScanSBOM(ctx, scanID, repositoryID, result)
+	if data != nil && repositoryID > 0 {
+		recordScannerHealthFromScan(ctx, repositoryID, scanID, data.ScannerResults)
+	}
 	if reportOnlyDryRunFromContext(ctx) && scanRecorder.Enabled() && analysisErr == nil {
 		if bs, ok := bugbotStore.(interface {
 			UpdateScanPipelineState(context.Context, string, string, map[string]any) error
@@ -1653,6 +1664,9 @@ func finishPersistedScan(ctx context.Context, scanCtx *store.ScanContext, reposi
 			_ = bs.UpdateScanPipelineState(ctx, scanID, store.ScanStatusCompleted, map[string]any{
 				"dry_run_report_only": true,
 			})
+		}
+		if result != nil && repositoryID > 0 {
+			emitReportOnlyDryRun(ctx, repositoryID, scanID, len(result.Issues))
 		}
 	}
 	notifyScanFinish(ctx, scanCtx, repositoryID, result, analysisErr)
