@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-const currentSchemaVersion = 18
+const currentSchemaVersion = 19
 
 var migrationStatements = map[int][]string{
 	1: {
@@ -514,6 +514,39 @@ var migrationStatements = map[int][]string{
 	},
 	18: {
 		`CREATE INDEX IF NOT EXISTS idx_finding_instances_scan_id ON finding_instances(scan_id)`,
+	},
+	19: {
+		`CREATE TABLE IF NOT EXISTS project_groups (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT NOT NULL UNIQUE COLLATE NOCASE,
+			description TEXT NOT NULL DEFAULT '',
+			primary_repository_id INTEGER,
+			created_at TEXT NOT NULL,
+			updated_at TEXT NOT NULL,
+			FOREIGN KEY (primary_repository_id) REFERENCES repositories(id) ON DELETE SET NULL
+		)`,
+		`CREATE TABLE IF NOT EXISTS project_group_repositories (
+			project_group_id INTEGER NOT NULL,
+			repository_id INTEGER NOT NULL,
+			created_at TEXT NOT NULL,
+			PRIMARY KEY (project_group_id, repository_id),
+			FOREIGN KEY (project_group_id) REFERENCES project_groups(id) ON DELETE CASCADE,
+			FOREIGN KEY (repository_id) REFERENCES repositories(id) ON DELETE CASCADE
+		)`,
+		`CREATE TABLE IF NOT EXISTS sbom_artifacts (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			repository_id INTEGER,
+			scan_id TEXT NOT NULL DEFAULT '',
+			format TEXT NOT NULL DEFAULT '',
+			package_count INTEGER NOT NULL DEFAULT 0,
+			vuln_count INTEGER NOT NULL DEFAULT 0,
+			status TEXT NOT NULL DEFAULT '',
+			detail TEXT NOT NULL DEFAULT '',
+			artifact_path TEXT NOT NULL DEFAULT '',
+			created_at TEXT NOT NULL,
+			FOREIGN KEY (repository_id) REFERENCES repositories(id) ON DELETE CASCADE
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_sbom_artifacts_scan ON sbom_artifacts(scan_id)`,
 	},
 }
 

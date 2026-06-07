@@ -194,4 +194,10 @@ type QueryStore interface {
 	ListCalibrationRecommendations(ctx context.Context, status string, limit int) ([]CalibrationRecommendation, error)
 	UpdateCalibrationRecommendationStatus(ctx context.Context, id int64, status string) error
 	CalibrationSummary(ctx context.Context) (map[string]any, error)
+
+	ListProjectGroups(ctx context.Context) ([]ProjectGroup, error)
+	CreateProjectGroup(ctx context.Context, g ProjectGroup) (ProjectGroup, error)
+
+	SaveSBOMArtifact(ctx context.Context, rec SBOMArtifact) error
+	GetSBOMArtifactForScan(ctx context.Context, scanID string) (SBOMArtifact, error)
 }

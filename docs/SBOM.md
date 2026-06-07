@@ -69,6 +69,18 @@ Optional offline builds: `./scripts/vendor-deps.sh` then build with `-mod=vendor
 
 See [SCANNERS.md](SCANNERS.md) and [SCANNER_ROADMAP.md](SCANNER_ROADMAP.md).
 
+## Runtime SBOM (beta)
+
+During scans with a prepared workspace, Repository Detective calls `sbom.GenerateAndCheck`:
+
+- Go repos: `cyclonedx-gomod` (preferred) or syft
+- Other manifests: syft when installed
+- Vulnerability check: grype against generated SBOM
+
+Statuses: `sbom_generated`, `sbom_no_supported_manifest`, `sbom_tool_missing`, `sbom_check_clean`, `sbom_vulnerabilities_found`, `sbom_check_failed`.
+
+See `docs/beta/SBOM_BETA_READINESS.md`.
+
 ## Machine-readable export
 
 For SPDX or CycloneDX in CI, generate from the lockfiles:

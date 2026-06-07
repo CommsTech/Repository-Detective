@@ -18,6 +18,7 @@ import (
 	"git.commsnet.org/commstech/bugbot/issues"
 	"git.commsnet.org/commstech/bugbot/models"
 	"git.commsnet.org/commstech/bugbot/profile"
+	"git.commsnet.org/commstech/bugbot/sbom"
 	"git.commsnet.org/commstech/bugbot/scanners"
 	"github.com/sirupsen/logrus"
 )
@@ -73,6 +74,7 @@ type AnalysisResult struct {
 	WorkspaceModeUsed string
 	Graph             *graph.Graph
 	RepoProfile       profile.RepoProfile
+	Sbom              *sbom.Result
 }
 
 // ============================================================================
@@ -111,6 +113,7 @@ type FinalReport struct {
 	Workspace      models.WorkspaceMeta
 	Graph          *graph.Graph
 	RepoProfile    profile.RepoProfile
+	Sbom           *sbom.Result
 
 	Stats ReportStats
 }
@@ -225,7 +228,7 @@ func (e *Engine) RunCAHPipelineWithOptions(ctx context.Context, owner, repo, ref
 	// Stage 2: SCAN
 	log.Info("[CAH:SCAN] Starting scan phase...")
 	sStart := time.Now()
-	candidates, scanSummary, workspaceMeta, repoGraph, err := e.Scan(ctx, prepareReport)
+	candidates, scanSummary, workspaceMeta, repoGraph, sbomResult, err := e.Scan(ctx, prepareReport)
 	if err != nil {
 		log.Errorf("[CAH:SCAN] Failed: %v", err)
 		return nil, fmt.Errorf("scan failed: %w", err)
@@ -234,6 +237,7 @@ func (e *Engine) RunCAHPipelineWithOptions(ctx context.Context, owner, repo, ref
 	report.ScannerResults = profile.AnnotateScannerResults(scanSummary.Results, report.RepoProfile)
 	report.Workspace = workspaceMeta
 	report.Graph = repoGraph
+	report.Sbom = sbomResult
 	report.Stages = append(report.Stages, "scan")
 	scanSummary.LogResults(e.logger, id)
 	scanners.LogMeta(workspaceMeta, id, log)
@@ -384,7 +388,7 @@ const (
 )
 
 // Scan runs deterministic checks first, then LLM auditors on flagged files.
-func (e *Engine) Scan(ctx context.Context, prepare *PrepareReport) ([]CandidateFinding, scanners.RunSummary, models.WorkspaceMeta, *graph.Graph, error) {
+func (e *Engine) Scan(ctx context.Context, prepare *PrepareReport) ([]CandidateFinding, scanners.RunSummary, models.WorkspaceMeta, *graph.Graph, *sbom.Result, error) {
 	log := e.scanLogger(ctx)
 	summary := scanners.RunSummary{}
 	workspaceMeta := models.WorkspaceMeta{
@@ -393,16 +397,17 @@ func (e *Engine) Scan(ctx context.Context, prepare *PrepareReport) ([]CandidateF
 		CommitPinned: prepare.CommitPinned,
 	}
 	var repoGraph *graph.Graph
+	var sbomResult *sbom.Result
 	owner, repo := splitRepository(prepare.Repository)
 
 	analyzableFiles, err := e.resolveAnalyzableFiles(ctx, owner, repo, prepare.Commit, prepare.TargetFiles)
 	if err != nil {
-		return nil, summary, workspaceMeta, nil, fmt.Errorf("failed to resolve files: %w", err)
+		return nil, summary, workspaceMeta, nil, nil, fmt.Errorf("failed to resolve files: %w", err)
 	}
 
 	fileContents, err := e.fetchFileContents(ctx, owner, repo, prepare.Commit, analyzableFiles)
 	if err != nil {
-		return nil, summary, workspaceMeta, nil, fmt.Errorf("failed to fetch file contents: %w", err)
+		return nil, summary, workspaceMeta, nil, nil, fmt.Errorf("failed to fetch file contents: %w", err)
 	}
 
 	cfg := e.configFor(ctx)
@@ -515,18 +520,26 @@ func (e *Engine) Scan(ctx context.Context, prepare *PrepareReport) ([]CandidateF
 				allCandidates = append(allCandidates, finding.ToCandidateFinding())
 			}
 			log.Infof("[CAH:SCAN] External scanners found %d candidate(s) (workspace_mode=%s)", len(summary.Candidates()), workspaceMeta.ModeUsed)
+			outDir := filepath.Join(prepared.Dir, ".rd-sbom")
+			if res, sbErr := sbom.GenerateAndCheck(ctx, prepared.Dir, outDir); sbErr == nil {
+				copy := res
+				sbomResult = &copy
+				log.Infof("[CAH:SCAN] SBOM status=%s packages=%d vulns=%d", res.Status, res.PackageCount, res.VulnCount)
+			} else {
+				log.Warnf("[CAH:SCAN] SBOM generation failed: %v", sbErr)
+			}
 		}
 	}
 
 	// Stage 2c: LLM auditors (depth >= 3)
 	if !e.llmEnabledFor(ctx) || !e.configFor(ctx).EnableSecurity {
-		return allCandidates, summary, workspaceMeta, repoGraph, nil
+		return allCandidates, summary, workspaceMeta, repoGraph, sbomResult, nil
 	}
 
 	llmTargets := e.selectLLMTargetFiles(fileContents, allCandidates)
 	if len(llmTargets) == 0 {
 		log.Info("[CAH:SCAN] No files selected for LLM audit")
-		return allCandidates, summary, workspaceMeta, repoGraph, nil
+		return allCandidates, summary, workspaceMeta, repoGraph, sbomResult, nil
 	}
 
 	log.Infof("[CAH:SCAN] Running LLM auditors on %d file(s)", len(llmTargets))
@@ -567,7 +580,7 @@ func (e *Engine) Scan(ctx context.Context, prepare *PrepareReport) ([]CandidateF
 		allCandidates = append(allCandidates, r.findings...)
 	}
 
-	return allCandidates, summary, workspaceMeta, repoGraph, nil
+	return allCandidates, summary, workspaceMeta, repoGraph, sbomResult, nil
 }
 
 // mergeScannerRunSummaries keeps in-process deterministic stage results when external scanners run.
@@ -1214,6 +1227,10 @@ func (e *Engine) analysisResultFromReport(ctx context.Context, owner, repo, ref,
 		IssuesFound:    len(report.Proven),
 		ScannerResults: report.ScannerResults,
 		WorkspaceModeUsed: report.Workspace.ModeUsed,
+	}
+	if report.Sbom != nil {
+		copy := *report.Sbom
+		result.Sbom = &copy
 	}
 	if report.Graph != nil {
 		result.Graph = report.Graph

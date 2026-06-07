@@ -1642,6 +1642,7 @@ func finishPersistedScan(ctx context.Context, scanCtx *store.ScanContext, reposi
 	if err := scanRecorder.FinishScan(ctx, scanID, data, analysisErr); err != nil {
 		logger.Warnf("Failed to finish scan persistence: %v", err)
 	}
+	persistScanSBOM(ctx, scanID, repositoryID, result)
 	if reportOnlyDryRunFromContext(ctx) && scanRecorder.Enabled() && analysisErr == nil {
 		if bs, ok := bugbotStore.(interface {
 			UpdateScanPipelineState(context.Context, string, string, map[string]any) error
