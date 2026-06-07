@@ -200,4 +200,14 @@ type QueryStore interface {
 
 	SaveSBOMArtifact(ctx context.Context, rec SBOMArtifact) error
 	GetSBOMArtifactForScan(ctx context.Context, scanID string) (SBOMArtifact, error)
+
+	RecordLearningEvent(ctx context.Context, ev LearningEvent) (LearningEvent, error)
+	ListLearningEvents(ctx context.Context, repositoryID int64, limit int) ([]LearningEvent, error)
+	RecordScannerHealth(ctx context.Context, rec ScannerHealthRecord) error
+	CreateRepoCalibrationRule(ctx context.Context, rule RepoCalibrationRule) (RepoCalibrationRule, error)
+	ListRepoCalibrationRules(ctx context.Context, repositoryID int64, activeOnly bool) ([]RepoCalibrationRule, error)
+	ExpireRepoCalibrationRule(ctx context.Context, ruleID int64) error
+	GenerateRepoScopedRecommendations(ctx context.Context, repositoryID int64, minFindings int) (int, error)
+	LearningHealthSummary(ctx context.Context) (LearningHealthSummary, error)
+	AssignStructuralGroup(ctx context.Context, repositoryID int64, structuralHash string, findingID int64) error
 }

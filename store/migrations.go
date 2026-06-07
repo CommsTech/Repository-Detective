@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-const currentSchemaVersion = 19
+const currentSchemaVersion = 20
 
 var migrationStatements = map[int][]string{
 	1: {
@@ -547,6 +547,88 @@ var migrationStatements = map[int][]string{
 			FOREIGN KEY (repository_id) REFERENCES repositories(id) ON DELETE CASCADE
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_sbom_artifacts_scan ON sbom_artifacts(scan_id)`,
+	},
+	20: {
+		`CREATE TABLE IF NOT EXISTS learning_events (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			repository_id INTEGER NOT NULL,
+			scan_id TEXT NOT NULL DEFAULT '',
+			finding_id INTEGER,
+			fingerprint TEXT NOT NULL DEFAULT '',
+			source TEXT NOT NULL DEFAULT '',
+			rule_id TEXT NOT NULL DEFAULT '',
+			event_type TEXT NOT NULL,
+			evidence_json TEXT NOT NULL DEFAULT '{}',
+			created_at TEXT NOT NULL,
+			created_by TEXT NOT NULL DEFAULT '',
+			confidence_delta REAL NOT NULL DEFAULT 0,
+			idempotency_key TEXT NOT NULL DEFAULT '',
+			UNIQUE(idempotency_key),
+			FOREIGN KEY (repository_id) REFERENCES repositories(id) ON DELETE CASCADE
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_learning_events_repo ON learning_events(repository_id, created_at)`,
+		`CREATE INDEX IF NOT EXISTS idx_learning_events_rule ON learning_events(repository_id, source, rule_id)`,
+		`CREATE TABLE IF NOT EXISTS repo_calibration_rules (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			repository_id INTEGER,
+			project_group_id INTEGER,
+			scope TEXT NOT NULL DEFAULT 'repo',
+			source TEXT NOT NULL DEFAULT '',
+			rule_id TEXT NOT NULL DEFAULT '',
+			path_pattern TEXT NOT NULL DEFAULT '',
+			finding_category TEXT NOT NULL DEFAULT '',
+			action TEXT NOT NULL DEFAULT 'no_change',
+			reason TEXT NOT NULL DEFAULT '',
+			evidence_count INTEGER NOT NULL DEFAULT 0,
+			false_positive_rate REAL NOT NULL DEFAULT 0,
+			true_positive_rate REAL NOT NULL DEFAULT 0,
+			duplicate_rate REAL NOT NULL DEFAULT 0,
+			expires_at TEXT,
+			active INTEGER NOT NULL DEFAULT 1,
+			created_at TEXT NOT NULL,
+			updated_at TEXT NOT NULL,
+			recommendation_id INTEGER,
+			FOREIGN KEY (repository_id) REFERENCES repositories(id) ON DELETE CASCADE
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_repo_calibration_rules_repo ON repo_calibration_rules(repository_id, active)`,
+		`CREATE TABLE IF NOT EXISTS rule_reliability_stats (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			repository_id INTEGER,
+			project_group_id INTEGER,
+			source TEXT NOT NULL DEFAULT '',
+			rule_id TEXT NOT NULL DEFAULT '',
+			scans_seen INTEGER NOT NULL DEFAULT 0,
+			findings_seen INTEGER NOT NULL DEFAULT 0,
+			true_positive_count INTEGER NOT NULL DEFAULT 0,
+			false_positive_count INTEGER NOT NULL DEFAULT 0,
+			resolved_verified_count INTEGER NOT NULL DEFAULT 0,
+			duplicate_count INTEGER NOT NULL DEFAULT 0,
+			reappeared_count INTEGER NOT NULL DEFAULT 0,
+			issue_created_count INTEGER NOT NULL DEFAULT 0,
+			issue_closed_count INTEGER NOT NULL DEFAULT 0,
+			scanner_failure_count INTEGER NOT NULL DEFAULT 0,
+			last_seen_at TEXT NOT NULL,
+			reliability_score REAL NOT NULL DEFAULT 0,
+			actionability_score REAL NOT NULL DEFAULT 0,
+			UNIQUE(repository_id, source, rule_id)
+		)`,
+		`CREATE TABLE IF NOT EXISTS scanner_health_history (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			repository_id INTEGER NOT NULL,
+			scan_id TEXT NOT NULL,
+			scanner TEXT NOT NULL,
+			status TEXT NOT NULL,
+			version TEXT NOT NULL DEFAULT '',
+			duration_ms INTEGER NOT NULL DEFAULT 0,
+			finding_count INTEGER NOT NULL DEFAULT 0,
+			error_class TEXT NOT NULL DEFAULT '',
+			created_at TEXT NOT NULL,
+			FOREIGN KEY (repository_id) REFERENCES repositories(id) ON DELETE CASCADE
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_scanner_health_repo ON scanner_health_history(repository_id, scanner, created_at)`,
+		`ALTER TABLE findings ADD COLUMN structural_hash TEXT NOT NULL DEFAULT ''`,
+		`ALTER TABLE findings ADD COLUMN canonical_finding_id INTEGER`,
+		`ALTER TABLE findings ADD COLUMN calibration_note TEXT NOT NULL DEFAULT ''`,
 	},
 }
 
