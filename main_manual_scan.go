@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"strings"
 
 	"git.commsnet.org/commstech/bugbot/internal/scanid"
 	"git.commsnet.org/commstech/bugbot/ui"
@@ -25,19 +24,4 @@ func wireScanTrigger() {
 		})
 		return ui.ScanTriggerResult{ScanID: scanID}, nil
 	})
-}
-
-func manualScanReportOnlyDefault() bool {
-	if config == nil {
-		return true
-	}
-	return !config.AutoCreateIssues
-}
-
-func normalizeManualScanRef(ref string) string {
-	ref = strings.TrimSpace(ref)
-	if ref == "" {
-		return "main"
-	}
-	return ref
 }
