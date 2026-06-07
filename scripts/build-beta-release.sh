@@ -72,8 +72,18 @@ if command -v cyclonedx-gomod >/dev/null 2>&1; then
   ( cd "$ROOT" && cyclonedx-gomod mod -json -output "$OUT/sbom-go.cdx.json" ) || true
 fi
 
-cp config/config.yaml "$OUT/config.example.yaml" 2>/dev/null || cp docs/examples/homelab-minimal.yaml "$OUT/config.example.yaml" 2>/dev/null || true
-cp docker-compose.yml "$OUT/docker-compose.beta.yml" 2>/dev/null || true
+if [[ -f config/private-beta.example.yaml ]]; then
+  cp config/private-beta.example.yaml "$OUT/config.example.yaml"
+elif [[ -f config/config.yaml.example ]]; then
+  cp config/config.yaml.example "$OUT/config.example.yaml"
+else
+  cp docs/examples/homelab-minimal.yaml "$OUT/config.example.yaml" 2>/dev/null || true
+fi
+if [[ -f docker-compose.beta.yml ]]; then
+  cp docker-compose.beta.yml "$OUT/docker-compose.beta.yml"
+else
+  cp docker-compose.yml "$OUT/docker-compose.beta.yml" 2>/dev/null || true
+fi
 cp .env.example "$OUT/.env.example" 2>/dev/null || true
 
 # Never ship live secrets or local databases.
