@@ -1,48 +1,30 @@
-# Deterministic calibration
+# Calibration (per-repository learning)
 
-Repository Detective learns **locally** from suppressions, false positives, verified fixes, and issue lifecycle — **no LLM required**.
+Repository Detective calibrates noisy findings **per repository** by default.
 
-## Inputs (local DB only)
+## Scoping rules
 
-- Findings, issues created, suppressions, false-positive marks
-- Verified closures, scanner outcomes
-- Rule IDs, sources, categories, severities
+| Scope | Applies to | Expires |
+|-------|------------|---------|
+| Repository suppression | Single repo fingerprint/rule | Operator review or disable |
+| Global suppression | Proven universal false positives only | Requires explicit approval |
+| Graph homelab profile | Infra repos via `homelab_infra` scan profile | Profile-bound, not global |
 
-**Not used:** raw code, embeddings, issue bodies, private repo metadata.
+## Evidence used
 
-## Outputs
+- Duplicate rate across scans
+- Resolved-verified vs false-positive disposition
+- Scanner stability (grype DB, parse vs unavailable)
+- Rule actionability and developer feedback
 
-- `rule_false_positive_rate`, `rule_actionable_rate`
-- `scanner_reliability_score` (via scan-quality metrics)
-- `recommended_default_action` per rule
-- Proposed suppressions and report-only changes
+## Safety
 
-## Tables (migration 15)
+- High-confidence security findings are **not** downgraded by repo-local graph noise rules alone.
+- Cross-repo learning may **suggest** calibration; auto-apply remains off (`calibration_auto_apply: false`).
 
-- `calibration_rule_stats`
-- `calibration_recommendations`
+## API / storage
 
-## API
+- Suppressions: `finding_suppressions` + calibration recommendations tables
+- Matcher cache: per-repository via `calibration.Matcher.LoadRepository`
 
-```text
-GET  /api/v1/calibration/summary
-GET  /api/v1/calibration/recommendations
-POST /api/v1/calibration/recommendations/:id/accept
-POST /api/v1/calibration/recommendations/:id/reject
-POST /api/v1/calibration/recompute
-```
-
-## Background job
-
-```yaml
-calibration_enabled: true
-calibration_interval_hours: 24
-calibration_min_findings_for_recommendation: 20
-calibration_auto_apply: false   # never auto-apply by default
-```
-
-Accepting a recommendation may create a global suppression; rejecting persists the decision.
-
-## Community boundary
-
-See [PRIVACY.md](PRIVACY.md) — no cross-instance sharing in this phase.
+See also: `docs/beta/CALIBRATION_BETA_POLICY.md`
