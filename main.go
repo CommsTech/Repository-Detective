@@ -959,6 +959,8 @@ func initializeComponents() error {
 				RemediationPRMaxFiles:        config.RemediationPRMaxFilesChanged,
 				RemediationPRMaxDiffLines:    config.RemediationPRMaxDiffLines,
 				RemediationPRBranchPrefix:    config.RemediationPRBranchPrefix,
+				LLMSanityGateEnabled:         config.LLMSanityGateEnabled,
+				BacklogControlEnabled:        config.DogfoodBacklogControlEnabled,
 			})
 		}
 		if err != nil {

@@ -31,6 +31,8 @@ type PlatformContext struct {
 	RemediationPRMaxFiles        int
 	RemediationPRMaxDiffLines    int
 	RemediationPRBranchPrefix    string
+	LLMSanityGateEnabled         bool
+	BacklogControlEnabled        bool
 }
 
 func buildCapabilityStatuses(

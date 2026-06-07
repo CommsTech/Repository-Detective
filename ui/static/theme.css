@@ -1628,3 +1628,193 @@ table td { padding: 12px; border-bottom: 1px solid var(--rd-border); }
   display: inline;
   margin: 0;
 }
+
+/* ── Repo operations + Scan Now modal ── */
+.rd-repo-ops {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.rd-repo-ops-card .rd-card-head {
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.rd-repo-ops-actions {
+  margin-top: 0;
+}
+
+.rd-repo-ops-actions .rd-btn,
+.rd-repo-ops-actions button {
+  margin-top: 0;
+}
+
+.rd-repo-id {
+  margin: 6px 0 0;
+  font-size: 0.88rem;
+}
+
+.rd-btn-primary {
+  font-size: 0.95rem;
+  padding: 12px 22px;
+}
+
+.rd-reconciliation-panel {
+  margin-top: 0;
+}
+
+.rd-recon-explainer {
+  font-size: 0.92rem;
+  margin-bottom: 8px;
+}
+
+.rd-recon-detail {
+  font-size: 0.85rem;
+  margin-bottom: 12px;
+}
+
+.rd-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.rd-modal[hidden] {
+  display: none !important;
+}
+
+.rd-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px);
+}
+
+.rd-modal-panel {
+  position: relative;
+  width: min(560px, 100%);
+  max-height: min(90vh, 720px);
+  overflow: auto;
+  background: var(--rd-card);
+  border: 1px solid var(--rd-border-strong);
+  border-radius: var(--rd-radius);
+  box-shadow: var(--rd-shadow-lg);
+  padding: 20px 22px 24px;
+}
+
+.rd-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.rd-modal-head h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.rd-modal-close {
+  margin: 0;
+  padding: 4px 10px;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: var(--rd-text-dim) !important;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.rd-modal-beta-note {
+  margin-bottom: 12px;
+}
+
+.rd-scan-form label {
+  display: block;
+  margin-bottom: 12px;
+  font-size: 0.88rem;
+}
+
+.rd-scan-form input[type="text"],
+.rd-scan-form input:not([type="checkbox"]):not([type="hidden"]),
+.rd-scan-form select {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 10px 12px;
+  border-radius: var(--rd-radius-sm);
+  border: 1px solid var(--rd-border-strong);
+  background: var(--rd-input-bg);
+  color: var(--rd-text);
+  font-family: var(--rd-font);
+}
+
+.rd-scan-safety-summary {
+  margin: 16px 0;
+  padding: 12px 14px;
+  border-radius: var(--rd-radius-sm);
+  background: var(--rd-overlay);
+  border: 1px solid var(--rd-border);
+}
+
+.rd-scan-safety-head {
+  margin: 0 0 8px;
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+
+.rd-scan-safety-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.85rem;
+}
+
+.rd-scan-safety-list li {
+  margin-bottom: 6px;
+}
+
+.rd-scan-safety-list .rd-safe {
+  color: var(--rd-green);
+}
+
+.rd-scan-safety-list .rd-warn {
+  color: var(--rd-orange);
+}
+
+.rd-scan-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.rd-scan-form-actions .rd-btn,
+.rd-scan-form-actions button {
+  margin-top: 0;
+}
+
+.rd-scan-result {
+  margin-top: 16px;
+  padding: 12px 14px;
+  border-radius: var(--rd-radius-sm);
+  border: 1px solid var(--rd-border-strong);
+  background: var(--rd-overlay);
+}
+
+.rd-scan-result.success {
+  border-color: rgba(34, 197, 94, 0.45);
+}
+
+.rd-scan-result.error {
+  border-color: rgba(239, 68, 68, 0.45);
+}

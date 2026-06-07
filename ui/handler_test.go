@@ -8,11 +8,13 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"net/url"
 	"testing"
 	"time"
 
 	"git.commsnet.org/commstech/bugbot/graph"
 	"git.commsnet.org/commstech/bugbot/ai"
+	"git.commsnet.org/commstech/bugbot/internal/security"
 	"git.commsnet.org/commstech/bugbot/notify"
 	"git.commsnet.org/commstech/bugbot/store"
 	"git.commsnet.org/commstech/bugbot/ui"
@@ -694,7 +696,10 @@ func TestRepoDetailReconciliationPanel(t *testing.T) {
 		{Fingerprint: "fp2", Title: "b", Severity: "low", Source: "graph"},
 	})
 
-	r, _ := testUI(t, s)
+	r, h := testUI(t, s)
+	h.SetScanTrigger(func(_ context.Context, _ ui.ScanTriggerRequest) (ui.ScanTriggerResult, error) {
+		return ui.ScanTriggerResult{ScanID: "unused"}, nil
+	})
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest(http.MethodGet, "/ui/repos/"+strconv.FormatInt(repo.ID, 10), nil)
 	r.ServeHTTP(w, req)
@@ -705,8 +710,65 @@ func TestRepoDetailReconciliationPanel(t *testing.T) {
 	if !strings.Contains(body, "Issue / finding reconciliation") {
 		t.Fatal("expected reconciliation panel")
 	}
-	if !strings.Contains(body, "report-only") && !strings.Contains(body, "Report-only") {
-		t.Fatal("expected report-only explanation")
+	if !strings.Contains(body, "Scan findings and forge issues may differ") {
+		t.Fatal("expected reconciliation explainer")
+	}
+	if !strings.Contains(body, `id="rd-scan-now-open"`) {
+		t.Fatal("expected Scan now button on repo detail")
+	}
+	if !strings.Contains(body, `id="rd-scan-now-modal"`) {
+		t.Fatal("expected inline scan modal")
+	}
+	if !strings.Contains(body, "rd-repo-ops") {
+		t.Fatal("expected repo operations section")
+	}
+}
+
+func TestRepoScanStartJSON(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	s, _ := store.Open(store.Config{Enabled: true, Path: filepath.Join(dir, "scan-json.db")})
+	defer s.Close()
+	repo, _ := s.UpsertRepository(ctx, store.Repository{Owner: "amber", Name: "app", FullName: "amber/app", DefaultBranch: "develop"})
+	r, h := testUI(t, s)
+	h.SetScanTrigger(func(_ context.Context, req ui.ScanTriggerRequest) (ui.ScanTriggerResult, error) {
+		if req.Ref != "develop" {
+			t.Fatalf("ref=%q want develop", req.Ref)
+		}
+		if !req.ReportOnlyDryRun {
+			t.Fatal("expected report-only")
+		}
+		return ui.ScanTriggerResult{ScanID: "manual-scan-json"}, nil
+	})
+
+	csrf := security.CSRFToken("test-secret", "scan-test-key")
+	form := url.Values{}
+	form.Set("csrf_token", csrf)
+	form.Set("format", "json")
+	form.Set("ref", "develop")
+	form.Set("report_only_dry_run", "true")
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodPost, "/ui/repos/"+strconv.FormatInt(repo.ID, 10)+"/scan", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("X-Repository-Detective-API-Key", "scan-test-key")
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status %d body=%s", w.Code, w.Body.String())
+	}
+	var resp map[string]any
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatal(err)
+	}
+	if resp["scan_id"] != "manual-scan-json" {
+		t.Fatalf("scan_id=%v", resp["scan_id"])
+	}
+	if resp["trigger_type"] != store.TriggerManual {
+		t.Fatalf("trigger_type=%v", resp["trigger_type"])
+	}
+	if resp["report_only_dry_run"] != true {
+		t.Fatalf("report_only=%v", resp["report_only_dry_run"])
 	}
 }
 

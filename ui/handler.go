@@ -651,14 +651,21 @@ func (h *Handler) RepoDetail(c *gin.Context) {
 	}
 	scheduledScans, _ := h.store.ListRecentScheduledScans(c.Request.Context(), 5)
 	recon, _ := h.loadReconciliation(c, id, "")
-	h.renderNav(c, "repo_detail.html", repo.FullName, "repos", map[string]any{
+	scanForm := h.buildScanFormView(repo, effective, meta)
+	data := map[string]any{
 		"Repo": repo, "Scans": scans, "Findings": findings,
 		"ExternalIssues": external, "Effective": effective, "ProfileMeta": meta,
 		"CronInfo": cronInfo, "ScheduledScans": scheduledScans,
-		"ReconcileEnabled": h.reconcileEnabled,
-		"Reconciliation":   recon,
+		"ReconcileEnabled":   h.reconcileEnabled,
+		"Reconciliation":     recon,
 		"ScanTriggerEnabled": h.ScanTriggerEnabled(),
-	})
+		"ScanForm":           scanForm,
+	}
+	if started := strings.TrimSpace(c.Query("scan_started")); started != "" {
+		data["ScanStartedID"] = started
+		data["Notice"] = fmt.Sprintf("Manual scan queued — ID %s.", started)
+	}
+	h.renderNav(c, "repo_detail.html", repo.FullName, "repos", data)
 }
 
 func (h *Handler) RepoSettings(c *gin.Context) {
