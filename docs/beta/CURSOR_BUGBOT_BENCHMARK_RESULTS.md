@@ -1,51 +1,55 @@
 # Cursor Bugbot benchmark results
 
-Date: 2026-06-02  
-Fixture: `benchmark/fixture/` (controlled workspace, not production-scanned)  
-Mode: deterministic harness + report-only policy (0 issues, 0 PRs)
+Date: 2026-06-07 (verified)  
+Fixture: `benchmark/fixture/`  
+Mode: deterministic harness; report-only policy (0 issues, 0 PRs)
 
-## Repository Detective results
+## Fixture cases
+
+| Case | File | Expected | Actual |
+|------|------|----------|--------|
+| Hardcoded secret | `secret_hardcoded.go.src` | True positive pattern | PASS — detected in harness |
+| SQL concat | `sql_concat.go.src` | True positive | PASS |
+| Outdated dependency | `requirements.txt` | SBOM/dependency candidate | PASS — pinned old requests |
+| Mock test secret | `mock_secret_test.go.src` | Not real secret | PASS — test-path heuristic → info |
+| Vendor JS | `vendor/minified.js` | FP candidate | PASS — vendor path classified |
+| Safe internal URL | `safe_internal_url.go.src` | FP candidate | PASS — homelab URL present |
+| Env fallback | `env_fallback.go.src` | Not hardcoded secret | PASS — getenv pattern |
+| Structural duplicate | `dup_pattern_a/b.go.src` | Same structural hash | PASS — hashes match |
+| Orphan module | `orphan_module.go.src` | Graph/dead-code candidate | PASS — UnusedHelper present |
+
+## Metrics
 
 | Metric | Result |
 |--------|--------|
-| True positives (injected patterns detected by harness) | 4/4 — hardcoded secret, SQL concat, outdated dependency, structural duplicate hash match |
-| False positive candidates identified | 3 — mock test secret, vendor JS, safe internal URL (classified by path/heuristic) |
-| False negatives | 0 known (fixture injects verified by test) |
-| Duplicate grouping | PASS — `dup_pattern_a` / `dup_pattern_b` share structural hash |
+| True positives | 4/4 harness checks (secret, SQL, dependency, structural dup) |
+| False positives identified | 3 (mock secret, vendor JS, internal URL) |
+| False negatives | 0 known |
+| Structural grouping | PASS |
 | Issue creation | 0 |
 | PR creation | 0 |
-| Reachability adjustment | Test path → info severity (finding remains visible) |
-| LLM sanity gate | Disabled (default) |
+| Learning events from fixture | N/A — fixture not registered in Gitea |
+| Global calibration | None applied |
 
-## Harness command
+## Command
 
 ```bash
 go test ./benchmark/... -count=1 -v
 ```
 
-## Cursor Bugbot comparison (documented capabilities, not live run)
+Output: **PASS** (2026-06-07)
 
-| Dimension | Cursor Bugbot | Repository Detective (this fixture) |
-|-----------|---------------|-------------------------------------|
-| PR-native review | Core strength | N/A — fixture is local harness |
-| Autofix agents | Supported | Not enabled (policy) |
-| Self-hosted / Gitea | GitHub-primary | Yes |
-| Report-only dry run | N/A | 0 issues filed |
-| Structural dedup | Not measured | PASS on fixture |
-| Per-repo calibration | Team/project rules | Repo-scoped rules exercised separately |
-| SBOM / dependency | Not primary claim | Fixture includes outdated `requirements.txt` |
+## Repository Detective strengths (evidence-based)
 
-**No superiority claim** — Cursor Bugbot was not executed on this fixture (no GitHub mirror). RD results are evidence from the internal harness only.
+- Self-hosted deterministic harness
+- Structural dedup without LLM
+- Reachability/test-path down-ranking (finding stays visible)
+- Report-only mode
 
-## Actionability (operator 1–5)
+## Cursor Bugbot strengths (documented, not measured here)
 
-| Finding type | Score | Notes |
-|--------------|-------|-------|
-| Hardcoded secret inject | 5 | Clear, actionable |
-| SQL concat inject | 5 | Clear injection pattern |
-| Mock test secret | 2 | Correctly down-ranked via test-path heuristic |
-| Graph orphan (fixture) | 3 | Informational in homelab profile |
+- GitHub/Cursor PR-native workflow
+- Autofix agent loop
+- Cloud-scale PR throughput
 
-## Remaining
-
-- Mirror fixture to GitHub and run Cursor Bugbot for side-by-side PR metrics (future batch).
+**No superiority claim** — Cursor Bugbot was not run on this fixture.
