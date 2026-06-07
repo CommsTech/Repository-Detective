@@ -1,7 +1,11 @@
 {{define "preinstall.html"}}
 <!DOCTYPE html><html lang="en"><head>{{template "head" .}}</head><body class="rd-app">
 {{template "nav" .}}
+{{if not .Data.Enabled}}
+<div class="rd-alert warn" role="status"><strong>Pre-install audit disabled.</strong> Set <code>preinstall_audit_enabled=true</code> in config and restart. This page remains available for documentation and past audits.</div>
+{{else}}
 <div class="rd-alert">Third-party audit reports are drafts. Review before sharing or submitting externally. Repository Detective does not auto-file issues or send email for pre-install audits.</div>
+{{end}}
 {{if .Data.Error}}<div class="rd-alert">{{.Data.Error}}</div>{{end}}
 <div class="rd-card">
 <form method="post" action="{{.BasePath}}/preinstall{{if .APIKey}}?api_key={{.APIKey}}{{end}}">

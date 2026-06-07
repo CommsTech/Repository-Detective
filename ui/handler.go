@@ -217,12 +217,13 @@ func (h *Handler) RegisterRoutes(g *gin.RouterGroup) {
 	g.POST("/findings/:id/suppress-rule", h.SuppressGraphRule)
 	g.POST("/findings/:id/mark-intentional", h.MarkIntentionalStandalone)
 	g.POST("/findings/:id/mark-false-positive", h.MarkFindingFalsePositive)
-	if h.preinstallEnabled {
-		g.GET("/preinstall", h.Preinstall)
-		g.POST("/preinstall", h.StartPreinstallAudit)
-		g.GET("/preinstall/audits/:audit_id", h.PreinstallAuditDetail)
-		g.POST("/preinstall/reports/:report_id/reviewed", h.MarkPreinstallReportReviewed)
-	}
+	g.GET("/configure", h.Configure)
+	g.GET("/preinstall", h.Preinstall)
+	g.POST("/preinstall", h.StartPreinstallAudit)
+	g.GET("/preinstall/audits/:audit_id", h.PreinstallAuditDetail)
+	g.POST("/preinstall/reports/:report_id/reviewed", h.MarkPreinstallReportReviewed)
+	g.GET("/projects", h.ProjectGroups)
+	g.POST("/projects", h.CreateProjectGroup)
 }
 
 // BasePath returns the configured UI mount path.
@@ -437,7 +438,7 @@ func (h *Handler) Dashboard(c *gin.Context) {
 		"RecentSevereFindings": severe,
 		"Actions":              actions,
 		"Calibration":          calibration,
-		"ChartJSON":            buildDashboardChartJSON(summary, repos),
+		"ChartJSON":            buildDashboardChartJSONWithStore(c.Request.Context(), h.store, summary, repos),
 	}
 	h.renderNav(c, "dashboard.html", "Dashboard", "dashboard", data)
 }
@@ -1207,10 +1208,11 @@ func (h *Handler) Preinstall(c *gin.Context) {
 	if !h.requireStore(c) {
 		return
 	}
+	enabled := h.preinstallEnabled && h.preinstallRunner != nil
 	audits, _ := h.store.ListAuditRequests(c.Request.Context(), store.ListOptions{Limit: 20})
-	h.render(c, "preinstall.html", "Pre-install audit", map[string]any{
+	h.renderNav(c, "preinstall.html", "Pre-install audit", "preinstall", map[string]any{
 		"Audits":  audits,
-		"Enabled": h.preinstallEnabled && h.preinstallRunner != nil,
+		"Enabled": enabled,
 	})
 }
 
@@ -1222,8 +1224,9 @@ func (h *Handler) StartPreinstallAudit(c *gin.Context) {
 		return
 	}
 	if !h.preinstallEnabled || h.preinstallRunner == nil {
-		h.render(c, "error.html", "Pre-install audit disabled", map[string]any{
-			"Message": "Pre-install audit is disabled by configuration.",
+		h.renderNav(c, "preinstall.html", "Pre-install audit", "preinstall", map[string]any{
+			"Enabled": false,
+			"Notice":  "Pre-install audit is disabled. Set preinstall_audit_enabled=true in config and restart the service.",
 		})
 		return
 	}
@@ -1299,6 +1302,84 @@ func (h *Handler) MarkPreinstallReportReviewed(c *gin.Context) {
 		dest += "?" + enc
 	}
 	c.Redirect(http.StatusSeeOther, dest)
+}
+
+func (h *Handler) Configure(c *gin.Context) {
+	if !h.requireStore(c) {
+		return
+	}
+	var readiness operator.Readiness
+	if h.readinessFn != nil {
+		readiness = h.readinessFn()
+	}
+	caps := buildCapabilityStatuses(readiness, h.notifyGlobal, h.platform, h.basePath)
+	h.renderNav(c, "configure.html", "Configure", "settings", map[string]any{
+		"Readiness":    readiness,
+		"Capabilities": caps,
+		"Platform":     h.platform,
+		"SetupComplete": h.isSetupComplete(c.Request.Context()),
+	})
+}
+
+func (h *Handler) ProjectGroups(c *gin.Context) {
+	if !h.requireStore(c) {
+		return
+	}
+	groups, err := h.store.ListProjectGroups(c.Request.Context())
+	if err != nil {
+		c.String(http.StatusInternalServerError, "failed to list project groups")
+		return
+	}
+	repos, _ := h.store.ListRepositoriesWithSummary(c.Request.Context(), store.ListOptions{Limit: 500})
+	h.renderNav(c, "projects.html", "Project groups", "projects", map[string]any{
+		"Groups": groups,
+		"Repos":  repos,
+	})
+}
+
+func (h *Handler) CreateProjectGroup(c *gin.Context) {
+	if !h.requireStore(c) {
+		return
+	}
+	if !h.requireCSRF(c) {
+		return
+	}
+	name := strings.TrimSpace(c.PostForm("name"))
+	desc := strings.TrimSpace(c.PostForm("description"))
+	primaryID, _ := strconv.ParseInt(c.PostForm("primary_repository_id"), 10, 64)
+	repoIDs := c.PostFormArray("repository_ids")
+	if name == "" {
+		h.renderNav(c, "projects.html", "Project groups", "projects", map[string]any{
+			"Notice": "Project group name is required.",
+		})
+		return
+	}
+	var ids []int64
+	for _, raw := range repoIDs {
+		id, err := strconv.ParseInt(raw, 10, 64)
+		if err == nil && id > 0 {
+			ids = append(ids, id)
+		}
+	}
+	if primaryID <= 0 && len(ids) > 0 {
+		primaryID = ids[0]
+	}
+	if _, err := h.store.CreateProjectGroup(c.Request.Context(), store.ProjectGroup{
+		Name: name, Description: desc, PrimaryRepositoryID: primaryID, RepositoryIDs: ids,
+	}); err != nil {
+		h.renderNav(c, "projects.html", "Project groups", "projects", map[string]any{
+			"Notice": "Failed to create project group: " + err.Error(),
+		})
+		return
+	}
+	c.Redirect(http.StatusSeeOther, h.basePath+"/projects"+apiKeyQuery(c))
+}
+
+func apiKeyQuery(c *gin.Context) string {
+	if key := c.Query("api_key"); key != "" {
+		return "?api_key=" + url.QueryEscape(key)
+	}
+	return ""
 }
 
 func parseID(c *gin.Context, param string) (int64, bool) {
