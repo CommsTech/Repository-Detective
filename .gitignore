@@ -97,6 +97,11 @@ docs/dogfood-reports/*
 !docs/dogfood-reports/final-evidence-backed-closures-report.md
 !docs/dogfood-reports/final-active-codefix-queue.md
 !docs/dogfood-reports/final-product-repo-closeout-verification.md
+!docs/dogfood-reports/batch6-baseline.md
+!docs/dogfood-reports/operator-issue-disposition-report.md
+!docs/dogfood-reports/historical-summary-rollup-disposition-report.md
+!docs/dogfood-reports/non-product-repo-dry-run-plan.md
+!docs/dogfood-reports/batch6-final-verification.md
 
 # Private operator dogfood (unsanitized — keep local)
 docs/DOGFOOD_REPORT_FIRST_39_REPOS.md
