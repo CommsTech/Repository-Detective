@@ -1,34 +1,35 @@
 # Feature flag beta test matrix
 
-Product baseline commit: sprint head (see `BETA_RELEASE_READINESS_REPORT.md`).
+Updated: Beta UX + Release Gate sprint
 
-| Feature | Config keys | Default | Beta state | Test | Pass | Blocks beta |
-|---------|-------------|---------|------------|------|------|-------------|
-| Database | `database_enabled` | true | enabled_and_verified | `go test ./store/...` | pending | yes if fails |
-| Scheduler | `scheduler_enabled` | true | enabled_and_verified | operator smoke / health | pending | medium |
-| Runner delegation | `runner_delegation_enabled`, `runner_shared_secret` | false | disabled_by_default_but_tested | health capability row | pending | no |
-| Notifications | `notifications_enabled`, channel URLs | false | disabled_missing_config_with_action | health shows missing channel | pending | no |
-| Pre-install audit | `preinstall_audit_enabled` | false | disabled_by_default_but_tested | GET `/ui/preinstall` → 200 | pending | yes if 404 |
-| Remediation planner | `remediation_planner_enabled` | true | enabled_and_verified | API + UI smoke | pending | medium |
-| Remediation PR | `remediation_pr_enabled` | false | disabled_by_default_but_tested | capability status | pending | no |
-| Evidence closure | `evidence_closure_enabled` | true | enabled_and_verified | closure unit tests | pending | medium |
-| Operator UI | `operator_ui_enabled` | true | enabled_and_verified | `go test ./ui/...` | pending | yes |
-| Scan profiles | `scan_profile` | standard_deterministic | enabled_and_verified | profile tests | pending | no |
-| Report-only dry run | `report_only_dry_run` (API) | available | enabled_and_verified | dry-run docs | pass | no |
-| Backlog-control | built-in | active | enabled_and_verified | product repo 0 active-present | pass | yes if off |
-| Project grouping | DB + `/ui/projects` | new | enabled_and_verified | `TestProjectGroupCRUD` | pending | no |
-| SBOM | scan pipeline + `sbom` pkg | new | enabled_and_verified | `go test ./sbom/...` | pending | medium |
+Configure page: `/ui/configure#<section>` — each capability **Configure** action deep-links here.
+
+| Feature | Configure link | Beta state | Test | Pass |
+|---------|----------------|------------|------|------|
+| Database | `#database` | enabled_and_verified | `go test ./store/...` | pass |
+| Scheduler | `#scheduler` | enabled_and_verified | health page | pass |
+| Runner delegation | `#runner-delegation` | disabled_by_default_but_tested | configure section | pass |
+| Notifications | `#notifications` | disabled_missing_config_with_action | configure secrets rows | pass |
+| Pre-install audit | `#preinstall-audit` | disabled_by_default_but_tested | GET `/ui/preinstall` 200 | pass |
+| Remediation planner | `#remediation-planner` | enabled_and_verified | unit tests | pass |
+| Remediation PR | `#remediation-pr` | disabled_by_default_but_tested | health link + configure | pass |
+| Evidence closure | `#evidence-closure` | enabled_and_verified | closure tests | pass |
+| Operator UI | `#operator-ui` | enabled_and_verified | `go test ./ui/...` | pass |
+| Scan profiles | `#scan-profile` | enabled_and_verified | profile tests | pass |
+| Report-only dry run | `#report-only-dry-run` | enabled_and_verified | API docs | pass |
+| Backlog-control | n/a (policy) | enabled_and_verified | 0 active-present | pass |
+| SBOM | `#sbom` | enabled_and_verified | `go test ./sbom/...` | pass |
+| Project grouping | `/ui/projects` | enabled_and_verified | CRUD test | pass |
 
 ## Disabled feature expected behavior
 
-| Feature | When disabled | Expected UI/API |
-|---------|---------------|-----------------|
-| Pre-install audit | flag false | Page loads; banner explains enable steps |
-| Runner delegation | flag false | Health: disabled + config keys |
-| Notifications | flag false | Health: disabled + channel list |
-| Remediation PR | flag false | Finding page hides PR attempt or shows disabled |
+| Feature | When disabled | Expected |
+|---------|---------------|----------|
+| Pre-install audit | flag false | 200 page + configure instructions |
+| Remediation PR | flag false | Configure shows keys + beta default disabled |
+| Runner delegation | flag false | Configure shows missing secret guidance |
 
-## Security notes
+## Security
 
-- Disabled ≠ 404 for operator-facing features.
-- Beta-disabled auto-remediation outside controlled tests remains **not_beta_supported**.
+- Secrets: present/missing only on Configure page.
+- Disabled features must not 404.
