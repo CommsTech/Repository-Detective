@@ -3,6 +3,7 @@ package api
 import (
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"git.commsnet.org/commstech/bugbot/notify"
@@ -43,6 +44,7 @@ func (h *Handler) RegisterRoutes(g *gin.RouterGroup) {
 	g.GET("/repos/:id/findings", h.ListRepoFindings)
 	g.GET("/repos/:id/graph", h.GetRepoGraph)
 	g.GET("/repos/:id/graph/export", h.ExportRepoGraph)
+	g.GET("/repos/:id/reconciliation", h.GetRepoReconciliation)
 
 	g.GET("/scans/:scan_id", h.GetScan)
 	g.GET("/scans/:scan_id/scanner-results", h.GetScanScannerResults)
@@ -331,6 +333,35 @@ func (h *Handler) GetFindingLifecycle(c *gin.Context) {
 		out = append(out, toLifecycleEventResponse(ev))
 	}
 	c.JSON(http.StatusOK, gin.H{"lifecycle_events": out})
+}
+
+func (h *Handler) GetRepoReconciliation(c *gin.Context) {
+	if !h.requireStore(c) {
+		return
+	}
+	id, ok := parseRepoID(c)
+	if !ok {
+		return
+	}
+	settings, _ := h.store.GetRepoSettings(c.Request.Context(), id)
+	effective, _ := store.ResolveEffectiveSettingsFull(h.global, settings)
+	issueFiling := store.ShouldCreateForgeIssues(effective)
+	scanID := strings.TrimSpace(c.Query("scan_id"))
+	var (
+		sum store.ReconciliationSummary
+		err error
+	)
+	if scanID != "" {
+		sum, err = h.store.ReconciliationSummaryForScan(c.Request.Context(), id, scanID, issueFiling)
+	} else {
+		sum, err = h.store.ReconciliationSummaryForRepository(c.Request.Context(), id, issueFiling)
+	}
+	if err != nil {
+		h.logger.Errorf("reconciliation summary: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load reconciliation summary"})
+		return
+	}
+	c.JSON(http.StatusOK, sum)
 }
 
 // GlobalSnapshotFromConfig builds the global settings snapshot from main config values.

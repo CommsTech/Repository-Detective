@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"git.commsnet.org/commstech/bugbot/graph"
+	"git.commsnet.org/commstech/bugbot/ai"
 	"git.commsnet.org/commstech/bugbot/notify"
 	"git.commsnet.org/commstech/bugbot/store"
 	"git.commsnet.org/commstech/bugbot/ui"
@@ -20,9 +21,20 @@ import (
 )
 
 func testUI(t *testing.T, s store.QueryStore) (*gin.Engine, *ui.Handler) {
+	return testUIWithGlobal(t, s, betaTestGlobal())
+}
+
+func betaTestGlobal() store.GlobalSettingsSnapshot {
+	g := store.DefaultGlobalSettings()
+	g.IssuePolicy = store.IssuePolicyOff
+	g.PolicyLevel = store.PolicyMonitorOnly
+	return g
+}
+
+func testUIWithGlobal(t *testing.T, s store.QueryStore, global store.GlobalSettingsSnapshot) (*gin.Engine, *ui.Handler) {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
-	h, err := ui.NewHandler(s, store.DefaultGlobalSettings(), "/ui", logrus.New(), nil, false, "test-secret")
+	h, err := ui.NewHandler(s, global, "/ui", logrus.New(), nil, false, "test-secret")
 	if err != nil {
 		t.Fatalf("new ui handler: %v", err)
 	}
@@ -80,8 +92,8 @@ func TestDashboardRenders(t *testing.T) {
 	if !strings.Contains(body, "Executive report") {
 		t.Fatal("expected executive report section on dashboard")
 	}
-	if !strings.Contains(body, "favicon.svg") {
-		t.Fatal("expected favicon in layout")
+	if !strings.Contains(body, "favicon.svg?v=2") {
+		t.Fatal("expected versioned favicon in layout")
 	}
 }
 
@@ -631,6 +643,93 @@ func TestGraphPageAccessibility(t *testing.T) {
 		if !strings.Contains(body, "rd-graph-canvas") {
 			t.Fatal("expected themed graph canvas class")
 		}
+	}
+}
+
+func TestRepoScanFormShowsReportOnly(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	s, _ := store.Open(store.Config{Enabled: true, Path: filepath.Join(dir, "scan-form.db")})
+	defer s.Close()
+	repo, _ := s.UpsertRepository(ctx, store.Repository{Owner: "amber", Name: "app", FullName: "amber/app"})
+	r, h := testUI(t, s)
+	h.SetScanTrigger(func(_ context.Context, _ ui.ScanTriggerRequest) (ui.ScanTriggerResult, error) {
+		return ui.ScanTriggerResult{ScanID: "manual-scan-1"}, nil
+	})
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, "/ui/repos/"+strconv.FormatInt(repo.ID, 10)+"/scan", nil)
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status %d", w.Code)
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "Report-only dry-run") {
+		t.Fatal("expected report-only toggle")
+	}
+	if !strings.Contains(body, "Issue filing is disabled") {
+		t.Fatal("expected issue filing disabled notice")
+	}
+}
+
+func TestRepoDetailReconciliationPanel(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	s, _ := store.Open(store.Config{Enabled: true, Path: filepath.Join(dir, "recon-ui.db")})
+	defer s.Close()
+	repo, _ := s.UpsertRepository(ctx, store.Repository{Owner: "amber", Name: "app", FullName: "amber/app"})
+	scanID := "recon-scan-1"
+	summary, _ := json.Marshal(map[string]any{
+		"issues_found": 2, "persistence_status": store.PersistenceStatusComplete,
+		"issue_sync_status": store.IssueSyncStatusSkipped, "dry_run_report_only": true,
+		"persistence_persisted_count": 2,
+	})
+	_, _ = s.CreateScan(ctx, store.Scan{
+		ID: scanID, RepositoryID: repo.ID, TriggerType: store.TriggerManual,
+		Status: store.ScanStatusCompleted, SummaryJSON: summary,
+	})
+	rec := store.NewRecorder(s, logrus.New())
+	_, _ = rec.RecordFindings(ctx, repo.ID, scanID, []ai.CodeIssue{
+		{Fingerprint: "fp1", Title: "a", Severity: "low", Source: "graph"},
+		{Fingerprint: "fp2", Title: "b", Severity: "low", Source: "graph"},
+	})
+
+	r, _ := testUI(t, s)
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, "/ui/repos/"+strconv.FormatInt(repo.ID, 10), nil)
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status %d", w.Code)
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "Issue / finding reconciliation") {
+		t.Fatal("expected reconciliation panel")
+	}
+	if !strings.Contains(body, "report-only") && !strings.Contains(body, "Report-only") {
+		t.Fatal("expected report-only explanation")
+	}
+}
+
+func TestRepoSettingsSectionsExplainPolicies(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	s, _ := store.Open(store.Config{Enabled: true, Path: filepath.Join(dir, "settings-ui.db")})
+	defer s.Close()
+	repo, _ := s.UpsertRepository(ctx, store.Repository{Owner: "o", Name: "r", FullName: "o/r"})
+
+	r, _ := testUI(t, s)
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, "/ui/repos/"+strconv.FormatInt(repo.ID, 10)+"/settings", nil)
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status %d", w.Code)
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "Issue filing") {
+		t.Fatal("expected issue filing section")
+	}
+	if !strings.Contains(body, "Safe beta default") {
+		t.Fatal("expected safety badge text")
 	}
 }
 

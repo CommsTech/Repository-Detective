@@ -183,6 +183,8 @@ type QueryStore interface {
 
 	GetLatestCompletedScanForRepository(ctx context.Context, repositoryID int64) (Scan, error)
 	GetLatestReconcilableScanForRepository(ctx context.Context, repositoryID int64) (Scan, error)
+	ReconciliationSummaryForRepository(ctx context.Context, repositoryID int64, issueFilingEnabled bool) (ReconciliationSummary, error)
+	ReconciliationSummaryForScan(ctx context.Context, repositoryID int64, scanID string, issueFilingEnabled bool) (ReconciliationSummary, error)
 	CountFindingInstancesForScan(ctx context.Context, scanID string) (int, error)
 	UpdateScanPipelineState(ctx context.Context, scanID string, status string, fields map[string]any) error
 	ListFingerprintsInScan(ctx context.Context, scanID string, repositoryID int64) (map[string]bool, error)
