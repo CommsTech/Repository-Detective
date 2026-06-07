@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"git.commsnet.org/commstech/bugbot/learning"
 	"git.commsnet.org/commstech/bugbot/store"
 	"github.com/gin-gonic/gin"
 )
@@ -15,7 +16,14 @@ func (calibrationBridge) Summary(c *gin.Context) (map[string]any, error) {
 	if bugbotStore == nil {
 		return nil, fmt.Errorf("database disabled")
 	}
-	return bugbotStore.CalibrationSummary(c.Request.Context())
+	ctx := c.Request.Context()
+	out, err := bugbotStore.CalibrationSummary(ctx)
+	if err != nil {
+		return nil, err
+	}
+	lh, _ := bugbotStore.LearningHealthSummary(ctx)
+	out["learning_health"] = lh
+	return out, nil
 }
 
 func (calibrationBridge) ListRecommendations(c *gin.Context, status string) ([]store.CalibrationRecommendation, error) {
@@ -47,20 +55,47 @@ func (calibrationBridge) AcceptRecommendation(c *gin.Context, id int64) error {
 	if rec == nil {
 		return fmt.Errorf("recommendation not found")
 	}
-	if rec.RecommendationType == "report_only" && rec.RuleID != "" {
+	if learning.IsProtectedFromAutoDowngrade("high", rec.Category) {
+		return fmt.Errorf("recommendation affects protected security category — requires explicit operator override on finding")
+	}
+	scope := store.SuppressionScopeGlobal
+	var repoIDPtr *int64
+	if rec.Scope == "repo" && rec.RepositoryID != nil && *rec.RepositoryID > 0 {
+		scope = store.SuppressionScopeRepo
+		repoIDPtr = rec.RepositoryID
+	} else if rec.Scope == "global" {
+		// Global rules require explicit multi-repo evidence — block naive global accept in beta.
+		return fmt.Errorf("global calibration recommendations require multi-repo evidence review — use repo-scoped recommendations")
+	}
+	if rec.RecommendedAction == "report_only" && rec.RuleID != "" {
 		_, err = bugbotStore.CreateFindingSuppression(ctx, store.FindingSuppression{
-			Source:    rec.Source,
-			RuleID:    rec.RuleID,
-			Category:  rec.Category,
-			Scope:     store.SuppressionScopeGlobal,
-			Reason:    rec.Reason,
-			CreatedBy: "calibration-accept",
-			Active:    true,
+			RepositoryID: repoIDPtr,
+			Source:       rec.Source,
+			RuleID:       rec.RuleID,
+			Category:     rec.Category,
+			Scope:        scope,
+			Reason:       rec.Reason,
+			CreatedBy:    "calibration-accept",
+			Active:       true,
 		})
 		if err != nil {
 			return err
 		}
+		if repoIDPtr != nil {
+			expires := time.Now().UTC().Add(90 * 24 * time.Hour)
+			_, _ = bugbotStore.CreateRepoCalibrationRule(ctx, store.RepoCalibrationRule{
+				RepositoryID: repoIDPtr, Scope: "repo", Source: rec.Source, RuleID: rec.RuleID,
+				FindingCategory: rec.Category, Action: "downgrade_confidence", Reason: rec.Reason,
+				EvidenceCount: int(rec.Confidence * 100), FalsePositiveRate: rec.Confidence,
+				Active: true, ExpiresAt: &expires, RecommendationID: &rec.ID,
+			})
+		}
 	}
+	repoID := int64(0)
+	if rec.RepositoryID != nil {
+		repoID = *rec.RepositoryID
+	}
+	emitRecommendationLearning(ctx, repoID, rec.ID, true, rec.Source, rec.RuleID)
 	return bugbotStore.UpdateCalibrationRecommendationStatus(ctx, id, "accepted")
 }
 
@@ -68,7 +103,19 @@ func (calibrationBridge) RejectRecommendation(c *gin.Context, id int64) error {
 	if bugbotStore == nil {
 		return fmt.Errorf("database disabled")
 	}
-	return bugbotStore.UpdateCalibrationRecommendationStatus(c.Request.Context(), id, "rejected")
+	ctx := c.Request.Context()
+	recs, _ := bugbotStore.ListCalibrationRecommendations(ctx, "", 1000)
+	for i := range recs {
+		if recs[i].ID == id {
+			repoID := int64(0)
+			if recs[i].RepositoryID != nil {
+				repoID = *recs[i].RepositoryID
+			}
+			emitRecommendationLearning(ctx, repoID, id, false, recs[i].Source, recs[i].RuleID)
+			break
+		}
+	}
+	return bugbotStore.UpdateCalibrationRecommendationStatus(ctx, id, "rejected")
 }
 
 func (calibrationBridge) Recompute(c *gin.Context) (map[string]any, error) {
@@ -84,9 +131,16 @@ func (calibrationBridge) Recompute(c *gin.Context) (map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
+	repoRecs := 0
+	repos, _ := bugbotStore.ListRepositoriesWithSummary(ctx, store.ListOptions{Limit: 50})
+	for _, r := range repos {
+		n, _ := bugbotStore.GenerateRepoScopedRecommendations(ctx, r.ID, 5)
+		repoRecs += n
+	}
 	return map[string]any{
-		"rules_updated":              stats,
-		"recommendations_generated": recs,
+		"rules_updated":               stats,
+		"recommendations_generated":   recs,
+		"repo_recommendations_generated": repoRecs,
 	}, nil
 }
 
