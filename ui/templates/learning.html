@@ -1,0 +1,41 @@
+{{define "learning.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>{{template "head" .}}</head>
+<body class="rd-app">
+{{template "nav" .}}
+<div class="rd-card">
+  <div class="rd-card-head"><h2>Learning health</h2><span class="rd-chip">Evidence-backed</span></div>
+  <p class="rd-muted">Continuous improvement from lifecycle outcomes — deterministic first, optional LLM gate disabled by default.</p>
+  <table class="rd-table rd-table-compact">
+    <tr><td>Learning events recorded</td><td><strong>{{.Data.Health.EventsTotal}}</strong></td></tr>
+    <tr><td>Pending recommendations</td><td><strong>{{.Data.Health.PendingRecommendations}}</strong></td></tr>
+    <tr><td>Active repo calibration rules</td><td><strong>{{.Data.Health.ActiveRepoRules}}</strong></td></tr>
+    <tr><td>Structurally grouped findings</td><td><strong>{{.Data.Health.GroupedFindings}}</strong></td></tr>
+    <tr><td>Avg false-positive rate (rules)</td><td><strong>{{printf "%.0f" (mul .Data.Health.AvgFalsePositiveRate 100)}}%</strong></td></tr>
+    <tr><td>Scanner failure rate (history)</td><td><strong>{{printf "%.0f" (mul .Data.Health.ScannerFailureRate 100)}}%</strong></td></tr>
+  </table>
+  <p><a class="rd-link" href="{{.BasePath}}/configure{{apiKeyQS .APIKey}}">Configure features</a> · <a class="rd-link" href="{{.BasePath}}/health{{apiKeyQS .APIKey}}">System Health</a></p>
+</div>
+
+<div class="rd-card">
+  <div class="rd-card-head"><h2>Calibration recommendations</h2></div>
+  <p class="rd-muted">Repo-scoped by default. Approve via API <code>POST /api/v1/calibration/recommendations/:id/accept</code> or recompute job.</p>
+  <table class="rd-table">
+    <tr><th>Scope</th><th>Rule</th><th>Action</th><th>Reason</th><th>Confidence</th></tr>
+    {{range .Data.Recommendations}}
+    <tr>
+      <td>{{.Scope}}{{if .RepositoryID}} #{{.RepositoryID}}{{end}}</td>
+      <td><code>{{.Source}}/{{.RuleID}}</code></td>
+      <td>{{.RecommendedAction}}</td>
+      <td class="rd-muted">{{.Reason}}</td>
+      <td>{{printf "%.0f" (mul .Confidence 100)}}%</td>
+    </tr>
+    {{else}}
+    <tr><td colspan="5" class="rd-muted">No pending recommendations — run recompute or complete more dry-runs.</td></tr>
+    {{end}}
+  </table>
+</div>
+{{template "foot" .}}
+</body></html>
+{{end}}

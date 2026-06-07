@@ -170,6 +170,34 @@
 </div>
 {{end}}
 
+{{with .Data.LearningHealth}}
+<div class="rd-card">
+  <div class="rd-card-head">
+    <h2>Learning health</h2>
+    <a class="rd-link" href="{{$.BasePath}}/learning{{apiKeyQS $.APIKey}}">Learning &amp; calibration →</a>
+  </div>
+  <p class="rd-muted">Evidence-backed continuous improvement — repo-scoped calibration, structural grouping, optional LLM gate off by default.</p>
+  <div class="rd-grid rd-grid-stats">
+    <div class="rd-stat info">
+      <div class="rd-stat-value">{{.EventsTotal}}</div>
+      <div class="rd-stat-label">Learning events</div>
+    </div>
+    <div class="rd-stat {{if gt .PendingRecommendations 0}}warn{{end}}">
+      <div class="rd-stat-value">{{.PendingRecommendations}}</div>
+      <div class="rd-stat-label">Pending recommendations</div>
+    </div>
+    <div class="rd-stat info">
+      <div class="rd-stat-value">{{.ActiveRepoRules}}</div>
+      <div class="rd-stat-label">Active repo rules</div>
+    </div>
+    <div class="rd-stat info">
+      <div class="rd-stat-value">{{.GroupedFindings}}</div>
+      <div class="rd-stat-label">Structurally grouped</div>
+    </div>
+  </div>
+</div>
+{{end}}
+
 {{with .Data.Summary}}
 <div class="rd-card">
   <div class="rd-card-head"><h2>Finding backlog</h2><span class="rd-chip">Deduplicated</span></div>

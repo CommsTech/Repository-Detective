@@ -224,6 +224,7 @@ func (h *Handler) RegisterRoutes(g *gin.RouterGroup) {
 	g.POST("/preinstall/reports/:report_id/reviewed", h.MarkPreinstallReportReviewed)
 	g.GET("/projects", h.ProjectGroups)
 	g.POST("/projects", h.CreateProjectGroup)
+	g.GET("/learning", h.Learning)
 }
 
 // BasePath returns the configured UI mount path.
@@ -428,6 +429,7 @@ func (h *Handler) Dashboard(c *gin.Context) {
 	severe := append(critical, high...)
 
 	calibration, _ := h.store.CalibrationSummary(c.Request.Context())
+	learningHealth, _ := h.store.LearningHealthSummary(c.Request.Context())
 
 	data := map[string]any{
 		"Summary":              summary,
@@ -438,6 +440,7 @@ func (h *Handler) Dashboard(c *gin.Context) {
 		"RecentSevereFindings": severe,
 		"Actions":              actions,
 		"Calibration":          calibration,
+		"LearningHealth":       learningHealth,
 		"ChartJSON":            buildDashboardChartJSONWithStore(c.Request.Context(), h.store, summary, repos),
 	}
 	h.renderNav(c, "dashboard.html", "Dashboard", "dashboard", data)
@@ -1320,6 +1323,19 @@ func (h *Handler) Configure(c *gin.Context) {
 		"Platform":      h.platform,
 		"Sections":      sections,
 		"SetupComplete": h.isSetupComplete(c.Request.Context()),
+	})
+}
+
+func (h *Handler) Learning(c *gin.Context) {
+	if !h.requireStore(c) {
+		return
+	}
+	ctx := c.Request.Context()
+	health, _ := h.store.LearningHealthSummary(ctx)
+	recs, _ := h.store.ListCalibrationRecommendations(ctx, "proposed", 50)
+	h.renderNav(c, "learning.html", "Learning & Calibration", "learning", map[string]any{
+		"Health":          health,
+		"Recommendations": recs,
 	})
 }
 
