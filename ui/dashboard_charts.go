@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"context"
 	"encoding/json"
 	"sort"
 	"strings"
@@ -17,15 +18,21 @@ type dashboardChartPayload struct {
 	CategoryValues  []int    `json:"categoryValues"`
 	ScanTrendLabels []string `json:"scanTrendLabels"`
 	ScanTrendValues []int    `json:"scanTrendValues"`
-	RepoMapLabels   []string `json:"repoMapLabels"`
-	RepoMapValues   []int    `json:"repoMapValues"`
-	RepoMapFailed   []bool   `json:"repoMapFailed"`
+	RepoMapLabels      []string `json:"repoMapLabels"`
+	RepoMapValues      []int    `json:"repoMapValues"`
+	RepoMapFailed      []bool   `json:"repoMapFailed"`
+	RepoMapStackLabels []string `json:"repoMapStackLabels"`
+	RepoMapStacks      [][]int  `json:"repoMapStacks"`
 	BacklogOpen     int      `json:"backlogOpen"`
 	BacklogCritical int      `json:"backlogCritical"`
 	BacklogHigh     int      `json:"backlogHigh"`
 }
 
 func buildDashboardChartJSON(summary store.DashboardSummary, repos []store.RepositorySummary) string {
+	return buildDashboardChartJSONWithStore(context.Background(), nil, summary, repos)
+}
+
+func buildDashboardChartJSONWithStore(ctx context.Context, qs store.QueryStore, summary store.DashboardSummary, repos []store.RepositorySummary) string {
 	payload := dashboardChartPayload{
 		BacklogOpen:     summary.Backlog.OpenUnique,
 		BacklogCritical: summary.Backlog.CriticalOpen,
@@ -84,10 +91,45 @@ func buildDashboardChartJSON(summary store.DashboardSummary, repos []store.Repos
 		payload.RepoMapLabels = append(payload.RepoMapLabels, short)
 		payload.RepoMapValues = append(payload.RepoMapValues, r.OpenFindingsCount)
 		payload.RepoMapFailed = append(payload.RepoMapFailed, strings.EqualFold(r.LastScanStatus, "failed"))
+		if qs != nil && ctx != nil {
+			cats, err := qs.OpenFindingsByCategoryForRepository(ctx, r.ID)
+			if err == nil {
+				stack := make([]int, len(riskStackOrder))
+				for cat, n := range cats {
+					stack[riskStackIndex(cat)] += n
+				}
+				payload.RepoMapStacks = append(payload.RepoMapStacks, stack)
+			}
+		}
+	}
+	if len(payload.RepoMapStackLabels) == 0 {
+		payload.RepoMapStackLabels = riskStackOrder
 	}
 
 	raw, _ := json.Marshal(payload)
 	return string(raw)
+}
+
+var riskStackOrder = []string{"Security", "Dependency", "Reliability", "Graph", "Quality", "Compliance", "Operations"}
+
+func riskStackIndex(category string) int {
+	c := strings.ToLower(strings.TrimSpace(category))
+	switch {
+	case strings.Contains(c, "secret"), c == "security", strings.Contains(c, "vulner"):
+		return 0
+	case strings.Contains(c, "depend"):
+		return 1
+	case strings.Contains(c, "reliab"), strings.Contains(c, "public"):
+		return 2
+	case strings.Contains(c, "arch"), strings.Contains(c, "maintain"), strings.Contains(c, "graph"):
+		return 3
+	case strings.Contains(c, "quality"), strings.Contains(c, "test"), strings.Contains(c, "tech"):
+		return 4
+	case strings.Contains(c, "license"), strings.Contains(c, "pipeline"), strings.Contains(c, "compliance"):
+		return 5
+	default:
+		return 6
+	}
 }
 
 type trendPoint struct {

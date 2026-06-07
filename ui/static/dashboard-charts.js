@@ -162,7 +162,43 @@
     });
   }
 
+  var riskSegmentColors = [
+    "rgba(239, 68, 68, 0.85)",
+    "rgba(249, 115, 22, 0.85)",
+    "rgba(234, 179, 8, 0.85)",
+    "rgba(139, 92, 246, 0.85)",
+    "rgba(37, 99, 235, 0.85)",
+    "rgba(20, 184, 166, 0.85)",
+    "rgba(107, 114, 128, 0.85)",
+  ];
+
   function initRepoMap(ctx, data) {
+    if (data.repoMapStacks && data.repoMapStacks.length && data.repoMapStackLabels && data.repoMapStackLabels.length) {
+      var datasets = data.repoMapStackLabels.map(function (label, si) {
+        return {
+          label: label,
+          data: data.repoMapStacks.map(function (row) { return row[si] || 0; }),
+          backgroundColor: riskSegmentColors[si % riskSegmentColors.length],
+          borderRadius: si === data.repoMapStackLabels.length - 1 ? 6 : 0,
+          stack: "risk",
+        };
+      });
+      new Chart(ctx, {
+        type: "bar",
+        data: { labels: data.repoMapLabels, datasets: datasets },
+        options: {
+          indexAxis: "y",
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: "bottom", labels: { color: palette.text, boxWidth: 12 } } },
+          scales: {
+            x: { stacked: true, ticks: { color: palette.text, precision: 0 }, grid: { color: palette.grid }, beginAtZero: true },
+            y: { stacked: true, ticks: { color: palette.text, font: { size: 10 } }, grid: { display: false } },
+          },
+        },
+      });
+      return;
+    }
     var colors = data.repoMapLabels.map(function (_, i) {
       return data.repoMapFailed && data.repoMapFailed[i]
         ? "rgba(239, 68, 68, 0.75)"

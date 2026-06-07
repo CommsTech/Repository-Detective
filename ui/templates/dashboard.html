@@ -74,7 +74,7 @@
       <h2>Repository risk map</h2>
       <a class="rd-link" href="{{$.BasePath}}/repos{{apiKeyQS $.APIKey}}">All repositories →</a>
     </div>
-    <p class="rd-muted rd-chart-hint">Bar length = open findings. Red = last scan failed. Click a repo in the table below for full report.</p>
+    <p class="rd-muted rd-chart-hint">Stacked bar = open findings by category (security, dependency, graph, quality…). Red border = last scan failed.</p>
     <div class="rd-chart-canvas-wrap rd-chart-repos">
       <canvas id="rd-chart-repos" role="img" aria-label="Repository risk by open findings"></canvas>
     </div>
