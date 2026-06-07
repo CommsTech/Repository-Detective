@@ -11,8 +11,34 @@
 </nav>
 {{end}}
 <div class="rd-alert info">{{.Notice}}</div>
+{{if not .Data.IssueFilingEnabled}}<div class="rd-alert info"><strong>Issue filing is disabled</strong> — findings persist in report-only mode; forge issue counts may be lower than scan findings.</div>{{end}}
 <div class="rd-alert">Profiles are deterministic-first. AI is advisory unless explicitly enabled.</div>
 <div class="rd-settings-warn rd-alert">Lowering severity gates or disabling scanners reduces detection coverage. Changes apply on the next scan.</div>
+
+<nav class="rd-settings-nav" aria-label="Settings sections">
+  {{range .Data.SettingsSections}}<a class="rd-link" href="#{{.ID}}">{{.Title}}</a>{{end}}
+</nav>
+
+{{range .Data.SettingsSections}}
+<div class="rd-card rd-settings-section" id="{{.ID}}">
+  <div class="rd-card-head"><h2>{{.Title}}</h2></div>
+  <p class="rd-muted">{{.Summary}}</p>
+  <table class="rd-table rd-table-compact">
+    <thead><tr><th>Setting</th><th>Effective</th><th>Source</th><th>Notes</th></tr></thead>
+    <tbody>
+    {{range .Fields}}
+    <tr>
+      <td><strong>{{.Label}}</strong>{{if .Badge}} <span class="rd-badge {{.BadgeClass}}">{{.Badge}}</span>{{end}}</td>
+      <td><code>{{.EffectiveValue}}</code></td>
+      <td class="rd-muted">{{.Source}}</td>
+      <td class="rd-muted">{{.Explanation}}{{if .BetaNote}} · <em>{{.BetaNote}}</em>{{end}}{{if .RestartRequired}} · restart required{{end}}</td>
+    </tr>
+    {{end}}
+    </tbody>
+  </table>
+</div>
+{{end}}
+
 {{if .Data.Error}}<div class="rd-alert">{{.Data.Error}}</div>{{end}}
 <form method="post" action="{{.BasePath}}/repos/{{.Data.Repo.ID}}/settings{{if .APIKey}}?api_key={{.APIKey}}{{end}}">
 <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
