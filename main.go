@@ -937,6 +937,9 @@ func initializeComponents() error {
 				RunnerCallbackBaseURL:        config.RunnerCallbackBaseURL,
 				PublicURL:                    config.PublicURL,
 				RemediationPRRequireApproval: config.RemediationPRRequireApproval,
+				RemediationPRMaxFiles:        config.RemediationPRMaxFilesChanged,
+				RemediationPRMaxDiffLines:    config.RemediationPRMaxDiffLines,
+				RemediationPRBranchPrefix:    config.RemediationPRBranchPrefix,
 			})
 		}
 		if err != nil {

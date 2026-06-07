@@ -1313,10 +1313,12 @@ func (h *Handler) Configure(c *gin.Context) {
 		readiness = h.readinessFn()
 	}
 	caps := buildCapabilityStatuses(readiness, h.notifyGlobal, h.platform, h.basePath)
+	sections := buildConfigureSections(readiness, h.platform, h.notifyGlobal, h.global, h.basePath)
 	h.renderNav(c, "configure.html", "Configure", "settings", map[string]any{
-		"Readiness":    readiness,
-		"Capabilities": caps,
-		"Platform":     h.platform,
+		"Readiness":     readiness,
+		"Capabilities":  caps,
+		"Platform":      h.platform,
+		"Sections":      sections,
 		"SetupComplete": h.isSetupComplete(c.Request.Context()),
 	})
 }

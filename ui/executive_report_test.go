@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"strings"
 	"testing"
 
 	"git.commsnet.org/commstech/bugbot/notify"
@@ -63,5 +64,8 @@ func TestBuildCapabilityStatusesRemediationPRDisabled(t *testing.T) {
 	}
 	if pr.Reason == "" || pr.SettingsURL == "" {
 		t.Fatal("expected reason and settings link")
+	}
+	if !strings.Contains(pr.SettingsURL, "/configure#remediation-pr") {
+		t.Fatalf("expected configure anchor, got %q", pr.SettingsURL)
 	}
 }

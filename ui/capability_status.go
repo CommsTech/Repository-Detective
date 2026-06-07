@@ -28,6 +28,9 @@ type PlatformContext struct {
 	RunnerCallbackBaseURL        string
 	PublicURL                    string
 	RemediationPRRequireApproval bool
+	RemediationPRMaxFiles        int
+	RemediationPRMaxDiffLines    int
+	RemediationPRBranchPrefix    string
 }
 
 func buildCapabilityStatuses(
@@ -36,23 +39,23 @@ func buildCapabilityStatuses(
 	platform PlatformContext,
 	basePath string,
 ) []CapabilityStatus {
-	settingsURL := basePath + "/repos"
 	return []CapabilityStatus{
-		remediationPRStatus(readiness, platform, settingsURL),
-		runnerDelegationStatus(readiness, platform, settingsURL),
-		notificationsStatus(readiness, notifyCfg, settingsURL),
+		remediationPRStatus(readiness, platform, basePath),
+		runnerDelegationStatus(readiness, platform, basePath),
+		notificationsStatus(readiness, notifyCfg, basePath),
 		preinstallAuditStatus(readiness, platform, basePath),
 	}
 }
 
-func remediationPRStatus(r operator.Readiness, p PlatformContext, settingsURL string) CapabilityStatus {
+func remediationPRStatus(r operator.Readiness, p PlatformContext, basePath string) CapabilityStatus {
+	url := configureSectionURL(basePath, "remediation-pr")
 	if r.Features.RemediationPREnabled {
 		return CapabilityStatus{
 			Name: "Remediation PR", State: "enabled",
 			Reason:      "Low-risk approved remediation PR flow is available when plans pass validation.",
 			ConfigKeys:  []string{"remediation_pr_enabled", "remediation_pr_require_approval", "gitea_token"},
 			SafetyNote:  "Broad auto-PR remains off by default; approval gates apply.",
-			SettingsURL: settingsURL, SettingsLabel: "Configure repositories",
+			SettingsURL: url, SettingsLabel: "Configure",
 		}
 	}
 	reason := "Intentionally disabled by default for safety."
@@ -65,11 +68,12 @@ func remediationPRStatus(r operator.Readiness, p PlatformContext, settingsURL st
 		Name: "Remediation PR", State: "disabled", Reason: reason,
 		ConfigKeys:  []string{"remediation_pr_enabled", "remediation_pr_require_approval", "gitea_token"},
 		SafetyNote:  "Enable only after reviewing remediation planner output and PR size limits.",
-		SettingsURL: settingsURL, SettingsLabel: "Configure",
+		SettingsURL: url, SettingsLabel: "Configure",
 	}
 }
 
-func runnerDelegationStatus(r operator.Readiness, p PlatformContext, settingsURL string) CapabilityStatus {
+func runnerDelegationStatus(r operator.Readiness, p PlatformContext, basePath string) CapabilityStatus {
+	url := configureSectionURL(basePath, "runner-delegation")
 	if r.Features.RunnerDelegationEnabled {
 		state := "enabled"
 		reason := "Runner jobs can be delegated when runners authenticate with the shared secret."
@@ -80,7 +84,7 @@ func runnerDelegationStatus(r operator.Readiness, p PlatformContext, settingsURL
 		return CapabilityStatus{
 			Name: "Runner delegation", State: state, Reason: reason,
 			ConfigKeys:  []string{"runner_delegation_enabled", "runner_shared_secret", "runner_callback_base_url", "public_url"},
-			SettingsURL: settingsURL, SettingsLabel: "Configure",
+			SettingsURL: url, SettingsLabel: "Configure",
 		}
 	}
 	reason := "Disabled by default until runner_shared_secret and callback URL are configured."
@@ -91,11 +95,12 @@ func runnerDelegationStatus(r operator.Readiness, p PlatformContext, settingsURL
 		Name: "Runner delegation", State: "disabled", Reason: reason,
 		ConfigKeys:  []string{"runner_delegation_enabled", "runner_shared_secret", "runner_callback_base_url"},
 		SafetyNote:  "Default-off prevents unsigned runner callbacks.",
-		SettingsURL: settingsURL, SettingsLabel: "Configure",
+		SettingsURL: url, SettingsLabel: "Configure",
 	}
 }
 
-func notificationsStatus(r operator.Readiness, cfg notify.Config, settingsURL string) CapabilityStatus {
+func notificationsStatus(r operator.Readiness, cfg notify.Config, basePath string) CapabilityStatus {
+	url := configureSectionURL(basePath, "notifications")
 	if r.Features.NotificationsEnabled {
 		channels := notifyConfiguredChannels(cfg)
 		if len(channels) == 0 {
@@ -103,26 +108,26 @@ func notificationsStatus(r operator.Readiness, cfg notify.Config, settingsURL st
 				Name: "Notifications", State: "degraded",
 				Reason:      "Global notifications_enabled is true but no channel (webhook/Slack/Discord/Telegram) is configured.",
 				ConfigKeys:  []string{"notifications_enabled", "notification_webhook_url", "notification_slack_webhook_url"},
-				SettingsURL: settingsURL, SettingsLabel: "Per-repo notification settings",
+				SettingsURL: url, SettingsLabel: "Configure",
 			}
 		}
 		return CapabilityStatus{
 			Name: "Notifications", State: "enabled",
 			Reason:      fmt.Sprintf("Active channels: %s", strings.Join(channels, ", ")),
 			ConfigKeys:  []string{"notifications_enabled", "notification_min_severity"},
-			SettingsURL: settingsURL, SettingsLabel: "Configure",
+			SettingsURL: url, SettingsLabel: "Configure",
 		}
 	}
 	return CapabilityStatus{
 		Name: "Notifications", State: "disabled",
 		Reason:      "Set notifications_enabled=true and configure at least one delivery channel.",
 		ConfigKeys:  []string{"notifications_enabled", "notification_webhook_url", "notification_slack_webhook_url", "notification_discord_webhook_url"},
-		SettingsURL: settingsURL, SettingsLabel: "Configure",
+		SettingsURL: url, SettingsLabel: "Configure",
 	}
 }
 
 func preinstallAuditStatus(r operator.Readiness, p PlatformContext, basePath string) CapabilityStatus {
-	url := basePath + "/preinstall"
+	url := configureSectionURL(basePath, "preinstall-audit")
 	if r.Features.PreinstallAuditEnabled {
 		reason := "Pre-install audit routes are available."
 		state := "enabled"
@@ -134,14 +139,14 @@ func preinstallAuditStatus(r operator.Readiness, p PlatformContext, basePath str
 			Name: "Pre-install audit", State: state, Reason: reason,
 			ConfigKeys:  []string{"preinstall_audit_enabled", "public_url", "preinstall_allow_private_networks"},
 			SafetyNote:  "Private network targets remain blocked unless explicitly allowed.",
-			SettingsURL: url, SettingsLabel: "Open pre-install audit",
+			SettingsURL: url, SettingsLabel: "Configure",
 		}
 	}
 	return CapabilityStatus{
 		Name: "Pre-install audit", State: "disabled",
 		Reason:      "Set preinstall_audit_enabled=true to expose /preinstall audit workflow.",
 		ConfigKeys:  []string{"preinstall_audit_enabled", "public_url"},
-		SettingsURL: url, SettingsLabel: "Learn more",
+		SettingsURL: url, SettingsLabel: "Configure",
 	}
 }
 
