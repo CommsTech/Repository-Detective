@@ -69,10 +69,11 @@ ARG COMMIT=unknown
 ARG BUILD_DATE=unknown
 
 COPY deploy/bin /tmp/deploy-bin
-COPY scripts/apk-retry.sh /tmp/apk-retry.sh /usr/local/lib/rd/apk-retry.sh
+COPY scripts/apk-retry.sh /usr/local/lib/rd/apk-retry.sh
 COPY scripts/install-scanner-tools.sh /tmp/install-scanner-tools.sh
 
-RUN chmod +x /tmp/apk-retry.sh /usr/local/lib/rd/apk-retry.sh /tmp/install-scanner-tools.sh && \
+RUN cp /usr/local/lib/rd/apk-retry.sh /tmp/apk-retry.sh && \
+    chmod +x /tmp/apk-retry.sh /usr/local/lib/rd/apk-retry.sh /tmp/install-scanner-tools.sh && \
     if [ "$INSTALL_EXTERNAL_TOOLS" = "true" ]; then \
       /tmp/install-scanner-tools.sh; \
     else \
