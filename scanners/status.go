@@ -17,7 +17,9 @@ const (
 	StatusFound           Status = "found"
 	StatusFailed          Status = "failed"
 	StatusTimedOut        Status = "timed_out"
-	StatusParseFailed     Status = "parse_failed"
+	StatusParseFailed         Status = "parse_failed"
+	StatusNoSupportedManifest Status = "no_supported_manifest"
+	StatusScannerUnavailable  Status = "scanner_unavailable"
 )
 
 // RunResult is the normalized outcome for one scanner.

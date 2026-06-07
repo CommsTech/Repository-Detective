@@ -56,30 +56,49 @@ func RunGrype(ctx context.Context, logger *logrus.Logger, dir string, cfg Config
 
 	timeout := time.Duration(cfg.TimeoutSeconds) * time.Second
 	output, err := runCommand(ctx, timeout, dir, "grype", args...)
-	if err != nil && len(output) == 0 {
+	if len(output) == 0 && err != nil {
 		result.Status = classifyCommandError(err)
 		result.Detail = err.Error()
 		logger.Warnf("[SCANNER:grype] scan failed: status=%s err=%v", result.Status, err)
 		return result
 	}
 
-	findings, parseErr := parseGrypeOutput(output, dir, cfg)
-	if parseErr != nil {
-		result.Status = StatusParseFailed
-		result.Detail = parseErr.Error()
-		logger.Warnf("[SCANNER:grype] failed to parse output: %v", parseErr)
-		return result
+	findings, status, detail := parseGrypeOutput(output, dir, cfg)
+	result.Status = status
+	result.Detail = detail
+	result.Findings = findings
+	if status == StatusParseFailed || status == StatusFailed || status == StatusScannerUnavailable {
+		logger.Warnf("[SCANNER:grype] failed to parse output: %v", detail)
+	} else {
+		logger.Infof("[SCANNER:grype] status=%s findings=%d", result.Status, len(findings))
 	}
-
-	result = resultWithFindings("grype", findings)
-	logger.Infof("[SCANNER:grype] status=%s findings=%d", result.Status, len(findings))
 	return result
 }
 
-func parseGrypeOutput(output []byte, dir string, cfg Config) ([]Finding, error) {
+func parseGrypeOutput(output []byte, dir string, cfg Config) ([]Finding, Status, string) {
+	text := strings.TrimSpace(string(output))
+	if text == "" {
+		return nil, StatusNoSupportedManifest, "empty grype output — no supported dependency manifest detected"
+	}
+
+	if status, detail, handled := classifyGrypePlaintext(text); handled {
+		return nil, status, detail
+	}
+
+	payload, err := extractJSONObject(output)
+	if err != nil {
+		if status, detail, handled := classifyGrypePlaintext(text); handled {
+			return nil, status, detail
+		}
+		return nil, StatusParseFailed, err.Error()
+	}
+
 	var report grypeReport
-	if err := json.Unmarshal(output, &report); err != nil {
-		return nil, err
+	if err := json.Unmarshal(payload, &report); err != nil {
+		if status, detail, handled := classifyGrypePlaintext(text); handled {
+			return nil, status, detail
+		}
+		return nil, StatusParseFailed, err.Error()
 	}
 
 	minSeverity := cfg.GrypeFailOn
@@ -119,5 +138,32 @@ func parseGrypeOutput(output []byte, dir string, cfg Config) ([]Finding, error) 
 		})
 	}
 
-	return findings, nil
+	status := StatusClean
+	if len(findings) > 0 {
+		status = StatusFound
+	}
+	return findings, status, ""
+}
+
+func classifyGrypePlaintext(text string) (Status, string, bool) {
+	lower := strings.ToLower(text)
+	switch {
+	case strings.Contains(lower, "failed to load vulnerability db"),
+		strings.Contains(lower, "database disk image is malformed"),
+		strings.Contains(lower, "unable to get namespaces"):
+		return StatusScannerUnavailable, strings.TrimSpace(firstLine(text)), true
+	case strings.Contains(lower, "no packages were discovered"),
+		strings.Contains(lower, "no package catalog"),
+		strings.Contains(lower, "unable to catalog"),
+		strings.Contains(lower, "no supported package"):
+		return StatusNoSupportedManifest, strings.TrimSpace(firstLine(text)), true
+	}
+	return "", "", false
+}
+
+func firstLine(text string) string {
+	if idx := strings.IndexByte(text, '\n'); idx >= 0 {
+		return text[:idx]
+	}
+	return text
 }
