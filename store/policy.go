@@ -122,6 +122,19 @@ func ShouldCreateForgeIssues(e EffectiveSettings) bool {
 	return e.IssuePolicy != IssuePolicyOff
 }
 
+// ApplyReportOnlyDryRunSettings forces analyze+persist without forge filing or remediation.
+func ApplyReportOnlyDryRunSettings(e *EffectiveSettings) {
+	if e == nil {
+		return
+	}
+	e.PolicyLevel = PolicyMonitorOnly
+	e.IssuePolicy = IssuePolicyOff
+	e.AIPolicy = AIPolicyDisabled
+	e.EnableLLMAuditors = false
+	e.EnableAIRiskChecks = false
+	e.RemediationPolicy = "off"
+}
+
 // UseSemanticDedup reports whether semantic dedup should skip new issue creation.
 func UseSemanticDedup(e EffectiveSettings) bool {
 	return e.IssuePolicy == IssuePolicyFingerprint

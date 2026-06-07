@@ -69,6 +69,20 @@ func TestShouldCreateForgeIssues(t *testing.T) {
 	}
 }
 
+func TestApplyReportOnlyDryRunSettings(t *testing.T) {
+	e := store.EffectiveSettings{
+		Enabled: true, PolicyLevel: store.PolicyIssueOnly, IssuePolicy: store.IssuePolicyAll,
+		AIPolicy: store.AIPolicyAllowed, EnableLLMAuditors: true,
+	}
+	store.ApplyReportOnlyDryRunSettings(&e)
+	if store.ShouldCreateForgeIssues(e) {
+		t.Fatal("report-only dry run must not create forge issues")
+	}
+	if e.AIPolicy != store.AIPolicyDisabled || e.EnableLLMAuditors {
+		t.Fatal("report-only dry run must disable AI")
+	}
+}
+
 func TestPassesIssueGates(t *testing.T) {
 	e := store.EffectiveSettings{SeverityGate: "high", ConfidenceGate: 0.8}
 	if store.PassesIssueGates("low", 0.9, e) {

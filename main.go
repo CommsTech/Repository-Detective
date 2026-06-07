@@ -49,6 +49,8 @@ var componentsReady atomic.Bool
 
 type scanProfileOverrideKey struct{}
 
+type reportOnlyDryRunKey struct{}
+
 var (
 	logger              *logrus.Logger
 	config              *Config
@@ -1448,6 +1450,18 @@ func scanPolicyFromEffective(e store.EffectiveSettings) analyzers.ScanPolicy {
 	}
 }
 
+func withReportOnlyDryRun(ctx context.Context, enabled bool) context.Context {
+	if !enabled {
+		return ctx
+	}
+	return context.WithValue(ctx, reportOnlyDryRunKey{}, true)
+}
+
+func reportOnlyDryRunFromContext(ctx context.Context) bool {
+	v, _ := ctx.Value(reportOnlyDryRunKey{}).(bool)
+	return v
+}
+
 func withScanProfileOverride(ctx context.Context, profile string) context.Context {
 	profile = store.NormalizeScanProfile(profile)
 	if profile == "" || !store.IsValidScanProfile(profile) {
@@ -1485,6 +1499,9 @@ func resolveEffectiveSettingsForRepo(ctx context.Context, forgeType, owner, repo
 	}
 	if effective.AIPolicy == store.AIPolicyAllowed && aiClient == nil {
 		effective.EnableLLMAuditors = false
+	}
+	if reportOnlyDryRunFromContext(ctx) {
+		store.ApplyReportOnlyDryRunSettings(&effective)
 	}
 	policy := scanPolicyFromEffective(effective)
 	policy.ScanProfile = meta.ScanProfile
@@ -1620,6 +1637,15 @@ func finishPersistedScan(ctx context.Context, scanCtx *store.ScanContext, reposi
 	if err := scanRecorder.FinishScan(ctx, scanID, data, analysisErr); err != nil {
 		logger.Warnf("Failed to finish scan persistence: %v", err)
 	}
+	if reportOnlyDryRunFromContext(ctx) && scanRecorder.Enabled() && analysisErr == nil {
+		if bs, ok := bugbotStore.(interface {
+			UpdateScanPipelineState(context.Context, string, string, map[string]any) error
+		}); ok {
+			_ = bs.UpdateScanPipelineState(ctx, scanID, store.ScanStatusCompleted, map[string]any{
+				"dry_run_report_only": true,
+			})
+		}
+	}
 	notifyScanFinish(ctx, scanCtx, repositoryID, result, analysisErr)
 }
 
@@ -1747,7 +1773,9 @@ func createIssuesFromResult(ctx context.Context, forgeType, owner, repo string, 
 			// Filing phase ran but nothing new to link (backlog control, all skipped, or no forge candidates).
 			scanRecorder.MarkIssueSyncComplete(postCtx, result.ScanID)
 		}
-		maybeGenerateRemediationPlans(postCtx, repositoryID, actionIssues, processed)
+		if !reportOnlyDryRunFromContext(ctx) {
+			maybeGenerateRemediationPlans(postCtx, repositoryID, actionIssues, processed)
+		}
 	}
 	maybeProcessEvidenceClosure(postCtx, owner, repo, repositoryID, result)
 }
@@ -1864,13 +1892,14 @@ func runnerNonceMiddleware() gin.HandlerFunc {
 }
 
 type manualAnalysisRequest struct {
-	ForgeType   string `json:"forge_type"` // gitea (default) or github
-	Owner       string `json:"owner" binding:"required"`
-	Repository  string `json:"repository" binding:"required"`
-	Ref         string `json:"ref"`
-	Type        string `json:"type"` // "repository" or "pull_request"
-	PRNumber    int    `json:"pr_number"`
-	ScanProfile string `json:"scan_profile"`
+	ForgeType          string `json:"forge_type"` // gitea (default) or github
+	Owner              string `json:"owner" binding:"required"`
+	Repository         string `json:"repository" binding:"required"`
+	Ref                string `json:"ref"`
+	Type               string `json:"type"` // "repository" or "pull_request"
+	PRNumber           int    `json:"pr_number"`
+	ScanProfile        string `json:"scan_profile"`
+	ReportOnlyDryRun   bool   `json:"report_only_dry_run"`
 }
 
 func normalizeForgeType(forgeType string) string {
@@ -1886,10 +1915,10 @@ func normalizeForgeType(forgeType string) string {
 
 func enqueueManualAnalysis(parentCtx context.Context, req manualAnalysisRequest) {
 	// Detach from HTTP request context so bulk /analyze/all scans are not cancelled when the handler returns.
-	scanCtx := context.WithoutCancel(parentCtx)
 	go func() {
 		forgeType := normalizeForgeType(req.ForgeType)
-		runAnalysis(withScanProfileOverride(scanCtx, req.ScanProfile), func(ctx context.Context) {
+		analysisCtx := withReportOnlyDryRun(context.WithoutCancel(parentCtx), req.ReportOnlyDryRun)
+		runAnalysis(withScanProfileOverride(analysisCtx, req.ScanProfile), func(ctx context.Context) {
 			var result *analyzers.AnalysisResult
 			var err error
 			var repositoryID int64
