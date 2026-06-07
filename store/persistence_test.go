@@ -74,6 +74,36 @@ func TestRecordFindingsBeforeIssueSync(t *testing.T) {
 	if pipeline.PersistenceStatus != store.PersistenceStatusComplete {
 		t.Fatalf("pipeline status %q", pipeline.PersistenceStatus)
 	}
+	if pipeline.IssueSyncStatus != store.IssueSyncStatusPending && pipeline.IssueSyncStatus != "" {
+		t.Fatalf("issue sync should remain pending until filing phase, got %q", pipeline.IssueSyncStatus)
+	}
+}
+
+func TestMarkIssueSyncCompleteAfterFilingPhase(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	s, err := store.Open(store.Config{Enabled: true, Path: filepath.Join(dir, "issuesync.db")})
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	defer s.Close()
+
+	repo, _ := s.UpsertRepository(ctx, store.Repository{Owner: "o", Name: "r", FullName: "o/r"})
+	scanID := "issuesyncscan01"
+	summary := []byte(`{"issues_found":0,"persistence_status":"complete","issue_sync_status":"pending"}`)
+	_, _ = s.CreateScan(ctx, store.Scan{
+		ID: scanID, RepositoryID: repo.ID, TriggerType: store.TriggerManual,
+		Status: store.ScanStatusCompleted, SummaryJSON: summary,
+	})
+
+	rec := store.NewRecorder(s, logrus.New())
+	rec.MarkIssueSyncComplete(ctx, scanID)
+
+	scan, _ := s.GetScan(ctx, scanID)
+	pipeline := store.PipelineStateFromSummary(scan.SummaryJSON)
+	if pipeline.IssueSyncStatus != store.IssueSyncStatusComplete {
+		t.Fatalf("expected issue_sync complete, got %q", pipeline.IssueSyncStatus)
+	}
 }
 
 func TestPersistScanFindingsBatchIsTransactional(t *testing.T) {

@@ -72,6 +72,16 @@ func (s *SQLiteStore) GetLatestReconcilableScanForRepository(ctx context.Context
 			})
 			scan.Status = ScanStatusCompleted
 		}
+		// Stale scans may leave issue_sync pending after successful persistence + zero new filings.
+		if pipeline.PersistenceStatus == PersistenceStatusComplete &&
+			pipeline.IssueSyncStatus == IssueSyncStatusPending {
+			_ = s.UpdateScanPipelineState(ctx, scan.ID, ScanStatusCompleted, map[string]any{
+				"issue_sync_status": IssueSyncStatusComplete,
+			})
+			if refreshed, err := s.GetScan(ctx, scan.ID); err == nil {
+				scan = refreshed
+			}
+		}
 		return scan, nil
 	}
 	return Scan{}, sql.ErrNoRows

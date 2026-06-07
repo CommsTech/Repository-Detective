@@ -1737,11 +1737,15 @@ func createIssuesFromResult(ctx context.Context, forgeType, owner, repo string, 
 	}
 
 	// Phase 3: link external issues in DB after forge filing.
+	issueFilingEnabled := store.ShouldCreateForgeIssues(effective) && forgeReady && issueManager != nil
 	if scanRecorder != nil && scanRecorder.Enabled() && repositoryID > 0 && result.ScanID != "" {
 		if len(processed) > 0 {
 			if err := scanRecorder.RecordExternalIssues(postCtx, result.ScanID, forgeType, processed, findingIDs); err != nil {
 				logger.Warnf("Failed to link external issues: %v", err)
 			}
+		} else if issueFilingEnabled {
+			// Filing phase ran but nothing new to link (backlog control, all skipped, or no forge candidates).
+			scanRecorder.MarkIssueSyncComplete(postCtx, result.ScanID)
 		}
 		maybeGenerateRemediationPlans(postCtx, repositoryID, actionIssues, processed)
 	}

@@ -297,6 +297,17 @@ func (r *Recorder) RecordExternalIssues(ctx context.Context, scanID string, forg
 	})
 }
 
+// MarkIssueSyncComplete records that the forge issue filing phase finished (including zero new links).
+func (r *Recorder) MarkIssueSyncComplete(ctx context.Context, scanID string) {
+	bs := r.batchStore()
+	if bs == nil || scanID == "" {
+		return
+	}
+	_ = bs.UpdateScanPipelineState(ctx, scanID, ScanStatusCompleted, map[string]any{
+		"issue_sync_status": IssueSyncStatusComplete,
+	})
+}
+
 // MarkIssueSyncSkipped records that forge issue filing was intentionally skipped.
 func (r *Recorder) MarkIssueSyncSkipped(ctx context.Context, scanID string) {
 	bs := r.batchStore()
