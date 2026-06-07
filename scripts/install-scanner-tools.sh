@@ -61,18 +61,36 @@ install_golangci() {
     | sh -s -- -b /usr/local/bin "v${GOLANGCI_VERSION}"
 }
 
+install_shellcheck() {
+  . /tmp/apk-retry.sh
+  apk_retry shellcheck || echo "shellcheck install skipped"
+}
+
+install_ruff() {
+  pip3 install --no-cache-dir --break-system-packages "ruff==0.8.4" || echo "ruff install skipped"
+}
+
+refresh_grype_db() {
+  if command -v grype >/dev/null 2>&1; then
+    grype db update || echo "grype db update skipped"
+  fi
+}
+
 . /tmp/apk-retry.sh
 apk_retry curl bash tar python3 py3-pip git ca-certificates
 
 install_trivy
 install_grype
+refresh_grype_db
 install_gitleaks || echo "gitleaks install skipped"
 install_hadolint || echo "hadolint install skipped"
 install_semgrep || echo "semgrep install skipped"
 install_checkov || echo "checkov install skipped"
 install_golangci || echo "golangci-lint install skipped (optional)"
+install_shellcheck || echo "shellcheck install skipped"
+install_ruff || echo "ruff install skipped"
 
-for bin in trivy grype gitleaks semgrep govulncheck gosec staticcheck hadolint checkov; do
+for bin in trivy grype gitleaks semgrep govulncheck gosec staticcheck hadolint checkov shellcheck ruff; do
   if command -v "$bin" >/dev/null 2>&1; then
     echo "installed: $bin -> $($bin --version 2>/dev/null | head -1 || echo ok)"
   fi
