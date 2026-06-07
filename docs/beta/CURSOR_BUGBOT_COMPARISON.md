@@ -20,6 +20,7 @@ Gitea-first, self-hosted, evidence-backed **full-repository lifecycle** inspecti
 - Issue idempotency, backlog-control, evidence closure
 - SBOM generation + grype checking (beta)
 - Per-repo calibration (not global overfit)
+- **Continuous learning engine** — auditable events, repo-scoped recommendations, structural dedup (beta)
 - Project groups for multi-repo applications (beta)
 
 ## Comparison matrix
@@ -34,7 +35,10 @@ Gitea-first, self-hosted, evidence-backed **full-repository lifecycle** inspecti
 | Self-hosted | Cloud service | **Yes** |
 | SBOM gen + check | Not advertised as core | **Beta** (syft/gomod + grype) |
 | Scanner transparency | Proprietary stack | Configurable deterministic scanners |
-| Per-repo calibration | Rules + team rules | **Suppressions + homelab profiles** |
+| Per-repo calibration | Rules + team rules | **Suppressions + homelab profiles + learning events** |
+| Continuous learning | Resolution experiments (cloud) | **Deterministic lifecycle learning, optional LLM gate off** |
+| Structural dedup | Not advertised | **Pattern hash grouping (beta)** |
+| Reachability priority | Not advertised | **Graph/path heuristics (beta)** |
 | Project grouping | Project rules | **Beta project groups** |
 | Report-only mode | N/A | **Dry-run without filing** |
 | Auto-remediation | **Autofix agents** | Planner + gated PR (default off) |

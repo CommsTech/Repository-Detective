@@ -31,6 +31,7 @@ One PR modifying 3 files: introduce bug, fix typo, add dependency.
 | True positives (injected bugs found) | TBD | TBD |
 | False positives (safe code flagged) | TBD | TBD |
 | Duplicate findings (repeat scan) | TBD | TBD |
+| Learning calibration impact | TBD | N/A |
 | Time to first useful report | TBD | TBD |
 | Actionability score (operator 1–5) | TBD | TBD |
 | Verified closure after fix commit | TBD | TBD |
