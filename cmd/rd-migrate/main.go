@@ -1,0 +1,34 @@
+// rd-migrate opens the configured SQLite database and applies pending schema migrations.
+package main
+
+import (
+	"context"
+	"fmt"
+	"os"
+	"path/filepath"
+
+	"git.commsnet.org/commstech/bugbot/store"
+)
+
+func main() {
+	path := os.Getenv("REPOSITORY_DETECTIVE_DATABASE_PATH")
+	if path == "" {
+		path = os.Getenv("BUGBOT_DATABASE_PATH")
+	}
+	if path == "" {
+		path = filepath.Join("data", "bugbot.db")
+	}
+	s, err := store.Open(store.Config{Enabled: true, Path: path})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "migrate failed: %v\n", err)
+		os.Exit(1)
+	}
+	defer s.Close()
+	if qs, ok := s.(store.QueryStore); ok {
+		if _, err := qs.LearningHealthSummary(context.Background()); err != nil {
+			fmt.Fprintf(os.Stderr, "learning tables verify failed: %v\n", err)
+			os.Exit(1)
+		}
+	}
+	fmt.Printf("database migrated: %s\n", path)
+}
