@@ -1,6 +1,6 @@
 # Non-product dry-run next gate
 
-Generated: 2026-06-07
+Generated: 2026-06-07 (updated post-calibration)
 
 ## Decision
 
@@ -12,46 +12,41 @@ ready_for_more_dry_runs
 
 | Criterion | Status |
 |-----------|--------|
-| Both dry-run scans completed | ✅ |
-| Issue creation stayed 0 | ✅ |
-| No duplicate activity | ✅ |
-| Reports actionable | ✅ (medium); N/A (small clean) |
-| Scanner failures understood | ✅ (grype, ruff, shellcheck) |
-| Noisy findings manageable | ⚠️ graph rules need calibration first |
-| Product repo remains clean | ✅ (0 active-present, 1 open #48) |
-| Operator explicitly approves limited filing | ❌ not requested |
+| Product repo clean | ✅ 0 active-present, 1 open #48 |
+| Report-only enforcement | ✅ round 2: 0 issues, 0 PRs |
+| Graph noise acceptable | ⚠️ improved — downgraded to info; count reduced 48→23 on netmapper |
+| grype states understood | ✅ `scanner_unavailable` vs round 1 `parse_failed` |
+| Scanner variance documented | ✅ shellcheck pending image rebuild; ruff adds findings needing gating |
+| Round 2 dry run completed | ✅ `commstech/commsnet_optimizer` |
+| Operator approves limited filing | ❌ not requested |
 
 ## Options considered
 
 | Option | Verdict |
 |--------|---------|
-| `blocked` | No — scans succeeded, guardrails work |
-| `repeat_report_only` | Possible but same repos less valuable now |
-| `ready_for_limited_issue_filing` | **Rejected** — noise + missing operator approval |
+| `blocked` | No — calibration improved signal; safety controls hold |
+| `repeat_report_only` | Valid if operator wants another repo before wider dry runs |
+| `ready_for_limited_issue_filing` | **Not recommended** — operator approval required; ruff gating + image rebuild pending |
 | `ready_for_more_dry_runs` | **Selected** |
 
-## Rationale
+## Technically ready for operator review?
 
-Report-only infrastructure is **proven**: findings persist, forge filing blocked, remediation skipped. However, netmapper showed **55% graph-noise findings** and container scanner gaps (grype, ruff, shellcheck). Filing issues now would produce a poor signal-to-noise ratio and erode operator trust.
+**Partially.** Report-only safety is proven across three repos. Graph calibration and homelab profile improve signal quality. However:
+
+1. **Limited issue filing not approved** by operator.
+2. **Full Docker image rebuild** not verified in this session (shellcheck still missing on live container).
+3. **Ruff findings** need severity/confidence gating before Python repo issue filing.
+4. **grype** reports `scanner_unavailable` until vuln DB is healthy in runtime image.
 
 ## Recommended next batch
 
-1. **Calibrate graph rules** for small/medium homelab repos (suppress orphan/island below file threshold).
-2. **Fix grype JSON parse** and add ruff + shellcheck to scanner image.
-3. **Run one more report-only dry run** on a Go or docs-only medium repo (e.g. a utility with `go.mod`, no open issues).
-4. **Operator review** netmapper dry-run report — confirm SEC-EVAL and test-gap findings match expectations.
-5. Only after steps 1–4: consider `ready_for_limited_issue_filing` with **critical/high only** on a single pilot repo.
+1. Rebuild and deploy all-in-one image (`docker-build-verify.sh` + compose up).
+2. Add ruff finding severity gating for homelab repos (similar to graph calibration).
+3. Run one more report-only dry run on a Python medium repo after image rebuild.
+4. Operator review round 2 report; explicit approval required before any `ready_for_limited_issue_filing`.
 
 ## Explicitly not started
 
 - All-repo fleet scan
-- Limited issue filing
+- Limited issue filing in non-product repos
 - PR auto-remediation
-- Modification of non-product Gitea issues
-
-## Remaining blockers for limited issue filing
-
-1. Operator explicit approval
-2. Graph noise calibration
-3. grype / ruff / shellcheck scanner completeness
-4. Second medium-repo dry run in different ecosystem
