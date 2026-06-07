@@ -516,6 +516,8 @@ func (e *Engine) Scan(ctx context.Context, prepare *PrepareReport) ([]CandidateF
 			deterministicResults := append([]scanners.RunResult(nil), summary.Results...)
 			externalSummary := scanners.RunAll(ctx, e.logger, prepared.Dir, prepared.Entries, cfg.Scanners, cfg.EnableSecurity, cfg.EnableQuality)
 			summary = mergeScannerRunSummaries(deterministicResults, externalSummary)
+			repoProfile := profile.DetectProfile(allPathsFromEntries(prepared.Entries))
+			summary.Results = profile.CalibrateRuffResults(summary.Results, repoProfile)
 			for _, finding := range summary.Candidates() {
 				allCandidates = append(allCandidates, finding.ToCandidateFinding())
 			}
@@ -1431,6 +1433,16 @@ func forgeToGiteaFiles(files []forge.RepositoryContent) []gitea.RepositoryConten
 		}
 	}
 	return out
+}
+
+func allPathsFromEntries(entries []scanners.FileEntry) []string {
+	paths := make([]string, 0, len(entries))
+	for _, e := range entries {
+		if e.Path != "" {
+			paths = append(paths, e.Path)
+		}
+	}
+	return paths
 }
 
 func graphOverlaysFromCandidates(candidates []CandidateFinding) []graph.FindingOverlay {
