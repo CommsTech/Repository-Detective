@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"git.commsnet.org/commstech/bugbot/models"
+	"git.commsnet.org/commstech/bugbot/profile"
 )
 
 type staticRule struct {
@@ -299,6 +300,11 @@ func staticRuleConfidence(rule staticRule) float64 {
 
 // RunStaticAnalysis performs deterministic pattern checks without LLM calls.
 func RunStaticAnalysis(files []FileContent, enableSecurity, enableQuality bool) []models.CandidateFinding {
+	return RunStaticAnalysisWithProfile(files, enableSecurity, enableQuality, profile.RepoProfile{})
+}
+
+// RunStaticAnalysisWithProfile applies homelab/infra calibration when repo profile is provided.
+func RunStaticAnalysisWithProfile(files []FileContent, enableSecurity, enableQuality bool, repoProfile profile.RepoProfile) []models.CandidateFinding {
 	var findings []models.CandidateFinding
 
 	for _, file := range files {
@@ -323,6 +329,9 @@ func RunStaticAnalysis(files []FileContent, enableSecurity, enableQuality bool) 
 				if isStaticFalsePositive(rule, file.Path, line) {
 					continue
 				}
+				severity := rule.Severity
+				confidence := staticRuleConfidence(rule)
+				severity, confidence = profile.HomelabInfraSeverity(rule.ID, severity, confidence, file.Path, line, repoProfile)
 				findings = append(findings, models.CandidateFinding{
 					ID:         rule.ID,
 					Hypothesis: rule.Title,
@@ -330,8 +339,8 @@ func RunStaticAnalysis(files []FileContent, enableSecurity, enableQuality bool) 
 						Code:      strings.TrimSpace(line),
 						CallChain: []string{file.Path},
 					},
-					Severity:    rule.Severity,
-					Confidence:  staticRuleConfidence(rule),
+					Severity:    severity,
+					Confidence:  confidence,
 					AuditorType: "static",
 					Category:    rule.Category,
 					File:        file.Path,

@@ -12,6 +12,7 @@ const (
 	ScanProfileMaintainerDeep        = "maintainer_deep"
 	ScanProfilePreinstallCautious    = "preinstall_cautious"
 	ScanProfileBetaStandard          = "beta_standard"
+	ScanProfileHomelabInfra          = "homelab_infra"
 	ScanProfileCustom                = "custom"
 )
 
@@ -20,6 +21,7 @@ var AllowedScanProfiles = []string{
 	ScanProfileFast,
 	ScanProfileStandardDeterministic,
 	ScanProfileBetaStandard,
+	ScanProfileHomelabInfra,
 	ScanProfileStrictSecurity,
 	ScanProfileMaintainerDeep,
 	ScanProfilePreinstallCautious,
@@ -31,6 +33,7 @@ var ProfileDescriptions = map[string]string{
 	ScanProfileFast:                  "Quick feedback, low noise — gitleaks + trivy, minimal health, no AI",
 	ScanProfileStandardDeterministic: "Default deterministic scan — security, Go, IaC, health, and graph",
 	ScanProfileBetaStandard:          "Private beta default — deterministic, low issue noise, graph on dashboard only",
+	ScanProfileHomelabInfra:          "Homelab/infra repos — deterministic scan with internal-ref and graph noise calibration",
 	ScanProfileStrictSecurity:        "Strong PR/security gate — all scanners, medium severity gate, status gate",
 	ScanProfileMaintainerDeep:        "Deep maintenance — full workspace, scanners, health, graph, and LLM auditors",
 	ScanProfilePreinstallCautious:    "Third-party trust assessment — no issues/AI, conservative scanners",
@@ -138,6 +141,19 @@ func ProfileDefaults(profile string) EffectiveSettings {
 		base.ConfidenceGate = 0.85
 		base.IssuePolicy = IssuePolicyAll
 		base.RemediationPolicy = "suggest"
+		return base
+	case ScanProfileHomelabInfra:
+		base = ProfileDefaults(ScanProfileStandardDeterministic)
+		base.AnalysisDepth = 2
+		base.EnableLLMAuditors = false
+		base.AIPolicy = AIPolicyDisabled
+		base.SeverityGate = "high"
+		base.ConfidenceGate = 0.75
+		base.IssuePolicy = IssuePolicyAll
+		base.RemediationPolicy = "off"
+		base.EnableCodeGraph = true
+		base.GraphIncludeFunctions = true
+		base.GraphIncludeFindings = true
 		return base
 	case ScanProfileStrictSecurity:
 		base.AnalysisDepth = 2
