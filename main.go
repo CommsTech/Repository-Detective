@@ -1321,10 +1321,15 @@ func scannerSummaries(result *analyzers.AnalysisResult) []gitea.ScannerResultSum
 	return summaries
 }
 
-func runAnalysis(_ context.Context, fn func(context.Context)) {
+func runAnalysis(parent context.Context, fn func(context.Context)) {
+	if parent == nil {
+		parent = context.Background()
+	}
+	// Preserve request-scoped flags (report-only dry run, scan profile override) while detaching cancel.
+	parent = context.WithoutCancel(parent)
 	// Wait for a concurrency slot without a scan timeout — queue wait must not consume analysis time.
 	if err := analysisLimiter.Run(context.Background(), func() {
-		analysisCtx, cancel := context.WithTimeout(context.Background(), time.Duration(config.AnalysisTimeout)*time.Second)
+		analysisCtx, cancel := context.WithTimeout(parent, time.Duration(config.AnalysisTimeout)*time.Second)
 		defer cancel()
 		fn(analysisCtx)
 	}); err != nil {

@@ -98,9 +98,10 @@ def wait_scan(owner: str, repo: str, prev_scans: set[str], timeout: int = 900) -
             ext_new = conn.execute(
                 """
                 SELECT COUNT(*) FROM external_issues ei
-                WHERE ei.scan_id=? OR ei.created_at >= ?
+                JOIN finding_instances fi ON fi.finding_id = ei.finding_id
+                WHERE fi.scan_id = ?
                 """,
-                (scan_id, started),
+                (scan_id,),
             ).fetchone()[0]
             conn.close()
             duration = ""
