@@ -278,6 +278,9 @@ type Finding struct {
 	LastSeenScanID  string
 	FirstSeenAt     time.Time
 	LastSeenAt      time.Time
+	StructuralHash      string
+	CanonicalFindingID  *int64
+	CalibrationNote     string
 }
 
 // FindingInstance is one occurrence of a finding in a scan.

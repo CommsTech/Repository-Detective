@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"git.commsnet.org/commstech/bugbot/ai"
+	"git.commsnet.org/commstech/bugbot/findinglearn"
 	"git.commsnet.org/commstech/bugbot/issues"
 )
 
@@ -50,17 +51,24 @@ func (s *SQLiteStore) PersistScanFindingsBatch(ctx context.Context, repositoryID
 
 	persisted := 0
 	byFingerprint := make(map[string]int64, len(codeIssues))
+	structuralGroups := make([]struct {
+		hash      string
+		findingID int64
+	}, 0)
 	for _, issue := range codeIssues {
 		if issue.Fingerprint == "" {
 			continue
 		}
 
+		pathInput := findinglearn.ClassifyPath(issue.File)
+		severity, confidence, reachNote := findinglearn.ActionabilityAdjust(issue.Severity, issue.Confidence, pathInput)
+
 		finding := Finding{
 			RepositoryID:    repositoryID,
 			Fingerprint:     issue.Fingerprint,
 			Category:        issue.Category,
-			Severity:        issue.Severity,
-			Confidence:      issue.Confidence,
+			Severity:        severity,
+			Confidence:      confidence,
 			Source:          issue.Source,
 			RuleID:          issue.RuleID,
 			PackageName:     issue.PackageName,
@@ -73,12 +81,26 @@ func (s *SQLiteStore) PersistScanFindingsBatch(ctx context.Context, repositoryID
 			FirstSeenAt:     now,
 			LastSeenAt:      now,
 		}
+		if reachNote != "" {
+			finding.CalibrationNote = reachNote
+		}
 
 		findingID, err := upsertFindingTx(ctx, tx, finding)
 		if err != nil {
 			return persisted, byFingerprint, fmt.Errorf("upsert finding %s: %w", issue.Fingerprint, err)
 		}
 		byFingerprint[issue.Fingerprint] = findingID
+
+		snippet := issue.CodeSnippet
+		if snippet == "" {
+			snippet = issue.Description
+		}
+		if hash := findinglearn.StructuralHash(issue.RuleID, issue.Category, snippet); hash != "" {
+			structuralGroups = append(structuralGroups, struct {
+				hash      string
+				findingID int64
+			}{hash: hash, findingID: findingID})
+		}
 
 		locationJSON, err := json.Marshal(map[string]any{
 			"file":         issue.File,
@@ -123,6 +145,9 @@ func (s *SQLiteStore) PersistScanFindingsBatch(ctx context.Context, repositoryID
 	if err := tx.Commit(); err != nil {
 		return persisted, byFingerprint, fmt.Errorf("commit findings batch: %w", err)
 	}
+	for _, g := range structuralGroups {
+		_ = s.AssignStructuralGroup(ctx, repositoryID, g.hash, g.findingID)
+	}
 	return persisted, byFingerprint, nil
 }
 
@@ -148,8 +173,8 @@ func upsertFindingTx(ctx context.Context, tx *sql.Tx, finding Finding) (int64, e
 		INSERT INTO findings (
 			repository_id, fingerprint, category, severity, confidence, source, rule_id,
 			package_name, file_path, line, title, status,
-			first_seen_scan_id, last_seen_scan_id, first_seen_at, last_seen_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			first_seen_scan_id, last_seen_scan_id, first_seen_at, last_seen_at, calibration_note
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(repository_id, fingerprint) DO UPDATE SET
 			category = excluded.category,
 			severity = excluded.severity,
@@ -162,10 +187,14 @@ func upsertFindingTx(ctx context.Context, tx *sql.Tx, finding Finding) (int64, e
 			title = excluded.title,
 			status = excluded.status,
 			last_seen_scan_id = excluded.last_seen_scan_id,
-			last_seen_at = excluded.last_seen_at
+			last_seen_at = excluded.last_seen_at,
+			calibration_note = CASE
+				WHEN excluded.calibration_note != '' THEN excluded.calibration_note
+				ELSE findings.calibration_note
+			END
 	`, finding.RepositoryID, finding.Fingerprint, finding.Category, finding.Severity, finding.Confidence,
 		finding.Source, finding.RuleID, finding.PackageName, finding.FilePath, finding.Line, finding.Title, finding.Status,
-		finding.FirstSeenScanID, finding.LastSeenScanID, formatTime(finding.FirstSeenAt), formatTime(finding.LastSeenAt))
+		finding.FirstSeenScanID, finding.LastSeenScanID, formatTime(finding.FirstSeenAt), formatTime(finding.LastSeenAt), finding.CalibrationNote)
 	if err != nil {
 		return 0, err
 	}
