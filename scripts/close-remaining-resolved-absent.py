@@ -13,9 +13,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-REPORT = ROOT / "docs/dogfood-reports/remaining-resolved-absent-closeout-report.md"
+REPORT = ROOT / "docs/dogfood-reports/batch4b-resolved-absent-closeout-report.md"
 DB = ROOT / "data/bugbot.db"
-SCAN_ID = "cd4cb8d70d357f26"
+SCAN_ID = "db2d7061eaac8eb0"
 OWNER, REPO = "commstech", "Bugbot"
 
 
@@ -141,7 +141,7 @@ def main() -> int:
     REPORT.write_text(
         "\n".join(
             [
-                "# Remaining resolved-absent closeout report\n",
+                "# Batch 4b resolved-absent closeout report\n",
                 f"Generated: {now}\n",
                 f"Scan: `{SCAN_ID}`\n",
                 f"Open before: {open_before}\n",
