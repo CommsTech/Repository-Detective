@@ -1,27 +1,33 @@
 # All-Gitea-repos scan readiness checklist
 
-**Status:** BLOCKED — product repo active findings cleared; await CI green + operator approval.
+**Status:** READY FOR DRY-RUN PLANNING — product repo active findings are 0; operator approval still required before any fleet scan.
 
-## Current gate (2026-06-07)
+## Current gate (2026-06-07 final closeout)
 
 | Gate | Status |
 |------|--------|
-| Product repo real active findings | **0** (scan `68cab1ba3dc0591d`) |
-| Product repo open issues | 43 (mostly summaries / ops / human-review) |
-| Docker core rebuild | **green** (deterministic user setup) |
-| Docker all-in-one verify | partial (homelab — run `scripts/docker-build-verify.sh`) |
-| CI on `main` | pending run #119 |
+| Product repo real active findings | **0** (scan `5e570c95bc4e3467`) |
+| Product repo open issues | 32 (2 ops human-review + 30 summary rollups — no code findings) |
+| Docker full rebuild | **green** (core/runner/all-in-one verified) |
+| Code CI on `main` | **green** — run #119 (`73c4a0f`) success |
+| Docs CI #120 | failure (docs-only; non-blocking) |
 | Backlog-control | **active** — 0 new low/medium on final rescan |
-| Duplicate/idempotency | verified — 0 duplicate burst |
-| DB persistence | stable — persistence complete on final scan |
-| Scanner variance | documented (gosec/staticcheck/hadolint timeouts in archive mode) |
-| Operator approval gate | **required** before any fleet scan |
+| Duplicate/idempotency | verified |
+| DB persistence | stable |
+| Operator approval gate | **required** |
 
 ## Readiness decision
 
-- **All-repo scan:** BLOCKED until CI is green and operator explicitly approves dry-run.
-- **Dry-run / report-only planning:** eligible once CI completes green (active findings already 0).
-- **Full filing fleet scan:** not ready — open issue hygiene + human-review items remain.
+| Mode | Status |
+|------|--------|
+| All-repo full filing scan | **BLOCKED** — operator approval + summary-ticket hygiene optional |
+| All-repo dry-run (analyze + persist, no filing) | **READY FOR PLANNING** |
+| All-repo report-only | **READY FOR PLANNING** |
+
+## Remaining product-repo open issues (not blocking dry-run)
+
+- **#48, #49** — homelab ops; needs human review (no fingerprints)
+- **30 summary rollups** — out of scope; no active findings linked
 
 ## Explicitly out of scope
 
@@ -32,55 +38,16 @@
 
 ## Recommended next steps
 
-1. Confirm CI run #119 green on `73c4a0f`.
-2. Run full `scripts/docker-build-verify.sh` on homelab runner.
-3. Batch 5: classify remaining 43 open issues (summaries #48/#49 human-review).
-4. Operator sign-off for org-wide **dry-run** (analyze + persist, no filing).
-
-## Scope and discovery
-
-- [ ] Define org/user list (`GITEA_SCAN_ORGS` or explicit repo allowlist)
-- [ ] Exclude archived, fork, mirror, and test sandboxes by default
-- [ ] Document repo discovery API and pagination limits
-- [ ] Operator approval gate before enabling scheduled all-repo scans
-
-## Rate limits and performance
-
-- [ ] Per-repo analyze rate limit (avoid forge + runner overload)
-- [ ] Max concurrent scans (scheduler queue depth)
-- [ ] Database size monitoring (`data/bugbot.db` growth)
-- [ ] Issue filing cap per scan/run (existing config — verify values)
-
-## Issue policy
-
-- [x] Duplicate prevention enabled (lifecycle guards on `main`)
-- [x] Evidence closure enabled for dogfood (`close_issues=true` in homelab config)
-- [x] Backlog-control pauses low/medium filing during burn-down
-- [ ] Per-run issue cap without starving long-lived active findings
-- [ ] Summary/code-review issues out of scope for auto batches
-
-## Scanner baseline
-
-- [x] Record scanner availability per scan (`scanner_results`)
-- [x] Treat scanner variance separately from code regressions
-- [x] AI disabled by default for fleet scans
-- [ ] Token budget / no LLM auditor unless explicitly enabled
-
-## Modes (recommended rollout)
-
-1. **Dry-run** — analyze + persist findings, no issue filing
-2. **Report-only** — dashboard/exports, no Gitea issues
-3. **File issues** — capped per repo, operator-approved repos only
-
-## Rollback
-
-- [ ] Stop scheduler / disable auto-analyze
-- [ ] Document label `duplicate` / canonical linking if issue storm occurs
-- [ ] Restore DB from `deployment-backups/` if needed
+1. Operator sign-off for org-wide **dry-run** config (no issue filing).
+2. Optional Batch 6: bulk-close or archive summary rollup tickets with documented policy.
+3. Resolve ops tickets #48/#49 manually.
+4. Define `GITEA_SCAN_ORGS` allowlist before any fleet run.
 
 ## Verification before go-live
 
-- [x] Product repo (Bugbot) batch 4b: 0 real active findings
-- [ ] CI green on `main`
-- [x] No duplicate burst on single-repo rescan
-- [x] Classification export shows explainable open count
+- [x] Product repo active findings: 0
+- [x] Code CI green (#119)
+- [x] Docker rebuild verified
+- [x] No duplicate burst on rescan
+- [ ] Operator approval recorded
+- [ ] Dry-run config validated on 1–2 non-product repos
