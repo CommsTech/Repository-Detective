@@ -59,10 +59,8 @@ func (h *Handler) RepoScanStart(c *gin.Context) {
 	}
 	settings, _ := h.store.GetRepoSettings(c.Request.Context(), id)
 	effective, _ := store.ResolveEffectiveSettingsFull(h.global, settings)
-	if !effective.Enabled {
-		respondScanStartError(c, http.StatusBadRequest, "repository is disabled in settings")
-		return
-	}
+	// Manual scans remain available when repo scanning is disabled; scheduler honors enabled.
+	_ = effective
 
 	ref := strings.TrimSpace(c.PostForm("ref"))
 	if ref == "" {

@@ -106,6 +106,7 @@ type QueryStore interface {
 	GetRepository(ctx context.Context, id int64) (Repository, error)
 
 	ListRepositoriesWithSummary(ctx context.Context, opts ListOptions) ([]RepositorySummary, error)
+	ListRepositoryControlRows(ctx context.Context, opts ListOptions) ([]RepositoryControlRow, error)
 	ListScansByRepository(ctx context.Context, repositoryID int64, opts ListOptions) ([]Scan, error)
 	ListScannerResultsByScan(ctx context.Context, scanID string) ([]ScannerResultRecord, error)
 

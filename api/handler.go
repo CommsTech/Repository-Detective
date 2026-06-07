@@ -40,6 +40,7 @@ func (h *Handler) RegisterRoutes(g *gin.RouterGroup) {
 	g.GET("/repos/:id", h.GetRepository)
 	g.GET("/repos/:id/settings", h.GetRepoSettings)
 	g.PUT("/repos/:id/settings", h.UpdateRepoSettings)
+	h.registerRepoScanControlRoutes(g)
 	g.GET("/repos/:id/scans", h.ListRepoScans)
 	g.GET("/repos/:id/findings", h.ListRepoFindings)
 	g.GET("/repos/:id/graph", h.GetRepoGraph)

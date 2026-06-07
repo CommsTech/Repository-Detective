@@ -303,3 +303,25 @@ func TestExportScanGraph(t *testing.T) {
 		t.Fatalf("expected attachment disposition, got %q", disp)
 	}
 }
+
+func TestDisableRepoScanningAPI(t *testing.T) {
+	s := testStore(t)
+	ctx := context.Background()
+	repo := seedRepo(t, s)
+	on := true
+	_ = s.SaveRepoSettings(ctx, store.RepoSettings{RepositoryID: repo.ID, Enabled: &on})
+	r := testRouter(t, s)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodPost, "/api/v1/repos/1/disable-scanning", nil)
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status %d body=%s", w.Code, w.Body.String())
+	}
+	settings, _ := s.GetRepoSettings(ctx, repo.ID)
+	g := store.DefaultGlobalSettings()
+	g.IssuePolicy = store.IssuePolicyOff
+	if store.ResolveEffectiveSettings(g, settings).Enabled {
+		t.Fatal("expected disabled")
+	}
+}
