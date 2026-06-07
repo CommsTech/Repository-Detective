@@ -112,6 +112,10 @@ docs/dogfood-reports/*
 !docs/dogfood-reports/homelab-infra-profile-notes.md
 !docs/dogfood-reports/non-product-dry-run-round2-report.md
 
+# Beta readiness docs (sanitized, committable)
+!docs/beta/
+!docs/beta/**
+
 # Private operator dogfood (unsanitized — keep local)
 docs/DOGFOOD_REPORT_FIRST_39_REPOS.md
 
@@ -161,6 +165,7 @@ config/config.yaml.bak-*
 /repository-detective-build
 /bugbot
 bugbot
+bugbot-build
 
 # Vendored modules (generate via scripts/vendor-deps.sh when needed)
 vendor/
