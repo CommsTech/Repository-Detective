@@ -34,13 +34,16 @@
     <span class="rd-chip">{{.ForgeType}}</span>
   </div>
   <div class="rd-actions">
-    <a class="rd-btn" href="{{$.BasePath}}/repos/{{.ID}}/settings{{apiKeyQS $.APIKey}}">Policy settings</a>
+    {{if $.Data.ScanTriggerEnabled}}<a class="rd-btn" href="{{$.BasePath}}/repos/{{.ID}}/scan{{apiKeyQS $.APIKey}}">Scan now</a>{{end}}
+    <a class="rd-btn rd-btn-secondary" href="{{$.BasePath}}/repos/{{.ID}}/settings{{apiKeyQS $.APIKey}}">Policy settings</a>
     <a class="rd-btn rd-btn-secondary" href="{{$.BasePath}}/repos/{{.ID}}/report{{apiKeyQS $.APIKey}}">Executive report</a>
     <a class="rd-btn rd-btn-ghost" href="{{$.BasePath}}/repos/{{.ID}}/graph{{apiKeyQS $.APIKey}}">Repository map</a>
     {{if $.Data.ReconcileEnabled}}<a class="rd-btn rd-btn-ghost" href="{{$.BasePath}}/repos/{{.ID}}/reconcile{{apiKeyQS $.APIKey}}">Reconcile existing issues</a>{{end}}
   </div>
 </div>
 {{end}}
+
+{{template "reconciliation_panel.html" .}}
 
 <div class="rd-split">
   <div class="rd-card">

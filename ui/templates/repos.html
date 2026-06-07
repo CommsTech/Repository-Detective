@@ -37,6 +37,7 @@
       <td>{{if .LastScanStatus}}<span class="rd-badge {{scanBadge .LastScanStatus}}">{{.LastScanStatus}}</span>{{else}}<span class="rd-muted">never scanned</span>{{end}}</td>
       <td>{{if gt .OpenFindingsCount 0}}<strong>{{.OpenFindingsCount}}</strong>{{else}}<span class="rd-muted">0</span>{{end}}</td>
       <td>
+        {{if $.Data.ScanTriggerEnabled}}<a class="rd-btn rd-btn-sm" href="{{$.BasePath}}/repos/{{.ID}}/scan{{apiKeyQS $.APIKey}}">Scan now</a>{{end}}
         <a class="rd-btn rd-btn-sm rd-btn-ghost" href="{{$.BasePath}}/repos/{{.ID}}/settings{{apiKeyQS $.APIKey}}">Policy</a>
         <a class="rd-btn rd-btn-sm rd-btn-ghost" href="{{$.BasePath}}/repos/{{.ID}}/report{{apiKeyQS $.APIKey}}">Report</a>
       </td>

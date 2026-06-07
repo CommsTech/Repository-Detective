@@ -702,6 +702,17 @@ func setupRoutes(router *gin.Engine) {
 		c.Redirect(http.StatusFound, "/onboard/")
 	})
 
+	uiBase := strings.TrimSuffix(strings.TrimSpace(config.UIBasePath), "/")
+	if uiBase == "" {
+		uiBase = "/ui"
+	}
+	router.GET("/favicon.ico", func(c *gin.Context) {
+		c.Redirect(http.StatusFound, uiBase+"/static/favicon.svg?v=2")
+	})
+	router.GET("/favicon.svg", func(c *gin.Context) {
+		c.Redirect(http.StatusFound, uiBase+"/static/favicon.svg?v=2")
+	})
+
 	// Webhook endpoint for Gitea — rate limited and webhook secret auth
 	router.POST("/webhook", requireComponentsReady(), func(c *gin.Context) {
 		webhookHandler.HandleWebhook(c)
@@ -1196,6 +1207,7 @@ func initializeComponents() error {
 	}
 
 	logger.Info("All components initialized successfully")
+	wireScanTrigger()
 	return nil
 }
 
@@ -1923,6 +1935,7 @@ type manualAnalysisRequest struct {
 	PRNumber           int    `json:"pr_number"`
 	ScanProfile        string `json:"scan_profile"`
 	ReportOnlyDryRun   bool   `json:"report_only_dry_run"`
+	ScanID             string `json:"scan_id,omitempty"`
 }
 
 func normalizeForgeType(forgeType string) string {
@@ -1953,6 +1966,7 @@ func enqueueManualAnalysis(parentCtx context.Context, req manualAnalysisRequest)
 				TriggerType:   store.TriggerManual,
 				Ref:           req.Ref,
 				ConnectedRepo: true,
+				ScanID:        strings.TrimSpace(req.ScanID),
 			}
 			ctx, repositoryID = beginPersistedScan(ctx, &scanCtx)
 			ctx = analyzers.WithForgeType(ctx, forgeType)
@@ -2032,9 +2046,17 @@ func handleManualAnalysis(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 		return
 	}
+	if strings.TrimSpace(req.ScanID) == "" {
+		req.ScanID = scanid.New()
+	}
 
 	enqueueManualAnalysis(c.Request.Context(), req)
-	c.JSON(http.StatusOK, gin.H{"status": "analysis started"})
+	c.JSON(http.StatusOK, gin.H{
+		"status":              "analysis started",
+		"scan_id":             req.ScanID,
+		"report_only_dry_run": req.ReportOnlyDryRun,
+		"trigger_type":        store.TriggerManual,
+	})
 }
 
 type bulkForgeResult struct {

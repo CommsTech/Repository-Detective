@@ -1,0 +1,47 @@
+{{define "scan_now.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>{{template "head" .}}</head>
+<body class="rd-app">
+{{template "nav" .}}
+{{with .Data.Repo}}
+<nav class="rd-breadcrumb" aria-label="Breadcrumb">
+  <a href="{{$.BasePath}}/repos{{apiKeyQS $.APIKey}}">Repositories</a>
+  <span>/</span>
+  <a href="{{$.BasePath}}/repos/{{.ID}}{{apiKeyQS $.APIKey}}">{{.FullName}}</a>
+  <span>/</span>
+  <span>Scan now</span>
+</nav>
+{{end}}
+
+<div class="rd-card">
+  <div class="rd-card-head"><h2>Scan now — {{.Data.Repo.FullName}}</h2></div>
+  {{if not .Data.ScanEnabled}}
+  <div class="rd-alert">Manual scan is unavailable — the scan engine is not configured.</div>
+  {{else}}
+  <div class="rd-alert info">Private beta: keep <strong>report-only</strong> enabled unless issue filing is explicitly approved.</div>
+  <form method="post" action="{{.BasePath}}/repos/{{.Data.Repo.ID}}/scan{{if .APIKey}}?api_key={{.APIKey}}{{end}}" data-confirm="Start manual scan for {{.Data.Repo.FullName}}?">
+    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+    <label>Branch / ref<input name="ref" value="main" placeholder="main"></label>
+    <label>Scan profile (optional)<select name="scan_profile">
+      <option value="">inherit ({{.Data.ProfileMeta.ScanProfile}})</option>
+      {{range .Data.Profiles}}<option value="{{.}}">{{.}}</option>{{end}}
+    </select></label>
+    <label class="rd-checkbox-row">
+      <input type="checkbox" name="report_only_dry_run" value="true" {{if .Data.DefaultReportOnly}}checked{{end}} {{if not .Data.IssueFilingOn}}disabled checked{{end}}>
+      Report-only dry-run (no forge issues, no PRs)
+    </label>
+    {{if not .Data.IssueFilingOn}}<p class="rd-muted">Issue filing is disabled — report-only is enforced.</p>{{end}}
+    <dl class="rd-dl rd-scan-confirm">
+      <dt>Issue filing</dt><dd>{{if .Data.IssueFilingOn}}enabled when report-only off{{else}}<strong>disabled</strong>{{end}}</dd>
+      <dt>Remediation PRs</dt><dd>disabled by default</dd>
+      <dt>Trigger</dt><dd>manual</dd>
+    </dl>
+    <button type="submit" class="rd-btn">Start scan</button>
+    <a class="rd-btn rd-btn-ghost" href="{{.BasePath}}/repos/{{.Data.Repo.ID}}{{apiKeyQS .APIKey}}">Cancel</a>
+  </form>
+  {{end}}
+</div>
+{{template "foot" .}}
+</body></html>
+{{end}}

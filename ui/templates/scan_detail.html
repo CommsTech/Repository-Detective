@@ -79,10 +79,13 @@
   {{end}}{{end}}
 
   <div class="rd-actions">
-    <a class="rd-btn" href="{{$.BasePath}}/findings{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}">View findings</a>
-    <a class="rd-btn rd-btn-secondary" href="{{$.BasePath}}/scans/{{.ID}}/graph{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}">Repository map</a>
+    {{if $.Data.ScanTriggerEnabled}}{{with $.Data.Repo}}<a class="rd-btn" href="{{$.BasePath}}/repos/{{.ID}}/scan{{apiKeyQS $.APIKey}}">Scan again</a>{{end}}{{end}}
+    <a class="rd-btn rd-btn-secondary" href="{{$.BasePath}}/findings{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}">View findings</a>
+    <a class="rd-btn rd-btn-ghost" href="{{$.BasePath}}/scans/{{.ID}}/graph{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}">Repository map</a>
   </div>
 </div>
+
+{{template "reconciliation_panel.html" $}}
 
 <div class="rd-card">
   <h2>Scanner results</h2>

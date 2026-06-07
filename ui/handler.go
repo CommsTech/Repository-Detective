@@ -48,6 +48,7 @@ type Handler struct {
 	suppression          SuppressionBackend
 	reconcileEnabled     bool
 	reconciler           IssueReconciler
+	scanTrigger          ScanTrigger
 	readinessFn          func() operator.Readiness
 	platform             PlatformContext
 }
@@ -225,6 +226,7 @@ func (h *Handler) RegisterRoutes(g *gin.RouterGroup) {
 	g.GET("/projects", h.ProjectGroups)
 	g.POST("/projects", h.CreateProjectGroup)
 	g.GET("/learning", h.Learning)
+	h.registerScanRoutes(g)
 }
 
 // BasePath returns the configured UI mount path.
@@ -614,7 +616,10 @@ func (h *Handler) Repositories(c *gin.Context) {
 		c.String(http.StatusInternalServerError, "failed to list repositories")
 		return
 	}
-	h.renderNav(c, "repos.html", "Repositories", "repos", map[string]any{"Repositories": repos})
+	h.renderNav(c, "repos.html", "Repositories", "repos", map[string]any{
+		"Repositories": repos,
+		"ScanTriggerEnabled": h.ScanTriggerEnabled(),
+	})
 }
 
 func (h *Handler) RepoDetail(c *gin.Context) {
@@ -645,11 +650,14 @@ func (h *Handler) RepoDetail(c *gin.Context) {
 		cronInfo = store.DescribeCron(effective.ScheduleCron, baseline)
 	}
 	scheduledScans, _ := h.store.ListRecentScheduledScans(c.Request.Context(), 5)
+	recon, _ := h.loadReconciliation(c, id, "")
 	h.renderNav(c, "repo_detail.html", repo.FullName, "repos", map[string]any{
 		"Repo": repo, "Scans": scans, "Findings": findings,
 		"ExternalIssues": external, "Effective": effective, "ProfileMeta": meta,
 		"CronInfo": cronInfo, "ScheduledScans": scheduledScans,
 		"ReconcileEnabled": h.reconcileEnabled,
+		"Reconciliation":   recon,
+		"ScanTriggerEnabled": h.ScanTriggerEnabled(),
 	})
 }
 
@@ -687,6 +695,7 @@ func (h *Handler) RepoSettings(c *gin.Context) {
 		ActiveOnly:   true,
 		Limit:        100,
 	})
+	sections := buildRepoSettingsSections(effective, meta, h.global)
 	h.renderNav(c, "repo_settings.html", "Settings — "+repo.FullName, "policies", map[string]any{
 		"Repo": repo, "Settings": settings, "Effective": effective, "ProfileMeta": meta,
 		"SelectedProfile": selectedProfile,
@@ -695,6 +704,8 @@ func (h *Handler) RepoSettings(c *gin.Context) {
 		"NotificationGlobal": h.notifyGlobal, "EffectiveNotifications": notifyEff,
 		"NotificationEvents": store.AllowedNotificationEvents,
 		"Suppressions":       suppressions,
+		"SettingsSections":   sections,
+		"IssueFilingEnabled": store.ShouldCreateForgeIssues(effective),
 	})
 }
 
@@ -839,6 +850,7 @@ func (h *Handler) ScanDetail(c *gin.Context) {
 	if repo.FullName != "" {
 		repoName = repo.FullName
 	}
+	recon, _ := h.loadReconciliation(c, scan.RepositoryID, scanID)
 	h.renderNav(c, "scan_detail.html", "Scan "+scanID[:8], "scans", map[string]any{
 		"Scan":           scan,
 		"ScannerResults": results,
@@ -846,6 +858,9 @@ func (h *Handler) ScanDetail(c *gin.Context) {
 		"RepoName":       repoName,
 		"RunnerJob":      runnerJob,
 		"Summary":        summaryView,
+		"Reconciliation": recon,
+		"ReconcileEnabled": h.reconcileEnabled,
+		"ScanTriggerEnabled": h.ScanTriggerEnabled() && repo.ID > 0,
 	})
 }
 
