@@ -23,6 +23,9 @@ type ReconciliationSummary struct {
 	FindingsWithIssue   int `json:"findings_with_open_issue"`
 	FindingsWithoutIssue int `json:"findings_without_open_issue"`
 
+	SkippedDueReportOnly      int `json:"skipped_due_report_only"`
+	SkippedDueBacklogControl  int `json:"skipped_due_backlog_control"`
+
 	// Pipeline / policy context
 	IssueSyncStatus       string `json:"issue_sync_status"`
 	PersistenceStatus     string `json:"persistence_status"`

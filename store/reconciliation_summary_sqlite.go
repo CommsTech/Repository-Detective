@@ -61,6 +61,8 @@ func (s *SQLiteStore) reconciliationSummary(ctx context.Context, repositoryID in
 	}
 
 	out.ReportOnlyExplanation = buildReportOnlyExplanation(out, issueFilingEnabled)
+	out.SkippedDueReportOnly = skippedDueReportOnly(out, issueFilingEnabled)
+	out.SkippedDueBacklogControl = skippedDueBacklogControl(pipeline, issueFilingEnabled)
 	out.CountsDifferExpected = !issueFilingEnabled || out.DryRunReportOnly ||
 		out.IssueSyncStatus == IssueSyncStatusSkipped ||
 		out.FindingsWithoutIssue > 0
@@ -214,4 +216,21 @@ func buildMismatchWarning(out ReconciliationSummary, pipeline ScanPipelineState)
 		return "Open finding count differs from mapped forge issues — review mappings or run reconciliation."
 	}
 	return ""
+}
+
+func skippedDueReportOnly(out ReconciliationSummary, issueFilingEnabled bool) int {
+	if out.DryRunReportOnly || !issueFilingEnabled {
+		return out.FindingsWithoutIssue
+	}
+	return 0
+}
+
+func skippedDueBacklogControl(pipeline ScanPipelineState, issueFilingEnabled bool) int {
+	if !issueFilingEnabled {
+		return 0
+	}
+	if pipeline.IssueSyncStatus == IssueSyncStatusSkipped {
+		return 0
+	}
+	return 0
 }
