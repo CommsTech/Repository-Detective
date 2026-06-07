@@ -337,10 +337,6 @@ func (h *Handler) isSetupComplete(ctx context.Context) bool {
 	return err == nil && len(repos) > 0
 }
 
-func (h *Handler) clientAPIKey(c *gin.Context) string {
-	return clientAPIKeyFromRequest(c)
-}
-
 func (h *Handler) requireCSRF(c *gin.Context) bool {
 	if h.auth.IsLocal() {
 		if !h.auth.CSRFEnabled {

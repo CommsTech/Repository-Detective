@@ -41,38 +41,6 @@ func normalizeSeverityList(values []string) map[string]bool {
 	return out
 }
 
-func confidenceGateForLevel(level string) float64 {
-	switch strings.ToLower(strings.TrimSpace(level)) {
-	case "critical":
-		return 0.95
-	case "high":
-		return 0.85
-	case "medium":
-		return 0.70
-	case "low":
-		return 0.50
-	default:
-		if f, ok := parseConfidenceLevel(level); ok {
-			return f
-		}
-		return 0.85
-	}
-}
-
-func parseConfidenceLevel(level string) (float64, bool) {
-	level = strings.TrimSpace(level)
-	switch level {
-	case "0.95", "95":
-		return 0.95, true
-	case "0.85", "85":
-		return 0.85, true
-	case "0.70", "70":
-		return 0.70, true
-	default:
-		return 0, false
-	}
-}
-
 // ShouldBlockNewIssue reports whether backlog control blocks creating a new forge issue.
 // Existing issue updates and backfill are handled elsewhere and are never blocked here.
 func (bc BacklogControlConfig) ShouldBlockNewIssue(issue *ai.CodeIssue, openIssueCount int) (blocked bool, reason string) {
