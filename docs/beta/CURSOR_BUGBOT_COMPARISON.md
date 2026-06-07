@@ -57,7 +57,9 @@ Gitea-first, self-hosted, evidence-backed **full-repository lifecycle** inspecti
 - Auditable closure without cloud agent dependency
 - Safe dry-run calibration before enabling issue filing
 
-## Benchmark plan (not yet executed)
+## Benchmark plan
+
+Results recorded in [CURSOR_BUGBOT_BENCHMARK_RESULTS.md](CURSOR_BUGBOT_BENCHMARK_RESULTS.md) (2026-06-02).
 
 | Metric | Method |
 |--------|--------|
