@@ -1,53 +1,50 @@
 # Beta release readiness report
 
-Generated: 2026-06-02 (Continuous Learning Engine sprint)  
-Latest commit: see git log
+Generated: 2026-06-02 (Post-learning beta gate sprint)
 
 ## Verification summary
 
 | Check | Result |
 |-------|--------|
-| `go test ./...` | See sprint final output |
-| `go vet ./...` | See sprint final output |
-| staticcheck | Not confirmed in CI container (IPv6/proxy); local optional |
-| gosec | Baseline findings; not a sprint blocker |
-| Docker build verify | Prior sprint PASS; re-run after learning merge |
-| `make beta-release` | See sprint final output |
-| Configure capability links | Fixed prior sprint |
-| Pre-install audit | 200 when disabled with banner |
-| Learning engine | Shipped — see [LEARNING_BETA_READINESS.md](LEARNING_BETA_READINESS.md) |
+| `go test ./...` | PASS (Docker golang:1.23-bookworm) |
+| `go vet ./...` | PASS |
+| staticcheck | PASS locally with `-buildvcs=false`; CI pinned v0.6.1 |
+| `make beta-release` | **PASS** (user-safe staging + clean-beta-release) |
+| Beta secrets check | **PASS** (`scripts/check-beta-package-secrets.sh`) |
+| Docker build verify | Prior sprint PASS; re-run after merge recommended |
+| Learning engine validation | PASS — see learning-engine-validation-report.md |
+| Benchmark fixture | PASS — see CURSOR_BUGBOT_BENCHMARK_RESULTS.md |
+| Calibration operator review | PASS — 3 repo-scoped accepts, 0 global |
 
-## Feature / UX status
-
-| Item | Status |
-|------|--------|
-| Continuous learning data model | **NEW** — events, rules, stats, scanner health |
-| Per-repo calibration recommendations | **NEW** — evidence threshold, global accept blocked |
-| Learning health UI | **NEW** — dashboard + `/ui/learning` |
-| Structural deduplication | **NEW** — at finding persist |
-| Reachability-informed priority | **NEW** — test/docs/vendor heuristics |
-| Optional LLM sanity gate | **NEW** — disabled by default |
-| Scanner output classification | **NEW** — `ClassifyScannerRunStatus` |
-| Ruff gating | Implemented (`profile/ruff.go`) |
-| SBOM | Implemented prior sprint |
-
-## Product baseline
+## Gate status
 
 | Gate | Status |
 |------|--------|
-| Open issues | 1 (#48) |
+| Open issues (product) | 1 (#48) |
 | Active-present findings | 0 |
-| Limited issue filing | NOT approved |
-| All-repo scan | NOT started |
+| Non-product issue filing | Disabled |
+| All-repo scan | Not started |
+| LLM sanity gate | Disabled by default |
+| Report-only dry-run | Available |
 
-## Recommendation
+## Packaging
 
-**Private beta ready** for homelab/internal testers with continuous learning observability.
-
-Public beta: pending benchmark fixture execution + staticcheck CI gate.
+| Item | Status |
+|------|--------|
+| `make clean-beta-release` | Removes root-owned dist via Docker fallback |
+| `make beta-release` | Builds as current user; no secrets in package |
+| SBOM in package | Optional when `cyclonedx-gomod` installed at build time |
 
 ## Remaining blockers
 
-1. Run Cursor Bugbot benchmark fixture and fill metrics table
-2. staticcheck in CI
-3. Operator validation of accept/reject calibration on homelab repos
+1. Rebuild live `repository-detective` container for learning API on deployed instance
+2. Optional: mirror benchmark fixture to GitHub for Cursor Bugbot side-by-side run
+3. `data/` directory owned by container user — document Docker-based operator DB updates
+
+## Recommendation
+
+**Private beta ready** — packaging fixed, staticcheck validated, benchmark fixture complete, calibration reviewed safely.
+
+**Public beta:** pending live container rebuild + optional Cursor Bugbot mirror benchmark.
+
+Not ready for: unlimited issue filing, all-repo scan, global auto-calibration.
