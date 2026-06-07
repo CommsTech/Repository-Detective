@@ -190,6 +190,10 @@ beta-release:
 	@chmod +x scripts/build-beta-release.sh
 	@./scripts/build-beta-release.sh
 
+clean-beta-release:
+	@chmod +x scripts/clean-beta-release.sh
+	@./scripts/clean-beta-release.sh
+
 # Help
 help:
 	@echo "Available targets:"
@@ -200,7 +204,7 @@ help:
 	@echo "  docker-build - Build Docker image"
 	@echo "  release      - Prepare release directory"
 
-.PHONY: all build clean test coverage deps lint fmt docker-build docker-run docker-push help release beta-release
+.PHONY: all build clean test coverage deps lint fmt docker-build docker-run docker-push help release beta-release clean-beta-release
 	@echo "Available targets:"
 	@echo "  all          - Clean, deps, test, and build"
 	@echo "  build        - Build the application"

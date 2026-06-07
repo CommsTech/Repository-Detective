@@ -11,10 +11,6 @@ func persistScanSBOM(ctx context.Context, scanID string, repositoryID int64, res
 	if result == nil || result.Sbom == nil || bugbotStore == nil || scanID == "" || repositoryID <= 0 {
 		return
 	}
-	qs, ok := bugbotStore.(store.QueryStore)
-	if !ok {
-		return
-	}
 	sb := *result.Sbom
 	rec := store.SBOMArtifact{
 		RepositoryID: repositoryID,
@@ -26,7 +22,7 @@ func persistScanSBOM(ctx context.Context, scanID string, repositoryID int64, res
 		Detail:       sb.Detail,
 		ArtifactPath: sb.ArtifactPath,
 	}
-	if err := qs.SaveSBOMArtifact(ctx, rec); err != nil {
+	if err := bugbotStore.SaveSBOMArtifact(ctx, rec); err != nil {
 		logger.Warnf("Failed to persist SBOM for scan %s: %v", scanID, err)
 		return
 	}

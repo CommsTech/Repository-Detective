@@ -7,14 +7,64 @@ cd "$ROOT"
 
 VERSION="${VERSION:-$(git describe --tags --always --dirty 2>/dev/null || echo dev)}"
 BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-OUT="$ROOT/dist/repository-detective-beta"
+FINAL_OUT="$ROOT/dist/repository-detective-beta"
+STAGE="${BETA_RELEASE_STAGE:-$ROOT/dist/.beta-release-staging}"
+OUT="$STAGE/repository-detective-beta"
 BIN="$OUT/repository-detective"
+CLEANUP_STAGE=0
 
-rm -rf "$OUT"
+if [[ -z "${BETA_RELEASE_STAGE:-}" ]]; then
+  CLEANUP_STAGE=1
+  rm -rf "$STAGE"
+fi
+
+cleanup() {
+  if [[ "$CLEANUP_STAGE" -eq 1 && -n "${STAGE:-}" && -d "$STAGE" ]]; then
+    rm -rf "$STAGE"
+  fi
+}
+trap cleanup EXIT
+
+ensure_dist_writable() {
+  local dist_dir="$ROOT/dist"
+  if [[ -e "$FINAL_OUT" && ! -w "$FINAL_OUT" ]]; then
+    echo "ERROR: $FINAL_OUT is not writable (often root-owned from a prior Docker build)." >&2
+    echo "Run: make clean-beta-release" >&2
+    exit 1
+  fi
+  if [[ -e "$dist_dir" && ! -w "$dist_dir" ]]; then
+    echo "ERROR: $dist_dir is not writable." >&2
+    echo "Run: make clean-beta-release" >&2
+    exit 1
+  fi
+}
+
+install_final_package() {
+  ensure_dist_writable
+  mkdir -p "$ROOT/dist"
+  rm -rf "$FINAL_OUT"
+  mv "$OUT" "$FINAL_OUT"
+  chmod -R u+rwX "$FINAL_OUT" 2>/dev/null || true
+}
+
 mkdir -p "$OUT"
 
-echo "Building repository-detective $VERSION..."
-CGO_ENABLED=1 go build -buildvcs=false -ldflags "-s -w -X main.version=${VERSION}" -o "$BIN" .
+echo "Building repository-detective $VERSION (stage: $STAGE)..."
+
+if command -v go >/dev/null 2>&1; then
+  CGO_ENABLED=1 go build -buildvcs=false -ldflags "-s -w -X main.version=${VERSION}" -o "$BIN" .
+else
+  echo "go not found locally — building in golang:1.23-bookworm container..."
+  rel_out="${OUT#$ROOT/}"
+  docker run --rm \
+    -v "$ROOT:/src" \
+    -w /src \
+    -e CGO_ENABLED=1 \
+    golang:1.23-bookworm \
+    go build -buildvcs=false -ldflags "-s -w -X main.version=${VERSION}" -o "/src/${rel_out}/repository-detective" .
+  chown "$(id -u):$(id -g)" "$BIN" 2>/dev/null || \
+    docker run --rm -v "$ROOT:/src" alpine:3.20 chown "$(id -u):$(id -g)" "/src/${rel_out}/repository-detective"
+fi
 
 ( cd "$OUT" && sha256sum repository-detective > checksums.txt )
 
@@ -25,6 +75,14 @@ fi
 cp config/config.yaml "$OUT/config.example.yaml" 2>/dev/null || cp docs/examples/homelab-minimal.yaml "$OUT/config.example.yaml" 2>/dev/null || true
 cp docker-compose.yml "$OUT/docker-compose.beta.yml" 2>/dev/null || true
 cp .env.example "$OUT/.env.example" 2>/dev/null || true
+
+# Never ship live secrets or local databases.
+for forbidden in .env bugbot.db config/config.yaml; do
+  if [[ -e "$OUT/$forbidden" ]]; then
+    echo "ERROR: forbidden artifact would be packaged: $forbidden" >&2
+    exit 1
+  fi
+done
 
 cat > "$OUT/README_BETA.md" <<EOF
 # Repository Detective — Private Beta Package
@@ -49,5 +107,7 @@ cat > "$OUT/RELEASE_NOTES.md" <<EOF
 - See docs/beta/BETA_RELEASE_READINESS_REPORT.md in source repo for readiness status.
 EOF
 
-echo "Beta package ready: $OUT"
-ls -la "$OUT"
+install_final_package
+
+echo "Beta package ready: $FINAL_OUT"
+ls -la "$FINAL_OUT"
