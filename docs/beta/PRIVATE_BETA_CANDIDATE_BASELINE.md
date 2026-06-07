@@ -4,7 +4,7 @@ Generated: 2026-06-07
 
 ## Latest commit
 
-`6a2cbfd` (pre-verification); verification fixes pending push.
+`fd59e2e` — docs(beta): publish private beta go-no-go
 
 ## Product repo state
 
@@ -44,7 +44,7 @@ Generated: 2026-06-07
 
 ## Remaining blockers (pre-final verification)
 
-1. CI staticcheck step fix (invalid flag)
-2. staticcheck S1040 in `cmd/rd-*` tools (fixed in working tree)
+1. ~~CI staticcheck step fix~~ — fixed in `572635b`; await green CI run #129
+2. ~~staticcheck S1040 in `cmd/rd-*` tools~~ — fixed in `572635b`
 3. Rebuild live container for learning-event emission on dry-runs
 4. Optional: full `docker-build-verify.sh` re-run
