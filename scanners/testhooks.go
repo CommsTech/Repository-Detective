@@ -72,6 +72,21 @@ func RunSemgrepWithCommandForTest(ctx context.Context, logger *logrus.Logger, di
 	return result
 }
 
+// AnnotateHistoryFindingsForTest exposes history finding annotation for unit tests.
+func AnnotateHistoryFindingsForTest(findings []Finding, scope, currentTreeDir string, redact bool) []Finding {
+	return annotateHistoryFindings(findings, scope, currentTreeDir, redact)
+}
+
+// GitleaksHistoryArgsForTest exposes gitleaks detect argv for unit tests.
+func GitleaksHistoryArgsForTest(gitDir string, cfg Config, scope, reportPath string) []string {
+	return gitleaksHistoryArgs(gitDir, cfg, scope, reportPath)
+}
+
+// RunGitleaksGitHistoryWithCommandForTest runs git-history gitleaks detect with a substitute command.
+func RunGitleaksGitHistoryWithCommandForTest(ctx context.Context, logger *logrus.Logger, gitDir string, cfg Config, scope, currentTreeDir, commandName string, commandArgs ...string) RunResult {
+	return runGitleaksGitHistoryWithCommand(ctx, logger, gitDir, cfg, scope, currentTreeDir, commandName)
+}
+
 // RunGitleaksWithCommandForTest runs the gitleaks scan path using a substitute command name.
 func RunGitleaksWithCommandForTest(ctx context.Context, logger *logrus.Logger, dir string, cfg Config, commandName string, commandArgs ...string) RunResult {
 	result := RunResult{Scanner: "gitleaks"}

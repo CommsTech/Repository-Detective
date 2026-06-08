@@ -135,6 +135,14 @@ func (r *Runner) runAudit(auditID string, parsed ParsedRepoURL, depth string) {
 
 	scannerCfg := scannerConfigForDepth(depth, r.scannerBase)
 	summary := scanners.RunAll(ctx, r.logger, clone.WorkspaceDir, entries, scannerCfg, true, true)
+	if depth != "quick" && scannerCfg.EnableGitleaks && scannerCfg.SecretScanGitHistoryEnabled && r.cfg.AllowGitClone {
+		histCfg := scannerCfg
+		if histCfg.SecretScanRecentCommitsMax <= 0 {
+			histCfg.SecretScanRecentCommitsMax = 20
+		}
+		hist := scanners.RunGitleaksGitHistory(ctx, r.logger, clone.WorkspaceDir, histCfg, scanners.SecretScopeRecentCommits, clone.WorkspaceDir)
+		summary.Results = append(summary.Results, hist)
+	}
 	scannerResults := toScannerResults(summary)
 
 	var findings []store.AuditFinding

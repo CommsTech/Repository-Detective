@@ -116,6 +116,12 @@ type Config struct {
 	ScanProfile                             string                               `mapstructure:"scan_profile"`
 	GitleaksConfig                          string                               `mapstructure:"gitleaks_config"`
 	GitleaksTimeoutSeconds                  int                                  `mapstructure:"gitleaks_timeout_seconds"`
+	SecretScanGitHistoryEnabled             bool                                 `mapstructure:"secret_scan_git_history_enabled"`
+	SecretScanHistoryMaxCommits             int                                  `mapstructure:"secret_scan_history_max_commits"`
+	SecretScanRecentCommitsMax              int                                  `mapstructure:"secret_scan_recent_commits_max"`
+	SecretScanHistoryTimeoutSeconds         int                                  `mapstructure:"secret_scan_history_timeout_seconds"`
+	SecretScanHistoryReportOnlyForPreinstall bool                                `mapstructure:"secret_scan_history_report_only_for_preinstall"`
+	SecretScanRedact                        bool                                 `mapstructure:"secret_scan_redact"`
 	SemgrepConfig                           string                               `mapstructure:"semgrep_config"`
 	SemgrepTimeoutSeconds                   int                                  `mapstructure:"semgrep_timeout_seconds"`
 	SemgrepMaxFindings                      int                                  `mapstructure:"semgrep_max_findings"`
@@ -413,6 +419,12 @@ func loadConfig() error {
 	viper.SetDefault("scan_profile", "custom")
 	viper.SetDefault("gitleaks_config", "")
 	viper.SetDefault("gitleaks_timeout_seconds", 0)
+	viper.SetDefault("secret_scan_git_history_enabled", true)
+	viper.SetDefault("secret_scan_history_max_commits", 0)
+	viper.SetDefault("secret_scan_recent_commits_max", 50)
+	viper.SetDefault("secret_scan_history_timeout_seconds", 600)
+	viper.SetDefault("secret_scan_history_report_only_for_preinstall", true)
+	viper.SetDefault("secret_scan_redact", true)
 	viper.SetDefault("semgrep_config", "p/ci")
 	viper.SetDefault("semgrep_timeout_seconds", 0)
 	viper.SetDefault("semgrep_max_findings", 100)
@@ -2332,8 +2344,14 @@ func mainScannerConfig() scanners.Config {
 		EnableHadolint:            config.EnableHadolint,
 		EnableCheckov:             config.EnableCheckov,
 		EnableLinters:             config.EnableLinters,
-		GitleaksConfig:            config.GitleaksConfig,
-		GitleaksTimeoutSeconds:    config.GitleaksTimeoutSeconds,
+		GitleaksConfig:                   config.GitleaksConfig,
+		GitleaksTimeoutSeconds:           config.GitleaksTimeoutSeconds,
+		SecretScanGitHistoryEnabled:      config.SecretScanGitHistoryEnabled,
+		SecretScanHistoryMaxCommits:      config.SecretScanHistoryMaxCommits,
+		SecretScanRecentCommitsMax:       config.SecretScanRecentCommitsMax,
+		SecretScanHistoryTimeoutSeconds:  config.SecretScanHistoryTimeoutSeconds,
+		SecretScanHistoryReportOnly:      config.SecretScanHistoryReportOnlyForPreinstall,
+		SecretScanRedact:                 config.SecretScanRedact,
 		SemgrepConfig:             config.SemgrepConfig,
 		SemgrepTimeoutSeconds:     config.SemgrepTimeoutSeconds,
 		SemgrepMaxFindings:        config.SemgrepMaxFindings,

@@ -170,13 +170,17 @@ func gitleaksFindingToFinding(item gitleaksFinding, dir string) Finding {
 		id = fmt.Sprintf("GITLEAKS-%s-%s-%d", ruleID, file, item.StartLine)
 	}
 
+	desc := description
+	if !strings.Contains(desc, "scope:") {
+		desc = fmt.Sprintf("%s; scope: %s", desc, secretScopeLabel(SecretScopeCurrentTree))
+	}
 	return Finding{
 		ID:          id,
-		Source:      "gitleaks",
+		Source:      TreeScannerName,
 		Category:    "secret",
 		Severity:    "high",
 		Title:       title,
-		Description: description,
+		Description: desc,
 		File:        file,
 		Line:        item.StartLine,
 		Confidence:  0.95,

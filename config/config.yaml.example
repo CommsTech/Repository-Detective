@@ -40,6 +40,13 @@ enable_quality: true
 enable_trivy: true
 enable_grype: true
 enable_gitleaks: true
+# Git-history secret scan (slower; labeled gitleaks-history in reports)
+secret_scan_git_history_enabled: true
+secret_scan_history_max_commits: 0          # 0 = full history when cloning
+secret_scan_recent_commits_max: 50          # scoped / pre-install window
+secret_scan_history_timeout_seconds: 600
+secret_scan_history_report_only_for_preinstall: true
+secret_scan_redact: true
 enable_semgrep: true
 enable_govulncheck: true
 enable_gosec: true

@@ -52,13 +52,26 @@ Operator documentation synced from the main repository.
 
 Gitea wiki links use page names without `.md`.
 
-## Automated sync (optional)
+## Automated sync (recommended script)
 
-No CI job pushes the wiki by default. To automate:
+```bash
+# Dry-run (lists pages, no credentials required for listing)
+WIKI_DRY_RUN=true ./scripts/publish-gitea-wiki.sh
 
-1. Add a protected deploy key or token with wiki write access
-2. Run the copy + commit steps in `.gitea/workflows/` only on release tags
-3. Never use `git push --force` on the wiki remote
+# Publish (token via env — not stored in git config)
+export BUGBOT_GITEA_TOKEN='…'   # wiki-write scope
+./scripts/publish-gitea-wiki.sh
+```
+
+Options:
+
+| Variable | Purpose |
+|----------|---------|
+| `WIKI_DRY_RUN=true` | List pages only |
+| `WIKI_REMOTE_URL` | Override wiki git URL |
+| `KEEP_WIKI_WORKDIR=true` | Inspect clone after run |
+
+Never use `git push --force` on the wiki remote.
 
 ## Status in this environment
 

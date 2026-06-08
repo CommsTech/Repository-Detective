@@ -16,8 +16,14 @@ type Config struct {
 	EnableLinters            bool
 	TrivySeverity            string // comma-separated: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
 	GrypeFailOn              string // negligible, low, medium, high, critical
-	GitleaksConfig           string // optional path to gitleaks config TOML
-	GitleaksTimeoutSeconds   int    // 0 = use TimeoutSeconds
+	GitleaksConfig                   string // optional path to gitleaks config TOML
+	GitleaksTimeoutSeconds           int    // 0 = use TimeoutSeconds
+	SecretScanGitHistoryEnabled      bool
+	SecretScanHistoryMaxCommits      int  // 0 = full history when cloning
+	SecretScanRecentCommitsMax       int  // recent-commit window for scoped/quick scans
+	SecretScanHistoryTimeoutSeconds  int  // 0 = use GitleaksTimeoutSeconds / TimeoutSeconds / 600
+	SecretScanHistoryReportOnly      bool // pre-install: report findings without filing (enforced upstream)
+	SecretScanRedact                 bool
 	SemgrepConfig            string // registry ruleset or operator path, default p/ci
 	SemgrepTimeoutSeconds    int    // 0 = use TimeoutSeconds
 	SemgrepMaxFindings       int    // cap normalized findings, default 100

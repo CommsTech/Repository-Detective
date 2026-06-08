@@ -530,6 +530,17 @@ func (e *Engine) Scan(ctx context.Context, prepare *PrepareReport) ([]CandidateF
 			} else {
 				log.Warnf("[CAH:SCAN] SBOM generation failed: %v", sbErr)
 			}
+
+			scopedScan := len(prepare.TargetFiles) > 0
+			secretModes := scanners.ResolveSecretScanModes(cfg.Scanners, scopedScan, depth)
+			if cfg.EnableSecurity && (secretModes.GitHistory || secretModes.RecentCommits || secretModes.ChangedFiles) {
+				for _, hr := range e.runGitHistorySecretScans(ctx, owner, repo, prepare.Commit, prepared.Dir, secretModes, cfg.Scanners) {
+					summary.Results = append(summary.Results, hr)
+					for _, finding := range hr.Findings {
+						allCandidates = append(allCandidates, finding.ToCandidateFinding())
+					}
+				}
+			}
 		}
 	}
 
@@ -1456,4 +1467,70 @@ func graphOverlaysFromCandidates(candidates []CandidateFinding) []graph.FindingO
 		})
 	}
 	return out
+}
+
+func (e *Engine) runGitHistorySecretScans(
+	ctx context.Context,
+	owner, repo, ref, currentTreeDir string,
+	modes scanners.SecretScanModes,
+	cfg scanners.Config,
+) []scanners.RunResult {
+	cloneURL, err := e.resolveCloneURL(ctx, owner, repo)
+	if err != nil || strings.TrimSpace(cloneURL) == "" {
+		detail := "clone URL unavailable for git history secret scan"
+		if err != nil {
+			detail = err.Error()
+		}
+		e.logger.Warnf("[CAH:SCAN] git history secret scan skipped: %s", detail)
+		return []scanners.RunResult{{
+			Scanner: scanners.HistoryScannerName,
+			Status:  scanners.StatusFailed,
+			Detail:  detail,
+		}}
+	}
+
+	scope := scanners.SecretScopeGitHistory
+	maxCommits := 0
+	if modes.ChangedFiles {
+		scope = scanners.SecretScopeChangedFiles
+		maxCommits = cfg.SecretScanRecentCommitsMax
+	} else if modes.RecentCommits {
+		scope = scanners.SecretScopeRecentCommits
+		maxCommits = cfg.SecretScanRecentCommitsMax
+	}
+	if maxCommits <= 0 && cfg.SecretScanHistoryMaxCommits > 0 {
+		maxCommits = cfg.SecretScanHistoryMaxCommits
+	}
+	if (modes.ChangedFiles || modes.RecentCommits) && maxCommits <= 0 {
+		maxCommits = 50
+	}
+
+	gitWS, err := scanners.PrepareGitHistoryWorkspace(ctx, cloneURL, ref, maxCommits, cfg.SecretScanHistoryTimeoutSeconds)
+	if err != nil {
+		e.logger.Warnf("[CAH:SCAN] git history workspace: %v", err)
+		return []scanners.RunResult{{
+			Scanner: scanners.HistoryScannerName,
+			Status:  scanners.StatusFailed,
+			Detail:  err.Error(),
+		}}
+	}
+	defer gitWS.Cleanup()
+
+	hr := scanners.RunGitleaksGitHistory(ctx, e.logger, gitWS.Dir, cfg, scope, currentTreeDir)
+	return []scanners.RunResult{hr}
+}
+
+func (e *Engine) resolveCloneURL(ctx context.Context, owner, repo string) (string, error) {
+	client := e.repoClient(ctx)
+	if client == nil {
+		return "", fmt.Errorf("no forge client configured")
+	}
+	r, err := client.GetRepository(ctx, owner, repo)
+	if err != nil {
+		return "", err
+	}
+	if strings.TrimSpace(r.CloneURL) == "" {
+		return "", fmt.Errorf("repository has no clone URL")
+	}
+	return r.CloneURL, nil
 }

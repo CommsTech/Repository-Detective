@@ -174,6 +174,21 @@ func buildConfigureSections(
 			},
 		},
 		{
+			ID: "secret-scanning", Title: "Secret scanning",
+			Status: statusLabel(global.EnableGitleaks), StatusClass: statusClass(global.EnableGitleaks),
+			Summary: "Gitleaks current-tree scan plus optional Git-history scan (labeled gitleaks-history; slower).",
+			SafetyNote: "History scanning clones the repository and may take several minutes on large repos. Raw secrets are never stored.",
+			BetaDefault: "tree + history on deep scans", RestartRequired: true,
+			DocPath: "docs/guides/SECRET_SCANNING_AND_GIT_HISTORY.md",
+			Settings: []ConfigureSetting{
+				boolSetting("enable_gitleaks", global.EnableGitleaks),
+				{Key: "secret_scan_git_history_enabled", DisplayValue: "true (default)", Source: "config", Hint: "Full history on onboarding/scheduled deep scans"},
+				{Key: "secret_scan_history_max_commits", DisplayValue: "0 = full history", Source: "config"},
+				{Key: "secret_scan_history_timeout_seconds", DisplayValue: "600", Source: "default"},
+				{Key: "secret_scan_redact", DisplayValue: "true", Source: "default"},
+			},
+		},
+		{
 			ID: "issue-filing", Title: "Issue filing policy",
 			Status: issueFilingConfigureStatus(global),
 			StatusClass: issueFilingConfigureClass(global),
