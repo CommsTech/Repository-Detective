@@ -115,6 +115,10 @@ func skipStaticAnalysisPath(path string) bool {
 		return true
 	case strings.Contains(path, "/testdata/"), strings.Contains(path, "/fixtures/"):
 		return true
+	case strings.Contains(path, "/benchmark/fixture/"), strings.HasPrefix(path, "benchmark/fixture/"):
+		return true
+	case strings.HasSuffix(lower, ".go.src"):
+		return true
 	case strings.HasPrefix(path, "web/static/"), strings.HasPrefix(path, "docs/"):
 		return true
 	case strings.HasPrefix(path, "ui/templates/"), strings.HasPrefix(path, "ui/static/"):

@@ -23,6 +23,7 @@ var vendorPathHints = []string{
 var testPathHints = []string{
 	"/test/", "/tests/", "/__tests__/", "/testdata/", "/fixtures/",
 	"/mock/", "/mocks/", "/spec/", "/specs/",
+	"/benchmark/fixture/", "/benchmark/",
 }
 
 var examplePathHints = []string{
@@ -102,7 +103,8 @@ func ClassifySourceType(path string) string {
 	}
 	if strings.HasSuffix(base, "_test.go") || strings.HasSuffix(base, ".test.js") ||
 		strings.HasSuffix(base, ".test.ts") || strings.HasSuffix(base, "_test.py") ||
-		strings.HasSuffix(base, ".spec.js") || strings.HasSuffix(base, ".spec.ts") {
+		strings.HasSuffix(base, ".spec.js") || strings.HasSuffix(base, ".spec.ts") ||
+		strings.HasSuffix(base, ".go.src") {
 		return SourceTypeTest
 	}
 

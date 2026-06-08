@@ -115,7 +115,13 @@ func checkWithGrype(ctx context.Context, sbomPath, format string, pkgCount ...in
 		res.Detail = "SBOM generated; grype unavailable for vulnerability check"
 		return res, nil
 	}
-	cmd := exec.CommandContext(ctx, "grype", "sbom:"+sbomPath, "-o", "json", "--quiet")
+	cleanSBOM := filepath.Clean(sbomPath)
+	cleanDir := filepath.Clean(filepath.Dir(cleanSBOM))
+	if cleanDir == "" || cleanDir == "." {
+		return Result{Status: StatusCheckFailed, Detail: "invalid sbom path"}, nil
+	}
+	grypeArgs := []string{"sbom:" + cleanSBOM, "-o", "json", "--quiet"}
+	cmd := exec.CommandContext(ctx, "grype", grypeArgs...)
 	out, err := cmd.CombinedOutput()
 	text := strings.TrimSpace(string(out))
 	if err != nil && !strings.Contains(text, "{") {

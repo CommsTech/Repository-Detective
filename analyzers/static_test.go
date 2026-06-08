@@ -89,6 +89,9 @@ func TestSkipStaticAnalysisPath(t *testing.T) {
 	if skipStaticAnalysisPath("handlers/webhook.go") {
 		t.Fatal("expected webhook.go to be analyzed")
 	}
+	if !skipStaticAnalysisPath("benchmark/fixture/secret_hardcoded.go.src") {
+		t.Fatal("expected benchmark fixture to be skipped")
+	}
 }
 
 func TestRunStaticAnalysisSkipsRuleDefinitionLines(t *testing.T) {

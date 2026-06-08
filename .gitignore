@@ -111,6 +111,9 @@ docs/dogfood-reports/*
 !docs/dogfood-reports/calibration-and-scanner-fix-baseline.md
 !docs/dogfood-reports/homelab-infra-profile-notes.md
 !docs/dogfood-reports/non-product-dry-run-round2-report.md
+!docs/dogfood-reports/current-product-issue-regression-baseline.md
+!docs/dogfood-reports/product-issue-burndown-after-filing-restore.md
+!docs/dogfood-reports/issue-filing-policy-e2e-report.md
 
 # Beta readiness docs (sanitized, committable)
 !docs/beta/
