@@ -33,6 +33,13 @@ func betaTestGlobal() store.GlobalSettingsSnapshot {
 	return g
 }
 
+func productionTestGlobal() store.GlobalSettingsSnapshot {
+	g := store.DefaultGlobalSettings()
+	g.IssuePolicy = store.IssuePolicyAll
+	g.PolicyLevel = store.PolicyIssueOnly
+	return g
+}
+
 func testUIWithGlobal(t *testing.T, s store.QueryStore, global store.GlobalSettingsSnapshot) (*gin.Engine, *ui.Handler) {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
@@ -666,10 +673,10 @@ func TestRepoScanFormShowsReportOnly(t *testing.T) {
 		t.Fatalf("status %d", w.Code)
 	}
 	body := w.Body.String()
-	if !strings.Contains(body, "Report-only dry-run") {
+	if !strings.Contains(body, "Report-only / dry run") {
 		t.Fatal("expected report-only toggle")
 	}
-	if !strings.Contains(body, "Issue filing is disabled") {
+	if !strings.Contains(body, "Issue filing is disabled by policy") {
 		t.Fatal("expected issue filing disabled notice")
 	}
 }
@@ -843,6 +850,110 @@ func TestRepoDisableScanningUI(t *testing.T) {
 	effective := store.ResolveEffectiveSettings(betaTestGlobal(), settings)
 	if effective.Enabled {
 		t.Fatal("expected scanning disabled")
+	}
+}
+
+func TestManualScanFilesWhenDryRunUnchecked(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	s, _ := store.Open(store.Config{Enabled: true, Path: filepath.Join(dir, "filing-scan.db")})
+	defer s.Close()
+	repo, _ := s.UpsertRepository(ctx, store.Repository{Owner: "amber", Name: "app", FullName: "amber/app", DefaultBranch: "main"})
+	r, h := testUIWithGlobal(t, s, productionTestGlobal())
+	h.SetScanTrigger(func(_ context.Context, req ui.ScanTriggerRequest) (ui.ScanTriggerResult, error) {
+		if req.ReportOnlyDryRun {
+			t.Fatal("expected issue filing when dry run unchecked")
+		}
+		return ui.ScanTriggerResult{ScanID: "filing-scan-1"}, nil
+	})
+
+	csrf := security.CSRFToken("test-secret", "filing-key")
+	form := url.Values{}
+	form.Set("csrf_token", csrf)
+	form.Set("format", "json")
+	form.Set("ref", "main")
+	rEngine := r
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodPost, "/ui/repos/"+strconv.FormatInt(repo.ID, 10)+"/scan", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("X-Repository-Detective-API-Key", "filing-key")
+	rEngine.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status %d body=%s", w.Code, w.Body.String())
+	}
+}
+
+func TestManualScanDryRunCheckedSkipsFiling(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	s, _ := store.Open(store.Config{Enabled: true, Path: filepath.Join(dir, "dry-scan.db")})
+	defer s.Close()
+	repo, _ := s.UpsertRepository(ctx, store.Repository{Owner: "amber", Name: "app", FullName: "amber/app"})
+	r, h := testUIWithGlobal(t, s, productionTestGlobal())
+	h.SetScanTrigger(func(_ context.Context, req ui.ScanTriggerRequest) (ui.ScanTriggerResult, error) {
+		if !req.ReportOnlyDryRun {
+			t.Fatal("expected dry run when checkbox checked")
+		}
+		return ui.ScanTriggerResult{ScanID: "dry-scan-1"}, nil
+	})
+
+	csrf := security.CSRFToken("test-secret", "dry-key")
+	form := url.Values{}
+	form.Set("csrf_token", csrf)
+	form.Set("format", "json")
+	form.Set("report_only_dry_run", "true")
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodPost, "/ui/repos/"+strconv.FormatInt(repo.ID, 10)+"/scan", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("X-Repository-Detective-API-Key", "dry-key")
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status %d", w.Code)
+	}
+}
+
+func TestManualScanFormShowsAdvancedOptions(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	s, _ := store.Open(store.Config{Enabled: true, Path: filepath.Join(dir, "adv-scan.db")})
+	defer s.Close()
+	repo, _ := s.UpsertRepository(ctx, store.Repository{Owner: "amber", Name: "app", FullName: "amber/app"})
+	r, h := testUIWithGlobal(t, s, productionTestGlobal())
+	h.SetScanTrigger(func(_ context.Context, _ ui.ScanTriggerRequest) (ui.ScanTriggerResult, error) {
+		return ui.ScanTriggerResult{ScanID: "x"}, nil
+	})
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, "/ui/repos/"+strconv.FormatInt(repo.ID, 10)+"/scan", nil)
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status %d", w.Code)
+	}
+	body := w.Body.String()
+	for _, token := range []string{"Advanced options", "Preflight summary", "Severity gate", "Max issues"} {
+		if !strings.Contains(body, token) {
+			t.Fatalf("expected %q in scan form", token)
+		}
+	}
+	if !strings.Contains(body, "enabled by policy") {
+		t.Fatal("production global should show filing enabled")
+	}
+}
+
+func TestLayoutTitleContainsRepositoryDetective(t *testing.T) {
+	dir := t.TempDir()
+	s, _ := store.Open(store.Config{Enabled: true, Path: filepath.Join(dir, "title.db")})
+	defer s.Close()
+	r, _ := testUI(t, s)
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, "/ui/", nil)
+	r.ServeHTTP(w, req)
+	if !strings.Contains(w.Body.String(), "Repository Detective — Inspect. Analyze. Improve.") {
+		t.Fatal("expected product title in layout")
+	}
+	if strings.Contains(w.Body.String(), "<title>") && strings.Contains(strings.ToLower(w.Body.String()), "bugbot —") {
+		t.Fatal("product-facing title must not use Bugbot")
 	}
 }
 

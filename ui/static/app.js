@@ -122,6 +122,52 @@
     }
   }
 
+  function updateScanPreflight(form, issueFiling, dryRunChecked) {
+    var issuesLine = form.querySelector("#rd-repos-scan-issues-line");
+    var dryRunLine = form.querySelector("#rd-scan-dry-run-line");
+    var filingNote = form.querySelector("#rd-repos-scan-filing-note");
+    var willFile = issueFiling && !dryRunChecked;
+
+    if (filingNote) {
+      filingNote.hidden = issueFiling;
+    }
+    if (issuesLine) {
+      if (willFile) {
+        issuesLine.className = "rd-warn";
+        issuesLine.textContent =
+          "This scan will file or update Gitea issues for eligible findings (duplicates prevented by fingerprint).";
+      } else if (!issueFiling) {
+        issuesLine.className = "rd-safe";
+        issuesLine.textContent =
+          "Issue filing is disabled by repo/global policy — this scan will not create or update forge issues.";
+      } else {
+        issuesLine.className = "rd-safe";
+        issuesLine.textContent =
+          "This scan is report-only and will not file or update Gitea issues.";
+      }
+    }
+    if (dryRunLine) {
+      if (!issueFiling) {
+        dryRunLine.textContent = "Report-only enforced — issue filing is off in policy.";
+      } else if (dryRunChecked) {
+        dryRunLine.textContent =
+          "Dry run selected — findings persist, reports generate, issue_sync_status will be skipped.";
+      } else {
+        dryRunLine.textContent =
+          "Dry run not selected — issue filing follows repo policy when eligible.";
+      }
+    }
+  }
+
+  function wireScanPreflightToggle(form, issueFiling) {
+    if (!form) return;
+    var reportEl = form.querySelector("[data-preflight-toggle]");
+    if (!reportEl) return;
+    reportEl.addEventListener("change", function () {
+      updateScanPreflight(form, issueFiling, reportEl.checked);
+    });
+  }
+
   function wireScanFormModal(modal) {
     if (!modal) return;
     modal.querySelectorAll("[data-scan-cancel]").forEach(function (el) {
@@ -176,6 +222,10 @@
             "Scan ID: <code>" + (data.scan_id || "—") + "</code><br>" +
             "Trigger: <code>" + (data.trigger_type || "manual") + "</code><br>" +
             "Report-only: <strong>" + (data.report_only_dry_run ? "yes" : "no") + "</strong><br>" +
+            "Issue filing: <strong>" + (data.issue_filing ? "yes" : "no") + "</strong><br>" +
+            (data.scan_policy_mode
+              ? "Policy mode: <code>" + data.scan_policy_mode + "</code><br>"
+              : "") +
             scanLink;
         })
         .catch(function (err) {
@@ -205,6 +255,11 @@
 
     wireScanFormModal(detailModal);
     wireScanFormModal(listModal);
+
+    document.querySelectorAll("[data-scan-form]").forEach(function (form) {
+      var issueFiling = !form.querySelector("#rd-repos-scan-report-only[disabled]");
+      wireScanPreflightToggle(form, issueFiling);
+    });
 
     document.querySelectorAll("[data-scan-open]").forEach(function (btn) {
       btn.addEventListener("click", function () {
@@ -236,21 +291,11 @@
         if (refEl) refEl.value = ref;
         if (profileEl) profileEl.value = profile;
         if (reportEl) {
-          reportEl.checked = reportOnly || !issueFiling;
+          reportEl.checked = !issueFiling || reportOnly;
           reportEl.disabled = !issueFiling;
         }
-        if (filingNote) {
-          filingNote.hidden = issueFiling;
-        }
-        if (issuesLine) {
-          if (issueFiling && !reportOnly) {
-            issuesLine.className = "rd-warn";
-            issuesLine.innerHTML = "Issue filing may create forge issues when report-only is off.";
-          } else {
-            issuesLine.className = "rd-safe";
-            issuesLine.innerHTML = "<strong>Issues will not be created</strong> — report-only is enabled.";
-          }
-        }
+        updateScanPreflight(form, issueFiling, reportEl ? reportEl.checked : true);
+        wireScanPreflightToggle(form, issueFiling);
         openModal(listModal);
       });
     });

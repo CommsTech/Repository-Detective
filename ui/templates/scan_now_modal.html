@@ -6,7 +6,13 @@
       <h2 id="rd-scan-now-title">Scan now</h2>
       <button type="button" class="rd-modal-close" data-scan-cancel aria-label="Close">&times;</button>
     </div>
-    <div class="rd-alert info rd-modal-beta-note">Private beta: keep <strong>report-only</strong> enabled unless issue filing is explicitly approved.</div>
+    <div class="rd-alert info rd-modal-beta-note">
+      {{if eq .Data.ScanForm.ScanPolicyMode "private_beta_safe"}}
+      Private beta safe mode: issue filing is off globally.
+      {{else}}
+      Uncheck report-only to file or update Gitea issues when repo policy allows.
+      {{end}}
+    </div>
     {{if not .Data.ScanForm.ScanEnabled}}
     <div class="rd-alert">Manual scan is unavailable — the scan engine is not configured.</div>
     {{else}}

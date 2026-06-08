@@ -19,7 +19,11 @@
   {{if not .Data.ScanForm.ScanEnabled}}
   <div class="rd-alert">Manual scan is unavailable — the scan engine is not configured.</div>
   {{else}}
-  <div class="rd-alert info">Private beta: keep <strong>report-only</strong> enabled unless issue filing is explicitly approved.</div>
+  {{if eq .Data.ScanForm.ScanPolicyMode "private_beta_safe"}}
+  <div class="rd-alert info">Private beta safe mode: issue filing is off globally. Enable <code>auto_create_issues</code> to file forge issues.</div>
+  {{else}}
+  <div class="rd-alert info">Uncheck report-only to file or update Gitea issues when repo policy allows.</div>
+  {{end}}
   {{template "scan_now_form.html" .}}
   {{end}}
 </div>

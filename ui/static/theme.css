@@ -1759,7 +1759,25 @@ table td { padding: 12px; border-bottom: 1px solid var(--rd-border); }
   font-family: var(--rd-font);
 }
 
-.rd-scan-safety-summary {
+.rd-scan-advanced {
+  margin: 0.75rem 0;
+  border: 1px solid var(--rd-border);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+}
+
+.rd-scan-advanced summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.rd-scan-advanced-dl {
+  margin-top: 0.75rem;
+}
+
+.rd-scan-policy-hint {
+  font-size: 0.9rem;
+}
   margin: 16px 0;
   padding: 12px 14px;
   border-radius: var(--rd-radius-sm);
