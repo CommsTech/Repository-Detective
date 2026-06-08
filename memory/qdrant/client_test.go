@@ -6,6 +6,16 @@ import (
 	"testing"
 )
 
+func TestDefaultConfigUsesCAHFindings(t *testing.T) {
+	cfg := DefaultConfig()
+	if cfg.Collection != "cah_findings" {
+		t.Fatalf("collection=%q want cah_findings", cfg.Collection)
+	}
+	if cfg.Enabled {
+		t.Fatal("qdrant should be disabled by default")
+	}
+}
+
 func TestStoreDisabledNoWrites(t *testing.T) {
 	store := NewStore(DefaultConfig())
 	input := MatchInput{Repository: "o/r", Title: "test"}
