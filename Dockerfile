@@ -175,7 +175,8 @@ LABEL org.opencontainers.image.title="Repository Detective (all-in-one)" \
 COPY scripts/docker-alpine-runtime-setup.sh /usr/local/lib/rd/docker-alpine-runtime-setup.sh
 
 RUN chmod +x /usr/local/lib/rd/docker-alpine-runtime-setup.sh && \
-    /usr/local/lib/rd/docker-alpine-runtime-setup.sh wget su-exec
+    /usr/local/lib/rd/docker-alpine-runtime-setup.sh wget su-exec git && \
+    git --version
 
 WORKDIR /app
 
