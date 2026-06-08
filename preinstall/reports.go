@@ -51,6 +51,51 @@ func GenerateReports(cfg Config, audit store.AuditRequest, findings []store.Audi
 	return reports
 }
 
+func appendSandboxSection(b *strings.Builder, cfg Config, audit store.AuditRequest) {
+	fmt.Fprintf(b, "## Sandbox and safety\n\n")
+	if !cfg.SandboxEnabled {
+		fmt.Fprintf(b, "- **Sandbox enabled:** no (operator disabled — review with caution)\n")
+	} else {
+		fmt.Fprintf(b, "- **Sandbox enabled:** yes\n")
+	}
+	fmt.Fprintf(b, "- **Clone mode:** shallow, single-branch, no tags\n")
+	fmt.Fprintf(b, "- **Submodules disabled:** %v\n", !cfg.SandboxAllowSubmodules)
+	fmt.Fprintf(b, "- **Max repo size:** %d MB\n", cfg.MaxRepoSizeMB)
+	fmt.Fprintf(b, "- **Max file count:** %d\n", cfg.MaxFiles)
+	fmt.Fprintf(b, "- **Max single file:** %d MB\n", cfg.SandboxMaxFileSizeMB)
+	fmt.Fprintf(b, "- **Timeout:** %d seconds\n", cfg.TimeoutSeconds)
+	fmt.Fprintf(b, "- **Private IP blocking:** %v\n", !cfg.AllowPrivateNetworks)
+	fmt.Fprintf(b, "- **Issue creation:** 0 (report-only audit)\n")
+	fmt.Fprintf(b, "- **PR creation:** 0\n")
+	fmt.Fprintf(b, "- **Disclosure submission:** operator approval required\n")
+	fmt.Fprintf(b, "- **Workspace retention:** %s\n", sandboxRetentionLabel(cfg))
+	b.WriteString("\n")
+	b.WriteString("Repository Detective did not execute this repository's code. Files and metadata were scanned only. Secrets are redacted in reports. Private network targets are blocked by default.\n\n")
+	if meta := sandboxFromAudit(audit); meta.SandboxID != "" {
+		fmt.Fprintf(b, "- **Sandbox ID:** `%s`\n\n", meta.SandboxID)
+	}
+}
+
+func sandboxRetentionLabel(cfg Config) string {
+	if cfg.SandboxRetainOnFailure {
+		return "retained on failure for operator review"
+	}
+	return "deleted after audit completes"
+}
+
+func sandboxFromAudit(audit store.AuditRequest) SandboxMeta {
+	if len(audit.SummaryJSON) == 0 {
+		return SandboxMeta{}
+	}
+	var summary struct {
+		Sandbox SandboxMeta `json:"sandbox"`
+	}
+	if json.Unmarshal(audit.SummaryJSON, &summary) != nil {
+		return SandboxMeta{}
+	}
+	return summary.Sandbox
+}
+
 func appendReportFooter(b *strings.Builder, cfg Config) {
 	fmt.Fprintf(b, "---\n\n%s\n", reportFooterLead)
 	fmt.Fprintf(b, "Gitea-first repository assessment, pre-install audit, and evidence-based remediation.\n")
@@ -84,6 +129,7 @@ func installRiskSummaryReport(cfg Config, audit store.AuditRequest, findings []s
 	fmt.Fprintf(&b, "**Audit date:** %s\n\n", audit.StartedAt.UTC().Format(time.RFC3339))
 	fmt.Fprintf(&b, "**Risk score:** %d / 100\n\n", audit.RiskScore)
 	fmt.Fprintf(&b, "**Recommendation:** %s\n\n", audit.Recommendation)
+	appendSandboxSection(&b, cfg, audit)
 	fmt.Fprintf(&b, "## Scanner summary\n\n")
 	if len(scannerResults) == 0 {
 		b.WriteString("_No scanner results recorded._\n\n")
