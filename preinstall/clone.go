@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"git.commsnet.org/commstech/bugbot/internal/security"
 )
@@ -21,6 +22,8 @@ type CloneResult struct {
 	DefaultBranch string
 	TotalBytes    int64
 	FileCount     int
+	SandboxID     string
+	Sandbox       SandboxMeta
 }
 
 // ShallowClone clones a public repository into an isolated temp directory.
@@ -36,12 +39,14 @@ func ShallowClone(ctx context.Context, parsed ParsedRepoURL, cfg Config) (CloneR
 		return CloneResult{}, fmt.Errorf("clone URL is required")
 	}
 
-	parent, err := os.MkdirTemp("", "bugbot-preinstall-*")
+	sandboxID := newSandboxID()
+	parent, err := os.MkdirTemp("", "rd-preinstall-"+sandboxID+"-*")
 	if err != nil {
 		return CloneResult{}, fmt.Errorf("create temp dir: %w", err)
 	}
 	dest := filepath.Join(parent, "repo")
 	cleanup := func() { _ = os.RemoveAll(parent) }
+	meta := sandboxMetaFromConfig(cfg, sandboxID, dest)
 
 	if security.SubprocessEnvExposesSecrets() {
 		cleanup()
@@ -49,9 +54,14 @@ func ShallowClone(ctx context.Context, parsed ParsedRepoURL, cfg Config) (CloneR
 	}
 
 	cloneArgs := []string{
+		"-c", "core.hooksPath=/dev/null",
+		"-c", "advice.detachedHead=false",
 		"clone", "--depth=1", "--single-branch", "--no-tags",
-		"--", cloneURL, dest,
 	}
+	if !cfg.SandboxAllowSubmodules {
+		cloneArgs = append(cloneArgs, "--no-recurse-submodules")
+	}
+	cloneArgs = append(cloneArgs, "--", cloneURL, dest)
 	if out, err := runGit(ctx, cloneArgs); err != nil {
 		cleanup()
 		return CloneResult{}, fmt.Errorf("git clone failed: %w", sanitizeGitError(out, err))
@@ -70,10 +80,13 @@ func ShallowClone(ctx context.Context, parsed ParsedRepoURL, cfg Config) (CloneR
 		defaultBranch = "main"
 	}
 
-	totalBytes, fileCount, err := measureWorkspace(dest, cfg.maxRepoSizeBytes(), cfg.MaxFiles)
+	totalBytes, fileCount, err := measureWorkspaceSandbox(dest, cfg)
 	if err != nil {
 		cleanup()
 		return CloneResult{}, err
+	}
+	if cfg.SandboxReadonlyWorkspace {
+		_ = makeWorkspaceReadOnly(dest)
 	}
 
 	return CloneResult{
@@ -83,7 +96,22 @@ func ShallowClone(ctx context.Context, parsed ParsedRepoURL, cfg Config) (CloneR
 		DefaultBranch: defaultBranch,
 		TotalBytes:    totalBytes,
 		FileCount:     fileCount,
+		SandboxID:     sandboxID,
+		Sandbox:       meta,
 	}, nil
+}
+
+func newSandboxID() string {
+	return fmt.Sprintf("%x", time.Now().UnixNano())[:12]
+}
+
+func makeWorkspaceReadOnly(root string) error {
+	return filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
+		}
+		return os.Chmod(path, 0o444)
+	})
 }
 
 func runGit(ctx context.Context, args []string) ([]byte, error) {
@@ -101,41 +129,6 @@ func sanitizeGitError(out []byte, err error) error {
 	return fmt.Errorf("git operation failed")
 }
 
-func measureWorkspace(root string, maxBytes int64, maxFiles int) (int64, int, error) {
-	if maxFiles <= 0 {
-		maxFiles = 5000
-	}
-	var total int64
-	count := 0
-	err := filepath.WalkDir(root, func(path string, d os.DirEntry, walkErr error) error {
-		if walkErr != nil {
-			return walkErr
-		}
-		if d.IsDir() {
-			if d.Type()&os.ModeSymlink != 0 {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		if d.Type()&os.ModeSymlink != 0 {
-			return nil
-		}
-		count++
-		if count > maxFiles {
-			return fmt.Errorf("repository exceeds max file count (%d)", maxFiles)
-		}
-		info, err := d.Info()
-		if err != nil {
-			return err
-		}
-		total += info.Size()
-		if total > maxBytes {
-			return fmt.Errorf("repository exceeds max size (%d MB)", maxBytes/(1024*1024))
-		}
-		return nil
-	})
-	return total, count, err
-}
 
 // SensitiveEnvKeys lists env vars that must never appear in audit workspaces.
 var SensitiveEnvKeys = security.SensitiveEnvKeys
@@ -148,7 +141,8 @@ func CloneEnvExposesSecrets() bool {
 // GitCloneArgsForTests exposes clone argv shape for security tests.
 func GitCloneArgsForTests(cloneURL, dest string) []string {
 	return []string{
-		"clone", "--depth=1", "--single-branch", "--no-tags",
+		"-c", "core.hooksPath=/dev/null",
+		"clone", "--depth=1", "--single-branch", "--no-tags", "--no-recurse-submodules",
 		"--", cloneURL, dest,
 	}
 }

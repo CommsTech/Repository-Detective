@@ -117,12 +117,27 @@ func (r *Runner) runAudit(auditID string, parsed ParsedRepoURL, depth string) {
 		}
 	}
 
-	clone, err := ShallowClone(ctx, parsed, r.cfg)
-	if err != nil {
-		fail(err.Error())
+	var retainWorkspace bool
+	var clone CloneResult
+	defer func() {
+		if !retainWorkspace && clone.Cleanup != nil {
+			clone.Cleanup()
+		}
+	}()
+
+	origFail := fail
+	fail = func(msg string) {
+		if r.cfg.SandboxRetainOnFailure && clone.Cleanup != nil {
+			retainWorkspace = true
+		}
+		origFail(msg)
+	}
+
+	clone, cloneErr := ShallowClone(ctx, parsed, r.cfg)
+	if cloneErr != nil {
+		fail(cloneErr.Error())
 		return
 	}
-	defer clone.Cleanup()
 
 	req.CommitSHA = clone.CommitSHA
 	req.DefaultBranch = clone.DefaultBranch
@@ -196,6 +211,9 @@ func (r *Runner) runAudit(auditID string, parsed ParsedRepoURL, depth string) {
 		"scanner_results":   scannerResults,
 		"risk_explanation":  risk.Explanation,
 		"finding_count":     len(findings),
+		"sandbox":           clone.Sandbox,
+		"issues_created":    0,
+		"prs_created":       0,
 	}
 	if graphNodes > 0 {
 		summaryPayload["graph_nodes"] = graphNodes

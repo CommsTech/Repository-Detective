@@ -144,6 +144,15 @@ evidence_closure_close_issues: false
 
 # Private beta defaults (see docs/BETA_READINESS.md)
 preinstall_audit_enabled: true
+preinstall_sandbox_enabled: true
+preinstall_sandbox_retain_on_failure: false
+preinstall_sandbox_max_repo_size_mb: 500
+preinstall_sandbox_max_files: 5000
+preinstall_sandbox_max_file_size_mb: 25
+preinstall_sandbox_timeout_seconds: 600
+preinstall_sandbox_allow_submodules: false
+preinstall_sandbox_network_mode: restricted
+preinstall_sandbox_readonly_workspace: true
 ai_startup_test_enabled: false
 notifications_enabled: false
 runner_delegation_enabled: false

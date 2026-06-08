@@ -18,6 +18,12 @@ type Config struct {
 	AllowGitClone                   bool
 	ReportIncludeProjectLink        bool
 	RepositoryDetectiveProjectURL   string
+	SandboxEnabled                  bool
+	SandboxRetainOnFailure          bool
+	SandboxMaxFileSizeMB            int
+	SandboxAllowSubmodules          bool
+	SandboxNetworkMode              string
+	SandboxReadonlyWorkspace        bool
 	Health                          health.Config
 	Graph                           graph.Config
 }
@@ -34,6 +40,12 @@ func DefaultConfig() Config {
 		AllowGitClone:                 true,
 		ReportIncludeProjectLink:      true,
 		RepositoryDetectiveProjectURL: "https://git.commsnet.org/commstech/bugbot",
+		SandboxEnabled:                true,
+		SandboxRetainOnFailure:        false,
+		SandboxMaxFileSizeMB:          25,
+		SandboxAllowSubmodules:        false,
+		SandboxNetworkMode:            "restricted",
+		SandboxReadonlyWorkspace:      true,
 	}
 }
 

@@ -102,8 +102,15 @@ func TestRevalidateHostBeforeClone(t *testing.T) {
 
 func TestGitCloneUsesFixedArgv(t *testing.T) {
 	args := preinstall.GitCloneArgsForTests("https://github.com/o/r.git", "/tmp/repo")
-	if len(args) < 3 || args[0] != "clone" {
-		t.Fatalf("unexpected args: %v", args)
+	cloneIdx := -1
+	for i, a := range args {
+		if a == "clone" {
+			cloneIdx = i
+			break
+		}
+	}
+	if cloneIdx < 0 {
+		t.Fatalf("unexpected args (missing clone): %v", args)
 	}
 	sep := -1
 	for i, a := range args {
