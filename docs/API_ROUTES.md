@@ -158,7 +158,7 @@ See [dogfood-reports/current-security-blocker-verification.md](dogfood-reports/c
 
 ## Pre-install audit
 
-Requires `preinstall_audit_enabled: true` (default **false** in beta).
+Requires `preinstall_audit_enabled: true` (default **true**; report-only).
 
 | Method | Path | Auth | Beta | Purpose |
 |--------|------|------|------|---------|

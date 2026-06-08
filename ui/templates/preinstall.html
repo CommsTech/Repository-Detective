@@ -4,8 +4,8 @@
 {{if not .Data.Enabled}}
 <div class="rd-alert warn" role="status"><strong>Pre-install audit disabled.</strong> Set <code>preinstall_audit_enabled=true</code> in <a href="{{.BasePath}}/configure#preinstall-audit{{if .APIKey}}?api_key={{.APIKey}}{{end}}">Configure</a> and restart. HTTPS public repos only; private IPs blocked unless explicitly allowed.</div>
 {{else}}
-<div class="rd-alert">Third-party audit reports are drafts. Review before sharing or submitting externally. Repository Detective does not auto-file issues or send email for pre-install audits.</div>
-{{end}}
+<div class="rd-alert info">Pre-install audit is enabled — report-only by design. Paste a public HTTPS repo URL to generate an install risk summary. Private IPs are blocked unless explicitly allowed in Configure.</div>
+<div class="rd-alert">Third-party audit reports are drafts. Review before sharing or submitting externally. Repository Detective does not auto-file issues, create PRs, or submit disclosures without operator approval.</div>
 {{if .Data.Error}}<div class="rd-alert">{{.Data.Error}}</div>{{end}}
 <div class="rd-card">
 <form method="post" action="{{.BasePath}}/preinstall{{if .APIKey}}?api_key={{.APIKey}}{{end}}">
@@ -27,6 +27,8 @@
 <td><a href="{{$.BasePath}}/preinstall/audits/{{.AuditID}}{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}">{{.NormalizedRepoURL}}</a></td>
 <td>{{.Status}}</td><td>{{.RiskScore}}</td><td>{{.Recommendation}}</td><td class="rd-muted">{{.StartedAt}}</td>
 </tr>{{else}}<tr><td colspan="5" class="rd-muted">No audits yet</td></tr>{{end}}
-</table></div>{{template "foot" .}}
+</table></div>
+{{end}}
+{{template "foot" .}}
 </body></html>
 {{end}}

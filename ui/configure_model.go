@@ -98,9 +98,9 @@ func buildConfigureSections(
 			ID: "preinstall-audit", Title: "Pre-install audit",
 			Status: preinstallConfigureStatus(f.PreinstallAuditEnabled, platform),
 			StatusClass: preinstallConfigureClass(f.PreinstallAuditEnabled, platform),
-			Summary: "Audit third-party repositories before install. Report-only — does not file issues.",
-			SafetyNote: "HTTPS public repos only; private IPs blocked unless preinstall_allow_private_networks=true.",
-			BetaDefault: "disabled", RestartRequired: true, DocPath: "docs/PREINSTALL_AUDIT.md",
+			Summary: "Audit third-party repositories before install — marketing/on-ramp flow. Report-only; never files issues or PRs.",
+			SafetyNote: "HTTPS public repos only; private IPs blocked unless preinstall_allow_private_networks=true. Disclosure drafts require operator approval before external submission.",
+			BetaDefault: "enabled (report-only)", RestartRequired: true, DocPath: "docs/PREINSTALL_AUDIT.md",
 			WorkflowURL: basePath + "/preinstall", WorkflowLabel: "Open pre-install audit workflow",
 			Settings: []ConfigureSetting{
 				boolSetting("preinstall_audit_enabled", f.PreinstallAuditEnabled),

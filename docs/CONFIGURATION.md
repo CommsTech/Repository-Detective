@@ -79,7 +79,7 @@ Full guide: [AUTH_LOCAL.md](AUTH_LOCAL.md).
 | `qdrant_enabled` | `false` | Local/redacted only when enabled |
 | `remediation_pr_enabled` | `false` | Safe PRs off until operator enables |
 | `evidence_closure_close_issues` | `false` | Comments only |
-| `preinstall_audit_enabled` | `false` | Enable on-demand for third-party audits |
+| `preinstall_audit_enabled` | `true` | Pre-install audit on-ramp (report-only; no issue filing) |
 | `ai_startup_test_enabled` | `false` | No paid probe on boot |
 | `database_path` | `./data/bugbot.db` | Legacy filename intentional |
 | `label_compat_mode` | `new_only` | Writes `repository-detective/*` labels |

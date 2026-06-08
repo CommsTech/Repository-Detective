@@ -39,7 +39,7 @@ Rejected by default: `file://`, local paths, SSH URLs, embedded credentials, loc
 
 | Key | Env | Default |
 |-----|-----|---------|
-| `preinstall_audit_enabled` | `REPOSITORY_DETECTIVE_PREINSTALL_AUDIT_ENABLED` | `false` (beta default; enable on-demand) |
+| `preinstall_audit_enabled` | `REPOSITORY_DETECTIVE_PREINSTALL_AUDIT_ENABLED` | `true` (report-only; enable on-ramp audits) |
 | `preinstall_allow_private_networks` | `BUGBOT_PREINSTALL_ALLOW_PRIVATE_NETWORKS` | `false` |
 | `preinstall_max_repo_size_mb` | `BUGBOT_PREINSTALL_MAX_REPO_SIZE_MB` | `500` |
 | `preinstall_max_files` | `BUGBOT_PREINSTALL_MAX_FILES` | `5000` |
