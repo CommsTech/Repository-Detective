@@ -185,6 +185,12 @@ type Config struct {
 	PreinstallMaxFindings                   int                                  `mapstructure:"preinstall_max_findings"`
 	PreinstallAllowGitClone                 bool                                 `mapstructure:"preinstall_allow_git_clone"`
 	PreinstallReportIncludeProjectLink      bool                                 `mapstructure:"preinstall_report_include_project_link"`
+	PreinstallSandboxEnabled                bool                                 `mapstructure:"preinstall_sandbox_enabled"`
+	PreinstallSandboxRetainOnFailure        bool                                 `mapstructure:"preinstall_sandbox_retain_on_failure"`
+	PreinstallSandboxMaxFileSizeMB          int                                  `mapstructure:"preinstall_sandbox_max_file_size_mb"`
+	PreinstallSandboxAllowSubmodules        bool                                 `mapstructure:"preinstall_sandbox_allow_submodules"`
+	PreinstallSandboxNetworkMode            string                               `mapstructure:"preinstall_sandbox_network_mode"`
+	PreinstallSandboxReadonlyWorkspace      bool                                 `mapstructure:"preinstall_sandbox_readonly_workspace"`
 	RepositoryDetectiveProjectURL           string                               `mapstructure:"repository_detective_project_url"`
 	EnableHealthChecks                      bool                                 `mapstructure:"enable_health_checks"`
 	EnableTechDebtChecks                    bool                                 `mapstructure:"enable_tech_debt_checks"`
@@ -481,6 +487,12 @@ func loadConfig() error {
 	viper.SetDefault("preinstall_max_findings", 200)
 	viper.SetDefault("preinstall_allow_git_clone", true)
 	viper.SetDefault("preinstall_report_include_project_link", true)
+	viper.SetDefault("preinstall_sandbox_enabled", true)
+	viper.SetDefault("preinstall_sandbox_retain_on_failure", false)
+	viper.SetDefault("preinstall_sandbox_max_file_size_mb", 25)
+	viper.SetDefault("preinstall_sandbox_allow_submodules", false)
+	viper.SetDefault("preinstall_sandbox_network_mode", "restricted")
+	viper.SetDefault("preinstall_sandbox_readonly_workspace", true)
 	viper.SetDefault("repository_detective_project_url", "https://git.commsnet.org/commstech/bugbot")
 	viper.SetDefault("enable_health_checks", true)
 	viper.SetDefault("enable_tech_debt_checks", true)
@@ -926,6 +938,12 @@ func initializeComponents() error {
 		AllowGitClone:                 config.PreinstallAllowGitClone,
 		ReportIncludeProjectLink:      config.PreinstallReportIncludeProjectLink,
 		RepositoryDetectiveProjectURL: config.RepositoryDetectiveProjectURL,
+		SandboxEnabled:                config.PreinstallSandboxEnabled,
+		SandboxRetainOnFailure:        config.PreinstallSandboxRetainOnFailure,
+		SandboxMaxFileSizeMB:          config.PreinstallSandboxMaxFileSizeMB,
+		SandboxAllowSubmodules:        config.PreinstallSandboxAllowSubmodules,
+		SandboxNetworkMode:            config.PreinstallSandboxNetworkMode,
+		SandboxReadonlyWorkspace:      config.PreinstallSandboxReadonlyWorkspace,
 		Health:                        mainHealthConfig(),
 		Graph:                         mainGraphConfig(),
 	}
@@ -1671,13 +1689,34 @@ func finishPersistedScan(ctx context.Context, scanCtx *store.ScanContext, reposi
 			ScannerResults:        scanners,
 			RepoProfile:           result.RepoProfile,
 		}
+		if result.PolicySnapshot != nil {
+			if raw, err := json.Marshal(result.PolicySnapshot); err == nil {
+				var snap struct {
+					EnableCodeGraph bool `json:"enable_code_graph"`
+					AnalysisDepth   int  `json:"analysis_depth"`
+				}
+				if json.Unmarshal(raw, &snap) == nil {
+					data.GraphEnabled = snap.EnableCodeGraph
+				}
+			}
+		}
 		if result.Graph != nil {
 			if raw, err := json.Marshal(result.Graph); err == nil {
 				data.GraphJSON = raw
 				data.GraphNodeCount = result.Graph.Metrics.NodeCount
 				data.GraphEdgeCount = result.Graph.Metrics.EdgeCount
 				data.GraphTruncated = result.Graph.Metrics.Truncated
+				if data.GraphTruncated {
+					data.GraphState = store.GraphStateTruncated
+				} else {
+					data.GraphState = store.GraphStateAvailable
+				}
+			} else {
+				data.GraphError = err.Error()
+				data.GraphState = store.GraphStateFailed
 			}
+		} else if data.GraphEnabled {
+			data.GraphState = store.GraphStateMissing
 		}
 	}
 	if err := scanRecorder.FinishScan(ctx, scanID, data, analysisErr); err != nil {

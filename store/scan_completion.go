@@ -15,9 +15,12 @@ type ScanCompletion struct {
 	WorkspaceModeUsed     string
 	PolicySnapshot        any
 	ScannerResults        []ScanCompletionScanner
+	GraphEnabled          bool
+	GraphState            string
 	GraphNodeCount        int
 	GraphEdgeCount        int
 	GraphTruncated        bool
+	GraphError            string
 	GraphJSON             []byte
 	RepoProfile           any
 }

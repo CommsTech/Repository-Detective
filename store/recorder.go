@@ -147,12 +147,17 @@ func (r *Recorder) FinishScan(ctx context.Context, scanID string, data *ScanComp
 		if data.RepoProfile != nil {
 			summary["repo_profile"] = data.RepoProfile
 		}
+		summary["graph_enabled"] = data.GraphEnabled
+		summary["graph_state"] = data.GraphState
 		if data.GraphNodeCount > 0 {
 			summary["graph_nodes"] = data.GraphNodeCount
 			summary["graph_edges"] = data.GraphEdgeCount
 		}
 		if data.GraphTruncated {
 			summary["graph_truncated"] = true
+		}
+		if data.GraphError != "" {
+			summary["graph_error"] = data.GraphError
 		}
 		summary["persistence_expected_count"] = expectedCount
 	}
@@ -183,6 +188,9 @@ func (r *Recorder) FinishScan(ctx context.Context, scanID string, data *ScanComp
 				EdgeCount: data.GraphEdgeCount, GeneratedAt: time.Now().UTC(),
 			}); err != nil && r.logger != nil {
 				r.logger.Warnf("Failed to save scan graph: %v", err)
+				if data.GraphError == "" {
+					data.GraphError = "failed to persist graph: " + err.Error()
+				}
 			}
 		}
 	}
