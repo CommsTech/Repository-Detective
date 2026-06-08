@@ -949,14 +949,6 @@ func (h *Handler) renderGraphPage(c *gin.Context, repoID int64, scanID string, s
 	})
 }
 
-func (h *Handler) graphAPIURLs(c *gin.Context, scanID string, repoID int64) (graphURL, exportURL string) {
-	if scanID != "" {
-		return "/api/v1/scans/" + scanID + "/graph", "/api/v1/scans/" + scanID + "/graph/export"
-	}
-	id := strconv.FormatInt(repoID, 10)
-	return "/api/v1/repos/" + id + "/graph", "/api/v1/repos/" + id + "/graph/export"
-}
-
 func (h *Handler) Findings(c *gin.Context) {
 	if !h.requireStore(c) {
 		return

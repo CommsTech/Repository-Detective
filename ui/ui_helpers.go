@@ -323,25 +323,6 @@ func buildScanDetailView(raw json.RawMessage) scanDetailView {
 	return view
 }
 
-func scanSummaryGraphTruncated(raw json.RawMessage) bool {
-	if len(raw) == 0 {
-		return false
-	}
-	var summary map[string]any
-	if err := json.Unmarshal(raw, &summary); err != nil {
-		return false
-	}
-	if b, ok := summary["graph_truncated"].(bool); ok && b {
-		return true
-	}
-	if metrics, ok := summary["graph_metrics"].(map[string]any); ok {
-		if b, ok := metrics["truncated"].(bool); ok && b {
-			return true
-		}
-	}
-	return false
-}
-
 func intFromAny(v any) int {
 	switch n := v.(type) {
 	case float64:
