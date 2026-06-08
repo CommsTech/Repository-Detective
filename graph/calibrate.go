@@ -28,7 +28,8 @@ func calibrateGraphFindings(b *builder, findings []GraphFinding, ctx RepoContext
 		if cal == nil {
 			continue
 		}
-		if largeRepo && strings.EqualFold(cal.Severity, severityInfo) {
+		if largeRepo && strings.EqualFold(cal.Source, "graph") &&
+			(strings.EqualFold(cal.Severity, severityInfo) || strings.EqualFold(cal.Severity, "low")) {
 			continue
 		}
 		out = append(out, *cal)
@@ -64,6 +65,17 @@ func calibrateOneFinding(b *builder, f GraphFinding, ctx RepoContext, smallRepo 
 					"Actionable when the file is unreachable from any documented entrypoint and is not intentionally standalone.")
 			}
 		}
+	case "GRAPH-ORPHAN-FUNCTION":
+		if classification == "test" || classification == "example" {
+			return downgradeGraphFinding(f, severityInfo, 0.42,
+				"Downgraded: function in "+classification+" path — orphan call graph edges are often expected.",
+				"Actionable when the function is production code on a reachable path.")
+		}
+		if ctx.FileCount > 500 {
+			return downgradeGraphFinding(f, severityInfo, 0.44,
+				"Downgraded: large repository — static orphan-function graph findings are informational.",
+				"Actionable when the function is security-sensitive and reachable from production entrypoints.")
+		}
 	case "GRAPH-SUSPICIOUS-ISLAND":
 		if smallRepo || ctx.HomelabInfra {
 			return downgradeGraphFinding(f, severityInfo, 0.45,
@@ -76,6 +88,11 @@ func calibrateOneFinding(b *builder, f GraphFinding, ctx RepoContext, smallRepo 
 				"Actionable when security findings in the cluster are confirmed reachable from production paths.")
 		}
 	case "GRAPH-DISCONNECTED-PACKAGE":
+		if ctx.FileCount > 500 {
+			return downgradeGraphFinding(f, severityInfo, 0.46,
+				"Downgraded: large repository — disconnected package clusters are often script-style layouts.",
+				"Actionable when the package contains confirmed security findings with production reachability.")
+		}
 		if smallRepo && ctx.PrimaryEcosystem == "python" {
 			return downgradeGraphFinding(f, severityInfo, 0.5,
 				"Downgraded: Python utility repos often use script-style modules without package import wiring.",
