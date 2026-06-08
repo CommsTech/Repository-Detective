@@ -124,15 +124,22 @@ def sync_external_issues(base: str, token: str) -> int:
     return repaired
 
 
-def wait_scan(api_key: str, prev_id: str, timeout: int = 1800) -> dict:
+def wait_scan(api_key: str, want_id: str, timeout: int = 1800) -> dict:
     start = time.time()
     while time.time() - start < timeout:
-        scans = api(api_key, "GET", f"/repos/{REPO_ID}/scans?limit=5")
-        items = scans if isinstance(scans, list) else scans.get("scans", scans.get("items", []))
-        for s in items:
-            sid = s.get("id") or s.get("scan_id")
-            if sid and sid != prev_id and s.get("status") == "completed":
-                return s
+        if want_id:
+            try:
+                s = api(api_key, "GET", f"/scans/{want_id}")
+                if s.get("status") == "completed":
+                    return s
+            except urllib.error.HTTPError:
+                pass
+        else:
+            scans = api(api_key, "GET", f"/repos/{REPO_ID}/scans?limit=5")
+            items = scans if isinstance(scans, list) else scans.get("scans", scans.get("items", []))
+            for s in items:
+                if s.get("status") == "completed":
+                    return s
         time.sleep(15)
     raise TimeoutError("scan did not complete in time")
 
@@ -159,9 +166,10 @@ def main() -> int:
     }
     trigger = api(api_key, "POST", "/analyze", body)
     print("triggered:", json.dumps(trigger, indent=2))
+    triggered_id = trigger.get("scan_id", "")
 
-    completed = wait_scan(api_key, prev_scan)
-    scan_id = completed.get("id") or completed.get("scan_id")
+    completed = wait_scan(api_key, triggered_id or prev_scan)
+    scan_id = triggered_id or completed.get("id") or completed.get("scan_id")
     time.sleep(10)
 
     repaired = sync_external_issues(gitea_base, token)

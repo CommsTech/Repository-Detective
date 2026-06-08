@@ -21,12 +21,17 @@ func calibrateGraphFindings(b *builder, findings []GraphFinding, ctx RepoContext
 		return findings
 	}
 	smallRepo := ctx.FileCount > 0 && ctx.FileCount <= 100
+	largeRepo := ctx.FileCount > 500
 	out := make([]GraphFinding, 0, len(findings))
 	for _, f := range findings {
 		cal := calibrateOneFinding(b, f, ctx, smallRepo)
-		if cal != nil {
-			out = append(out, *cal)
+		if cal == nil {
+			continue
 		}
+		if largeRepo && strings.EqualFold(cal.Severity, severityInfo) {
+			continue
+		}
+		out = append(out, *cal)
 	}
 	return out
 }
@@ -45,6 +50,11 @@ func calibrateOneFinding(b *builder, f GraphFinding, ctx RepoContext, smallRepo 
 		}
 		if b.entrypoints[nodeIDFile(f.File)] {
 			return nil
+		}
+		if ctx.FileCount > 500 {
+			return downgradeGraphFinding(f, severityInfo, 0.44,
+				"Downgraded: large repository — static orphan-file graph findings are informational; CLI, generated, and script entrypoints are often invisible to import-only analysis.",
+				"Actionable when the file is production code with no documented entrypoint and carries security findings.")
 		}
 		if smallRepo || ctx.HomelabInfra {
 			reach := entryReachability(b, nodeIDFile(f.File))
