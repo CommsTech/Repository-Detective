@@ -33,6 +33,10 @@ type PlatformContext struct {
 	RemediationPRBranchPrefix    string
 	LLMSanityGateEnabled         bool
 	BacklogControlEnabled        bool
+	MaxIssuesPerScan             int
+	ScanPolicyMode               string
+	NotificationsEnabled         bool
+	RunnerDelegationEnabled      bool
 }
 
 func buildCapabilityStatuses(

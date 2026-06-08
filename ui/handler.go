@@ -618,7 +618,8 @@ func (h *Handler) Repositories(c *gin.Context) {
 		return
 	}
 	page := h.buildRepoControlPage(rows)
-	data := map[string]any{"ControlPage": page}
+	fleetForm := h.buildFleetScanFormPlaceholder()
+	data := map[string]any{"ControlPage": page, "FleetScanForm": fleetForm}
 	if n := strings.TrimSpace(c.Query("notice")); n != "" {
 		data["Notice"] = n
 	}

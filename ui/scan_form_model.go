@@ -16,6 +16,15 @@ type ScanFormView struct {
 	DefaultReportOnly bool
 	IssueFilingOn     bool
 	DefaultRef        string
+	FilingPolicy      store.ScanFilingPolicy
+	ScanPolicyMode    string
+	SeverityGate      string
+	ConfidenceGate    float64
+	MaxIssuesPerScan  int
+	ScannerSummary    string
+	EnableCodeGraph   bool
+	NotificationsOn   bool
+	RunnerDelegation  bool
 
 	RemediationPREnabled  bool
 	LLMSanityGateEnabled  bool
@@ -23,7 +32,13 @@ type ScanFormView struct {
 }
 
 func (h *Handler) buildScanFormView(repo store.Repository, effective store.EffectiveSettings, meta store.EffectiveSettingsMeta) ScanFormView {
-	issueFiling := store.ShouldCreateForgeIssues(effective)
+	filing := store.ResolveScanFilingPolicy(store.ScanFilingInput{
+		Kind:                  store.ScanKindManual,
+		Effective:             effective,
+		RequestDryRun:         false,
+		BacklogControlEnabled: h.platform.BacklogControlEnabled,
+		MaxIssuesPerScan:      h.platform.MaxIssuesPerScan,
+	})
 	ref := strings.TrimSpace(repo.DefaultBranch)
 	if ref == "" {
 		ref = "main"
@@ -34,9 +49,18 @@ func (h *Handler) buildScanFormView(repo store.Repository, effective store.Effec
 		ProfileMeta:           meta,
 		Profiles:              store.AllowedScanProfiles,
 		ScanEnabled:           h.ScanTriggerEnabled(),
-		DefaultReportOnly:     !issueFiling,
-		IssueFilingOn:         issueFiling,
+		DefaultReportOnly:     filing.DryRunCheckboxDefault,
+		IssueFilingOn:         filing.IssueFilingAllowed,
 		DefaultRef:            ref,
+		FilingPolicy:          filing,
+		ScanPolicyMode:        h.platform.ScanPolicyMode,
+		SeverityGate:          effective.SeverityGate,
+		ConfidenceGate:        effective.ConfidenceGate,
+		MaxIssuesPerScan:      h.platform.MaxIssuesPerScan,
+		ScannerSummary:        store.ScannerSummaryLabel(effective),
+		EnableCodeGraph:       effective.EnableCodeGraph,
+		NotificationsOn:       h.platform.NotificationsEnabled,
+		RunnerDelegation:      h.platform.RunnerDelegationEnabled,
 		RemediationPREnabled:  h.remediationPREnabled,
 		LLMSanityGateEnabled:  h.platform.LLMSanityGateEnabled,
 		BacklogControlEnabled: h.platform.BacklogControlEnabled,

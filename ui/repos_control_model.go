@@ -12,6 +12,7 @@ type RepoControlPageView struct {
 	RemediationPREnabled  bool
 	LLMSanityGateEnabled  bool
 	BacklogControlEnabled bool
+	ScanPolicyMode        string
 }
 
 // RepoControlRowView is one repository row on /ui/repos.
@@ -29,40 +30,54 @@ func (h *Handler) buildRepoControlPage(rows []store.RepositoryControlRow) RepoCo
 		RemediationPREnabled:  h.remediationPREnabled,
 		LLMSanityGateEnabled:  h.platform.LLMSanityGateEnabled,
 		BacklogControlEnabled: h.platform.BacklogControlEnabled,
+		ScanPolicyMode:        h.platform.ScanPolicyMode,
 	}
 	for _, row := range rows {
 		effective, meta := store.ResolveEffectiveSettingsFull(h.global, row.RawSettings)
-		issueFiling := store.ShouldCreateForgeIssues(effective)
+		filing := store.ResolveScanFilingPolicy(store.ScanFilingInput{
+			Kind:                  store.ScanKindManual,
+			Effective:             effective,
+			BacklogControlEnabled: h.platform.BacklogControlEnabled,
+			MaxIssuesPerScan:      h.platform.MaxIssuesPerScan,
+		})
 		view := RepoControlRowView{
 			RepositoryControlRow: row,
-			IssueFilingLabel:     issueFilingLabel(issueFiling, effective.IssuePolicy),
-			ReportOnlyLabel:      reportOnlyLabel(issueFiling),
+			IssueFilingLabel:     issueFilingLabel(filing.IssueFilingAllowed, effective.IssuePolicy),
+			ReportOnlyLabel:      reportOnlyLabel(filing),
 		}
 		view.ScanEnabled = effective.Enabled
 		view.ScheduleEnabled = effective.ScheduleEnabled
-		view.IssueFilingOn = issueFiling
+		view.IssueFilingOn = filing.IssueFilingAllowed
 		view.ScanProfile = meta.ScanProfile
-		view.DefaultReportOnly = !issueFiling
-		if !issueFiling || row.DryRunReportOnly {
+		view.DefaultReportOnly = filing.DryRunCheckboxDefault
+		if !filing.IssueFilingAllowed || row.DryRunReportOnly {
 			view.SkippedReportOnly = row.ReportOnlyFindings
 		}
-		view.CountsDiffer = !issueFiling || row.DryRunReportOnly || row.ReportOnlyFindings > 0 ||
+		view.CountsDiffer = !filing.IssueFilingAllowed || row.DryRunReportOnly || row.ReportOnlyFindings > 0 ||
 			row.ScanFindingsTotal != row.ForgeOpenIssues
 		out.Rows = append(out.Rows, view)
 	}
 	return out
 }
 
+func (h *Handler) buildFleetScanFormPlaceholder() ScanFormView {
+	effective, meta := store.ResolveEffectiveSettingsFull(h.global, store.RepoSettings{})
+	return h.buildScanFormView(store.Repository{}, effective, meta)
+}
+
 func issueFilingLabel(on bool, policy string) string {
 	if on {
 		return "on (" + policy + ")"
 	}
-	return "off (beta safe)"
+	return "off (policy)"
 }
 
-func reportOnlyLabel(issueFilingOn bool) string {
-	if issueFilingOn {
-		return "default ON for manual scans"
+func reportOnlyLabel(filing store.ScanFilingPolicy) string {
+	if !filing.IssueFilingAllowed {
+		return "enforced"
 	}
-	return "enforced"
+	if filing.DryRunCheckboxDefault {
+		return "optional (dry run default)"
+	}
+	return "off unless checked"
 }

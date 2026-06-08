@@ -59,8 +59,6 @@ func (h *Handler) RepoScanStart(c *gin.Context) {
 	}
 	settings, _ := h.store.GetRepoSettings(c.Request.Context(), id)
 	effective, _ := store.ResolveEffectiveSettingsFull(h.global, settings)
-	// Manual scans remain available when repo scanning is disabled; scheduler honors enabled.
-	_ = effective
 
 	ref := strings.TrimSpace(c.PostForm("ref"))
 	if ref == "" {
@@ -70,10 +68,15 @@ func (h *Handler) RepoScanStart(c *gin.Context) {
 		ref = "main"
 	}
 	profile := strings.TrimSpace(c.PostForm("scan_profile"))
-	reportOnly := c.PostForm("report_only_dry_run") == "on" || c.PostForm("report_only_dry_run") == "true"
-	if !store.ShouldCreateForgeIssues(effective) {
-		reportOnly = true
-	}
+	requestDryRun := c.PostForm("report_only_dry_run") == "on" || c.PostForm("report_only_dry_run") == "true"
+	filing := store.ResolveScanFilingPolicy(store.ScanFilingInput{
+		Kind:                  store.ScanKindManual,
+		Effective:             effective,
+		RequestDryRun:         requestDryRun,
+		BacklogControlEnabled: h.platform.BacklogControlEnabled,
+		MaxIssuesPerScan:      h.platform.MaxIssuesPerScan,
+	})
+	reportOnly := filing.ReportOnlyDryRun
 
 	parts := strings.SplitN(repo.FullName, "/", 2)
 	owner, name := parts[0], ""
@@ -99,6 +102,8 @@ func (h *Handler) RepoScanStart(c *gin.Context) {
 			"scan_id":             result.ScanID,
 			"trigger_type":        store.TriggerManual,
 			"report_only_dry_run": reportOnly,
+			"issue_filing":        filing.WillFileIssues,
+			"scan_policy_mode":    filing.Mode,
 			"scan_url":            scanURL,
 			"repo_url":            repoURL,
 		})

@@ -961,6 +961,10 @@ func initializeComponents() error {
 				RemediationPRBranchPrefix:    config.RemediationPRBranchPrefix,
 				LLMSanityGateEnabled:         config.LLMSanityGateEnabled,
 				BacklogControlEnabled:        config.DogfoodBacklogControlEnabled,
+				MaxIssuesPerScan:             config.Reporting.MaxIssuesPerScan,
+				ScanPolicyMode:               store.DeploymentScanMode(globalSnapshot),
+				NotificationsEnabled:         config.NotificationsEnabled,
+				RunnerDelegationEnabled:      config.RunnerDelegationEnabled,
 			})
 		}
 		if err != nil {
