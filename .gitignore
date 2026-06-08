@@ -123,6 +123,11 @@ docs/dogfood-reports/*
 !docs/dogfood-reports/graph-sandbox-baseline.md
 !docs/dogfood-reports/graph-rescan-verification-report.md
 !docs/dogfood-reports/preinstall-sandbox-verification-report.md
+!docs/dogfood-reports/preinstall-git-product-rescan-baseline.md
+!docs/dogfood-reports/live-all-in-one-git-redeploy-report.md
+!docs/dogfood-reports/live-preinstall-sandbox-audit-report.md
+!docs/dogfood-reports/product-clean-rescan-issue-sync-report.md
+!docs/dogfood-reports/remaining-active-present-triage.md
 
 # Beta readiness docs (sanitized, committable)
 !docs/beta/
