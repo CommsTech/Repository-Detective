@@ -264,7 +264,7 @@
         }
       }
 
-      window.__bugbotGraph = g;
+      window.__rdGraph = g;
     })
     .catch(function (e) {
       hideTruncationBanner();

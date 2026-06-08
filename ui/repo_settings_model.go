@@ -55,7 +55,7 @@ func buildRepoSettingsSections(effective store.EffectiveSettings, meta store.Eff
 			ID: "report-only", Title: "Report-only / safety",
 			Summary: "Report-only dry-runs persist findings without forge side effects.",
 			Fields: []RepoSettingField{
-				field("report_only_dry_run", "Report-only dry-run", "API flag per scan", "api", "Set report_only_dry_run:true on manual/API scans.", "Default ON for first tester scans.", "Safe beta default", "monitor", false, false, false, false),
+				field("report_only_dry_run", "Report-only dry-run", "API flag per scan", "api", "Set report_only_dry_run:true on manual/API scans.", "Explicit operator choice — unchecked when issue filing is enabled.", "Per-scan override", "monitor", false, false, false, false),
 				field("remediation_policy", "Remediation policy", effective.RemediationPolicy, sourceForOverride(meta.ProfileModified), "off/suggest — planning only; does not open PRs by itself.", "Keep off/suggest in beta.", "Safe beta default", "monitor", false, false, false, false),
 			},
 		},

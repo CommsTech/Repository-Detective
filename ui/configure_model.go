@@ -51,7 +51,7 @@ func buildConfigureSections(
 			DocPath: "docs/CONFIGURATION.md",
 			Settings: []ConfigureSetting{
 				boolSetting("database_enabled", f.DatabaseEnabled),
-				{Key: "database.path", DisplayValue: "data/bugbot.db (default)", Source: "config", Hint: "Set database_path in config or DATABASE_PATH env"},
+				{Key: "database.path", DisplayValue: "data/repository-detective.db (legacy: bugbot.db)", Source: "config", Hint: "Set database_path in config or DATABASE_PATH env"},
 			},
 		},
 		{
@@ -174,9 +174,24 @@ func buildConfigureSections(
 			},
 		},
 		{
+			ID: "issue-filing", Title: "Issue filing policy",
+			Status: issueFilingConfigureStatus(global),
+			StatusClass: issueFilingConfigureClass(global),
+			Summary: "Connected repo scans file or update Gitea issues when policy allows. Dry run is an explicit per-scan choice.",
+			SafetyNote: "Private beta package defaults to report-only (auto_create_issues: false). Production/homelab uses auto_create_issues: true.",
+			BetaDefault: "report-only until auto_create_issues enabled",
+			DocPath: "docs/SCAN_POLICY.md",
+			Settings: []ConfigureSetting{
+				{Key: "auto_create_issues", DisplayValue: issuePolicyDisplay(global), Source: "config", Hint: "Maps to global issue_policy all/off"},
+				{Key: "scan_policy_mode", DisplayValue: store.DeploymentScanMode(global), Source: "derived"},
+				{Key: "reporting.max_issues_per_scan", DisplayValue: strconv.Itoa(platform.MaxIssuesPerScan), Source: "config"},
+				boolSetting("dogfood_backlog_control_enabled", platform.BacklogControlEnabled),
+			},
+		},
+		{
 			ID: "report-only-dry-run", Title: "Report-only dry run",
 			Status: "available", StatusClass: "completed",
-			Summary: "API flag report_only_dry_run skips issue filing — safe for non-product repos.",
+			Summary: "Explicit report_only_dry_run skips issue filing for one scan — findings still persist.",
 			SafetyNote: "Required for calibration dry-runs; do not enable bulk issue filing without approval.",
 			DocPath: "docs/dogfood-reports/non-product-dry-run-next-gate.md",
 			Settings: []ConfigureSetting{
@@ -263,6 +278,27 @@ func preinstallConfigureClass(on bool, p PlatformContext) string {
 		return "medium"
 	}
 	return statusClass(on)
+}
+
+func issuePolicyDisplay(global store.GlobalSettingsSnapshot) string {
+	if store.ShouldCreateForgeIssues(store.EffectiveFromGlobalSnapshot(global)) {
+		return "true (issues enabled)"
+	}
+	return "false (report-only default)"
+}
+
+func issueFilingConfigureStatus(global store.GlobalSettingsSnapshot) string {
+	if store.ShouldCreateForgeIssues(store.EffectiveFromGlobalSnapshot(global)) {
+		return "enabled"
+	}
+	return "report-only default"
+}
+
+func issueFilingConfigureClass(global store.GlobalSettingsSnapshot) string {
+	if store.ShouldCreateForgeIssues(store.EffectiveFromGlobalSnapshot(global)) {
+		return "completed"
+	}
+	return "pending"
 }
 
 func remediationPRConfigureStatus(prOn, plannerOn bool, p PlatformContext) string {
