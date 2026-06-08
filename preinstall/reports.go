@@ -111,6 +111,14 @@ func installRiskSummaryReport(cfg Config, audit store.AuditRequest, findings []s
 		}
 		b.WriteString("\n")
 	}
+	if review := needsReviewFindings(findings, 5); len(review) > 0 {
+		fmt.Fprintf(&b, "## Needs review (not install blockers)\n\n")
+		fmt.Fprintf(&b, "_Low-confidence or informational signals — verify before treating as vulnerabilities._\n\n")
+		for _, f := range review {
+			fmt.Fprintf(&b, "- **%s** (%s, confidence %.2f): %s — `%s`\n", f.Severity, f.Source, f.Confidence, f.Title, f.FilePath)
+		}
+		b.WriteString("\n")
+	}
 	if graphSummary := graphSummaryFromAudit(audit); graphSummary != "" {
 		fmt.Fprintf(&b, "## Repository map summary\n\n%s\n\n", graphSummary)
 	}
@@ -246,6 +254,25 @@ func qualityFindings(findings []store.AuditFinding, limit int) []store.AuditFind
 			out = append(out, f)
 		default:
 			if f.Source == "tech_debt" || f.Source == "reliability" || f.Source == "maintainability" || f.Source == "test_gap" || f.Source == "performance" || f.Source == "graph" {
+				out = append(out, f)
+			}
+		}
+	}
+	if len(out) > limit {
+		out = out[:limit]
+	}
+	return out
+}
+
+func needsReviewFindings(findings []store.AuditFinding, limit int) []store.AuditFinding {
+	var out []store.AuditFinding
+	for _, f := range findings {
+		if f.Confidence > 0 && f.Confidence < 0.6 {
+			out = append(out, f)
+			continue
+		}
+		if strings.EqualFold(f.Severity, "info") || strings.EqualFold(f.Severity, "low") {
+			if f.Source == "graph" || strings.Contains(strings.ToLower(f.Title), "review only") {
 				out = append(out, f)
 			}
 		}

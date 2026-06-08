@@ -49,7 +49,8 @@ func min(a, b float64) float64 {
 func ClassifyPath(path string) ReachabilityInput {
 	p := strings.ToLower(path)
 	in := ReachabilityInput{}
-	if strings.Contains(p, "/test") || strings.Contains(p, "_test.") || strings.HasSuffix(p, "_test.go") {
+	if strings.Contains(p, "/test") || strings.Contains(p, "_test.") || strings.HasSuffix(p, "_test.go") ||
+		strings.Contains(p, "/benchmark/fixture/") || strings.HasSuffix(p, ".go.src") {
 		in.TestOnlyPath = true
 	}
 	if strings.Contains(p, "/docs/") || strings.Contains(p, "readme") {

@@ -176,6 +176,8 @@ func (r *Runner) runAudit(auditID string, parsed ParsedRepoURL, depth string) {
 		findings = findings[:r.cfg.MaxFindings]
 	}
 
+	findings = filterPreinstallFindings(findings)
+
 	risk := ComputeRiskScore(findings, scannerResults)
 	finished := time.Now().UTC()
 
