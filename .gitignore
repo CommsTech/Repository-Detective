@@ -114,6 +114,12 @@ docs/dogfood-reports/*
 !docs/dogfood-reports/current-product-issue-regression-baseline.md
 !docs/dogfood-reports/product-issue-burndown-after-filing-restore.md
 !docs/dogfood-reports/issue-filing-policy-e2e-report.md
+!docs/dogfood-reports/docs-wiki-history-scan-baseline.md
+!docs/dogfood-reports/gitea-wiki-publish-report.md
+!docs/dogfood-reports/documentation-upgrade-report.md
+!docs/dogfood-reports/product-rescan-and-issue-sync-report.md
+!docs/dogfood-reports/docs-and-wiki-verification-report.md
+!docs/dogfood-reports/live-docs-history-scan-verification.md
 
 # Beta readiness docs (sanitized, committable)
 !docs/beta/
