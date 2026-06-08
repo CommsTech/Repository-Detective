@@ -3,39 +3,35 @@
 {{template "nav" .}}
 <p class="rd-muted">Repository Detective — Inspect. Analyze. Improve. Interactive repository map with findings overlay.</p>
 <div class="rd-card">
-<div id="graph-controls" role="toolbar" aria-label="Graph display options">
+<div id="graph-state-panel" role="status" aria-live="polite"></div>
+<div id="graph-controls" role="toolbar" aria-label="Graph display options" style="display:none">
 <label for="layout-mode">Layout <select id="layout-mode"><option value="cose">Architecture clusters</option><option value="breadthfirst">Directory tree</option><option value="circle">Dependency ring</option></select></label>
 <label for="filter-type">Node type <select id="filter-type"><option value="">All</option><option value="file">Files</option><option value="package">Packages</option><option value="function">Functions</option><option value="finding">Findings</option><option value="directory">Directories</option></select></label>
 <label for="filter-disconnected"><input type="checkbox" id="filter-disconnected"> Disconnected only</label>
 <label for="filter-findings-off"><input type="checkbox" id="filter-findings-off"> Hide findings overlay</label>
 <label for="filter-entrypoints"><input type="checkbox" id="filter-entrypoints"> Highlight entrypoints</label>
-{{if .Data.ExportURL}}<a id="export-graph" href="{{.Data.ExportURL}}" class="rd-btn rd-btn-secondary">Download JSON</a>{{end}}
-<button type="button" id="copy-graph-summary">Copy graph summary</button>
+<a id="export-graph" href="#" class="rd-btn rd-btn-secondary" style="display:none">Download JSON</a>
+<button type="button" id="copy-graph-summary" style="display:none">Copy graph summary</button>
+<button type="button" id="graph-refresh" class="rd-btn rd-btn-ghost" style="display:none">Refresh</button>
 </div>
-<div id="graph-legend" class="rd-muted" aria-label="Graph legend">
+<div id="graph-legend" class="rd-muted" aria-label="Graph legend" style="display:none">
 <span class="legend-item"><span class="dot type-file" aria-hidden="true"></span> File</span>
 <span class="legend-item"><span class="dot type-package" aria-hidden="true"></span> Package</span>
 <span class="legend-item"><span class="dot type-function" aria-hidden="true"></span> Function</span>
 <span class="legend-item"><span class="dot type-finding" aria-hidden="true"></span> Finding</span>
 <span class="legend-item"><span class="dot entry" aria-hidden="true"></span> Entrypoint</span>
 <span class="legend-item"><span class="dot disc" aria-hidden="true"></span> Disconnected</span>
-<span class="legend-item"><span class="dot sev-critical" aria-hidden="true"></span> Critical</span>
-<span class="legend-item"><span class="dot sev-high" aria-hidden="true"></span> High</span>
-<span class="legend-item"><span class="dot sev-medium" aria-hidden="true"></span> Medium</span>
-<span class="legend-item"><span class="dot sev-low" aria-hidden="true"></span> Low/Info</span>
 </div>
-<div id="graph-truncated" class="rd-alert" style="display:none" role="status">Graph was truncated due to node/edge limits. Increase per-repo or global graph limits and rescan. <a class="rd-link" href="{{.Data.GraphSettingsURL}}">Graph settings</a></div>
-<div id="graph-missing" class="rd-alert" {{if .Data.GraphAvailable}}style="display:none"{{end}} role="status">No graph was stored for this scan. Run a new scan with code graph enabled (analysis depth ≥ 2).</div>
-<p id="graph-summary" class="rd-graph-summary rd-muted" aria-live="polite">Loading graph summary…</p>
+<p id="graph-summary" class="rd-graph-summary rd-muted" aria-live="polite"></p>
 <div id="cy" class="rd-graph-canvas" role="img" aria-label="Repository code graph visualization"></div>
-<p id="graph-status" class="rd-muted" aria-live="polite">Loading graph…</p>
-<div id="node-detail" class="rd-muted rd-card" style="margin-top:0.5rem;padding:0.75rem;min-height:2.5rem" role="region" aria-label="Selected node details">Select a node for details.</div>
+<div id="node-detail" class="rd-muted rd-card" style="margin-top:0.5rem;padding:0.75rem;min-height:2.5rem;display:none" role="region" aria-label="Selected node details">Select a node for details.</div>
 </div>
+<script type="application/json" id="graph-initial-state">{{jsonScript .Data.GraphStateJSON}}</script>
 <div id="graph-app"
-  data-graph-url="{{.Data.GraphURL}}"
+  data-state-url="{{.Data.GraphStateURL}}"
   data-export-url="{{.Data.ExportURL}}"
-  data-graph-available="{{if .Data.GraphAvailable}}true{{else}}false{{end}}"
-  data-graph-truncated="{{if .Data.GraphTruncated}}true{{else}}false{{end}}"
+  data-settings-url="{{.Data.GraphSettingsURL}}"
+  data-scan-url="{{.Data.ScanNowURL}}"
   data-api-key="{{.APIKey}}"></div>
 <script src="{{.BasePath}}/static/cytoscape.min.js"></script>
 <script src="{{.BasePath}}/static/graph.js"></script>

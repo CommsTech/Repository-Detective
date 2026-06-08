@@ -394,11 +394,11 @@ func TestGraphPageMissingGraphNoTruncationBanner(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Fatalf("graph page status %d", w.Code)
 	}
-	if !strings.Contains(body, `data-graph-available="false"`) {
-		t.Fatal("expected graph unavailable marker")
+	if !strings.Contains(body, `data-state-url=`) {
+		t.Fatal("expected graph state URL")
 	}
-	if !strings.Contains(body, "No graph was stored for this scan") {
-		t.Fatal("expected missing graph message")
+	if !strings.Contains(body, `id="graph-initial-state"`) || !strings.Contains(body, `"state":"missing"`) {
+		t.Fatal("expected missing graph state in initial payload")
 	}
 	if strings.Contains(body, `id="graph-truncated"`) && strings.Contains(body, "Graph was truncated") {
 		// truncation banner exists in template but must stay hidden for missing graphs (handled in JS + server flag)

@@ -206,6 +206,7 @@ func (h *Handler) RegisterRoutes(g *gin.RouterGroup) {
 	g.GET("/health", h.SystemHealth)
 	g.GET("/scans/:scan_id", h.ScanDetail)
 	g.GET("/scans/:scan_id/graph", h.ScanGraph)
+	h.registerGraphRoutes(g)
 	g.GET("/findings", h.Findings)
 	g.GET("/findings/:id", h.FindingDetail)
 	g.POST("/findings/:id/remediation/generate", h.GenerateFindingRemediation)
@@ -886,22 +887,8 @@ func (h *Handler) ScanGraph(c *gin.Context) {
 		return
 	}
 	repo, _ := h.store.GetRepository(c.Request.Context(), scan.RepositoryID)
-	graphAvailable := false
-	graphTruncated := scanSummaryGraphTruncated(scan.SummaryJSON)
-	if _, err := h.store.GetScanGraph(c.Request.Context(), scanID); err == nil {
-		graphAvailable = true
-	}
-	var graphURL, exportURL string
-	if graphAvailable {
-		graphURL, exportURL = h.graphAPIURLs(c, scanID, 0)
-	}
-	settingsURL := fmt.Sprintf("%s/repos/%d/settings", h.basePath, scan.RepositoryID)
-	h.render(c, "graph.html", "Repository Map — Scan", map[string]any{
-		"Scan": scan, "Repo": repo, "GraphScanID": scanID,
-		"GraphURL": graphURL, "ExportURL": exportURL,
-		"GraphAvailable": graphAvailable, "GraphTruncated": graphTruncated,
-		"GraphSettingsURL": settingsURL,
-	})
+	status, _ := h.resolveGraphStatusForScan(c, scanID)
+	h.renderGraphPage(c, scan.RepositoryID, scanID, status, repo, scan)
 }
 
 func (h *Handler) RepoGraph(c *gin.Context) {
@@ -917,24 +904,48 @@ func (h *Handler) RepoGraph(c *gin.Context) {
 		c.String(http.StatusNotFound, "repository not found")
 		return
 	}
-	graphAvailable := false
-	graphTruncated := false
-	if record, err := h.store.GetLatestScanGraphForRepo(c.Request.Context(), id); err == nil {
-		graphAvailable = true
-		if scan, err := h.store.GetScan(c.Request.Context(), record.ScanID); err == nil {
-			graphTruncated = scanSummaryGraphTruncated(scan.SummaryJSON)
+	status, _ := h.resolveGraphStatusForRepo(c, id)
+	h.renderGraphPage(c, id, status.ScanID, status, repo, store.Scan{})
+}
+
+func (h *Handler) renderGraphPage(c *gin.Context, repoID int64, scanID string, status store.GraphStatus, repo store.Repository, scan store.Scan) {
+	settingsURL := fmt.Sprintf("%s/repos/%d/settings", h.basePath, repoID)
+	scanURL := ""
+	if repoID > 0 {
+		scanURL = fmt.Sprintf("%s/repos/%d/scan%s", h.basePath, repoID, apiKeyQueryString(h.apiKeyFromContext(c)))
+	}
+	stateURL := ""
+	exportURL := ""
+	if scanID != "" {
+		stateURL = fmt.Sprintf("%s/scans/%s/graph/data%s", h.basePath, scanID, apiKeyQueryString(h.apiKeyFromContext(c)))
+		if status.State == store.GraphStateAvailable || status.State == store.GraphStateTruncated {
+			exportURL = fmt.Sprintf("/api/v1/scans/%s/graph/export%s", scanID, apiKeyQueryString(h.apiKeyFromContext(c)))
+		}
+	} else if repoID > 0 {
+		stateURL = fmt.Sprintf("%s/repos/%d/graph/data%s", h.basePath, repoID, apiKeyQueryString(h.apiKeyFromContext(c)))
+		if status.State == store.GraphStateAvailable || status.State == store.GraphStateTruncated {
+			exportURL = fmt.Sprintf("/api/v1/repos/%d/graph/export%s", repoID, apiKeyQueryString(h.apiKeyFromContext(c)))
 		}
 	}
-	var graphURL, exportURL string
-	if graphAvailable {
-		graphURL, exportURL = h.graphAPIURLs(c, "", id)
-	}
-	settingsURL := fmt.Sprintf("%s/repos/%d/settings", h.basePath, id)
-	h.render(c, "graph.html", "Repository Map — "+repo.FullName, map[string]any{
-		"Repo": repo, "GraphRepoID": id,
-		"GraphURL": graphURL, "ExportURL": exportURL,
-		"GraphAvailable": graphAvailable, "GraphTruncated": graphTruncated,
+	displayStatus := status
+	displayStatus.Graph = nil
+	h.render(c, "graph.html", "Repository Map", map[string]any{
+		"Repo":             repo,
+		"Scan":             scan,
+		"GraphScanID":      scanID,
+		"GraphRepoID":      repoID,
+		"GraphState":       status.State,
+		"GraphStateJSON":   mustJSON(displayStatus),
+		"GraphStateURL":    stateURL,
+		"ExportURL":        exportURL,
 		"GraphSettingsURL": settingsURL,
+		"ScanNowURL":       scanURL,
+		"NodeCount":        status.NodeCount,
+		"EdgeCount":        status.EdgeCount,
+		"FailureReason":    status.FailureReason,
+		"NextAction":       status.NextAction,
+		"GraphEnabled":     status.GraphEnabled,
+		"AnalysisDepth":    status.AnalysisDepth,
 	})
 }
 
