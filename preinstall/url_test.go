@@ -46,6 +46,23 @@ func TestValidateRepoURLAcceptsHTTPSGitHub(t *testing.T) {
 	if parsed.Normalized != "https://github.com/owner/repo" {
 		t.Fatalf("normalized: %s", parsed.Normalized)
 	}
+	if parsed.CloneURL != "https://github.com/owner/repo.git" {
+		t.Fatalf("clone url: %s", parsed.CloneURL)
+	}
+}
+
+func TestValidateRepoURLWithGitSuffixDoesNotDoubleDotGit(t *testing.T) {
+	defer mockPublicDNS()()
+	parsed, err := preinstall.ValidateRepoURL("https://github.com/octocat/Hello-World.git", false)
+	if err != nil {
+		t.Fatalf("valid github url with .git suffix: %v", err)
+	}
+	if parsed.Name != "Hello-World" {
+		t.Fatalf("name should strip .git: %q", parsed.Name)
+	}
+	if parsed.CloneURL != "https://github.com/octocat/Hello-World.git" {
+		t.Fatalf("clone url must not double .git: %s", parsed.CloneURL)
+	}
 }
 
 func TestCloneEnvDoesNotExposeSecrets(t *testing.T) {

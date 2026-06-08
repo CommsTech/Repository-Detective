@@ -88,6 +88,8 @@ func ValidateRepoURL(raw string, allowPrivateNetworks bool) (ParsedRepoURL, erro
 	}
 	owner := strings.Join(segments[:len(segments)-1], "/")
 	name := segments[len(segments)-1]
+	name = strings.TrimSuffix(name, ".git")
+	name = strings.TrimSuffix(name, ".GIT")
 	if owner == "" || name == "" {
 		return ParsedRepoURL{}, fmt.Errorf("invalid repository path")
 	}
@@ -96,7 +98,10 @@ func ValidateRepoURL(raw string, allowPrivateNetworks bool) (ParsedRepoURL, erro
 	}
 
 	normalized := fmt.Sprintf("https://%s/%s/%s", host, owner, name)
-	cloneURL := normalized + ".git"
+	cloneURL := normalized
+	if !strings.HasSuffix(strings.ToLower(cloneURL), ".git") {
+		cloneURL += ".git"
+	}
 
 	return ParsedRepoURL{
 		Original:   raw,
