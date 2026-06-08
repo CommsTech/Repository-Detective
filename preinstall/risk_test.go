@@ -7,6 +7,20 @@ import (
 	"git.commsnet.org/commstech/bugbot/store"
 )
 
+func TestComputeRiskScoreLowConfidenceGraphNotBlocker(t *testing.T) {
+	findings := []store.AuditFinding{
+		{Severity: "high", Source: "graph", Category: "architecture", Confidence: 0.4},
+		{Severity: "high", Source: "graph", Category: "architecture", Confidence: 0.35},
+	}
+	out := preinstall.ComputeRiskScore(findings, nil)
+	if out.Recommendation == store.AuditRecommendationDoNotInstall {
+		t.Fatalf("low-confidence graph should not block install, got %s score=%d", out.Recommendation, out.Score)
+	}
+	if out.Score >= 20 {
+		t.Fatalf("low-confidence graph capped, got score %d", out.Score)
+	}
+}
+
 func TestComputeRiskScoreSafeWhenNoFindings(t *testing.T) {
 	out := preinstall.ComputeRiskScore(nil, nil)
 	if out.Score != 0 || out.Recommendation != store.AuditRecommendationSafe {

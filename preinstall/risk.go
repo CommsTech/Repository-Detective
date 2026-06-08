@@ -22,6 +22,14 @@ func ComputeRiskScore(findings []store.AuditFinding, scannerResults []store.Audi
 
 	for _, f := range findings {
 		points := severityPoints(f.Severity, f.Source, f.Category)
+		if f.Confidence > 0 && f.Confidence < 0.6 {
+			if isHealthQualityFinding(f.Source, f.Category) || strings.EqualFold(f.Source, "graph") {
+				points = 1
+				breakdown["needs_review"] = breakdown["needs_review"] + points
+				score += points
+				continue
+			}
+		}
 		if f.Source == "gitleaks" || f.Category == "secret" || strings.Contains(strings.ToLower(f.Title), "secret") {
 			secretSeen = true
 			if points < 20 {
