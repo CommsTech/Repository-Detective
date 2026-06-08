@@ -120,6 +120,9 @@ docs/dogfood-reports/*
 !docs/dogfood-reports/product-rescan-and-issue-sync-report.md
 !docs/dogfood-reports/docs-and-wiki-verification-report.md
 !docs/dogfood-reports/live-docs-history-scan-verification.md
+!docs/dogfood-reports/graph-sandbox-baseline.md
+!docs/dogfood-reports/graph-rescan-verification-report.md
+!docs/dogfood-reports/preinstall-sandbox-verification-report.md
 
 # Beta readiness docs (sanitized, committable)
 !docs/beta/
