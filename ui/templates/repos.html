@@ -7,108 +7,79 @@
 {{if .Notice}}<div class="rd-alert info">{{.Notice}}</div>{{end}}
 
 <div class="rd-card rd-repos-control">
-  <div class="rd-card-head">
-    <div>
-      <h2>Repository fleet control</h2>
-      <p class="rd-muted rd-repos-control-lead">Enable scanning, trigger report-only manual scans, and review issue/finding sync from one page.</p>
+  <div class="rd-card-head rd-fleet-head-bar">
+    <div class="rd-fleet-title-block">
+      <h2>Repository fleet</h2>
+      <p class="rd-muted rd-fleet-subtitle">Scan, schedule, and reconcile repositories from one console.</p>
     </div>
-    <span class="rd-chip">{{len .Data.ControlPage.Rows}} tracked</span>
+    <span class="rd-chip rd-fleet-count">{{len .Data.ControlPage.Rows}} tracked</span>
   </div>
 
-  <p class="rd-muted rd-recon-explainer" title="Why counts differ">
-    Scan findings and forge issues can differ. Report-only scans persist findings without filing Gitea issues. Open Gitea issues are mapped by fingerprint when available.
+  <p class="rd-fleet-help rd-muted" title="Scan findings and forge issues can differ. Report-only scans persist findings without filing Gitea issues. Open Gitea issues are mapped by fingerprint when available.">
+    Findings and forge issues may differ in report-only mode.
   </p>
 
-  <div class="rd-toolbar">
+  <div class="rd-toolbar rd-fleet-toolbar">
     <div class="rd-search">
-      <label for="rd-table-search" class="rd-muted" style="margin:0;font-weight:500">Search repositories</label>
-      <input type="search" id="rd-table-search" placeholder="Filter by name, forge, status…" aria-label="Search repositories">
+      <label for="rd-table-search" class="rd-muted">Search</label>
+      <input type="search" id="rd-table-search" placeholder="Name, forge, status…" aria-label="Search repositories">
     </div>
   </div>
 
-  <div class="rd-table-wrap">
-  <table class="rd-table rd-table-control" id="rd-searchable-table">
-    <thead>
-      <tr>
-        <th scope="col">Repository</th>
-        <th scope="col">Enabled</th>
-        <th scope="col">Scheduling</th>
-        <th scope="col">Latest scan</th>
-        <th scope="col">Status</th>
-        <th scope="col">Findings</th>
-        <th scope="col">Forge issues</th>
-        <th scope="col">Issue sync</th>
-        <th scope="col">Issue filing</th>
-        <th scope="col">Profile</th>
-        <th scope="col">Actions</th>
-      </tr>
-    </thead>
-    <tbody>
+  <div class="rd-fleet-scroll" id="rd-searchable-table">
+    <div class="rd-fleet-grid rd-fleet-grid-head" aria-hidden="true">
+      <div>Repository</div>
+      <div>State</div>
+      <div>Latest scan</div>
+      <div>Findings</div>
+      <div>Forge issues</div>
+      <div>Actions</div>
+    </div>
+
     {{range .Data.ControlPage.Rows}}
-    <tr data-search="{{.FullName}} {{.ForgeType}} {{.LastScanStatus}} {{.IssueSyncStatus}} {{.ScanProfile}}">
-      <td>
-        <a class="rd-link" href="{{$.BasePath}}/repos/{{.ID}}{{apiKeyQS $.APIKey}}"><strong>{{.FullName}}</strong></a>
-        <div class="rd-muted rd-repo-id-inline">ID {{.ID}} · {{.ForgeType}}</div>
+    <article class="rd-fleet-row" data-search="{{.FullName}} {{.ForgeType}} {{.LastScanStatus}} {{.IssueSyncStatus}} {{.ScanProfile}}">
+      <div class="rd-fleet-cell rd-fleet-repo">
+        <a class="rd-link rd-fleet-repo-name" href="{{$.BasePath}}/repos/{{.ID}}{{apiKeyQS $.APIKey}}">{{.FullName}}</a>
+        <span class="rd-fleet-repo-meta">ID {{.ID}} · {{.ForgeType}}</span>
         {{if .CountsDiffer}}<span class="rd-badge monitor rd-badge-xs" title="Finding vs issue counts may differ — expected in report-only mode">sync note</span>{{end}}
-      </td>
-      <td>
-        {{if .ScanEnabled}}<span class="rd-badge enforce">on</span>{{else}}<span class="rd-badge skipped">off</span>{{end}}
-      </td>
-      <td>{{if .ScheduleEnabled}}<span class="rd-badge info">on</span>{{else}}<span class="rd-muted">off</span>{{end}}</td>
-      <td class="rd-muted">
-        {{if .LastScanAt}}{{.LastScanAt.Format "2006-01-02 15:04"}}{{else}}—{{end}}
-        {{if .LastScanID}}<br><a class="rd-link rd-link-sm" href="{{$.BasePath}}/scans/{{.LastScanID}}{{apiKeyQS $.APIKey}}">{{shortID .LastScanID 8}}</a>{{end}}
-      </td>
-      <td>{{if .LastScanStatus}}<span class="rd-badge {{scanBadge .LastScanStatus}}">{{.LastScanStatus}}</span>{{else}}<span class="rd-muted">never</span>{{end}}</td>
-      <td>
-        <span title="Active-present in latest scan">{{.ActivePresentOpen}}</span>
-        <span class="rd-muted"> / </span>
-        <span title="Scan findings total">{{.ScanFindingsTotal}}</span>
-        {{if gt .ReportOnlyFindings 0}}<br><span class="rd-muted rd-badge-xs">{{.ReportOnlyFindings}} no issue</span>{{end}}
-      </td>
-      <td>
-        <strong>{{.ForgeOpenIssues}}</strong> mapped
-        {{if gt .UnmappedOpenIssues 0}}<br><span class="rd-muted">{{.UnmappedOpenIssues}} unmapped</span>{{end}}
-      </td>
-      <td><code>{{if .IssueSyncStatus}}{{.IssueSyncStatus}}{{else}}—{{end}}</code></td>
-      <td>
-        <span class="rd-badge {{if .IssueFilingOn}}warn{{else}}monitor{{end}}">{{.IssueFilingLabel}}</span>
-        <div class="rd-muted rd-badge-xs">report-only: {{.ReportOnlyLabel}}</div>
-      </td>
-      <td><code>{{.ScanProfile}}</code></td>
-      <td class="rd-actions-cell">
-        <div class="rd-actions rd-actions-compact">
-          {{if $.Data.ControlPage.ScanTriggerEnabled}}
-          <button type="button" class="rd-btn rd-btn-sm rd-btn-primary" data-scan-open
-            data-repo-id="{{.ID}}"
-            data-repo-name="{{.FullName}}"
-            data-default-ref="{{.DefaultRef}}"
-            data-scan-profile="{{.ScanProfile}}"
-            data-issue-filing="{{if .IssueFilingOn}}true{{else}}false{{end}}"
-            data-report-only="{{if .DefaultReportOnly}}true{{else}}false{{end}}">Scan now</button>
-          {{end}}
-          {{if .ScanEnabled}}
-          <form method="post" action="{{$.BasePath}}/repos/{{.ID}}/disable-scanning{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}" class="rd-inline-form" data-confirm="Disable scanning for {{.FullName}}? Scheduled scans stop. Manual scans still require confirmation. History and findings are kept.">
-            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
-            <button type="submit" class="rd-btn rd-btn-sm rd-btn-warn">Disable</button>
-          </form>
-          {{else}}
-          <form method="post" action="{{$.BasePath}}/repos/{{.ID}}/enable-scanning{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}" class="rd-inline-form" data-confirm="Enable scanning for {{.FullName}}?">
-            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
-            <button type="submit" class="rd-btn rd-btn-sm rd-btn-secondary">Enable</button>
-          </form>
-          {{end}}
-          <a class="rd-btn rd-btn-sm rd-btn-ghost" href="{{$.BasePath}}/repos/{{.ID}}{{apiKeyQS $.APIKey}}">Details</a>
-          <a class="rd-btn rd-btn-sm rd-btn-ghost" href="{{$.BasePath}}/repos/{{.ID}}/settings{{apiKeyQS $.APIKey}}">Settings</a>
-          <a class="rd-btn rd-btn-sm rd-btn-ghost" href="{{$.BasePath}}/repos/{{.ID}}/report{{apiKeyQS $.APIKey}}">Report</a>
-        </div>
-      </td>
-    </tr>
+      </div>
+
+      <div class="rd-fleet-cell rd-fleet-state">
+        <div class="rd-fleet-kv"><span class="rd-fleet-k">Scan</span>{{if .ScanEnabled}}<span class="rd-badge enforce rd-badge-xs">on</span>{{else}}<span class="rd-badge skipped rd-badge-xs">off</span>{{end}}</div>
+        <div class="rd-fleet-kv"><span class="rd-fleet-k">Sched</span>{{if .ScheduleEnabled}}<span class="rd-badge info rd-badge-xs">on</span>{{else}}<span class="rd-muted">off</span>{{end}}</div>
+        <div class="rd-fleet-kv"><span class="rd-fleet-k">Filing</span><span class="rd-badge {{if .IssueFilingOn}}warn{{else}}monitor{{end}} rd-badge-xs">{{if .IssueFilingOn}}on{{else}}off{{end}}</span></div>
+        <div class="rd-fleet-kv"><span class="rd-fleet-k">Profile</span><code class="rd-fleet-code">{{.ScanProfile}}</code></div>
+        <div class="rd-fleet-kv"><span class="rd-fleet-k">Report</span><span class="rd-muted rd-badge-xs">{{.ReportOnlyLabel}}</span></div>
+      </div>
+
+      <div class="rd-fleet-cell rd-fleet-scan">
+        {{if .LastScanStatus}}<span class="rd-badge {{scanBadge .LastScanStatus}} rd-badge-xs">{{.LastScanStatus}}</span>{{else}}<span class="rd-muted">never</span>{{end}}
+        <span class="rd-fleet-scan-time">{{if .LastScanAt}}{{.LastScanAt.Format "2006-01-02 15:04"}}{{else}}—{{end}}</span>
+        {{if .LastScanID}}<a class="rd-link rd-link-sm" href="{{$.BasePath}}/scans/{{.LastScanID}}{{apiKeyQS $.APIKey}}">{{shortID .LastScanID 8}}</a>{{end}}
+        <span class="rd-fleet-sync" title="Issue sync status"><code>{{if .IssueSyncStatus}}{{.IssueSyncStatus}}{{else}}—{{end}}</code></span>
+      </div>
+
+      <div class="rd-fleet-cell rd-fleet-findings" title="Active-present / scan findings total">
+        <strong>{{.ActivePresentOpen}}</strong><span class="rd-muted"> / {{.ScanFindingsTotal}}</span>
+        {{if gt .ReportOnlyFindings 0}}<span class="rd-fleet-subcount">{{.ReportOnlyFindings}} no issue</span>{{end}}
+      </div>
+
+      <div class="rd-fleet-cell rd-fleet-forge">
+        <strong>{{.ForgeOpenIssues}}</strong> <span class="rd-muted">mapped</span>
+        {{if gt .UnmappedOpenIssues 0}}<span class="rd-fleet-subcount">{{.UnmappedOpenIssues}} unmapped</span>{{end}}
+      </div>
+
+      <div class="rd-fleet-cell rd-fleet-actions-cell">
+        {{template "repos_fleet_actions.html" (dict "Row" . "Page" $)}}
+      </div>
+    </article>
     {{else}}
-    <tr><td colspan="11"><div class="rd-empty"><div class="rd-empty-icon">▣</div><h3>No repositories yet</h3><p class="rd-muted">Repositories appear after the first webhook or manual scan.</p></div></td></tr>
+    <div class="rd-empty rd-fleet-empty">
+      <div class="rd-empty-icon">▣</div>
+      <h3>No repositories yet</h3>
+      <p class="rd-muted">Repositories appear after the first webhook or manual scan.</p>
+    </div>
     {{end}}
-    </tbody>
-  </table>
   </div>
 </div>
 

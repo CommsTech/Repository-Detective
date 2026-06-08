@@ -790,7 +790,7 @@ func TestReposControlPage(t *testing.T) {
 		t.Fatalf("status %d", w.Code)
 	}
 	body := w.Body.String()
-	if !strings.Contains(body, "Repository fleet control") {
+	if !strings.Contains(body, "Repository fleet") {
 		t.Fatal("expected fleet control heading")
 	}
 	if !strings.Contains(body, "data-scan-open") {
@@ -799,11 +799,20 @@ func TestReposControlPage(t *testing.T) {
 	if !strings.Contains(body, "disable-scanning") && !strings.Contains(body, "enable-scanning") {
 		t.Fatal("expected enable/disable controls")
 	}
-	if !strings.Contains(body, "Scan findings and forge issues can differ") {
-		t.Fatal("expected reconciliation explainer")
+	if !strings.Contains(body, "rd-fleet-row") {
+		t.Fatal("expected fleet grid rows")
 	}
-	if !strings.Contains(body, repo.FullName) {
-		t.Fatal("expected repo in list")
+	if !strings.Contains(body, "rd-action-menu") {
+		t.Fatal("expected action overflow menu")
+	}
+	if !strings.Contains(body, "Findings and forge issues may differ") {
+		t.Fatal("expected reconciliation hint")
+	}
+	if !strings.Contains(body, "/repos/"+strconv.FormatInt(repo.ID, 10)+"/settings") {
+		t.Fatal("expected settings link")
+	}
+	if !strings.Contains(body, "report-only") && !strings.Contains(body, "Report") {
+		t.Fatal("expected report-only or report label")
 	}
 }
 

@@ -13,9 +13,9 @@
 
   function initTableSearch() {
     var input = document.getElementById("rd-table-search");
-    var table = document.getElementById("rd-searchable-table");
-    if (!input || !table) return;
-    var rows = table.querySelectorAll("tbody tr[data-search]");
+    var container = document.getElementById("rd-searchable-table");
+    if (!input || !container) return;
+    var rows = container.querySelectorAll(".rd-fleet-row[data-search], tbody tr[data-search]");
     var filter = debounce(function () {
       var q = input.value.toLowerCase().trim();
       rows.forEach(function (row) {
@@ -24,6 +24,53 @@
       });
     }, 180);
     input.addEventListener("input", filter);
+  }
+
+  function initActionMenus() {
+    document.querySelectorAll(".rd-action-menu").forEach(function (menu) {
+      var trigger = menu.querySelector(".rd-menu-trigger");
+      var panel = menu.querySelector(".rd-action-menu-panel");
+      if (!trigger || !panel) return;
+
+      trigger.addEventListener("click", function (e) {
+        e.stopPropagation();
+        var open = panel.hidden;
+        document.querySelectorAll(".rd-action-menu-panel").forEach(function (p) {
+          p.hidden = true;
+        });
+        document.querySelectorAll(".rd-menu-trigger").forEach(function (t) {
+          t.setAttribute("aria-expanded", "false");
+        });
+        if (open) {
+          panel.hidden = false;
+          trigger.setAttribute("aria-expanded", "true");
+        }
+      });
+
+      panel.addEventListener("click", function (e) {
+        e.stopPropagation();
+      });
+    });
+
+    document.addEventListener("click", function () {
+      document.querySelectorAll(".rd-action-menu-panel").forEach(function (p) {
+        p.hidden = true;
+      });
+      document.querySelectorAll(".rd-menu-trigger").forEach(function (t) {
+        t.setAttribute("aria-expanded", "false");
+      });
+    });
+
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") {
+        document.querySelectorAll(".rd-action-menu-panel").forEach(function (p) {
+          p.hidden = true;
+        });
+        document.querySelectorAll(".rd-menu-trigger").forEach(function (t) {
+          t.setAttribute("aria-expanded", "false");
+        });
+      }
+    });
   }
 
   function initConfirmForms() {
@@ -220,6 +267,7 @@
     initTableSearch();
     initConfirmForms();
     initRiskWarnings();
+    initActionMenus();
     initScanNowModal();
   });
 })();
