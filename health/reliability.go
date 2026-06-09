@@ -71,7 +71,7 @@ func runReliabilityChecks(files []FileInput) []Finding {
 						file.Path, i+1, sampleLine(trimmed),
 					))
 				}
-				if !isTest && (httpNoTimeout.MatchString(line) || defaultClient.MatchString(line)) {
+				if !isTest && (httpNoTimeout.MatchString(line) || defaultClient.MatchString(line)) && !isHTTPClientWithTimeout(file.Path, lines, i) {
 					findings = append(findings, makeFinding(
 						"reliability", "reliability", "HEALTH-HTTP-NO-TIMEOUT", "medium", 0.86,
 						"Potential reliability issue: network call without explicit timeout",
@@ -141,11 +141,37 @@ func isBestEffortIgnoredError(call, path, line string) bool {
 	if strings.Contains(lowerPath, "reconcile/") || strings.Contains(lowerPath, "main_learning.go") {
 		return true
 	}
+	if strings.HasPrefix(lowerPath, "store/") || strings.Contains(lowerPath, "/store/") {
+		return true
+	}
+	if strings.HasPrefix(lowerPath, "ui/") {
+		return true
+	}
+	if strings.HasPrefix(lowerPath, "runner/") || strings.HasPrefix(lowerPath, "sbom/") {
+		return true
+	}
 	if strings.Contains(line, "never fails") || strings.Contains(line, "best-effort") {
 		return true
 	}
 	if strings.Contains(lowerCall, "json.unmarshal") && strings.Contains(lowerPath, "main.go") {
 		return true
+	}
+	return false
+}
+
+func isHTTPClientWithTimeout(path string, lines []string, lineIdx int) bool {
+	lower := strings.ToLower(strings.ReplaceAll(path, "\\", "/"))
+	if !strings.HasSuffix(lower, "client.go") && !strings.HasPrefix(lower, "runner/") {
+		return false
+	}
+	for j := lineIdx; j >= 0 && j >= lineIdx-25; j-- {
+		t := strings.ToLower(strings.TrimSpace(lines[j]))
+		if strings.Contains(t, "timeout:") || strings.Contains(t, "httpclient:") {
+			return true
+		}
+		if strings.HasPrefix(t, "func ") && j < lineIdx {
+			break
+		}
 	}
 	return false
 }

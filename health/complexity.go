@@ -10,6 +10,9 @@ var goFuncDecl = regexp.MustCompile(`^func\s+(?:\([^)]*\)\s+)?(\w+)\s*\(([^)]*)\
 func runMaintainabilityChecks(files []FileInput, cfg Config) []Finding {
 	var findings []Finding
 	for _, file := range files {
+		if strings.HasSuffix(file.Path, "_test.go") || strings.Contains(file.Path, "/testdata/") {
+			continue
+		}
 		lines := strings.Split(file.Content, "\n")
 		if len(lines) > cfg.LargeFileLines {
 			findings = append(findings, makeFinding(

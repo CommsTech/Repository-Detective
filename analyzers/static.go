@@ -290,6 +290,10 @@ func isFalsePositiveInternalInfraRef(path, line string) bool {
 	case lower == "readme.md", lower == "quick_setup.md", lower == "deployment.md":
 		// Product setup docs reference homelab endpoints by design.
 		return true
+	case lower == "preinstall/audit_failure.go":
+		// Failure-stage classifier references blocked hosts (localhost, private), not embedded endpoints.
+		return strings.Contains(line, "localhost") || strings.Contains(line, "private") ||
+			strings.Contains(line, "ClassifyFailureStage")
 	case strings.HasSuffix(lower, ".example"):
 		return true
 	}

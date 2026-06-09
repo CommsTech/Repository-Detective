@@ -50,11 +50,16 @@ func ClassifyPath(path string) ReachabilityInput {
 	p := strings.ToLower(path)
 	in := ReachabilityInput{}
 	if strings.Contains(p, "/test") || strings.Contains(p, "_test.") || strings.HasSuffix(p, "_test.go") ||
-		strings.Contains(p, "/benchmark/fixture/") || strings.HasSuffix(p, ".go.src") {
+		strings.Contains(p, "/benchmark/fixture/") || strings.HasSuffix(p, ".go.src") ||
+		strings.Contains(p, "/testdata/") || strings.Contains(p, "/fixtures/") {
 		in.TestOnlyPath = true
 	}
-	if strings.Contains(p, "/docs/") || strings.Contains(p, "readme") {
+	if strings.Contains(p, "/docs/") || strings.Contains(p, "readme") ||
+		strings.HasPrefix(p, "config/") && strings.Contains(p, ".example") {
 		in.DocsOnlyPath = true
+	}
+	if strings.HasPrefix(p, "web/static/") {
+		in.VendorPath = true
 	}
 	if strings.Contains(p, "/vendor/") || strings.Contains(p, "node_modules") {
 		in.VendorPath = true

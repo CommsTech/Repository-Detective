@@ -68,6 +68,18 @@ func TestReliabilitySkipsTestFiles(t *testing.T) {
 	}
 }
 
+func TestHealthSkipsTestdataFixtures(t *testing.T) {
+	findings := health.Run(health.RunInput{
+		AllPaths: []string{"testdata/fixtures/go-single/main.go"},
+		Files:    []health.FileInput{{Path: "testdata/fixtures/go-single/main.go", Content: "package main\n", Language: "go"}},
+	}, testCfg(), nil)
+	for _, f := range findings {
+		if f.RuleID == "HEALTH-GO-NO-TEST" {
+			t.Fatal("testdata fixtures should be skipped for test gap checks")
+		}
+	}
+}
+
 func TestHealthSkipsDocsAndRuleDefinitions(t *testing.T) {
 	findings := health.Run(health.RunInput{Files: []health.FileInput{
 		{Path: "docs/TODO.md", Content: "// TODO: fix\n// temporary workaround\n", Language: "go"},

@@ -25,3 +25,11 @@ func TestReachabilityTestPathDowngrade(t *testing.T) {
 		t.Fatalf("got %s conf=%v note=%q", sev, conf, note)
 	}
 }
+
+func TestReachabilityTestdataFixtureDowngrade(t *testing.T) {
+	in := ClassifyPath("testdata/fixtures/go-single/main.go")
+	sev, _, note := ActionabilityAdjust("medium", 0.8, in)
+	if sev != "info" || note == "" {
+		t.Fatalf("testdata should downgrade: sev=%s note=%q", sev, note)
+	}
+}

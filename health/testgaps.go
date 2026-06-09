@@ -25,6 +25,9 @@ func runTestGapChecks(allPaths []string, files []FileInput) []Finding {
 
 	for _, p := range allPaths {
 		lower := strings.ToLower(p)
+		if strings.Contains(p, "/testdata/") || strings.Contains(p, "/fixtures/") {
+			continue
+		}
 		if strings.HasSuffix(lower, "package.json") {
 			hasPackageJSON = true
 			continue
