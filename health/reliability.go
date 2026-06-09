@@ -26,6 +26,9 @@ func runReliabilityChecks(files []FileInput) []Finding {
 		}
 		isTest := strings.HasSuffix(file.Path, "_test.go") || strings.Contains(file.Path, ".test.") || strings.Contains(file.Path, "/tests/")
 		isMain := strings.HasSuffix(file.Path, "main.go") || strings.HasSuffix(strings.ToLower(file.Path), "/main.py")
+		if isTest {
+			continue
+		}
 
 		lines := strings.Split(file.Content, "\n")
 		for i, line := range lines {
@@ -39,8 +42,14 @@ func runReliabilityChecks(files []FileInput) []Finding {
 					if isAllowedIgnoredError(call) {
 						continue
 					}
+					sev := "low"
+					conf := 0.72
+					if isBestEffortIgnoredError(call, file.Path, trimmed) {
+						sev = "info"
+						conf = 0.58
+					}
 					findings = append(findings, makeFinding(
-						"reliability", "reliability", "HEALTH-IGNORED-ERROR", "medium", 0.87,
+						"reliability", "reliability", "HEALTH-IGNORED-ERROR", sev, conf,
 						"Potential reliability issue: ignored error return",
 						"Error return value is discarded; failures may go unnoticed.",
 						file.Path, i+1, sampleLine(trimmed),
@@ -113,11 +122,30 @@ func isAllowedIgnoredError(call string) bool {
 	for _, allowed := range []string{
 		"close(", "remove(", "removeall(", "sync.", "unlock(", "waitgroup",
 		"commentissue", "addlifecyclelabels", "updatefindingstatus", "addlifecycleevent",
-		"emit(", "commentandlabel",
+		"emit(", "commentandlabel", "recordlearningevent", "emitjson",
+		"loadrepository", "savereconciliationrun", "listfingerprintsinscan",
+		"upsertexternalissue", "createissuecomment", "addissuelabels",
+		"makeworkspacereadonly", "updatescanpipelinestate", "recordscannerhealth",
+		"write(body)", "write(body", ".write(",
 	} {
 		if strings.Contains(lower, allowed) {
 			return true
 		}
+	}
+	return false
+}
+
+func isBestEffortIgnoredError(call, path, line string) bool {
+	lowerCall := strings.ToLower(call)
+	lowerPath := strings.ToLower(strings.ReplaceAll(path, "\\", "/"))
+	if strings.Contains(lowerPath, "reconcile/") || strings.Contains(lowerPath, "main_learning.go") {
+		return true
+	}
+	if strings.Contains(line, "never fails") || strings.Contains(line, "best-effort") {
+		return true
+	}
+	if strings.Contains(lowerCall, "json.unmarshal") && strings.Contains(lowerPath, "main.go") {
+		return true
 	}
 	return false
 }

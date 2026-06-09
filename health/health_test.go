@@ -57,6 +57,27 @@ func TestReliabilityIgnoredError(t *testing.T) {
 	}
 }
 
+func TestReliabilitySkipsTestFiles(t *testing.T) {
+	findings := health.Run(health.RunInput{Files: []health.FileInput{{
+		Path: "svc_test.go", Content: "func TestX(t *testing.T) { _ = doWork() }\n", Language: "go",
+	}}}, testCfg(), nil)
+	for _, f := range findings {
+		if f.RuleID == "HEALTH-IGNORED-ERROR" {
+			t.Fatal("ignored errors in _test.go should be skipped")
+		}
+	}
+}
+
+func TestHealthSkipsDocsAndRuleDefinitions(t *testing.T) {
+	findings := health.Run(health.RunInput{Files: []health.FileInput{
+		{Path: "docs/TODO.md", Content: "// TODO: fix\n// temporary workaround\n", Language: "go"},
+		{Path: "health/techdebt.go", Content: "// TODO: rule text\n// deprecated API\n", Language: "go"},
+	}}, testCfg(), nil)
+	if len(findings) != 0 {
+		t.Fatalf("expected no findings in docs/health rule files, got %d", len(findings))
+	}
+}
+
 func TestReliabilityHTTPNoTimeout(t *testing.T) {
 	findings := health.Run(health.RunInput{Files: []health.FileInput{{
 		Path: "client.go", Content: "resp, err := http.Get(url)\n", Language: "go",

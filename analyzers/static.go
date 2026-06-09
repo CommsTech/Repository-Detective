@@ -168,6 +168,8 @@ func isStaticFalsePositive(rule staticRule, path, line string) bool {
 		return isFalsePositiveDebugLine(path, line)
 	case "REL-INTERNAL-INFRA-REF":
 		return isFalsePositiveInternalInfraRef(path, line)
+	case "OPT-HTTP-CLIENT-PER-CALL":
+		return isFalsePositiveHTTPClientPerCall(path, line)
 	default:
 		return false
 	}
@@ -285,8 +287,23 @@ func isFalsePositiveInternalInfraRef(path, line string) bool {
 		// Blocked-host catalog for SSRF prevention, not embedded infra endpoints.
 		return strings.Contains(line, "blockedHost") || strings.Contains(line, "localhost") ||
 			strings.Contains(line, "loopback")
+	case lower == "readme.md", lower == "quick_setup.md", lower == "deployment.md":
+		// Product setup docs reference homelab endpoints by design.
+		return true
 	case strings.HasSuffix(lower, ".example"):
 		return true
+	}
+	return false
+}
+
+func isFalsePositiveHTTPClientPerCall(path, line string) bool {
+	norm := strings.ReplaceAll(path, "\\", "/")
+	lower := strings.ToLower(norm)
+	// Shared client factories configure timeouts/transport once; not hot-path per-call clients.
+	if strings.HasSuffix(lower, "client.go") || strings.HasSuffix(lower, "/httpclient.go") || strings.HasSuffix(lower, "notify/http.go") {
+		if strings.Contains(line, "http.Client{") || strings.Contains(line, "func New") {
+			return true
+		}
 	}
 	return false
 }

@@ -136,6 +136,11 @@ docs/dogfood-reports/*
 !docs/dogfood-reports/native-runner-failure-rollback-report.md
 !docs/dogfood-reports/remediation-pr-dry-run-verification.md
 !docs/dogfood-reports/remediation-pr-controlled-test-report.md
+!docs/dogfood-reports/post-runner-stabilization-baseline.md
+!docs/dogfood-reports/remaining-active-present-classification.md
+!docs/dogfood-reports/post-runner-product-rescan-report.md
+!docs/dogfood-reports/native-runner-soak-test-report.md
+!docs/dogfood-reports/remediation-pr-controlled-gate.md
 
 # Beta readiness docs (sanitized, committable)
 !docs/beta/

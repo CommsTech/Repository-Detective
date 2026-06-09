@@ -35,10 +35,33 @@ func ShouldSkipPath(path string, extraPatterns []string) bool {
 	return false
 }
 
+// skipHealthCheckPath excludes paths that should not contribute health findings.
+func skipHealthCheckPath(path string, extraPatterns []string) bool {
+	if ShouldSkipPath(path, extraPatterns) {
+		return true
+	}
+	path = filepath.ToSlash(strings.TrimSpace(path))
+	lower := strings.ToLower(path)
+	if strings.HasPrefix(path, "docs/") || strings.HasSuffix(lower, ".md") {
+		return true
+	}
+	if strings.HasPrefix(path, "ui/static/") || strings.Contains(lower, ".min.js") || strings.Contains(lower, ".min.css") {
+		return true
+	}
+	if strings.HasPrefix(path, "scripts/") || strings.HasSuffix(lower, ".sh") {
+		return true
+	}
+	// Rule definitions must not self-match (see dogfood HEALTH-* calibration).
+	if strings.HasPrefix(path, "health/") {
+		return true
+	}
+	return false
+}
+
 func filterFiles(files []FileInput, extraPatterns []string) []FileInput {
 	out := make([]FileInput, 0, len(files))
 	for _, f := range files {
-		if ShouldSkipPath(f.Path, extraPatterns) {
+		if skipHealthCheckPath(f.Path, extraPatterns) {
 			continue
 		}
 		out = append(out, f)

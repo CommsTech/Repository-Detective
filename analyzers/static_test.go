@@ -175,3 +175,27 @@ func TestRunStaticAnalysisFindsPipelineFloatingActionRef(t *testing.T) {
 		t.Fatalf("expected GOV-ACTION-FLOATING-REF, got %s", findings[0].ID)
 	}
 }
+
+func TestRunStaticAnalysisSkipsHTTPClientFactory(t *testing.T) {
+	findings := RunStaticAnalysis([]FileContent{{
+		Path:    "ai/httpclient.go",
+		Content: "func NewHTTPClient() *http.Client {\n\treturn &http.Client{Timeout: 30 * time.Second}\n}\n",
+	}}, false, true)
+	for _, f := range findings {
+		if f.ID == "OPT-HTTP-CLIENT-PER-CALL" {
+			t.Fatal("client factory should not match OPT-HTTP-CLIENT-PER-CALL")
+		}
+	}
+}
+
+func TestRunStaticAnalysisSkipsHomelabDocsInfraRef(t *testing.T) {
+	findings := RunStaticAnalysis([]FileContent{{
+		Path:    "README.md",
+		Content: "Open http://localhost:8081 for the UI\n",
+	}}, true, false)
+	for _, f := range findings {
+		if f.ID == "REL-INTERNAL-INFRA-REF" {
+			t.Fatal("README homelab endpoint refs are expected in product docs")
+		}
+	}
+}
