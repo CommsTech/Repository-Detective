@@ -1,40 +1,45 @@
 # Gitea wiki publish report
 
-**Date:** 2026-06-02
+**Last updated:** 2026-06-09
 
 ## Source
 
 - `docs/wiki/` (23 markdown pages)
 - Publish script: `scripts/publish-gitea-wiki.sh`
 
-## Pages prepared
-
-Home, Quick Start, Private Beta Install, Configuration, Report-Only Scans, Manual Scan Now, Repo Settings and Policies, Pre-install Audit, Scanner Coverage, Secret Scanning and Git History, SBOM, Learning and Calibration, Issue/Finding Reconciliation, Troubleshooting, Operator Runbook, FAQ, plus existing operator pages (Dashboard, Privacy, Scanner Health, etc.).
-
 ## Wiki remote
 
 `https://git.commsnet.org/commstech/Bugbot.wiki.git`
 
-## Publish result
+## Latest attempt (2026-06-09)
 
 | Step | Result |
 |------|--------|
 | Dry-run | **success** — 23 pages listed |
-| Clone existing wiki | failed (empty wiki — expected on first publish) |
-| Init + commit local wiki | **success** — 23 files committed locally in temp workdir |
-| `git push origin HEAD` | **failed** — HTTP 500 from Gitea |
+| Clone existing wiki | failed (empty wiki — init fallback) |
+| Local commit in temp workdir | **success** — 23 files |
+| `git push origin HEAD` | **failed** — HTTP **500** |
 
-## Manual next step
+### Exact failure
 
-1. Confirm Gitea wiki is enabled on `commstech/Bugbot` (API reports `has_wiki: true`).
-2. Use a token with **wiki write** scope.
-3. From Gitea UI: create initial wiki page **or** retry:
-
-```bash
-export BUGBOT_GITEA_TOKEN='…'
-./scripts/publish-gitea-wiki.sh
+```text
+Command: ./scripts/publish-gitea-wiki.sh
+Remote:  https://git.commsnet.org/commstech/Bugbot.wiki.git/
+Error:   fatal: unable to access '…Bugbot.wiki.git/': The requested URL returned error: 500
 ```
 
-4. If push still returns 500, check Gitea server logs — wiki git backend may need operator repair.
+Workdir preserved with `KEEP_WIKI_WORKDIR=true` for operator inspection.
 
-**Do not claim wiki is populated until `git push` to `Bugbot.wiki.git` succeeds.**
+## Likely cause
+
+Server-side Gitea wiki git backend issue (not client auth — push reaches server and returns 500). Prior sprint saw same failure.
+
+## Operator next steps
+
+1. Check Gitea server logs at push time for wiki repository creation/storage errors.
+2. Confirm wiki enabled on `commstech/Bugbot` (`has_wiki: true` via API).
+3. Token must include **wiki write** scope.
+4. Retry from UI: create one manual wiki page, then re-run `./scripts/publish-gitea-wiki.sh`.
+5. If repo wiki git storage is corrupt, repair or recreate `Bugbot.wiki` on server.
+
+**Wiki is not populated until `git push` to `Bugbot.wiki.git` succeeds.**
