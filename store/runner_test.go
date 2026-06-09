@@ -79,3 +79,31 @@ func TestCancelRunnerJob(t *testing.T) {
 		t.Fatalf("cancel: %v", err)
 	}
 }
+
+func TestExpireStaleRunnerJobsMarksRunningExpired(t *testing.T) {
+	s := openTestStore(t)
+	ctx := context.Background()
+	repo, _ := s.UpsertRepository(ctx, store.Repository{Owner: "o", Name: "stale", FullName: "o/stale"})
+	past := time.Now().UTC().Add(-time.Minute)
+	started := past.Add(-20 * time.Minute)
+	_, err := s.CreateRunnerJob(ctx, store.RunnerJob{
+		JobID: "rj-stale-run", RepositoryID: repo.ID, JobType: store.RunnerJobTypeScanFullRepo,
+		Status: store.RunnerJobStatusRunning, RunnerMode: "native", Ref: "main",
+		JobSpecJSON: json.RawMessage(`{}`), PolicySnapshotJSON: json.RawMessage(`{}`),
+		StartedAt: &started, ExpiresAt: &past,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	n, err := s.ExpireStaleRunnerJobs(ctx, time.Now().UTC())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n != 1 {
+		t.Fatalf("expected 1 expired job, got %d", n)
+	}
+	got, err := s.GetRunnerJob(ctx, "rj-stale-run")
+	if err != nil || got.Status != store.RunnerJobStatusExpired {
+		t.Fatalf("status=%s err=%v", got.Status, err)
+	}
+}

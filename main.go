@@ -1271,6 +1271,11 @@ func initializeComponents() error {
 		} else if n > 0 {
 			logger.Infof("Reaped %d stale started scan(s)", n)
 		}
+		if n, err := bugbotStore.ExpireStaleRunnerJobs(context.Background(), time.Now().UTC()); err != nil {
+			logger.Warnf("Failed to expire stale runner jobs: %v", err)
+		} else if n > 0 {
+			logger.Infof("Expired %d stale runner job(s)", n)
+		}
 	}
 
 	logger.Info("All components initialized successfully")
