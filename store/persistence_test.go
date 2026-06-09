@@ -79,6 +79,58 @@ func TestRecordFindingsBeforeIssueSync(t *testing.T) {
 	}
 }
 
+func TestPersistFindingsWithRepoCalibrationRules(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	s, err := store.Open(store.Config{Enabled: true, Path: filepath.Join(dir, "calib.db")})
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	defer s.Close()
+
+	repo, _ := s.UpsertRepository(ctx, store.Repository{Owner: "o", Name: "r", FullName: "o/r"})
+	rid := repo.ID
+	_, err = s.CreateRepoCalibrationRule(ctx, store.RepoCalibrationRule{
+		RepositoryID: &rid, Scope: "repo", Source: "health", RuleID: "HEALTH-MANY-PARAMS",
+		PathPattern: "store/", Action: "informational", Reason: "test calibration", Active: true, EvidenceCount: 5,
+	})
+	if err != nil {
+		t.Fatalf("create calibration rule: %v", err)
+	}
+
+	scanID := "calibscan01"
+	_, _ = s.CreateScan(ctx, store.Scan{ID: scanID, RepositoryID: repo.ID, TriggerType: store.TriggerManual, Status: store.ScanStatusAnalysisComplete})
+
+	done := make(chan error, 1)
+	go func() {
+		issues := []ai.CodeIssue{
+			{
+				Fingerprint: "fp-calib", Title: "many params", Severity: "low", Confidence: 0.8,
+				Source: "health", RuleID: "HEALTH-MANY-PARAMS", File: "store/example.go", Category: "maintainability",
+			},
+		}
+		_, _, err := s.(*store.SQLiteStore).PersistScanFindingsBatch(ctx, repo.ID, scanID, issues, time.Now().UTC())
+		done <- err
+	}()
+
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatalf("persist with calibration rules: %v", err)
+		}
+	case <-time.After(30 * time.Second):
+		t.Fatal("PersistScanFindingsBatch hung — calibration rules must load before transaction")
+	}
+
+	finding, err := s.GetFindingByFingerprint(ctx, repo.ID, "fp-calib")
+	if err != nil {
+		t.Fatalf("get finding: %v", err)
+	}
+	if finding.Severity != "info" {
+		t.Fatalf("expected calibrated severity info, got %q", finding.Severity)
+	}
+}
+
 func TestMarkIssueSyncCompleteAfterFilingPhase(t *testing.T) {
 	ctx := context.Background()
 	dir := t.TempDir()
