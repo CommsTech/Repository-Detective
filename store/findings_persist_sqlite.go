@@ -43,6 +43,15 @@ func (s *SQLiteStore) PersistScanFindingsBatch(ctx context.Context, repositoryID
 		now = time.Now().UTC()
 	}
 
+	storeRules, _ := s.ListRepoCalibrationRules(ctx, repositoryID, true)
+	repoRules := make([]findinglearn.RepoCalibrationRule, 0, len(storeRules))
+	for _, r := range storeRules {
+		repoRules = append(repoRules, findinglearn.RepoCalibrationRule{
+			Source: r.Source, RuleID: r.RuleID, PathPattern: r.PathPattern,
+			Action: r.Action, Reason: r.Reason, Active: r.Active, ExpiresAt: r.ExpiresAt,
+		})
+	}
+
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return 0, nil, fmt.Errorf("begin findings batch: %w", err)
@@ -62,6 +71,16 @@ func (s *SQLiteStore) PersistScanFindingsBatch(ctx context.Context, repositoryID
 
 		pathInput := findinglearn.ClassifyPath(issue.File)
 		severity, confidence, reachNote := findinglearn.ActionabilityAdjust(issue.Severity, issue.Confidence, pathInput)
+		if len(repoRules) > 0 {
+			if sev, conf, calNote := findinglearn.ApplyRepoRules(severity, confidence, issue.Source, issue.RuleID, issue.File, repoRules); calNote != "" {
+				severity, confidence = sev, conf
+				if reachNote != "" {
+					reachNote = reachNote + " " + calNote
+				} else {
+					reachNote = calNote
+				}
+			}
+		}
 
 		finding := Finding{
 			RepositoryID:    repositoryID,
