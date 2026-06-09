@@ -16,11 +16,20 @@ NOW = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 RULES = [
     ("maintainability", "HEALTH-MANY-PARAMS", "store/", "Store layer uses explicit SQL params — informational for product monolith"),
     ("maintainability", "HEALTH-MANY-PARAMS", "main", "Bootstrap/orchestration entrypoints may have wide signatures"),
+    ("maintainability", "HEALTH-MANY-PARAMS", "gitea/", "Forge reporter adapter — wide option surface is intentional"),
+    ("maintainability", "HEALTH-MANY-PARAMS", "issuelink/", "Issue link backfill helpers — informational only"),
+    ("maintainability", "HEALTH-MANY-PARAMS", "preinstall/", "Pre-install audit orchestration — wide signatures expected"),
+    ("maintainability", "HEALTH-MANY-PARAMS", "remediation/", "Remediation renderer — template context params"),
+    ("maintainability", "HEALTH-MANY-PARAMS", "runner/", "Runner spec/signing — protocol structs with many fields"),
+    ("maintainability", "HEALTH-MANY-PARAMS", "ui/", "UI settings model — form binding params"),
     ("maintainability", "HEALTH-LARGE-FILE", "main.go", "Known large bootstrap file — split is tracked separately"),
     ("maintainability", "HEALTH-LARGE-FILE", "ui/handler.go", "UI handler surface — informational maintainability signal"),
     ("maintainability", "HEALTH-LARGE-FILE", "analyzers/engine.go", "Scan engine orchestration — expected size for feature set"),
     ("maintainability", "HEALTH-LARGE-FUNC", "store/profiles.go", "Profile builder — decomposition is non-urgent"),
     ("maintainability", "HEALTH-DEEP-NEST", "main.go", "Bootstrap control flow — review only when refactoring"),
+    ("performance", "HEALTH-READ-ALL", "api/runner_handler.go", "Runner API reads bounded job payloads — expected pattern"),
+    ("tech_debt", "HEALTH-TECH-PHRASE", "patcher/", "Temporary git workspace comments — not actionable debt markers"),
+    ("tech_debt", "HEALTH-TECH-PHRASE", "scanners/", "Temporary clone workspace comments — expected for scanners"),
     ("optimization", "OPT-NESTED-LOOP", "operator/", "Telemetry aggregation loops — advisory only"),
 ]
 
