@@ -110,6 +110,20 @@ func (s *SQLiteStore) fillFindingCounts(ctx context.Context, repositoryID int64,
 			scanID, repositoryID, FindingStatusOpen).Scan(&out.ActivePresentOpen); err != nil {
 			return err
 		}
+		if err := s.db.QueryRowContext(ctx, `
+			SELECT COUNT(DISTINCT f.id) FROM findings f
+			INNER JOIN finding_instances fi ON fi.finding_id = f.id AND fi.scan_id = ?
+			WHERE f.repository_id = ? AND f.status = ? AND f.severity IN ('high','critical','medium')`,
+			scanID, repositoryID, FindingStatusOpen).Scan(&out.ActionableActiveOpen); err != nil {
+			return err
+		}
+		if err := s.db.QueryRowContext(ctx, `
+			SELECT COUNT(DISTINCT f.id) FROM findings f
+			INNER JOIN finding_instances fi ON fi.finding_id = f.id AND fi.scan_id = ?
+			WHERE f.repository_id = ? AND f.status = ? AND f.severity IN ('low','info')`,
+			scanID, repositoryID, FindingStatusOpen).Scan(&out.InformationalActiveOpen); err != nil {
+			return err
+		}
 	}
 
 	if err := s.db.QueryRowContext(ctx, `

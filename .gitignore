@@ -141,6 +141,10 @@ docs/dogfood-reports/*
 !docs/dogfood-reports/post-runner-product-rescan-report.md
 !docs/dogfood-reports/native-runner-soak-test-report.md
 !docs/dogfood-reports/remediation-pr-controlled-gate.md
+!docs/dogfood-reports/active-present-79-baseline.md
+!docs/dogfood-reports/active-present-79-classification.md
+!docs/dogfood-reports/active-present-79-rescan-report.md
+!docs/dogfood-reports/gitea-wiki-http-500-triage.md
 
 # Beta readiness docs (sanitized, committable)
 !docs/beta/

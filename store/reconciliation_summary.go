@@ -10,7 +10,9 @@ type ReconciliationSummary struct {
 
 	// Scan-side counts
 	ScanFindingsTotal   int `json:"scan_findings_total"`
-	ActivePresentOpen   int `json:"active_present_open"`
+	ActivePresentOpen        int `json:"active_present_open"`
+	ActionableActiveOpen   int `json:"actionable_active_open"`
+	InformationalActiveOpen int `json:"informational_active_open"`
 	OpenFindingsTotal   int `json:"open_findings_total"`
 	ReportOnlyFindings  int `json:"report_only_findings"`
 	ResolvedVerifiedOpen int `json:"resolved_verified_open"`
