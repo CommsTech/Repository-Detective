@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"git.commsnet.org/commstech/bugbot/preinstall"
 	"git.commsnet.org/commstech/bugbot/store"
 )
 
@@ -42,6 +43,9 @@ func templateFuncs() template.FuncMap {
 		"eq":         func(a, b interface{}) bool { return a == b },
 		"dict":       templateDict,
 		"jsonScript": jsonScriptContent,
+		"preinstallRiskDisplay":     preinstallRiskDisplay,
+		"preinstallRecDisplay":      preinstallRecDisplay,
+		"preinstallFailureStage":    preinstallFailureStage,
 	}
 }
 
@@ -410,4 +414,16 @@ func apiKeyQuerySuffix(path, apiKey string) string {
 func issuesFromScanSummary(raw json.RawMessage) int {
 	view := buildScanDetailView(raw)
 	return view.IssuesFound
+}
+
+func preinstallRiskDisplay(a store.AuditRequest) string {
+	return preinstall.RiskScoreDisplay(a)
+}
+
+func preinstallRecDisplay(a store.AuditRequest) string {
+	return preinstall.RecommendationDisplay(a)
+}
+
+func preinstallFailureStage(a store.AuditRequest) string {
+	return preinstall.FailureStageFromSummary(a.SummaryJSON)
 }

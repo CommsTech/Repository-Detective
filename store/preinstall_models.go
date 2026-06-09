@@ -16,6 +16,7 @@ const (
 	AuditRecommendationCaution       = "caution"
 	AuditRecommendationDoNotInstall  = "do_not_install"
 	AuditRecommendationUnknown       = "unknown"
+	AuditRecommendationAuditFailed   = "audit_failed"
 
 	ReportTypeInstallRiskSummary  = "install_risk_summary"
 	ReportTypeSecurityDisclosure  = "security_disclosure"

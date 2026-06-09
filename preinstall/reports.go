@@ -127,8 +127,8 @@ func installRiskSummaryReport(cfg Config, audit store.AuditRequest, findings []s
 	fmt.Fprintf(&b, "**Repository:** %s\n\n", audit.NormalizedRepoURL)
 	fmt.Fprintf(&b, "**Commit audited:** `%s`\n\n", audit.CommitSHA)
 	fmt.Fprintf(&b, "**Audit date:** %s\n\n", audit.StartedAt.UTC().Format(time.RFC3339))
-	fmt.Fprintf(&b, "**Risk score:** %d / 100\n\n", audit.RiskScore)
-	fmt.Fprintf(&b, "**Recommendation:** %s\n\n", audit.Recommendation)
+	fmt.Fprintf(&b, "**Risk score:** %s\n\n", RiskScoreDisplay(audit))
+	fmt.Fprintf(&b, "**Recommendation:** %s\n\n", RecommendationDisplay(audit))
 	appendSandboxSection(&b, cfg, audit)
 	fmt.Fprintf(&b, "## Scanner summary\n\n")
 	if len(scannerResults) == 0 {
@@ -176,6 +176,8 @@ func installRiskSummaryReport(cfg Config, audit store.AuditRequest, findings []s
 		b.WriteString("Review highlighted findings and install scripts before use. Consider isolated testing.\n\n")
 	case store.AuditRecommendationDoNotInstall:
 		b.WriteString("Significant risks were detected. Do not install until issues are reviewed and mitigated.\n\n")
+	case store.AuditRecommendationAuditFailed:
+		b.WriteString("No conclusion was made because the audit did not complete. Do not treat this repository as safe.\n\n")
 	default:
 		b.WriteString("Audit did not complete successfully; do not install until a full audit succeeds.\n\n")
 	}

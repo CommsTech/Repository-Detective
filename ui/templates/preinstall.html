@@ -25,7 +25,7 @@
 <tr><th>Repo</th><th>Status</th><th>Risk</th><th>Recommendation</th><th>Started</th></tr>
 {{range .Data.Audits}}<tr>
 <td><a href="{{$.BasePath}}/preinstall/audits/{{.AuditID}}{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}">{{.NormalizedRepoURL}}</a></td>
-<td>{{.Status}}</td><td>{{.RiskScore}}</td><td>{{.Recommendation}}</td><td class="rd-muted">{{.StartedAt}}</td>
+<td>{{.Status}}</td><td>{{if eq .Status "failed"}}unavailable{{else}}{{preinstallRiskDisplay .}}{{end}}</td><td>{{preinstallRecDisplay .}}</td><td class="rd-muted">{{.StartedAt}}</td>
 </tr>{{else}}<tr><td colspan="5" class="rd-muted">No audits yet</td></tr>{{end}}
 </table></div>
 {{end}}

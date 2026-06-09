@@ -5,11 +5,27 @@
 <div class="rd-card">
   <div class="rd-card-head"><h2>Audit summary</h2><span class="rd-chip">{{.Data.Audit.Status}}</span></div>
   <p><strong>Repository:</strong> {{.Data.Audit.NormalizedRepoURL}}</p>
+  {{if eq .Data.Audit.Status "failed"}}
+  <div class="rd-alert warn" role="alert">
+    <strong>Audit failed — no safety conclusion was made.</strong>
+    <p>Do not treat a failed audit as safe. Risk score is unavailable until a completed audit runs successfully.</p>
+    {{with preinstallFailureStage .Data.Audit}}<p><strong>Failure stage:</strong> {{.}}</p>{{end}}
+    {{if .Data.Audit.Error}}<p><strong>Reason:</strong> {{.Data.Audit.Error}}</p>{{end}}
+  </div>
+  {{else}}
   <p><strong>Commit:</strong> <code>{{.Data.Audit.CommitSHA}}</code></p>
-  <p><strong>Risk score:</strong> <span class="rd-badge medium">{{.Data.Audit.RiskScore}} / 100</span></p>
-  <p><strong>Recommendation:</strong> {{.Data.Audit.Recommendation}}</p>
-  {{if .Data.Audit.Error}}<p class="rd-alert">{{.Data.Audit.Error}}</p>{{end}}
+  {{end}}
+  <p><strong>Risk score:</strong>
+    {{if eq .Data.Audit.Status "failed"}}
+    <span class="rd-badge skipped">unavailable</span>
+    {{else}}
+    <span class="rd-badge medium">{{preinstallRiskDisplay .Data.Audit}}</span>
+    {{end}}
+  </p>
+  <p><strong>Recommendation:</strong> {{preinstallRecDisplay .Data.Audit}}</p>
+  {{if and (ne .Data.Audit.Status "failed") .Data.Audit.Error}}<p class="rd-alert">{{.Data.Audit.Error}}</p>{{end}}
 </div>
+{{if ne .Data.Audit.Status "failed"}}
 <div class="rd-card">
   <div class="rd-card-head"><h2>Findings</h2></div>
   <table class="rd-table">
@@ -46,6 +62,11 @@
   <p class="rd-muted">Reports appear when the audit completes.</p>
   {{end}}
 </div>
+{{else}}
+<div class="rd-card">
+  <p class="rd-muted">Findings and reports are not generated when an audit fails before scan completion.</p>
+</div>
+{{end}}
 <p><a class="rd-link" href="{{.BasePath}}/preinstall{{if .APIKey}}?api_key={{.APIKey}}{{end}}">← Back to pre-install audits</a></p>
 {{template "foot" .}}
 </body></html>

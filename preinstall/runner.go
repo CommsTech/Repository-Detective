@@ -106,12 +106,10 @@ func (r *Runner) runAudit(auditID string, parsed ParsedRepoURL, depth string) {
 		return
 	}
 
+	var sandboxMeta SandboxMeta
 	fail := func(msg string) {
-		finished := time.Now().UTC()
-		req.Status = store.AuditStatusFailed
-		req.Recommendation = store.AuditRecommendationUnknown
-		req.FinishedAt = &finished
-		req.Error = msg
+		stage := ClassifyFailureStage(msg)
+		ApplyAuditFailure(&req, stage, msg, sandboxMeta)
 		if err := r.store.UpdateAuditRequest(ctx, req); err != nil {
 			r.logger.Errorf("preinstall audit %s mark failed: %v", auditID, err)
 		}
@@ -138,6 +136,7 @@ func (r *Runner) runAudit(auditID string, parsed ParsedRepoURL, depth string) {
 		fail(cloneErr.Error())
 		return
 	}
+	sandboxMeta = clone.Sandbox
 
 	req.CommitSHA = clone.CommitSHA
 	req.DefaultBranch = clone.DefaultBranch

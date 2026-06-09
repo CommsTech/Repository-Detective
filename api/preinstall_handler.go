@@ -200,7 +200,12 @@ type auditResponse struct {
 	AuditDepth        string  `json:"audit_depth"`
 	Status            string  `json:"status"`
 	RiskScore         int     `json:"risk_score"`
+	RiskScoreDisplay  string  `json:"risk_score_display"`
+	RiskUnavailable   bool    `json:"risk_unavailable"`
 	Recommendation    string  `json:"recommendation"`
+	RecommendationDisplay string `json:"recommendation_display"`
+	FailureStage      string  `json:"failure_stage,omitempty"`
+	NextAction          string  `json:"next_action,omitempty"`
 	StartedAt         string  `json:"started_at"`
 	FinishedAt        *string `json:"finished_at,omitempty"`
 	SummaryJSON       any     `json:"summary_json"`
@@ -237,20 +242,35 @@ type disclosureReportResponse struct {
 
 func toAuditResponse(a store.AuditRequest) auditResponse {
 	resp := auditResponse{
-		AuditID:           a.AuditID,
-		RepoURL:           a.RepoURL,
-		NormalizedRepoURL: a.NormalizedRepoURL,
-		RepoHost:          a.RepoHost,
-		RepoOwner:         a.RepoOwner,
-		RepoName:          a.RepoName,
-		CommitSHA:         a.CommitSHA,
-		DefaultBranch:     a.DefaultBranch,
-		AuditDepth:        a.AuditDepth,
-		Status:            a.Status,
-		RiskScore:         a.RiskScore,
-		Recommendation:    a.Recommendation,
-		StartedAt:         a.StartedAt.UTC().Format(time.RFC3339),
-		Error:             a.Error,
+		AuditID:               a.AuditID,
+		RepoURL:               a.RepoURL,
+		NormalizedRepoURL:     a.NormalizedRepoURL,
+		RepoHost:              a.RepoHost,
+		RepoOwner:             a.RepoOwner,
+		RepoName:              a.RepoName,
+		CommitSHA:             a.CommitSHA,
+		DefaultBranch:         a.DefaultBranch,
+		AuditDepth:            a.AuditDepth,
+		Status:                a.Status,
+		RiskScore:             a.RiskScore,
+		RiskScoreDisplay:      preinstall.RiskScoreDisplay(a),
+		RiskUnavailable:       a.Status == store.AuditStatusFailed || a.RiskScore < 0,
+		Recommendation:        a.Recommendation,
+		RecommendationDisplay: preinstall.RecommendationDisplay(a),
+		FailureStage:          preinstall.FailureStageFromSummary(a.SummaryJSON),
+		StartedAt:             a.StartedAt.UTC().Format(time.RFC3339),
+		Error:                 preinstall.SanitizeFailureMessage(a.Error),
+	}
+	if a.Status == store.AuditStatusFailed {
+		resp.RiskScore = preinstall.RiskScoreUnavailable
+	}
+	if len(a.SummaryJSON) > 0 {
+		var summary map[string]any
+		if json.Unmarshal(a.SummaryJSON, &summary) == nil {
+			if s, ok := summary["next_action"].(string); ok {
+				resp.NextAction = s
+			}
+		}
 	}
 	if a.FinishedAt != nil {
 		s := a.FinishedAt.UTC().Format(time.RFC3339)
