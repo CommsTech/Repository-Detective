@@ -42,4 +42,25 @@ Server-side Gitea wiki git backend issue (not client auth — push reaches serve
 4. Retry from UI: create one manual wiki page, then re-run `./scripts/publish-gitea-wiki.sh`.
 5. If repo wiki git storage is corrupt, repair or recreate `Bugbot.wiki` on server.
 
+## Server-log checklist (2026-06-09)
+
+| Check | Command / location |
+|-------|-------------------|
+| Gitea app log at push time | `journalctl -u gitea --since '5 min ago'` or `/var/log/gitea/gitea.log` |
+| Wiki repo exists | `GET /api/v1/repos/commstech/Bugbot/wiki/page` |
+| Wiki git bare repo on disk | `{GITEA_DATA}/gitea-repositories/commstech/bugbot.wiki.git` |
+| Permissions | token has `write:repository` + wiki enabled on repo |
+| Remote URL | `https://git.commsnet.org/commstech/Bugbot.wiki.git` |
+| Bad init | empty wiki → first push may require UI "Initialize Wiki" |
+| Size/content | 23 md pages; unlikely size limit on homelab |
+| TLS/proxy | 500 after auth suggests server handler error, not client |
+
+## Re-run (2026-06-09 stabilization batch)
+
+| Step | Result |
+|------|--------|
+| Dry-run | success (23 pages) |
+| Push | **not attempted** (prior HTTP 500; server fix required first) |
+| HTTP code captured | **500** (from prior attempt) |
+
 **Wiki is not populated until `git push` to `Bugbot.wiki.git` succeeds.**
