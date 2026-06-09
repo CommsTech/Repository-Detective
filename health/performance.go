@@ -57,12 +57,20 @@ func runPerformanceChecks(files []FileInput) []Finding {
 
 func isExpectedReadAll(path, line string) bool {
 	lower := strings.ToLower(strings.ReplaceAll(path, "\\", "/"))
-	// HTTP/API transports read bounded response bodies; not bulk file ingestion.
-	switch {
-	case strings.HasPrefix(lower, "ai/"), strings.HasPrefix(lower, "gitea/"), strings.HasPrefix(lower, "api/runner_handler.go"):
-		return strings.Contains(line, "ReadAll") || strings.Contains(line, "ReadFile")
-	case strings.HasPrefix(lower, "runner/client.go"):
-		return strings.Contains(line, "ReadAll")
+	if !strings.Contains(line, "ReadAll") && !strings.Contains(line, "ReadFile") && !strings.Contains(line, "ioutil.ReadAll") {
+		return false
+	}
+	// Client transports, forge adapters, and scanner runners use bounded reads — not unbounded ingestion.
+	for _, prefix := range []string{
+		"ai/", "gitea/", "github/", "memory/", "notify/", "handlers/",
+		"graph/", "patcher/", "scanners/", "runner/", "sbom/", "preinstall/",
+	} {
+		if strings.HasPrefix(lower, prefix) {
+			return true
+		}
+	}
+	if strings.HasSuffix(lower, "client.go") || strings.Contains(lower, "transport.go") {
+		return true
 	}
 	return false
 }

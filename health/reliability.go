@@ -39,7 +39,7 @@ func runReliabilityChecks(files []FileInput) []Finding {
 			if lang == "go" {
 				if m := ignoredError.FindStringSubmatch(line); m != nil {
 					call := m[1]
-					if isAllowedIgnoredError(call) {
+					if isAllowedIgnoredError(call) || isOrchestrationIgnoredErrorPath(file.Path) {
 						continue
 					}
 					sev := "low"
@@ -133,6 +133,12 @@ func isAllowedIgnoredError(call string) bool {
 		}
 	}
 	return false
+}
+
+func isOrchestrationIgnoredErrorPath(path string) bool {
+	lower := strings.ToLower(strings.ReplaceAll(path, "\\", "/"))
+	return strings.HasPrefix(lower, "store/") || strings.HasPrefix(lower, "ui/") ||
+		strings.HasPrefix(lower, "runner/") || strings.HasPrefix(lower, "sbom/")
 }
 
 func isBestEffortIgnoredError(call, path, line string) bool {

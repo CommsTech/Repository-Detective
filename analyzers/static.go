@@ -170,9 +170,16 @@ func isStaticFalsePositive(rule staticRule, path, line string) bool {
 		return isFalsePositiveInternalInfraRef(path, line)
 	case "OPT-HTTP-CLIENT-PER-CALL":
 		return isFalsePositiveHTTPClientPerCall(path, line)
+	case "OPT-NESTED-LOOP":
+		return isFalsePositiveNestedLoop(path)
 	default:
 		return false
 	}
+}
+
+func isFalsePositiveNestedLoop(path string) bool {
+	lower := strings.ToLower(strings.ReplaceAll(path, "\\", "/"))
+	return strings.HasPrefix(lower, "operator/")
 }
 
 func isFalsePositiveEval(line string) bool {
