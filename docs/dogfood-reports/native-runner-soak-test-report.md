@@ -1,7 +1,7 @@
 # Native runner soak test report
 
-Recorded: 2026-06-09  
-Core revision: `8d5da54` (image `repository-detective:all-in-one`)  
+Recorded: 2026-06-09 (finalized 2026-06-09)  
+Core revision: `8d5da54` → guardrail follow-up on `main`  
 Worker: `bin/repository-detective-runner --mode worker`
 
 ## Test window
@@ -25,6 +25,7 @@ Worker: `bin/repository-detective-runner --mode worker`
 
 - Worker visible in `GET /api/v1/runner/workers` with capabilities `[graph, sbom, remediation_verify]`.
 - `last_seen_at` updated during test window.
+- In-memory registry drops workers after heartbeat max-age (offline when not seen).
 
 ## Failure recovery
 
@@ -32,9 +33,31 @@ Worker: `bin/repository-detective-runner --mode worker`
 |------|--------|
 | Enqueue graph while worker running | job entered `running` |
 | `pkill` worker mid-job | worker stopped |
-| Stuck/running job | remained until worker restart or cancel |
-| Worker restart | new worker re-registered |
-| Subsequent graph job | worker claimed and completed after restart |
+| Mid-test graph submit | `context canceled` (expected) |
+| Recovery job `rj-285aeeaccd178f88` | stayed `running` while worker dead |
+| Stuck job cleanup | marked `expired` during stabilization pass |
+| Worker restart | new worker re-registered; subsequent jobs completed |
+
+## Background task outcomes (final)
+
+| Task | Outcome |
+|------|---------|
+| `INSTALL_EXTERNAL_TOOLS=true` Docker build | stopped with **exit 143** after ~22 minutes |
+| Faster rebuild without external tools | **succeeded** |
+| `./scripts/docker-build-verify.sh` | **passed** afterward |
+| graph / SBOM / remediation_verify before failure test | **completed** |
+| Worker killed during failure-recovery test | intentional |
+| `context canceled` on mid-test graph | **expected** failure path |
+| `rj-285aeeaccd178f88` while worker dead | stayed `running` until cleanup |
+| Stuck job cleanup | `expired` with audit error message (not deleted) |
+| Live app after rollback | **healthy** |
+| Runner delegation | **disabled** |
+| Worker process | **none running** |
+
+## Docker build notes
+
+- Do **not** use `INSTALL_EXTERNAL_TOOLS=true` on the critical release path unless scanner image time budget (~20+ min) is acceptable.
+- Faster all-in-one build (no external tools) is sufficient for runner delegation validation.
 
 ## Load observation
 
@@ -53,6 +76,21 @@ Worker: `bin/repository-detective-runner --mode worker`
 | Recreate core without delegation override | **done** |
 | `/health` runner_delegation_enabled | **false** |
 
-## Runner delegation left enabled
+## Operational guardrails
 
-**No** — restored to disabled after test window.
+| Capability | Status |
+|------------|--------|
+| Job `expires_at` lease | yes (default 900s) |
+| `ExpireStaleRunnerJobs` on claim | yes |
+| `ExpireStaleRunnerJobs` on core startup | **added** (stabilization pass) |
+| Worker heartbeat registry | yes (in-memory, max-age filter) |
+| Cancel API | `POST /api/v1/runner/jobs/:id/cancel` |
+| Silent job deletion | **no** — expired/failed jobs retained |
+
+## Conclusion
+
+**Native runner delegation is beta-viable for controlled test windows.**
+
+- Keep **disabled by default**.
+- Enable only for short soak/validation windows; disable and stop worker after test.
+- Do not use `INSTALL_EXTERNAL_TOOLS=true` builds in the critical release path unless scanner image time budget is acceptable.
