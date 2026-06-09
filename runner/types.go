@@ -3,12 +3,18 @@ package runner
 const (
 	ContractVersion = 1
 
-	JobTypeScanFullRepo = "scan_full_repo"
+	JobTypeScanFullRepo       = "scan"
+	JobTypeSBOM               = "sbom"
+	JobTypeGraph              = "graph"
+	JobTypePreinstallAudit    = "preinstall_audit"
+	JobTypeRemediationVerify  = "remediation_verify"
+	JobTypeScanFullRepoLegacy = "scan_full_repo"
 
 	JobStatusCompleted = "completed"
 	JobStatusFailed    = "failed"
 
 	ModeCore         = "core"
+	ModeNative       = "native"
 	ModeGiteaActions = "gitea_actions"
 	ModeAuto         = "auto"
 

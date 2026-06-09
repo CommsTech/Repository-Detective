@@ -17,6 +17,9 @@ type Config struct {
 	CallbackBaseURL       string
 	MaxRepoSizeMB         int
 	MaxFiles              int
+	RequireHMAC           bool
+	NonceTTLSeconds       int
+	AllowedJobTypes       []string
 }
 
 // Normalized returns config with defaults applied.
@@ -42,6 +45,15 @@ func (c Config) Normalized() Config {
 	}
 	if out.MaxFiles <= 0 {
 		out.MaxFiles = 5000
+	}
+	if out.NonceTTLSeconds <= 0 {
+		out.NonceTTLSeconds = 300
+	}
+	if len(out.AllowedJobTypes) == 0 {
+		out.AllowedJobTypes = []string{
+			JobTypeScanFullRepo, JobTypeScanFullRepoLegacy, JobTypeSBOM,
+			JobTypeGraph, JobTypePreinstallAudit, JobTypeRemediationVerify,
+		}
 	}
 	return out
 }

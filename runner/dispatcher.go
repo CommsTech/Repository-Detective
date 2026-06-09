@@ -60,7 +60,7 @@ func (d *Dispatcher) CreateScanJob(ctx context.Context, repo store.Repository, s
 		ScanID:             scanID,
 		JobType:            store.RunnerJobTypeScanFullRepo,
 		Status:             store.RunnerJobStatusQueued,
-		RunnerMode:         ModeGiteaActions,
+		RunnerMode:         selectRunnerMode(d.cfg, spec.JobType),
 		Ref:                ref,
 		CommitSHA:          commitSHA,
 		PolicySnapshotJSON: policyJSON,
@@ -79,6 +79,26 @@ func (d *Dispatcher) CreateScanJob(ctx context.Context, repo store.Repository, s
 		}).Info("Runner job queued")
 	}
 	return created, nil
+}
+
+func selectRunnerMode(cfg Config, jobType string) string {
+	return SelectRunnerMode(cfg, jobType)
+}
+
+// SelectRunnerMode picks the execution backend for a job type.
+func SelectRunnerMode(cfg Config, jobType string) string {
+	cfg = cfg.Normalized()
+	switch cfg.Mode {
+	case ModeNative, ModeGiteaActions, ModeCore:
+		return cfg.Mode
+	case ModeAuto:
+		if jobType == JobTypeRemediationVerify {
+			return ModeGiteaActions
+		}
+		return ModeNative
+	default:
+		return ModeNative
+	}
 }
 
 func newJobID() (string, error) {

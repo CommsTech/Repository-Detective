@@ -76,6 +76,7 @@ var (
 	runnerCfg           runner.Config
 	runnerDispatcher    *runner.Dispatcher
 	runnerReceiver      *runner.Receiver
+	runnerRegistry      *runner.Registry
 	runnerHandler       *api.RunnerHandler
 )
 
@@ -218,6 +219,14 @@ type Config struct {
 	RunnerResultMaxSizeMB                   int                                  `mapstructure:"runner_result_max_size_mb"`
 	RunnerArtifactRetentionDays             int                                  `mapstructure:"runner_artifact_retention_days"`
 	RunnerCallbackBaseURL                   string                               `mapstructure:"runner_callback_base_url"`
+	RunnerRequireHMAC                       bool                                 `mapstructure:"runner_require_hmac"`
+	RunnerNonceTTLSeconds                   int                                  `mapstructure:"runner_nonce_ttl_seconds"`
+	RunnerAllowedJobTypes                   []string                             `mapstructure:"runner_allowed_job_types"`
+	GiteaActionsTestBackendEnabled          bool                                 `mapstructure:"gitea_actions_test_backend_enabled"`
+	GiteaActionsWorkflowName                string                               `mapstructure:"gitea_actions_workflow_name"`
+	GiteaActionsTriggerMode                 string                               `mapstructure:"gitea_actions_trigger_mode"`
+	GiteaActionsTimeoutSeconds              int                                  `mapstructure:"gitea_actions_timeout_seconds"`
+	GiteaActionsRequireOperatorApproval     bool                                 `mapstructure:"gitea_actions_require_operator_approval"`
 	LabelCompatMode                         string                               `mapstructure:"label_compat_mode"`
 	NotificationsEnabled                    bool                                 `mapstructure:"notifications_enabled"`
 	NotificationMinSeverity                 string                               `mapstructure:"notification_min_severity"`
@@ -243,6 +252,10 @@ type Config struct {
 	RemediationPRMaxFilesChanged            int                                  `mapstructure:"remediation_pr_max_files_changed"`
 	RemediationPRMaxDiffLines               int                                  `mapstructure:"remediation_pr_max_diff_lines"`
 	RemediationPRValidationTimeoutSeconds   int                                  `mapstructure:"remediation_pr_validation_timeout_seconds"`
+	RemediationPRRequireTests               bool                                 `mapstructure:"remediation_pr_require_tests"`
+	RemediationPRUseRunnerVerification      bool                                 `mapstructure:"remediation_pr_use_runner_verification"`
+	RemediationPRBlockHighCritical          bool                                 `mapstructure:"remediation_pr_block_high_critical_without_manual_override"`
+	RemediationPRAllowedSeverities          []string                             `mapstructure:"remediation_pr_allowed_severities"`
 	EvidenceClosureEnabled                  bool                                 `mapstructure:"evidence_closure_enabled"`
 	EvidenceClosureCloseIssues              bool                                 `mapstructure:"evidence_closure_close_issues"`
 	EvidenceClosureComment                  bool                                 `mapstructure:"evidence_closure_comment"`
@@ -518,6 +531,14 @@ func loadConfig() error {
 	viper.SetDefault("runner_max_concurrent_jobs", 2)
 	viper.SetDefault("runner_result_max_size_mb", 50)
 	viper.SetDefault("runner_artifact_retention_days", 14)
+	viper.SetDefault("runner_require_hmac", true)
+	viper.SetDefault("runner_nonce_ttl_seconds", 300)
+	viper.SetDefault("runner_allowed_job_types", []string{"scan", "sbom", "graph", "preinstall_audit", "remediation_verify"})
+	viper.SetDefault("gitea_actions_test_backend_enabled", false)
+	viper.SetDefault("gitea_actions_workflow_name", "repository-detective-verify.yml")
+	viper.SetDefault("gitea_actions_trigger_mode", "workflow_dispatch")
+	viper.SetDefault("gitea_actions_timeout_seconds", 1800)
+	viper.SetDefault("gitea_actions_require_operator_approval", true)
 	viper.SetDefault("label_compat_mode", "new_only")
 	viper.SetDefault("notifications_enabled", false)
 	viper.SetDefault("notification_min_severity", "high")
@@ -537,6 +558,10 @@ func loadConfig() error {
 	viper.SetDefault("remediation_pr_max_files_changed", 3)
 	viper.SetDefault("remediation_pr_max_diff_lines", 100)
 	viper.SetDefault("remediation_pr_validation_timeout_seconds", 300)
+	viper.SetDefault("remediation_pr_require_tests", true)
+	viper.SetDefault("remediation_pr_use_runner_verification", true)
+	viper.SetDefault("remediation_pr_block_high_critical_without_manual_override", true)
+	viper.SetDefault("remediation_pr_allowed_severities", []string{"low", "medium"})
 	viper.SetDefault("evidence_closure_enabled", true)
 	viper.SetDefault("evidence_closure_close_issues", false)
 	viper.SetDefault("evidence_closure_comment", true)
@@ -954,13 +979,14 @@ func initializeComponents() error {
 		logger.Info("Pre-install audit mode enabled")
 	}
 
+	runnerRegistry = runner.NewRegistry()
 	if bugbotStore != nil && runnerCfg.DelegationEnabled && runnerCfg.Mode != runner.ModeCore && runnerCfg.SharedSecret != "" {
 		runnerDispatcher = runner.NewDispatcher(bugbotStore, runnerCfg, logger)
 		runnerReceiver = runner.NewReceiver(bugbotStore, runnerCfg, logger, ingestRunnerResult)
 		runnerReceiver.SetJobsExpiredHandler(func(ctx context.Context, count int64) {
 			notifyRunnerJobsExpired(ctx, count)
 		})
-		runnerHandler = api.NewRunnerHandler(bugbotStore, runnerCfg, runnerReceiver, logger)
+		runnerHandler = api.NewRunnerHandler(bugbotStore, runnerCfg, runnerReceiver, runnerRegistry, logger)
 		logger.Infof("Runner delegation enabled (mode=%s)", runnerCfg.Mode)
 	}
 
@@ -995,6 +1021,11 @@ func initializeComponents() error {
 				ScanPolicyMode:               store.DeploymentScanMode(globalSnapshot),
 				NotificationsEnabled:         config.NotificationsEnabled,
 				RunnerDelegationEnabled:      config.RunnerDelegationEnabled,
+				RunnerRequireHMAC:            config.RunnerRequireHMAC,
+				RunnerMode:                   config.RunnerMode,
+				RemediationPRRequireTests:    config.RemediationPRRequireTests,
+				RemediationPRUseRunnerVerification: config.RemediationPRUseRunnerVerification,
+				GiteaActionsTestBackendEnabled: config.GiteaActionsTestBackendEnabled,
 			})
 		}
 		if err != nil {
@@ -1898,6 +1929,9 @@ func mainRunnerConfig() runner.Config {
 		CallbackBaseURL:       callback,
 		MaxRepoSizeMB:         config.WorkspaceMaxSizeMB,
 		MaxFiles:              config.WorkspaceMaxFiles,
+		RequireHMAC:           config.RunnerRequireHMAC,
+		NonceTTLSeconds:       config.RunnerNonceTTLSeconds,
+		AllowedJobTypes:       config.RunnerAllowedJobTypes,
 	}
 }
 

@@ -19,12 +19,13 @@ type RunnerHandler struct {
 	store    store.QueryStore
 	cfg      runner.Config
 	receiver *runner.Receiver
+	registry *runner.Registry
 	logger   *logrus.Logger
 }
 
 // NewRunnerHandler creates a runner API handler.
-func NewRunnerHandler(s store.QueryStore, cfg runner.Config, receiver *runner.Receiver, logger *logrus.Logger) *RunnerHandler {
-	return &RunnerHandler{store: s, cfg: cfg, receiver: receiver, logger: logger}
+func NewRunnerHandler(s store.QueryStore, cfg runner.Config, receiver *runner.Receiver, registry *runner.Registry, logger *logrus.Logger) *RunnerHandler {
+	return &RunnerHandler{store: s, cfg: cfg, receiver: receiver, registry: registry, logger: logger}
 }
 
 // RegisterOperatorRoutes mounts operator-facing runner job routes (API key auth applied by caller).
@@ -32,10 +33,12 @@ func (h *RunnerHandler) RegisterOperatorRoutes(g *gin.RouterGroup) {
 	g.GET("/runner/jobs", h.ListRunnerJobs)
 	g.GET("/runner/jobs/:job_id", h.GetRunnerJob)
 	g.POST("/runner/jobs/:job_id/cancel", h.CancelRunnerJob)
+	g.GET("/runner/workers", h.ListRunnerWorkers)
 }
 
 // RegisterRunnerRoutes mounts runner worker routes (HMAC auth applied by caller).
 func (h *RunnerHandler) RegisterRunnerRoutes(g *gin.RouterGroup) {
+	g.POST("/ping", h.PingRunner)
 	g.POST("/jobs/claim", h.ClaimJob)
 	g.GET("/jobs/:job_id/spec", h.GetJobSpec)
 	g.POST("/jobs/:job_id/result", h.SubmitJobResult)
@@ -159,6 +162,42 @@ func (h *RunnerHandler) SubmitJobResult(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"status": "accepted", "job_id": jobID})
+}
+
+type runnerPingRequest struct {
+	RunnerID     string   `json:"runner_id"`
+	Version      string   `json:"version"`
+	Capabilities []string `json:"capabilities"`
+}
+
+func (h *RunnerHandler) PingRunner(c *gin.Context) {
+	var body runnerPingRequest
+	if err := c.ShouldBindJSON(&body); err != nil || strings.TrimSpace(body.RunnerID) == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "runner_id required"})
+		return
+	}
+	if h.registry != nil {
+		h.registry.RecordHeartbeat(runner.WorkerHeartbeat{
+			RunnerID:     strings.TrimSpace(body.RunnerID),
+			Version:      strings.TrimSpace(body.Version),
+			Capabilities: body.Capabilities,
+		})
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "ok", "delegation_enabled": h.cfg.DelegationEnabled})
+}
+
+func (h *RunnerHandler) ListRunnerWorkers(c *gin.Context) {
+	if !h.requireStore(c) {
+		return
+	}
+	workers := []runner.WorkerHeartbeat{}
+	if h.registry != nil {
+		workers = h.registry.ListHeartbeats(15 * time.Minute)
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"delegation_enabled": h.cfg.DelegationEnabled,
+		"workers":            workers,
+	})
 }
 
 func (h *RunnerHandler) requireStore(c *gin.Context) bool {
