@@ -986,7 +986,7 @@ func initializeComponents() error {
 		runnerReceiver.SetJobsExpiredHandler(func(ctx context.Context, count int64) {
 			notifyRunnerJobsExpired(ctx, count)
 		})
-		runnerHandler = api.NewRunnerHandler(bugbotStore, runnerCfg, runnerReceiver, runnerRegistry, logger)
+		runnerHandler = api.NewRunnerHandler(bugbotStore, runnerCfg, runnerReceiver, runnerDispatcher, runnerRegistry, logger)
 		logger.Infof("Runner delegation enabled (mode=%s)", runnerCfg.Mode)
 	}
 

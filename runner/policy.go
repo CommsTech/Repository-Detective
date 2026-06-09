@@ -32,13 +32,13 @@ func ShouldDelegate(cfg Config, effective store.EffectiveSettings, triggerType s
 	switch strings.ToLower(strings.TrimSpace(effective.RunnerPolicy)) {
 	case "core":
 		return DecisionCore
-	case ModeGiteaActions:
-		if cfg.Mode == ModeGiteaActions || cfg.Mode == ModeAuto {
+	case ModeGiteaActions, ModeAuto:
+		if cfg.Mode == ModeGiteaActions || cfg.Mode == ModeAuto || cfg.Mode == ModeNative {
 			return DecisionDelegate
 		}
 		return DecisionCore
-	case ModeAuto:
-		if cfg.Mode == ModeAuto || cfg.Mode == ModeGiteaActions {
+	case ModeNative:
+		if cfg.Mode == ModeNative || cfg.Mode == ModeAuto {
 			return DecisionDelegate
 		}
 		return DecisionCore

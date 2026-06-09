@@ -52,6 +52,14 @@ func TestShouldDelegatePolicy(t *testing.T) {
 	}
 }
 
+func TestShouldDelegateNativeMode(t *testing.T) {
+	cfg := runner.Config{DelegationEnabled: true, Mode: runner.ModeNative, SharedSecret: "x"}
+	effective := store.EffectiveSettings{RunnerPolicy: runner.ModeAuto}
+	if runner.ShouldDelegate(cfg, effective, store.TriggerManual) != runner.DecisionDelegate {
+		t.Fatal("expected delegate for native mode with auto repo policy")
+	}
+}
+
 func TestValidateResultRejectsMismatch(t *testing.T) {
 	job := runner.JobView{JobID: "j1", ScanID: "scan-a"}
 	result := runner.JobResult{JobID: "j1", ScanID: "scan-b", Status: runner.JobStatusCompleted}

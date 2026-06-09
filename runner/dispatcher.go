@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"git.commsnet.org/commstech/bugbot/analyzers"
@@ -79,6 +80,81 @@ func (d *Dispatcher) CreateScanJob(ctx context.Context, repo store.Repository, s
 		}).Info("Runner job queued")
 	}
 	return created, nil
+}
+
+// CreateTypedJob enqueues a delegated job of a specific type (graph, sbom, remediation_verify).
+func (d *Dispatcher) CreateTypedJob(ctx context.Context, jobType string, repo store.Repository, scanID, ref, commitSHA string, policy analyzers.PolicySnapshot) (store.RunnerJob, error) {
+	if d.store == nil {
+		return store.RunnerJob{}, fmt.Errorf("database disabled")
+	}
+	jobType = strings.TrimSpace(jobType)
+	if jobType == "" {
+		return store.RunnerJob{}, fmt.Errorf("job type required")
+	}
+	if !jobTypeAllowed(d.cfg.AllowedJobTypes, jobType) {
+		return store.RunnerJob{}, fmt.Errorf("job type %q not allowed by server config", jobType)
+	}
+	running, err := d.store.CountRunningRunnerJobs(ctx)
+	if err != nil {
+		return store.RunnerJob{}, err
+	}
+	if running >= d.cfg.MaxConcurrentJobs {
+		return store.RunnerJob{}, fmt.Errorf("runner job capacity reached")
+	}
+
+	jobID, err := newJobID()
+	if err != nil {
+		return store.RunnerJob{}, err
+	}
+	spec := BuildJobSpecForType(d.cfg, jobID, jobType, repo, scanID, ref, commitSHA, policy, nil)
+	specJSON, err := json.Marshal(spec)
+	if err != nil {
+		return store.RunnerJob{}, err
+	}
+	policyJSON, err := json.Marshal(policy)
+	if err != nil {
+		return store.RunnerJob{}, err
+	}
+
+	now := time.Now().UTC()
+	expires := now.Add(time.Duration(d.cfg.JobTimeoutSeconds) * time.Second)
+	job := store.RunnerJob{
+		JobID:              jobID,
+		RepositoryID:       repo.ID,
+		ScanID:             scanID,
+		JobType:            jobType,
+		Status:             store.RunnerJobStatusQueued,
+		RunnerMode:         selectRunnerMode(d.cfg, jobType),
+		Ref:                ref,
+		CommitSHA:          commitSHA,
+		PolicySnapshotJSON: policyJSON,
+		JobSpecJSON:        specJSON,
+		ResultSummaryJSON:  json.RawMessage(`{}`),
+		CreatedAt:          now,
+		ExpiresAt:          &expires,
+	}
+	created, err := d.store.CreateRunnerJob(ctx, job)
+	if err != nil {
+		return store.RunnerJob{}, err
+	}
+	if d.logger != nil {
+		d.logger.WithFields(logrus.Fields{
+			"job_id": jobID, "job_type": jobType, "scan_id": scanID, "repo": repo.FullName,
+		}).Info("Runner typed job queued")
+	}
+	return created, nil
+}
+
+func jobTypeAllowed(allowed []string, jobType string) bool {
+	if len(allowed) == 0 {
+		return true
+	}
+	for _, t := range allowed {
+		if strings.TrimSpace(t) == strings.TrimSpace(jobType) {
+			return true
+		}
+	}
+	return false
 }
 
 func selectRunnerMode(cfg Config, jobType string) string {

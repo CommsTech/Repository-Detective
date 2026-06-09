@@ -109,11 +109,31 @@ type JobSpec struct {
 
 // BuildJobSpec constructs a runner job spec from core context.
 func BuildJobSpec(cfg Config, jobID string, repo store.Repository, scanID, ref, commitSHA string, policy analyzers.PolicySnapshot) JobSpec {
+	return BuildJobSpecForType(cfg, jobID, JobTypeScanFullRepo, repo, scanID, ref, commitSHA, policy, AllowedTasks)
+}
+
+// BuildJobSpecForType constructs a typed runner job spec.
+func BuildJobSpecForType(cfg Config, jobID, jobType string, repo store.Repository, scanID, ref, commitSHA string, policy analyzers.PolicySnapshot, allowedTasks []string) JobSpec {
 	cfg = cfg.Normalized()
+	if jobType == "" {
+		jobType = JobTypeScanFullRepo
+	}
+	if len(allowedTasks) == 0 {
+		switch jobType {
+		case JobTypeGraph:
+			allowedTasks = []string{"graph"}
+		case JobTypeSBOM:
+			allowedTasks = []string{"sbom"}
+		case JobTypeRemediationVerify:
+			allowedTasks = []string{"scanners"}
+		default:
+			allowedTasks = append([]string(nil), AllowedTasks...)
+		}
+	}
 	return JobSpec{
 		Version:           ContractVersion,
 		JobID:             jobID,
-		JobType:           JobTypeScanFullRepo,
+		JobType:           jobType,
 		Repository: RepositoryInfo{
 			ForgeType:     repo.ForgeType,
 			Owner:         repo.Owner,
@@ -132,7 +152,7 @@ func BuildJobSpec(cfg Config, jobID string, repo store.Repository, scanID, ref, 
 			MaxFiles:        cfg.MaxFiles,
 			MaxResultSizeMB: cfg.ResultMaxSizeMB,
 		},
-		AllowedTasks:    append([]string(nil), AllowedTasks...),
+		AllowedTasks:    append([]string(nil), allowedTasks...),
 		ForbiddenTasks:  append([]string(nil), ForbiddenTasks...),
 		CallbackBaseURL: cfg.CallbackBaseURL,
 	}

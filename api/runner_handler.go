@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"git.commsnet.org/commstech/bugbot/analyzers"
+	"git.commsnet.org/commstech/bugbot/internal/scanid"
 	"git.commsnet.org/commstech/bugbot/runner"
 	"git.commsnet.org/commstech/bugbot/store"
 	"github.com/gin-gonic/gin"
@@ -16,16 +18,17 @@ import (
 
 // RunnerHandler serves operator and runner callback endpoints.
 type RunnerHandler struct {
-	store    store.QueryStore
-	cfg      runner.Config
-	receiver *runner.Receiver
-	registry *runner.Registry
-	logger   *logrus.Logger
+	store      store.QueryStore
+	cfg        runner.Config
+	receiver   *runner.Receiver
+	dispatcher *runner.Dispatcher
+	registry   *runner.Registry
+	logger     *logrus.Logger
 }
 
 // NewRunnerHandler creates a runner API handler.
-func NewRunnerHandler(s store.QueryStore, cfg runner.Config, receiver *runner.Receiver, registry *runner.Registry, logger *logrus.Logger) *RunnerHandler {
-	return &RunnerHandler{store: s, cfg: cfg, receiver: receiver, registry: registry, logger: logger}
+func NewRunnerHandler(s store.QueryStore, cfg runner.Config, receiver *runner.Receiver, dispatcher *runner.Dispatcher, registry *runner.Registry, logger *logrus.Logger) *RunnerHandler {
+	return &RunnerHandler{store: s, cfg: cfg, receiver: receiver, dispatcher: dispatcher, registry: registry, logger: logger}
 }
 
 // RegisterOperatorRoutes mounts operator-facing runner job routes (API key auth applied by caller).
@@ -34,6 +37,7 @@ func (h *RunnerHandler) RegisterOperatorRoutes(g *gin.RouterGroup) {
 	g.GET("/runner/jobs/:job_id", h.GetRunnerJob)
 	g.POST("/runner/jobs/:job_id/cancel", h.CancelRunnerJob)
 	g.GET("/runner/workers", h.ListRunnerWorkers)
+	g.POST("/runner/jobs/enqueue-delegated", h.EnqueueDelegatedJob)
 }
 
 // RegisterRunnerRoutes mounts runner worker routes (HMAC auth applied by caller).
@@ -197,6 +201,83 @@ func (h *RunnerHandler) ListRunnerWorkers(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"delegation_enabled": h.cfg.DelegationEnabled,
 		"workers":            workers,
+	})
+}
+
+type enqueueDelegatedRequest struct {
+	RepositoryID int64  `json:"repository_id"`
+	JobType      string `json:"job_type"`
+	Ref          string `json:"ref,omitempty"`
+}
+
+var enqueueAllowedJobTypes = map[string]struct{}{
+	runner.JobTypeGraph:             {},
+	runner.JobTypeSBOM:              {},
+	runner.JobTypeRemediationVerify: {},
+}
+
+func (h *RunnerHandler) EnqueueDelegatedJob(c *gin.Context) {
+	if !h.requireStore(c) {
+		return
+	}
+	if !h.cfg.DelegationEnabled {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "runner delegation disabled"})
+		return
+	}
+	if h.dispatcher == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "runner dispatcher unavailable"})
+		return
+	}
+	var body enqueueDelegatedRequest
+	if err := c.ShouldBindJSON(&body); err != nil || body.RepositoryID <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "repository_id required"})
+		return
+	}
+	jobType := strings.TrimSpace(body.JobType)
+	if jobType == "" {
+		jobType = runner.JobTypeGraph
+	}
+	if _, ok := enqueueAllowedJobTypes[jobType]; !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "job_type must be graph, sbom, or remediation_verify"})
+		return
+	}
+
+	repo, err := h.store.GetRepository(c.Request.Context(), body.RepositoryID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "repository not found"})
+		return
+	}
+	ref := strings.TrimSpace(body.Ref)
+	if ref == "" {
+		ref = repo.DefaultBranch
+	}
+	if ref == "" {
+		ref = "main"
+	}
+
+	scanID := scanid.New()
+	now := time.Now().UTC()
+	if _, err := h.store.CreateScan(c.Request.Context(), store.Scan{
+		ID: scanID, RepositoryID: repo.ID, TriggerType: store.TriggerManual,
+		Ref: ref, Status: store.ScanStatusStarted, StartedAt: now,
+	}); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create scan record"})
+		return
+	}
+
+	policy := analyzers.PolicySnapshot{
+		EnableCodeGraph: true, GraphMaxNodes: 5000, GraphMaxEdges: 15000,
+		GraphTimeoutSeconds: 120, GraphIncludeFunctions: true, GraphIncludeFindings: true,
+		AnalysisDepth: 2,
+	}
+	job, err := h.dispatcher.CreateTypedJob(c.Request.Context(), jobType, repo, scanID, ref, "", policy)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusAccepted, gin.H{
+		"job_id": job.JobID, "scan_id": scanID, "job_type": jobType,
+		"repository_id": repo.ID, "repository": repo.FullName, "status": job.Status,
 	})
 }
 
