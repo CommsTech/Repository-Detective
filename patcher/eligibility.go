@@ -124,6 +124,26 @@ func CheckPREligibility(plan remediation.Plan, repo RepoContext, cfg Config) Eli
 		pass("patcher")
 	}
 
+	severity := strings.ToLower(strings.TrimSpace(plan.Severity))
+	if cfg.BlockHighCriticalWithoutOverride && (severity == "high" || severity == "critical") {
+		addBlock("severity", "high/critical findings blocked without manual override")
+	} else if len(cfg.AllowedSeverities) > 0 && severity != "" {
+		allowed := false
+		for _, s := range cfg.AllowedSeverities {
+			if strings.ToLower(strings.TrimSpace(s)) == severity {
+				allowed = true
+				break
+			}
+		}
+		if !allowed {
+			addBlock("severity", "severity not in remediation_pr_allowed_severities")
+		} else {
+			pass("severity")
+		}
+	} else {
+		pass("severity")
+	}
+
 	return EligibilityResult{
 		Eligible:       len(blocked) == 0,
 		BlockedReasons: blocked,

@@ -29,12 +29,16 @@ func remediationPRConfig() patcher.Config {
 		timeout = 300
 	}
 	return patcher.Config{
-		Enabled:              config.RemediationPREnabled,
-		BranchPrefix:         prefix,
-		RequireApproval:      config.RemediationPRRequireApproval,
-		MaxFilesChanged:      maxFiles,
-		MaxDiffLines:         maxLines,
-		ValidationTimeoutSec: timeout,
+		Enabled:                          config.RemediationPREnabled,
+		BranchPrefix:                     prefix,
+		RequireApproval:                  config.RemediationPRRequireApproval,
+		MaxFilesChanged:                  maxFiles,
+		MaxDiffLines:                     maxLines,
+		ValidationTimeoutSec:             timeout,
+		RequireTests:                     config.RemediationPRRequireTests,
+		UseRunnerVerification:            config.RemediationPRUseRunnerVerification,
+		BlockHighCriticalWithoutOverride: config.RemediationPRBlockHighCritical,
+		AllowedSeverities:                config.RemediationPRAllowedSeverities,
 	}
 }
 

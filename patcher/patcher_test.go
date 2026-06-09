@@ -12,12 +12,16 @@ import (
 
 func enabledPRConfig() Config {
 	return Config{
-		Enabled:              true,
-		BranchPrefix:         "repository-detective/fix",
-		RequireApproval:      true,
-		MaxFilesChanged:      3,
-		MaxDiffLines:         100,
-		ValidationTimeoutSec: 30,
+		Enabled:                          true,
+		BranchPrefix:                     "repository-detective/fix",
+		RequireApproval:                  true,
+		MaxFilesChanged:                  3,
+		MaxDiffLines:                     100,
+		ValidationTimeoutSec:             30,
+		RequireTests:                     true,
+		UseRunnerVerification:            true,
+		BlockHighCriticalWithoutOverride: true,
+		AllowedSeverities:                []string{"low", "medium"},
 	}
 }
 
@@ -25,6 +29,15 @@ func connectedRepo() RepoContext {
 	return RepoContext{
 		FullName: "o/r", CloneURL: "https://git.example.com/o/r.git",
 		DefaultBranch: "main", ConnectedRepo: true,
+	}
+}
+
+func TestHighSeverityBlockedByDefault(t *testing.T) {
+	plan := EligiblePlan()
+	plan.Severity = "high"
+	elig := CheckPREligibility(plan, connectedRepo(), enabledPRConfig())
+	if elig.Eligible {
+		t.Fatal("high severity should be blocked when block_high_critical is true")
 	}
 }
 

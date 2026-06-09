@@ -18,12 +18,16 @@ const (
 
 // Config holds safe remediation PR settings.
 type Config struct {
-	Enabled              bool
-	BranchPrefix         string
-	RequireApproval      bool
-	MaxFilesChanged      int
-	MaxDiffLines         int
-	ValidationTimeoutSec int
+	Enabled                          bool
+	BranchPrefix                     string
+	RequireApproval                  bool
+	MaxFilesChanged                  int
+	MaxDiffLines                     int
+	ValidationTimeoutSec             int
+	RequireTests                     bool
+	UseRunnerVerification            bool
+	BlockHighCriticalWithoutOverride bool
+	AllowedSeverities                []string
 }
 
 // TestResult records one validation command outcome.

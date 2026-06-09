@@ -228,5 +228,6 @@ func EligiblePlan() remediation.Plan {
 		FixComplexity:       remediation.ComplexitySmall,
 		SafeForAutoPR:       true,
 		RequiresHumanReview: false,
+		Severity:            "medium",
 	}
 }
