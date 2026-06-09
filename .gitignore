@@ -145,6 +145,9 @@ docs/dogfood-reports/*
 !docs/dogfood-reports/active-present-79-classification.md
 !docs/dogfood-reports/active-present-79-rescan-report.md
 !docs/dogfood-reports/gitea-wiki-http-500-triage.md
+!docs/dogfood-reports/active-present-26-baseline.md
+!docs/dogfood-reports/active-present-26-classification.md
+!docs/dogfood-reports/active-present-26-rescan-report.md
 
 # Beta readiness docs (sanitized, committable)
 !docs/beta/
