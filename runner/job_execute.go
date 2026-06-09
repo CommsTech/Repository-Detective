@@ -40,23 +40,9 @@ func ExecuteJob(ctx context.Context, spec JobSpec, in JobExecuteInput) (JobResul
 	case JobTypeRemediationVerify:
 		return executeRemediationVerifyJob(ctx, spec, in)
 	case JobTypeScanFullRepo, JobTypePreinstallAudit:
-		return ExecuteWorkspaceScan(ctx, spec, ExecuteInput{
-			WorkspaceDir: in.WorkspaceDir,
-			ScannerCfg:   in.ScannerCfg,
-			HealthCfg:    in.HealthCfg,
-			GraphCfg:     in.GraphCfg,
-			SkipPatterns: in.SkipPatterns,
-			Logger:       in.Logger,
-		})
+		return ExecuteWorkspaceScan(ctx, spec, ExecuteInput(in))
 	default:
-		return ExecuteWorkspaceScan(ctx, spec, ExecuteInput{
-			WorkspaceDir: in.WorkspaceDir,
-			ScannerCfg:   in.ScannerCfg,
-			HealthCfg:    in.HealthCfg,
-			GraphCfg:     in.GraphCfg,
-			SkipPatterns: in.SkipPatterns,
-			Logger:       in.Logger,
-		})
+		return ExecuteWorkspaceScan(ctx, spec, ExecuteInput(in))
 	}
 }
 
@@ -69,14 +55,9 @@ func executeGraphJob(ctx context.Context, spec JobSpec, in JobExecuteInput) (Job
 	policy.EnableCodeGraph = true
 	graphSpec.EffectiveSettings = policy
 	in.GraphCfg.IncludeFindings = false
-	result, err := ExecuteWorkspaceScan(ctx, graphSpec, ExecuteInput{
-		WorkspaceDir: in.WorkspaceDir,
-		ScannerCfg:   scanners.Config{},
-		HealthCfg:    health.Config{Enabled: false},
-		GraphCfg:     in.GraphCfg,
-		SkipPatterns: in.SkipPatterns,
-		Logger:       in.Logger,
-	})
+	in.ScannerCfg = scanners.Config{}
+	in.HealthCfg = health.Config{Enabled: false}
+	result, err := ExecuteWorkspaceScan(ctx, graphSpec, ExecuteInput(in))
 	// Graph delegation returns metrics only in v1 worker transport (full graph ingest deferred to artifacts).
 	nodeCount, edgeCount := 0, 0
 	if result.Graph != nil {
@@ -138,14 +119,10 @@ func executeRemediationVerifyJob(ctx context.Context, spec JobSpec, in JobExecut
 	policy := verifySpec.EffectiveSettings
 	policy.AnalysisDepth = 1
 	verifySpec.EffectiveSettings = policy
-	scanResult, err := ExecuteWorkspaceScan(ctx, verifySpec, ExecuteInput{
-		WorkspaceDir: in.WorkspaceDir,
-		ScannerCfg:   in.ScannerCfg,
-		HealthCfg:    health.Config{Enabled: false},
-		GraphCfg:     graph.Config{Enabled: false},
-		SkipPatterns: in.SkipPatterns,
-		Logger:       in.Logger,
-	})
+	verifyIn := in
+	verifyIn.HealthCfg = health.Config{Enabled: false}
+	verifyIn.GraphCfg = graph.Config{Enabled: false}
+	scanResult, err := ExecuteWorkspaceScan(ctx, verifySpec, ExecuteInput(verifyIn))
 	if err != nil {
 		result.Status = JobStatusFailed
 		result.Errors = append(result.Errors, RedactLogLine(err.Error()))
