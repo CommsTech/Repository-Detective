@@ -139,6 +139,15 @@ false_positive_reduction:
 
 remediation_planner_enabled: true
 remediation_pr_enabled: false
+remediation_pr_require_approval: true
+remediation_pr_require_tests: true
+remediation_pr_use_runner_verification: true
+remediation_pr_block_high_critical_without_manual_override: true
+remediation_pr_allowed_severities:
+  - low
+  - medium
+remediation_pr_max_files_changed: 5
+remediation_pr_max_diff_lines: 300
 evidence_closure_enabled: true
 evidence_closure_close_issues: false
 
@@ -156,3 +165,19 @@ preinstall_sandbox_readonly_workspace: true
 ai_startup_test_enabled: false
 notifications_enabled: false
 runner_delegation_enabled: false
+runner_mode: native
+runner_shared_secret: ""
+runner_max_concurrent_jobs: 2
+runner_require_hmac: true
+runner_nonce_ttl_seconds: 300
+runner_allowed_job_types:
+  - scan
+  - sbom
+  - graph
+  - preinstall_audit
+  - remediation_verify
+gitea_actions_test_backend_enabled: false
+gitea_actions_workflow_name: repository-detective-verify.yml
+gitea_actions_trigger_mode: workflow_dispatch
+gitea_actions_timeout_seconds: 1800
+gitea_actions_require_operator_approval: true

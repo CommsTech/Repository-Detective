@@ -20,7 +20,7 @@ type RunnerTelemetryView struct {
 	TotalJobs      int            `json:"total_jobs"`
 }
 
-const runnerDocsURL = "/ui/docs/RUNNERS.md"
+const runnerDocsURL = "/ui/docs/RUNNER_DELEGATION.md"
 
 // BuildRunnerTelemetry produces a state-aware empty/full runner queue explanation.
 func BuildRunnerTelemetry(delegationEnabled bool, jobsByStatus map[string]int, lastJobAt *time.Time, lastError string) RunnerTelemetryView {
@@ -38,8 +38,8 @@ func BuildRunnerTelemetry(delegationEnabled bool, jobsByStatus map[string]int, l
 		view.State = "disabled_global"
 		view.Title = "Runner delegation disabled"
 		view.Message = "Runner delegation is disabled. No runner telemetry is expected."
-		view.Detail = "Enable runner_delegation_enabled and configure runner_shared_secret to use Gitea Actions runners."
-		view.Action = "See docs/RUNNERS.md for runner setup."
+		view.Detail = "Enable runner_delegation_enabled and configure runner_shared_secret for native Repository Detective runners. Gitea act_runner is optional for repo-native test verification — see docs/RUNNER_DELEGATION.md."
+		view.Action = "See docs/RUNNER_DELEGATION.md for runner setup."
 		return view
 	}
 

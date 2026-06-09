@@ -37,6 +37,11 @@ type PlatformContext struct {
 	ScanPolicyMode               string
 	NotificationsEnabled         bool
 	RunnerDelegationEnabled      bool
+	RunnerRequireHMAC            bool
+	RunnerMode                   string
+	RemediationPRRequireTests    bool
+	RemediationPRUseRunnerVerification bool
+	GiteaActionsTestBackendEnabled bool
 }
 
 func buildCapabilityStatuses(
@@ -70,10 +75,14 @@ func remediationPRStatus(r operator.Readiness, p PlatformContext, basePath strin
 	} else if !r.Features.RemediationPlannerEnabled {
 		reason = "Remediation planner is disabled — enable remediation_planner_enabled first."
 	}
+	safety := "Enable only after reviewing remediation planner output and PR size limits."
+	if p.RemediationPRRequireTests {
+		safety += " Tests must pass before PR creation."
+	}
 	return CapabilityStatus{
 		Name: "Remediation PR", State: "disabled", Reason: reason,
-		ConfigKeys:  []string{"remediation_pr_enabled", "remediation_pr_require_approval", "gitea_token"},
-		SafetyNote:  "Enable only after reviewing remediation planner output and PR size limits.",
+		ConfigKeys:  []string{"remediation_pr_enabled", "remediation_pr_require_approval", "remediation_pr_require_tests", "gitea_token"},
+		SafetyNote:  safety,
 		SettingsURL: url, SettingsLabel: "Configure",
 	}
 }
@@ -95,12 +104,12 @@ func runnerDelegationStatus(r operator.Readiness, p PlatformContext, basePath st
 	}
 	reason := "Disabled by default until runner_shared_secret and callback URL are configured."
 	if p.RunnerSharedSecretSet && p.PublicURL != "" {
-		reason = "Shared secret present — set runner_delegation_enabled=true to activate."
+		reason = "Shared secret present — set runner_delegation_enabled=true to activate native runner workers."
 	}
 	return CapabilityStatus{
 		Name: "Runner delegation", State: "disabled", Reason: reason,
-		ConfigKeys:  []string{"runner_delegation_enabled", "runner_shared_secret", "runner_callback_base_url"},
-		SafetyNote:  "Default-off prevents unsigned runner callbacks.",
+		ConfigKeys:  []string{"runner_delegation_enabled", "runner_shared_secret", "runner_mode", "runner_callback_base_url"},
+		SafetyNote:  "Native Repository Detective runners handle scans; Gitea act_runner is optional for repo-native test verification only.",
 		SettingsURL: url, SettingsLabel: "Configure",
 	}
 }
