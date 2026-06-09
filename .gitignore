@@ -130,6 +130,12 @@ docs/dogfood-reports/*
 !docs/dogfood-reports/remaining-active-present-triage.md
 !docs/dogfood-reports/runner-remediation-preinstall-baseline.md
 !docs/dogfood-reports/runner-remediation-live-verification.md
+!docs/dogfood-reports/runner-worker-test-baseline.md
+!docs/dogfood-reports/native-runner-enablement-plan.md
+!docs/dogfood-reports/native-runner-live-validation.md
+!docs/dogfood-reports/native-runner-failure-rollback-report.md
+!docs/dogfood-reports/remediation-pr-dry-run-verification.md
+!docs/dogfood-reports/remediation-pr-controlled-test-report.md
 
 # Beta readiness docs (sanitized, committable)
 !docs/beta/
