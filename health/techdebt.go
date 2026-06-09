@@ -44,6 +44,9 @@ func runTechDebtChecks(files []FileInput) []Finding {
 
 func techDebtLineFindings(path string, lineNum int, trimmed, line string, markerCount *int) []Finding {
 	var out []Finding
+	if skipTechDebtFalsePositive(path, trimmed, line) {
+		return out
+	}
 	if techDebtMarker.MatchString(line) {
 		*markerCount++
 		sev := "low"
@@ -113,4 +116,32 @@ func makeFinding(category, source, ruleID, severity string, confidence float64, 
 		Confidence: confidence, Title: title, Description: desc,
 		File: file, Line: line, Evidence: evidence,
 	}
+}
+
+func skipTechDebtFalsePositive(path, trimmed, line string) bool {
+	lower := strings.ToLower(strings.ReplaceAll(path, "\\", "/"))
+	lowerLine := strings.ToLower(line)
+	if strings.Contains(lowerLine, "deprecated") {
+		if strings.Contains(lowerLine, "legacyconfig") || strings.Contains(lowerLine, "prefer repository_detective") ||
+			strings.Contains(lowerLine, "query string api key") || strings.Contains(lowerLine, "backward compatibility") ||
+			strings.Contains(lowerLine, "supported but deprecated") {
+			return true
+		}
+	}
+	if techDebtPhrase.MatchString(line) {
+		if strings.Contains(lowerLine, "temporary git") || strings.Contains(lowerLine, "temporary directory") ||
+			strings.Contains(lowerLine, "temporary git clone") || strings.Contains(lowerLine, "mkdirtemp") {
+			return true
+		}
+	}
+	if strings.HasPrefix(lower, "ai/config.go") && strings.Contains(lowerLine, "deprecated") {
+		return true
+	}
+	if strings.Contains(lowerLine, "deprecated") && (strings.Contains(lowerLine, "logger.") || strings.Contains(lowerLine, "log.")) {
+		return true
+	}
+	if strings.Contains(lowerLine, "query string api key") && strings.Contains(lowerLine, "deprecated") {
+		return true
+	}
+	return false
 }

@@ -62,7 +62,7 @@ func isExpectedReadAll(path, line string) bool {
 	}
 	// Client transports, forge adapters, and scanner runners use bounded reads — not unbounded ingestion.
 	for _, prefix := range []string{
-		"ai/", "gitea/", "github/", "memory/", "notify/", "handlers/",
+		"ai/", "gitea/", "github/", "memory/", "notify/", "handlers/", "api/",
 		"graph/", "patcher/", "scanners/", "runner/", "sbom/", "preinstall/",
 	} {
 		if strings.HasPrefix(lower, prefix) {

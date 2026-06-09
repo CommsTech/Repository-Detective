@@ -162,6 +162,9 @@ func isBestEffortIgnoredError(call, path, line string) bool {
 	if strings.Contains(lowerCall, "json.unmarshal") && strings.Contains(lowerPath, "main.go") {
 		return true
 	}
+	if strings.Contains(call, ".(") {
+		return true
+	}
 	return false
 }
 

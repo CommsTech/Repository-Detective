@@ -1977,7 +1977,9 @@ func ingestRunnerResult(ctx context.Context, job store.RunnerJob, result runner.
 	ctx, effective := resolveEffectiveSettingsForRepo(ctx, forgeType, repo.Owner, repo.Name)
 
 	var policy analyzers.PolicySnapshot
-	_ = json.Unmarshal(job.PolicySnapshotJSON, &policy)
+	if err := json.Unmarshal(job.PolicySnapshotJSON, &policy); err != nil {
+		logger.Warnf("runner result ingest: invalid policy snapshot for job %s: %v", job.JobID, err)
+	}
 
 	if result.Status == runner.JobStatusFailed || job.Status == store.RunnerJobStatusFailed {
 		errMsg := job.Error

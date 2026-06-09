@@ -109,7 +109,7 @@ func (c *Client) do(ctx context.Context, method, path string, body []byte) ([]by
 	req.Header.Set(HeaderSignature, sig)
 	httpClient := c.HTTPClient
 	if httpClient == nil {
-		httpClient = http.DefaultClient
+		httpClient = &http.Client{Timeout: 2 * time.Minute}
 	}
 	resp, err := httpClient.Do(req)
 	if err != nil {
