@@ -2,6 +2,7 @@ package runner
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/signal"
@@ -148,6 +149,22 @@ func (w *Worker) processJob(ctx context.Context, jobID string, spec JobSpec) err
 		result.FinishedAt = time.Now().UTC()
 	}
 
-	w.logger.Infof("job %s finished status=%s files=%d findings=%d", jobID, result.Status, result.FilesAnalyzed, len(result.Findings))
-	return w.client.SubmitResult(jobCtx, jobID, result)
+	body, err := json.Marshal(result)
+	if err != nil {
+		return err
+	}
+	maxBytes := int64(50 * 1024 * 1024)
+	if spec.Limits.MaxResultSizeMB > 0 {
+		maxBytes = int64(spec.Limits.MaxResultSizeMB) * 1024 * 1024
+	}
+	if int64(len(body)) > maxBytes {
+		result.Status = JobStatusFailed
+		result.Graph = nil
+		result.Findings = nil
+		result.Errors = []string{fmt.Sprintf("result payload exceeds %d MB limit", spec.Limits.MaxResultSizeMB)}
+		body, _ = json.Marshal(result)
+	}
+
+	w.logger.Infof("job %s finished status=%s files=%d findings=%d bytes=%d", jobID, result.Status, result.FilesAnalyzed, len(result.Findings), len(body))
+	return w.client.SubmitResultBody(jobCtx, jobID, body)
 }

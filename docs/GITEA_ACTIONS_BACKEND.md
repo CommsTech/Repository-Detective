@@ -38,7 +38,9 @@ Typical steps:
 
 Gitea act_runner uses a **registration token** obtained from your Gitea instance (instance/org/repo scope). Store this token only in runner configuration or secrets — **never** in the Repository Detective git repo.
 
-If a registration token was exposed, rotate it in Gitea before registering new runners.
+**If a registration token was pasted in chat or screenshots, rotate/revoke it in Gitea before registering new act_runner instances.**
+
+Repository Detective native workers use `REPOSITORY_DETECTIVE_RUNNER_SHARED_SECRET` (HMAC) — this is a different credential from Gitea act_runner registration tokens.
 
 ## When Repository Detective triggers a workflow
 

@@ -23,8 +23,9 @@
 ## Token hygiene
 
 - **Never** commit Gitea act_runner registration tokens or `runner_shared_secret`.
-- Rotate any token that appeared in chat, logs, or screenshots.
+- **Rotate** any Gitea act_runner registration token that was pasted in chat or logs before registering new runners.
 - Store tokens in runner host env or secret manager only.
+- Native RD worker uses `REPOSITORY_DETECTIVE_RUNNER_SHARED_SECRET` — separate from Gitea act_runner registration tokens.
 
 ## Compute isolation
 

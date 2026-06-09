@@ -80,7 +80,12 @@ func (c *Client) SubmitResult(ctx context.Context, jobID string, result JobResul
 	if err != nil {
 		return err
 	}
-	_, err = c.do(ctx, http.MethodPost, "/api/v1/runner/jobs/"+jobID+"/result", body)
+	return c.SubmitResultBody(ctx, jobID, body)
+}
+
+// SubmitResultBody uploads a pre-encoded JSON result body (single marshal preserves HMAC stability).
+func (c *Client) SubmitResultBody(ctx context.Context, jobID string, body []byte) error {
+	_, err := c.do(ctx, http.MethodPost, "/api/v1/runner/jobs/"+jobID+"/result", body)
 	return err
 }
 

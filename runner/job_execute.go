@@ -68,7 +68,8 @@ func executeGraphJob(ctx context.Context, spec JobSpec, in JobExecuteInput) (Job
 	policy.AnalysisDepth = 2
 	policy.EnableCodeGraph = true
 	graphSpec.EffectiveSettings = policy
-	return ExecuteWorkspaceScan(ctx, graphSpec, ExecuteInput{
+	in.GraphCfg.IncludeFindings = false
+	result, err := ExecuteWorkspaceScan(ctx, graphSpec, ExecuteInput{
 		WorkspaceDir: in.WorkspaceDir,
 		ScannerCfg:   scanners.Config{},
 		HealthCfg:    health.Config{Enabled: false},
@@ -76,6 +77,18 @@ func executeGraphJob(ctx context.Context, spec JobSpec, in JobExecuteInput) (Job
 		SkipPatterns: in.SkipPatterns,
 		Logger:       in.Logger,
 	})
+	// Graph delegation returns metrics only in v1 worker transport (full graph ingest deferred to artifacts).
+	nodeCount, edgeCount := 0, 0
+	if result.Graph != nil {
+		nodeCount = result.Graph.Metrics.NodeCount
+		edgeCount = result.Graph.Metrics.EdgeCount
+	}
+	result.Findings = nil
+	result.Graph = nil
+	if nodeCount > 0 || edgeCount > 0 {
+		result.Warnings = append(result.Warnings, fmt.Sprintf("graph_nodes=%d graph_edges=%d", nodeCount, edgeCount))
+	}
+	return result, err
 }
 
 func executeSBOMJob(ctx context.Context, spec JobSpec, in JobExecuteInput) (JobResult, error) {
