@@ -128,6 +128,8 @@ docs/dogfood-reports/*
 !docs/dogfood-reports/live-preinstall-sandbox-audit-report.md
 !docs/dogfood-reports/product-clean-rescan-issue-sync-report.md
 !docs/dogfood-reports/remaining-active-present-triage.md
+!docs/dogfood-reports/runner-remediation-preinstall-baseline.md
+!docs/dogfood-reports/runner-remediation-live-verification.md
 
 # Beta readiness docs (sanitized, committable)
 !docs/beta/
