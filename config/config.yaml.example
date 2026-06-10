@@ -176,6 +176,24 @@ runner_allowed_job_types:
   - graph
   - preinstall_audit
   - remediation_verify
+  - container_image_scan
+
+# Container image scanning (opt-in; runner-required; core never mounts Docker socket by default)
+container_scanning_enabled: false
+container_scan_default_policy: report_only
+container_scan_create_issues: false
+container_scan_require_runner: true
+container_scan_allow_core_docker_socket: false
+container_scan_pull_policy: if_missing
+container_scan_timeout_seconds: 900
+container_scan_max_image_size_mb: 4096
+container_scan_generate_sbom: true
+container_scan_fail_on_scanner_missing: false
+container_scan_allowed_runner_labels:
+  - container-scan
+container_scan_allowed_registries: []
+container_scan_blocked_registries: []
+
 gitea_actions_test_backend_enabled: false
 gitea_actions_workflow_name: repository-detective-verify.yml
 gitea_actions_trigger_mode: workflow_dispatch

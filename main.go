@@ -17,6 +17,7 @@ import (
 	"git.commsnet.org/commstech/bugbot/ai"
 	"git.commsnet.org/commstech/bugbot/analyzers"
 	"git.commsnet.org/commstech/bugbot/api"
+	"git.commsnet.org/commstech/bugbot/containers"
 	"git.commsnet.org/commstech/bugbot/forge"
 	"git.commsnet.org/commstech/bugbot/gitea"
 	"git.commsnet.org/commstech/bugbot/github"
@@ -284,6 +285,7 @@ type Config struct {
 	LLMSanityGateLowMediumOnly              bool                                 `mapstructure:"llm_sanity_gate_low_medium_only"`
 	Reporting                               profile.ReportingConfig              `mapstructure:"reporting"`
 	FalsePositiveReduction                  profile.FalsePositiveReductionConfig `mapstructure:"false_positive_reduction"`
+	ContainerScan                           containers.Config                    `mapstructure:",squash"`
 	AuthMode                                string                               `mapstructure:"auth_mode"`
 	SessionCookieName                       string                               `mapstructure:"session_cookie_name"`
 	SessionSecret                           string                               `mapstructure:"session_secret"`
@@ -533,7 +535,19 @@ func loadConfig() error {
 	viper.SetDefault("runner_artifact_retention_days", 14)
 	viper.SetDefault("runner_require_hmac", true)
 	viper.SetDefault("runner_nonce_ttl_seconds", 300)
-	viper.SetDefault("runner_allowed_job_types", []string{"scan", "sbom", "graph", "preinstall_audit", "remediation_verify"})
+	viper.SetDefault("runner_allowed_job_types", []string{"scan", "sbom", "graph", "preinstall_audit", "remediation_verify", "container_image_scan"})
+	defContainer := containers.DefaultConfig()
+	viper.SetDefault("container_scanning_enabled", defContainer.Enabled)
+	viper.SetDefault("container_scan_default_policy", defContainer.DefaultPolicy)
+	viper.SetDefault("container_scan_create_issues", defContainer.CreateIssues)
+	viper.SetDefault("container_scan_require_runner", defContainer.RequireRunner)
+	viper.SetDefault("container_scan_allow_core_docker_socket", defContainer.AllowCoreDockerSocket)
+	viper.SetDefault("container_scan_pull_policy", string(defContainer.PullPolicy))
+	viper.SetDefault("container_scan_timeout_seconds", defContainer.TimeoutSeconds)
+	viper.SetDefault("container_scan_max_image_size_mb", defContainer.MaxImageSizeMB)
+	viper.SetDefault("container_scan_generate_sbom", defContainer.GenerateSBOM)
+	viper.SetDefault("container_scan_fail_on_scanner_missing", defContainer.FailOnScannerMissing)
+	viper.SetDefault("container_scan_allowed_runner_labels", defContainer.AllowedRunnerLabels)
 	viper.SetDefault("gitea_actions_test_backend_enabled", false)
 	viper.SetDefault("gitea_actions_workflow_name", "repository-detective-verify.yml")
 	viper.SetDefault("gitea_actions_trigger_mode", "workflow_dispatch")
@@ -643,6 +657,7 @@ func loadConfig() error {
 		return fmt.Errorf("failed to unmarshal config: %w", err)
 	}
 	applyReportingDefaults(config)
+	applyContainerScanDefaults(config)
 
 	if err := viper.UnmarshalKey("skip_patterns", &config.SkipPatterns); err != nil {
 		return fmt.Errorf("failed to unmarshal skip_patterns: %w", err)
@@ -980,14 +995,20 @@ func initializeComponents() error {
 	}
 
 	runnerRegistry = runner.NewRegistry()
-	if bugbotStore != nil && runnerCfg.DelegationEnabled && runnerCfg.Mode != runner.ModeCore && runnerCfg.SharedSecret != "" {
+	runnerBackend := bugbotStore != nil && runnerCfg.SharedSecret != "" &&
+		((runnerCfg.DelegationEnabled && runnerCfg.Mode != runner.ModeCore) || config.ContainerScan.Normalized().Enabled)
+	if runnerBackend {
 		runnerDispatcher = runner.NewDispatcher(bugbotStore, runnerCfg, logger)
 		runnerReceiver = runner.NewReceiver(bugbotStore, runnerCfg, logger, ingestRunnerResult)
 		runnerReceiver.SetJobsExpiredHandler(func(ctx context.Context, count int64) {
 			notifyRunnerJobsExpired(ctx, count)
 		})
 		runnerHandler = api.NewRunnerHandler(bugbotStore, runnerCfg, runnerReceiver, runnerDispatcher, runnerRegistry, logger)
-		logger.Infof("Runner delegation enabled (mode=%s)", runnerCfg.Mode)
+		if runnerCfg.DelegationEnabled && runnerCfg.Mode != runner.ModeCore {
+			logger.Infof("Runner delegation enabled (mode=%s)", runnerCfg.Mode)
+		} else if config.ContainerScan.Normalized().Enabled {
+			logger.Info("Runner backend enabled for container image scanning only")
+		}
 	}
 
 	if config.UIEnabled {
@@ -2004,8 +2025,14 @@ func ingestRunnerResult(ctx context.Context, job store.RunnerJob, result runner.
 		TriggerType: store.TriggerScheduled, Ref: job.Ref, CommitSHA: job.CommitSHA, PRNumber: job.PRNumber,
 	}
 	finishPersistedScan(ctx, runnerScanCtx, repo.ID, analysisResult, nil)
-	createIssuesFromResult(ctx, forgeType, repo.Owner, repo.Name, analysisResult,
-		fmt.Sprintf("Runner scan (%s)", job.JobType), job.Ref, job.PRNumber, repo.ID, effective)
+	ingestContainerScanResult(ctx, job, result, repo)
+	if config.ContainerScan.Normalized().CreateIssues && job.JobType == store.RunnerJobTypeContainerImageScan {
+		createIssuesFromResult(ctx, forgeType, repo.Owner, repo.Name, analysisResult,
+			fmt.Sprintf("Container image scan (%s)", job.JobType), job.Ref, job.PRNumber, repo.ID, effective)
+	} else if job.JobType != store.RunnerJobTypeContainerImageScan {
+		createIssuesFromResult(ctx, forgeType, repo.Owner, repo.Name, analysisResult,
+			fmt.Sprintf("Runner scan (%s)", job.JobType), job.Ref, job.PRNumber, repo.ID, effective)
+	}
 	return nil
 }
 
@@ -2481,6 +2508,9 @@ func registerControlPlaneRoutes(router *gin.Engine) {
 	}
 	if config.CalibrationEnabled && bugbotStore != nil {
 		api.NewCalibrationHandler(bugbotStore, calibrationBridge{}).RegisterRoutes(cp)
+	}
+	if bugbotStore != nil {
+		api.NewContainerHandler(bugbotStore, containerScanBridge{}).RegisterRoutes(cp)
 	}
 	api.NewAIHandler(aiStatusBridge{}).RegisterRoutes(cp)
 
