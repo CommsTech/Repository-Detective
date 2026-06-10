@@ -50,6 +50,9 @@ Then open http://localhost:8080/onboard
 - Optional LLM backends — **off by default** in beta (`enable_llm_auditors: false`)
 - Remediation planner yes; **remediation PRs off by default**. Qdrant semantic dedup **off by default**
 - **No auto-merge** and **no automatic third-party issue submission**
+- **AI recommendations** (optional, off by default) — provider-neutral advisory layer with CAH gating; see [docs/AI_RECOMMENDATIONS.md](docs/AI_RECOMMENDATIONS.md)
+- **Issue providers:** Gitea supported; GitHub code path exists but RC-unproven; GitLab not implemented — [docs/ISSUE_PROVIDERS.md](docs/ISSUE_PROVIDERS.md)
+- **Marketing:** not ready — see [docs/release/RC_ACCEPTANCE_BASELINE.md](docs/release/RC_ACCEPTANCE_BASELINE.md)
 
 ## Go module proxy (supply chain)
 
