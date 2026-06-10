@@ -154,6 +154,8 @@ docs/dogfood-reports/*
 !docs/dogfood-reports/live-redeploy-9e10a40-report.md
 !docs/dogfood-reports/container-runner-prep-report.md
 !docs/dogfood-reports/container-image-scan-alpine-320-report.md
+!docs/dogfood-reports/openclaw-ai-review-baseline.md
+!docs/dogfood-reports/openclaw-ai-review-verification.md
 !docs/marketing/
 !docs/marketing/**
 
