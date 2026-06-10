@@ -195,6 +195,7 @@ func (h *Handler) RegisterRoutes(g *gin.RouterGroup) {
 	g.GET("/", h.Dashboard)
 	g.GET("/repos", h.Repositories)
 	g.GET("/repos/:id", h.RepoDetail)
+	g.GET("/repos/:id/containers", h.ContainerImages)
 	g.GET("/repos/:id/settings", h.RepoSettings)
 	g.POST("/repos/:id/settings", h.SaveRepoSettings)
 	g.GET("/repos/:id/graph", h.RepoGraph)
@@ -671,6 +672,27 @@ func (h *Handler) RepoDetail(c *gin.Context) {
 		data["Notice"] = fmt.Sprintf("Manual scan queued — ID %s.", started)
 	}
 	h.renderNav(c, "repo_detail.html", repo.FullName, "repos", data)
+}
+
+func (h *Handler) ContainerImages(c *gin.Context) {
+	if !h.requireStore(c) {
+		return
+	}
+	id, ok := parseID(c, "id")
+	if !ok {
+		return
+	}
+	repo, err := h.store.GetRepository(c.Request.Context(), id)
+	if err != nil {
+		c.String(http.StatusNotFound, "repository not found")
+		return
+	}
+	refs, _ := h.store.ListContainerImageReferences(c.Request.Context(), id)
+	scans, _ := h.store.ListContainerImageScans(c.Request.Context(), id, 20)
+	h.renderNav(c, "container_images.html", repo.FullName+" — Container Images", "repos", map[string]any{
+		"RepoID": id, "Repo": repo, "References": refs, "Scans": scans,
+		"Enabled": false, "RequireRunner": true, "AllowCoreSocket": false, "CreateIssues": false,
+	})
 }
 
 func (h *Handler) RepoSettings(c *gin.Context) {
