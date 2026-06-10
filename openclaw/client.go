@@ -56,11 +56,10 @@ func NewClient(cfg Config, transport ai.ChatTransport) (*Client, error) {
 
 // Review sends a redacted packet and parses the advisory response.
 func (c *Client) Review(ctx context.Context, cfg Config, reviewID string, pkt ReviewPacket) (ReviewResult, error) {
-	result := ReviewResult{ReviewID: reviewID, Status: "failed", Model: c.model}
 	if c == nil {
-		result.Error = "client is nil"
-		return result, fmt.Errorf("%s", result.Error)
+		return ReviewResult{ReviewID: reviewID, Status: "failed", Error: "client is nil"}, fmt.Errorf("client is nil")
 	}
+	result := ReviewResult{ReviewID: reviewID, Status: "failed", Model: c.model}
 	cfg = cfg.Normalized()
 	if cfg.MaxTokensPerScan <= 0 {
 		result.Status = "skipped"

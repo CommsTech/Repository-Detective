@@ -38,12 +38,11 @@ func NewService(cfg Config, s ReviewStore, transport ai.ChatTransport) *Service 
 // RunReview builds a redacted packet, calls OpenClaw, and stores advisory results.
 // Deterministic findings are never modified.
 func (s *Service) RunReview(ctx context.Context, in PacketInput) (ReviewResult, error) {
+	if s == nil || s.store == nil {
+		return ReviewResult{Status: "skipped", Error: "review service unavailable"}, fmt.Errorf("review service unavailable")
+	}
 	cfg := s.cfg.Normalized()
 	result := ReviewResult{Status: "skipped"}
-	if s == nil || s.store == nil {
-		result.Error = "review service unavailable"
-		return result, fmt.Errorf("%s", result.Error)
-	}
 	if !cfg.CanInvoke() {
 		result.Error = "openclaw ai review disabled or not configured"
 		return result, nil
