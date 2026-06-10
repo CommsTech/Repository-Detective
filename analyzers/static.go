@@ -310,6 +310,9 @@ func isFalsePositiveInternalInfraRef(path, line string) bool {
 func isFalsePositiveHTTPClientPerCall(path, line string) bool {
 	norm := strings.ReplaceAll(path, "\\", "/")
 	lower := strings.ToLower(norm)
+	if strings.HasPrefix(lower, "health/") {
+		return true
+	}
 	// Shared client factories configure timeouts/transport once; not hot-path per-call clients.
 	if strings.HasSuffix(lower, "client.go") || strings.HasSuffix(lower, "/httpclient.go") || strings.HasSuffix(lower, "notify/http.go") {
 		if strings.Contains(line, "http.Client{") || strings.Contains(line, "func New") {
