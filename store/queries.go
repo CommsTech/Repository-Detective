@@ -220,4 +220,15 @@ type QueryStore interface {
 	CreateContainerImageScan(ctx context.Context, scan ContainerImageScan) (ContainerImageScan, error)
 	UpdateContainerImageScan(ctx context.Context, id int64, status, digest string, vulnCount int, coverage, warnings json.RawMessage, finished time.Time) error
 	ListContainerImageScans(ctx context.Context, repoID int64, limit int) ([]ContainerImageScan, error)
+
+	CreateAIAdvisoryReview(ctx context.Context, rec AIAdvisoryReview) (AIAdvisoryReview, error)
+	UpdateAIAdvisoryReview(ctx context.Context, rec AIAdvisoryReview) error
+	GetAIAdvisoryReviewByScanID(ctx context.Context, scanID string) (AIAdvisoryReview, error)
+	GetAIAdvisoryReview(ctx context.Context, reviewID string) (AIAdvisoryReview, error)
+	ListAIAdvisoryRecommendations(ctx context.Context, reviewID string) ([]AIAdvisoryRecommendation, error)
+	ListPendingAIAdvisoryRecommendations(ctx context.Context, limit int) ([]AIAdvisoryRecommendation, error)
+	CreateAIAdvisoryRecommendation(ctx context.Context, rec AIAdvisoryRecommendation) (AIAdvisoryRecommendation, error)
+	UpdateAIAdvisoryRecommendationStatus(ctx context.Context, id int64, status string) error
+	ListFindingsForScan(ctx context.Context, scanID string, limit int) ([]Finding, error)
+	ListFindingInstancesByScan(ctx context.Context, scanID string) (map[int64]FindingInstance, error)
 }

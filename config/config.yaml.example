@@ -194,6 +194,25 @@ container_scan_allowed_runner_labels:
 container_scan_allowed_registries: []
 container_scan_blocked_registries: []
 
+# OpenClaw advisory AI review (opt-in; redacted packets; advisory-only)
+openclaw_ai_review_enabled: false
+openclaw_ai_endpoint: ""
+openclaw_ai_model: ""
+openclaw_ai_timeout_seconds: 60
+openclaw_ai_max_findings_per_scan: 25
+openclaw_ai_max_tokens_per_scan: 0
+openclaw_ai_send_source_snippets: false
+openclaw_ai_send_full_files: false
+openclaw_ai_redact_secrets: true
+openclaw_ai_redact_pii: true
+openclaw_ai_allow_preinstall: false
+openclaw_ai_allow_container_scans: true
+openclaw_ai_allow_repo_scans: true
+openclaw_ai_require_operator_approval: true
+openclaw_ai_store_prompts: false
+openclaw_ai_store_responses: true
+openclaw_ai_advisory_only: true
+
 gitea_actions_test_backend_enabled: false
 gitea_actions_workflow_name: repository-detective-verify.yml
 gitea_actions_trigger_mode: workflow_dispatch

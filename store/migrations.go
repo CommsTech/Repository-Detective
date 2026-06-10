@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-const currentSchemaVersion = 21
+const currentSchemaVersion = 22
 
 var migrationStatements = map[int][]string{
 	1: {
@@ -671,6 +671,47 @@ var migrationStatements = map[int][]string{
 			FOREIGN KEY (repository_id) REFERENCES repositories(id) ON DELETE CASCADE
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_container_image_scans_repo ON container_image_scans(repository_id, created_at)`,
+	},
+	22: {
+		`CREATE TABLE IF NOT EXISTS ai_advisory_reviews (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			review_id TEXT NOT NULL UNIQUE,
+			scan_id TEXT NOT NULL DEFAULT '',
+			repository_id INTEGER NOT NULL,
+			scan_type TEXT NOT NULL DEFAULT 'repo',
+			status TEXT NOT NULL DEFAULT 'queued',
+			findings_sent INTEGER NOT NULL DEFAULT 0,
+			redaction_count INTEGER NOT NULL DEFAULT 0,
+			recommendations_count INTEGER NOT NULL DEFAULT 0,
+			overall_assessment TEXT NOT NULL DEFAULT '',
+			packet_json TEXT NOT NULL DEFAULT '{}',
+			response_json TEXT NOT NULL DEFAULT '{}',
+			error_message TEXT NOT NULL DEFAULT '',
+			model TEXT NOT NULL DEFAULT '',
+			started_at TEXT NOT NULL,
+			finished_at TEXT,
+			created_at TEXT NOT NULL,
+			FOREIGN KEY (repository_id) REFERENCES repositories(id) ON DELETE CASCADE
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_ai_advisory_reviews_scan ON ai_advisory_reviews(scan_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_ai_advisory_reviews_repo ON ai_advisory_reviews(repository_id, created_at)`,
+		`CREATE TABLE IF NOT EXISTS ai_advisory_recommendations (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			review_id TEXT NOT NULL,
+			finding_fingerprint TEXT NOT NULL,
+			classification TEXT NOT NULL DEFAULT '',
+			suggested_action TEXT NOT NULL DEFAULT '',
+			suggested_severity TEXT NOT NULL DEFAULT '',
+			suggested_confidence TEXT NOT NULL DEFAULT '',
+			reason TEXT NOT NULL DEFAULT '',
+			evidence_gaps_json TEXT NOT NULL DEFAULT '[]',
+			operator_status TEXT NOT NULL DEFAULT 'pending',
+			created_at TEXT NOT NULL,
+			updated_at TEXT NOT NULL,
+			FOREIGN KEY (review_id) REFERENCES ai_advisory_reviews(review_id) ON DELETE CASCADE
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_ai_advisory_recs_review ON ai_advisory_recommendations(review_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_ai_advisory_recs_fp ON ai_advisory_recommendations(finding_fingerprint)`,
 	},
 }
 

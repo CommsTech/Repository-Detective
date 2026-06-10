@@ -1,0 +1,162 @@
+package openclaw
+
+import (
+	"context"
+	"crypto/rand"
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
+	"strings"
+	"time"
+
+	"git.commsnet.org/commstech/bugbot/ai"
+	"git.commsnet.org/commstech/bugbot/store"
+)
+
+// ReviewStore persists advisory reviews.
+type ReviewStore interface {
+	CreateAIAdvisoryReview(ctx context.Context, rec store.AIAdvisoryReview) (store.AIAdvisoryReview, error)
+	UpdateAIAdvisoryReview(ctx context.Context, rec store.AIAdvisoryReview) error
+	GetAIAdvisoryReviewByScanID(ctx context.Context, scanID string) (store.AIAdvisoryReview, error)
+	ListAIAdvisoryRecommendations(ctx context.Context, reviewID string) ([]store.AIAdvisoryRecommendation, error)
+	CreateAIAdvisoryRecommendation(ctx context.Context, rec store.AIAdvisoryRecommendation) (store.AIAdvisoryRecommendation, error)
+	UpdateAIAdvisoryRecommendationStatus(ctx context.Context, id int64, status string) error
+}
+
+// Service orchestrates advisory OpenClaw reviews.
+type Service struct {
+	cfg       Config
+	store     ReviewStore
+	transport ai.ChatTransport
+}
+
+// NewService creates an advisory review service.
+func NewService(cfg Config, s ReviewStore, transport ai.ChatTransport) *Service {
+	return &Service{cfg: cfg.Normalized(), store: s, transport: transport}
+}
+
+// RunReview builds a redacted packet, calls OpenClaw, and stores advisory results.
+// Deterministic findings are never modified.
+func (s *Service) RunReview(ctx context.Context, in PacketInput) (ReviewResult, error) {
+	cfg := s.cfg.Normalized()
+	result := ReviewResult{Status: "skipped"}
+	if s == nil || s.store == nil {
+		result.Error = "review service unavailable"
+		return result, fmt.Errorf("%s", result.Error)
+	}
+	if !cfg.CanInvoke() {
+		result.Error = "openclaw ai review disabled or not configured"
+		return result, nil
+	}
+	if !cfg.AllowsScanType(string(in.ScanType)) {
+		result.Error = "scan type not allowed for ai review"
+		return result, nil
+	}
+	reviewID, err := newReviewID()
+	if err != nil {
+		return result, err
+	}
+	result.ReviewID = reviewID
+	pkt, err := BuildPacket(in, cfg)
+	if err != nil {
+		return result, err
+	}
+	redactions, err := RedactPacket(&pkt, cfg)
+	result.RedactionCount = redactions
+	if err != nil {
+		result.Status = "failed"
+		result.Error = err.Error()
+		return result, err
+	}
+	result.FindingsSent = len(pkt.Findings)
+	if len(pkt.Findings) == 0 {
+		result.Status = "skipped"
+		result.Error = "no findings to review"
+		return result, nil
+	}
+	packetJSON, _ := json.Marshal(pkt)
+	now := time.Now().UTC()
+	rec := store.AIAdvisoryReview{
+		ReviewID: reviewID, ScanID: in.ScanID, RepositoryID: in.Repository.ID,
+		ScanType: string(in.ScanType), Status: "running",
+		FindingsSent: len(pkt.Findings), RedactionCount: redactions,
+		PacketJSON: packetJSON, StartedAt: now, CreatedAt: now,
+	}
+	rec, err = s.store.CreateAIAdvisoryReview(ctx, rec)
+	if err != nil {
+		return result, err
+	}
+	client, err := NewClient(cfg, s.transport)
+	if err != nil {
+		result.Error = err.Error()
+		_ = s.failReview(ctx, rec, result.Error)
+		return result, err
+	}
+	reviewResult, _ := client.Review(ctx, cfg, reviewID, pkt)
+	reviewResult.RedactionCount = redactions
+	finished := time.Now().UTC()
+	rec.Status = reviewResult.Status
+	rec.Model = reviewResult.Model
+	rec.FindingsSent = reviewResult.FindingsSent
+	rec.RedactionCount = reviewResult.RedactionCount
+	rec.RecommendationsCount = reviewResult.RecommendationsCount
+	rec.OverallAssessment = reviewResult.OverallAssessment
+	rec.ErrorMessage = reviewResult.Error
+	rec.FinishedAt = &finished
+	if cfg.StoreResponses && reviewResult.Response != nil {
+		sanitized, _ := json.Marshal(reviewResult.Response)
+		rec.ResponseJSON = sanitized
+	}
+	_ = s.store.UpdateAIAdvisoryReview(ctx, rec)
+	if reviewResult.Response != nil {
+		for _, r := range reviewResult.Response.Recommendations {
+			gaps, _ := json.Marshal(r.EvidenceGaps)
+			_, _ = s.store.CreateAIAdvisoryRecommendation(ctx, store.AIAdvisoryRecommendation{
+				ReviewID: reviewID, FindingFingerprint: r.Fingerprint,
+				Classification: r.Classification, SuggestedAction: r.SuggestedAction,
+				SuggestedSeverity: r.SuggestedSeverity, SuggestedConfidence: r.SuggestedConfidence,
+				Reason: r.Reason, EvidenceGapsJSON: string(gaps),
+				OperatorStatus: "pending", CreatedAt: now, UpdatedAt: now,
+			})
+		}
+	}
+	return reviewResult, nil
+}
+
+func (s *Service) failReview(ctx context.Context, rec store.AIAdvisoryReview, msg string) error {
+	rec.Status = "failed"
+	rec.ErrorMessage = msg
+	now := time.Now().UTC()
+	rec.FinishedAt = &now
+	return s.store.UpdateAIAdvisoryReview(ctx, rec)
+}
+
+func newReviewID() (string, error) {
+	buf := make([]byte, 8)
+	if _, err := rand.Read(buf); err != nil {
+		return "", err
+	}
+	return "air-" + hex.EncodeToString(buf), nil
+}
+
+// SanitizeStoredResponse redacts secrets from stored JSON for display.
+func SanitizeStoredResponse(raw json.RawMessage) string {
+	if len(raw) == 0 {
+		return ""
+	}
+	out, n := RedactText(string(raw), true)
+	_ = n
+	return out
+}
+
+// FormatScanType normalizes scan type strings.
+func FormatScanType(trigger string) ScanType {
+	switch strings.ToLower(strings.TrimSpace(trigger)) {
+	case "preinstall", "preinstall_audit":
+		return ScanTypePreinstall
+	case "container", "container_image_scan":
+		return ScanTypeContainer
+	default:
+		return ScanTypeRepo
+	}
+}

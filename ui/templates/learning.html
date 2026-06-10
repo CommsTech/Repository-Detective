@@ -21,6 +21,29 @@
 </div>
 
 <div class="rd-card">
+  <div class="rd-card-head"><h2>OpenClaw AI recommendations</h2><span class="rd-chip">Advisory only</span></div>
+  <p class="rd-muted">Second-opinion suggestions from OpenClaw — accept/reject creates calibration drafts only; findings are never auto-changed.</p>
+  {{if .Data.OpenClawConfigured}}
+  <table class="rd-table">
+    <tr><th>Review</th><th>Fingerprint</th><th>Classification</th><th>Action</th><th>Reason</th></tr>
+    {{range .Data.AIRecommendations}}
+    <tr>
+      <td><code>{{shortID .ReviewID 12}}</code></td>
+      <td><code>{{shortID .FindingFingerprint 16}}</code></td>
+      <td>{{.Classification}}</td>
+      <td>{{.SuggestedAction}}</td>
+      <td class="rd-muted">{{.Reason}}</td>
+    </tr>
+    {{else}}
+    <tr><td colspan="5" class="rd-muted">No pending OpenClaw recommendations.</td></tr>
+    {{end}}
+  </table>
+  {{else}}
+  <p class="rd-muted">OpenClaw endpoint not configured — set <code>ai_base_url</code> / <code>openclaw_ai_endpoint</code> and enable review in Configure.</p>
+  {{end}}
+</div>
+
+<div class="rd-card">
   <div class="rd-card-head"><h2>Calibration recommendations</h2></div>
   <p class="rd-muted">Repo-scoped by default. Approve via API <code>POST /api/v1/calibration/recommendations/:id/accept</code> or recompute job.</p>
   <table class="rd-table">

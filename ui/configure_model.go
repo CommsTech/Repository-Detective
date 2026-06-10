@@ -158,6 +158,24 @@ func buildConfigureSections(
 			},
 		},
 		{
+			ID: "openclaw-ai-review", Title: "OpenClaw AI review",
+			Status: openclawConfigureStatus(platform),
+			StatusClass: openclawConfigureClass(platform),
+			Summary: "Optional second-opinion advisory review on redacted finding summaries — never auto-files, auto-closes, or auto-suppresses.",
+			SafetyNote: "Disabled by default. No raw secrets, full source, or PHI/PII unless explicitly approved. Deterministic scanners remain source of truth.",
+			BetaDefault: "disabled", RestartRequired: true, DocPath: "docs/OPENCLAW_AI_REVIEW.md",
+			Settings: []ConfigureSetting{
+				boolSetting("openclaw_ai_review_enabled", platform.OpenClawAIReviewEnabled),
+				{Key: "openclaw_ai_endpoint", DisplayValue: openclawEndpointDisplay(platform), Source: "config", Hint: "Falls back to ai_base_url when empty"},
+				{Key: "openclaw_ai_max_tokens_per_scan", DisplayValue: "0 (no calls until set)", Source: "default", Hint: "Set >0 to allow review calls"},
+				boolSetting("openclaw_ai_send_source_snippets", false),
+				boolSetting("openclaw_ai_send_full_files", false),
+				boolSetting("openclaw_ai_redact_secrets", true),
+				boolSetting("openclaw_ai_advisory_only", true),
+				boolSetting("openclaw_ai_require_operator_approval", true),
+			},
+		},
+		{
 			ID: "scan-profile", Title: "Scan profile",
 			Status: f.ScanProfile, StatusClass: "medium",
 			Summary: "Deterministic scanner bundle and calibration defaults.", RestartRequired: true,
@@ -319,6 +337,33 @@ func issueFilingConfigureClass(global store.GlobalSettingsSnapshot) string {
 		return "completed"
 	}
 	return "pending"
+}
+
+func openclawConfigureStatus(p PlatformContext) string {
+	if p.OpenClawAIReviewEnabled {
+		if !p.OpenClawEndpointConfigured {
+			return "degraded"
+		}
+		return "enabled"
+	}
+	if p.OpenClawEndpointConfigured {
+		return "disabled (endpoint ready)"
+	}
+	return "disabled"
+}
+
+func openclawConfigureClass(p PlatformContext) string {
+	if p.OpenClawAIReviewEnabled && !p.OpenClawEndpointConfigured {
+		return "medium"
+	}
+	return statusClass(p.OpenClawAIReviewEnabled)
+}
+
+func openclawEndpointDisplay(p PlatformContext) string {
+	if p.OpenClawEndpointConfigured {
+		return "configured (redacted)"
+	}
+	return "(not set)"
 }
 
 func remediationPRConfigureStatus(prOn, plannerOn bool, p PlatformContext) string {

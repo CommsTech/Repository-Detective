@@ -42,6 +42,8 @@ type PlatformContext struct {
 	RemediationPRRequireTests    bool
 	RemediationPRUseRunnerVerification bool
 	GiteaActionsTestBackendEnabled bool
+	OpenClawAIReviewEnabled        bool
+	OpenClawEndpointConfigured     bool
 }
 
 func buildCapabilityStatuses(

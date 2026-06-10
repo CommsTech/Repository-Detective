@@ -885,6 +885,11 @@ func (h *Handler) ScanDetail(c *gin.Context) {
 		repoName = repo.FullName
 	}
 	recon, _ := h.loadReconciliation(c, scan.RepositoryID, scanID)
+	aiReview, _ := h.store.GetAIAdvisoryReviewByScanID(c.Request.Context(), scanID)
+	var aiRecs []store.AIAdvisoryRecommendation
+	if aiReview.ReviewID != "" {
+		aiRecs, _ = h.store.ListAIAdvisoryRecommendations(c.Request.Context(), aiReview.ReviewID)
+	}
 	h.renderNav(c, "scan_detail.html", "Scan "+scanID[:8], "scans", map[string]any{
 		"Scan":           scan,
 		"ScannerResults": results,
@@ -895,6 +900,9 @@ func (h *Handler) ScanDetail(c *gin.Context) {
 		"Reconciliation": recon,
 		"ReconcileEnabled": h.reconcileEnabled,
 		"ScanTriggerEnabled": h.ScanTriggerEnabled() && repo.ID > 0,
+		"AIReview":       aiReview,
+		"AIRecommendations": aiRecs,
+		"OpenClawEnabled": h.platform.OpenClawAIReviewEnabled,
 	})
 }
 
@@ -1384,9 +1392,13 @@ func (h *Handler) Learning(c *gin.Context) {
 	ctx := c.Request.Context()
 	health, _ := h.store.LearningHealthSummary(ctx)
 	recs, _ := h.store.ListCalibrationRecommendations(ctx, "proposed", 50)
+	aiRecs, _ := h.store.ListPendingAIAdvisoryRecommendations(ctx, 50)
 	h.renderNav(c, "learning.html", "Learning & Calibration", "learning", map[string]any{
-		"Health":          health,
-		"Recommendations": recs,
+		"Health":                health,
+		"Recommendations":       recs,
+		"AIRecommendations":     aiRecs,
+		"OpenClawEnabled":       h.platform.OpenClawAIReviewEnabled,
+		"OpenClawConfigured":    h.platform.OpenClawEndpointConfigured,
 	})
 }
 

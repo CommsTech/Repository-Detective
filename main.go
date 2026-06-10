@@ -18,6 +18,7 @@ import (
 	"git.commsnet.org/commstech/bugbot/analyzers"
 	"git.commsnet.org/commstech/bugbot/api"
 	"git.commsnet.org/commstech/bugbot/containers"
+	"git.commsnet.org/commstech/bugbot/openclaw"
 	"git.commsnet.org/commstech/bugbot/forge"
 	"git.commsnet.org/commstech/bugbot/gitea"
 	"git.commsnet.org/commstech/bugbot/github"
@@ -286,6 +287,7 @@ type Config struct {
 	Reporting                               profile.ReportingConfig              `mapstructure:"reporting"`
 	FalsePositiveReduction                  profile.FalsePositiveReductionConfig `mapstructure:"false_positive_reduction"`
 	ContainerScan                           containers.Config                    `mapstructure:",squash"`
+	OpenClawAIReview                        openclaw.Config                      `mapstructure:",squash"`
 	AuthMode                                string                               `mapstructure:"auth_mode"`
 	SessionCookieName                       string                               `mapstructure:"session_cookie_name"`
 	SessionSecret                           string                               `mapstructure:"session_secret"`
@@ -602,6 +604,22 @@ func loadConfig() error {
 	viper.SetDefault("llm_sanity_gate_max_tokens_per_scan", 0)
 	viper.SetDefault("llm_sanity_gate_apply_actions", false)
 	viper.SetDefault("llm_sanity_gate_low_medium_only", true)
+	defOpenClaw := openclaw.DefaultConfig()
+	viper.SetDefault("openclaw_ai_review_enabled", defOpenClaw.Enabled)
+	viper.SetDefault("openclaw_ai_timeout_seconds", defOpenClaw.TimeoutSeconds)
+	viper.SetDefault("openclaw_ai_max_findings_per_scan", defOpenClaw.MaxFindingsPerScan)
+	viper.SetDefault("openclaw_ai_max_tokens_per_scan", defOpenClaw.MaxTokensPerScan)
+	viper.SetDefault("openclaw_ai_send_source_snippets", defOpenClaw.SendSourceSnippets)
+	viper.SetDefault("openclaw_ai_send_full_files", defOpenClaw.SendFullFiles)
+	viper.SetDefault("openclaw_ai_redact_secrets", defOpenClaw.RedactSecrets)
+	viper.SetDefault("openclaw_ai_redact_pii", defOpenClaw.RedactPII)
+	viper.SetDefault("openclaw_ai_allow_preinstall", defOpenClaw.AllowPreinstall)
+	viper.SetDefault("openclaw_ai_allow_container_scans", defOpenClaw.AllowContainerScans)
+	viper.SetDefault("openclaw_ai_allow_repo_scans", defOpenClaw.AllowRepoScans)
+	viper.SetDefault("openclaw_ai_require_operator_approval", defOpenClaw.RequireOperatorApproval)
+	viper.SetDefault("openclaw_ai_store_prompts", defOpenClaw.StorePrompts)
+	viper.SetDefault("openclaw_ai_store_responses", defOpenClaw.StoreResponses)
+	viper.SetDefault("openclaw_ai_advisory_only", defOpenClaw.AdvisoryOnly)
 	viper.SetDefault("auth_mode", "api_key_only")
 	viper.SetDefault("session_cookie_name", "rd_session")
 	viper.SetDefault("session_secret", "")
@@ -658,6 +676,7 @@ func loadConfig() error {
 	}
 	applyReportingDefaults(config)
 	applyContainerScanDefaults(config)
+	applyOpenClawDefaults(config)
 
 	if err := viper.UnmarshalKey("skip_patterns", &config.SkipPatterns); err != nil {
 		return fmt.Errorf("failed to unmarshal skip_patterns: %w", err)
@@ -1046,7 +1065,9 @@ func initializeComponents() error {
 				RunnerMode:                   config.RunnerMode,
 				RemediationPRRequireTests:    config.RemediationPRRequireTests,
 				RemediationPRUseRunnerVerification: config.RemediationPRUseRunnerVerification,
-				GiteaActionsTestBackendEnabled: config.GiteaActionsTestBackendEnabled,
+				GiteaActionsTestBackendEnabled:     config.GiteaActionsTestBackendEnabled,
+				OpenClawAIReviewEnabled:            config.OpenClawAIReview.Enabled,
+				OpenClawEndpointConfigured:         config.OpenClawAIReview.EndpointConfigured(),
 			})
 		}
 		if err != nil {
@@ -1167,6 +1188,7 @@ func initializeComponents() error {
 		logger.Info("AI provider not required — deterministic-only mode (no LLM auditors, Qdrant disabled)")
 		aiClient = nil
 	}
+	initOpenClawReview()
 	initRemediationPlanner()
 	initClosureEngine()
 
@@ -2513,6 +2535,9 @@ func registerControlPlaneRoutes(router *gin.Engine) {
 		api.NewContainerHandler(bugbotStore, containerScanBridge{}).RegisterRoutes(cp)
 	}
 	api.NewAIHandler(aiStatusBridge{}).RegisterRoutes(cp)
+	if bugbotStore != nil {
+		api.NewOpenClawReviewHandler(openclawReviewBridge{}).RegisterRoutes(cp)
+	}
 
 	if runnerHandler != nil && runnerCfg.SharedSecret != "" {
 		rg := router.Group("/api/v1/runner")
