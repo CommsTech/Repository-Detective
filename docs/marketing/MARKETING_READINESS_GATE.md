@@ -18,6 +18,11 @@
 | 10 | No secrets in docs/screenshots | **ready** |
 | 11 | Beta docs linked from UI | **partially ready** |
 | 12 | Install path tested by non-developer | **not tested** |
+| 13 | OpenClaw AI review disabled by default | **ready** |
+| 14 | OpenClaw redaction tested | **ready** (unit + stored packet) |
+| 15 | OpenClaw advisory-only verified | **ready** (0 auto changes) |
+| 16 | OpenClaw connection tested | **partially ready** (metadata OK; JSON response format pending) |
+| 17 | OpenClaw recommendations explainable | **partially ready** (UI/API; pending live JSON) |
 
 ## Explicit non-goals (pre-marketing)
 
@@ -25,9 +30,10 @@
 - Remediation PR enabled by default
 - Runner delegation enabled by default
 - LLM sanity gate enabled by default
+- OpenClaw AI review enabled by default
 
 ## Decision
 
-**Not ready for marketing.** Container scan demo complete; wiki and external install remain blockers.
+**Not ready for marketing.** OpenClaw advisory path implemented and connection-tested; wiki and external install remain blockers.
 
-Next gate options: fix Gitea wiki server-side, pre-install 5-repo scale test, 2 non-product beta scans, external clean install.
+Next gate options: fix Gitea wiki server-side, align OpenClaw JSON response format, pre-install 5-repo scale test, 2 non-product beta scans, external clean install.

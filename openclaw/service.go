@@ -94,6 +94,9 @@ func (s *Service) RunReview(ctx context.Context, in PacketInput) (ReviewResult, 
 	}
 	reviewResult, _ := client.Review(ctx, cfg, reviewID, pkt)
 	reviewResult.RedactionCount = redactions
+	if reviewResult.FindingsSent == 0 {
+		reviewResult.FindingsSent = len(pkt.Findings)
+	}
 	finished := time.Now().UTC()
 	rec.Status = reviewResult.Status
 	rec.Model = reviewResult.Model

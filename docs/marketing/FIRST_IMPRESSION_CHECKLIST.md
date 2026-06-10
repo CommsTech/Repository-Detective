@@ -34,3 +34,12 @@ Use before any external demo or marketing.
 - [x] One controlled `alpine:3.20` registry scan on labeled runner — **ready**
 - [x] Syft/Trivy/Grype coverage reported — **ready**
 - [x] No issues/PRs created — **ready**
+
+## OpenClaw AI review (2026-06-10)
+
+- [x] Disabled by default (`max_tokens_per_scan: 0`) — **ready**
+- [x] Redacted packets only (no raw secrets in stored review) — **ready**
+- [x] Advisory-only (no auto issue/PR/suppression) — **ready**
+- [x] Operator approval required for accept/reject — **ready**
+- [x] Endpoint connection tested (`/api/v1/ai/test-connection`) — **ready**
+- [ ] Full JSON recommendation flow on live OpenClaw — **partially ready** (non-JSON response observed)
