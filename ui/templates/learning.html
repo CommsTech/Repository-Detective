@@ -14,7 +14,9 @@
     <tr><td>Structurally grouped findings</td><td><strong>{{.Data.Health.GroupedFindings}}</strong></td></tr>
     <tr><td>Avg false-positive rate (rules)</td><td><strong>{{printf "%.0f" (mul .Data.Health.AvgFalsePositiveRate 100)}}%</strong></td></tr>
     <tr><td>Scanner failure rate (history)</td><td><strong>{{printf "%.0f" (mul .Data.Health.ScannerFailureRate 100)}}%</strong></td></tr>
+    <tr><td>Rule reliability stats tracked</td><td><strong>yes</strong> <span class="rd-muted">(per source/rule)</span></td></tr>
   </table>
+  <p class="rd-muted">Findings stay visible after calibration. High/critical never auto-downgraded. Product-repo evidence alone cannot create global suppressions.</p>
   <p><a class="rd-link" href="{{.BasePath}}/configure{{apiKeyQS .APIKey}}">Configure features</a> · <a class="rd-link" href="{{.BasePath}}/health{{apiKeyQS .APIKey}}">System Health</a></p>
 </div>
 
