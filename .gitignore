@@ -150,6 +150,10 @@ docs/dogfood-reports/*
 !docs/dogfood-reports/active-present-26-rescan-report.md
 !docs/dogfood-reports/docker-image-scanning-baseline.md
 !docs/dogfood-reports/container-image-scan-verification.md
+!docs/dogfood-reports/container-live-demo-baseline.md
+!docs/dogfood-reports/live-redeploy-9e10a40-report.md
+!docs/dogfood-reports/container-runner-prep-report.md
+!docs/dogfood-reports/container-image-scan-alpine-320-report.md
 !docs/marketing/
 !docs/marketing/**
 
