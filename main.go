@@ -637,7 +637,7 @@ func loadConfig() error {
 	viper.SetDefault("ai_recommendations_cah_max_candidates", defCAH.MaxCandidates)
 	viper.SetDefault("ai_recommendations_cah_min_uncertainty_score", defCAH.MinUncertaintyScore)
 	viper.SetDefault("ai_recommendations_token_budget_per_scan", defCAH.TokenBudgetPerScan)
-	viper.SetDefault("ai_recommendations_fail_closed_on_redaction_error", defCAH.FailClosedOnRedactionError)
+	viper.SetDefault("ai_recommendations_fail_closed_on_redaction_error", defCAH.FailClosedOnRedaction)
 	viper.SetDefault("ai_recommendations_require_strict_json", defCAH.RequireStrictJSON)
 	viper.SetDefault("auth_mode", "api_key_only")
 	viper.SetDefault("session_cookie_name", "rd_session")
