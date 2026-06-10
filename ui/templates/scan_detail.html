@@ -88,15 +88,15 @@
 {{template "reconciliation_panel.html" $}}
 
 <div class="rd-card">
-  <div class="rd-card-head"><h2>AI Advisory Review</h2><span class="rd-chip">Advisory only</span></div>
-  <p class="rd-muted">Deterministic scanners remain source of truth. OpenClaw receives redacted finding summaries only.</p>
-  {{if $.Data.OpenClawEnabled}}
+  <div class="rd-card-head"><h2>AI recommendations</h2><span class="rd-chip">Advisory only</span></div>
+  <p class="rd-muted">Deterministic scanners remain source of truth. The configured AI provider receives redacted finding summaries only when enabled.</p>
+  {{if $.Data.AIRecommendationsEnabled}}
   {{with $.Data.AIReview}}{{if .ReviewID}}
   <p><strong>Status:</strong> <span class="rd-badge">{{.Status}}</span> · <strong>Findings sent:</strong> {{.FindingsSent}} · <strong>Redactions:</strong> {{.RedactionCount}} · <strong>Recommendations:</strong> {{.RecommendationsCount}}</p>
   {{if .OverallAssessment}}<p>{{.OverallAssessment}}</p>{{end}}
   {{if .ErrorMessage}}<p class="rd-muted">{{.ErrorMessage}}</p>{{end}}
   {{else}}
-  <p class="rd-muted">No advisory review for this scan yet. Trigger via <code>POST /api/v1/scans/{{.ID}}/ai-review</code> when enabled.</p>
+  <p class="rd-muted">No AI recommendations for this scan yet. Trigger via <code>POST /api/v1/scans/{{$.Data.Scan.ID}}/ai-recommendations</code> when enabled.</p>
   {{end}}{{end}}
   {{if $.Data.AIRecommendations}}
   <table class="rd-table rd-table-compact">
@@ -112,7 +112,7 @@
   </table>
   {{end}}
   {{else}}
-  <p class="rd-muted">OpenClaw advisory review is disabled. Enable <code>openclaw_ai_review_enabled</code> with a token budget in Configure.</p>
+  <p class="rd-muted">AI recommendations are disabled. Enable <code>ai_recommendations_enabled</code> with a token budget in Configure.</p>
   {{end}}
 </div>
 

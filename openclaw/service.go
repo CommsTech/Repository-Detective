@@ -44,7 +44,7 @@ func (s *Service) RunReview(ctx context.Context, in PacketInput) (ReviewResult, 
 	cfg := s.cfg.Normalized()
 	result := ReviewResult{Status: "skipped"}
 	if !cfg.CanInvoke() {
-		result.Error = "openclaw ai review disabled or not configured"
+		result.Error = "ai recommendations disabled or not configured"
 		return result, nil
 	}
 	if !cfg.AllowsScanType(string(in.ScanType)) {
@@ -65,7 +65,10 @@ func (s *Service) RunReview(ctx context.Context, in PacketInput) (ReviewResult, 
 	if err != nil {
 		result.Status = "failed"
 		result.Error = err.Error()
-		return result, err
+		if cfg.CAH.FailClosedOnRedaction {
+			return result, err
+		}
+		return result, nil
 	}
 	result.FindingsSent = len(pkt.Findings)
 	if len(pkt.Findings) == 0 {

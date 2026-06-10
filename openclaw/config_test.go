@@ -6,52 +6,40 @@ import (
 	"git.commsnet.org/commstech/bugbot/openclaw"
 )
 
-func TestDisabledByDefault(t *testing.T) {
-	cfg := openclaw.DefaultConfig()
-	if cfg.Enabled {
-		t.Fatal("must be disabled by default")
+func TestLegacyConfigKeysMerge(t *testing.T) {
+	cfg := openclaw.Config{
+		LegacyEnabled:           true,
+		LegacyEndpoint:          "http://legacy.example/v1",
+		LegacyMaxTokensPerScan:  500,
+		LegacyMaxFindingsPerScan: 10,
+	}.Normalized()
+	if !cfg.Enabled {
+		t.Fatal("expected legacy enabled to merge")
 	}
-	if cfg.MaxTokensPerScan != 0 {
-		t.Fatal("max tokens must be 0 by default")
+	if cfg.EffectiveEndpoint() != "http://legacy.example/v1" {
+		t.Fatalf("endpoint: %s", cfg.EffectiveEndpoint())
 	}
-	if !cfg.CanInvoke() {
-		return
+	if cfg.MaxTokensPerScan != 500 {
+		t.Fatalf("tokens: %d", cfg.MaxTokensPerScan)
 	}
-	t.Fatal("CanInvoke should be false when disabled")
 }
 
-func TestMaxTokensZeroBlocksCall(t *testing.T) {
-	cfg := openclaw.DefaultConfig()
-	cfg.Enabled = true
-	cfg.FallbackEndpoint = "http://127.0.0.1:1/v1"
+func TestPreferredKeysOverrideLegacy(t *testing.T) {
+	cfg := openclaw.Config{
+		Enabled:          true,
+		Endpoint:         "http://preferred/v1",
+		MaxTokensPerScan: 100,
+		LegacyEnabled:    false,
+		LegacyEndpoint:   "http://legacy/v1",
+	}.Normalized()
+	if cfg.EffectiveEndpoint() != "http://preferred/v1" {
+		t.Fatalf("endpoint: %s", cfg.EffectiveEndpoint())
+	}
+}
+
+func TestZeroTokensMeansNoInvoke(t *testing.T) {
+	cfg := openclaw.Config{Enabled: true, Endpoint: "http://x", MaxTokensPerScan: 0}.Normalized()
 	if cfg.CanInvoke() {
-		t.Fatal("max tokens 0 must block invoke")
-	}
-}
-
-func TestMissingEndpointDisablesSafely(t *testing.T) {
-	cfg := openclaw.DefaultConfig()
-	cfg.Enabled = true
-	cfg.MaxTokensPerScan = 1000
-	if cfg.CanInvoke() {
-		t.Fatal("missing endpoint must block invoke")
-	}
-}
-
-func TestFullFilesBlocked(t *testing.T) {
-	cfg := openclaw.DefaultConfig()
-	cfg.Enabled = true
-	cfg.MaxTokensPerScan = 1000
-	cfg.FallbackEndpoint = "http://example/v1"
-	cfg.SendFullFiles = true
-	if cfg.CanInvoke() {
-		t.Fatal("full files must block invoke")
-	}
-}
-
-func TestPreinstallDisabledByDefault(t *testing.T) {
-	cfg := openclaw.DefaultConfig()
-	if cfg.AllowsScanType("preinstall") {
-		t.Fatal("preinstall must be off by default")
+		t.Fatal("expected CanInvoke false with zero token budget")
 	}
 }

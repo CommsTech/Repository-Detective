@@ -199,6 +199,7 @@ func (h *Handler) RegisterRoutes(g *gin.RouterGroup) {
 	g.GET("/repos/:id/settings", h.RepoSettings)
 	g.POST("/repos/:id/settings", h.SaveRepoSettings)
 	g.GET("/repos/:id/graph", h.RepoGraph)
+	g.GET("/repos/:id/sbom", h.RepoSBOM)
 	g.GET("/repos/:id/report", h.RepoReport)
 	g.GET("/repos/:id/reconcile", h.RepoReconcilePreview)
 	g.POST("/repos/:id/reconcile", h.RepoReconcileApply)
@@ -206,6 +207,8 @@ func (h *Handler) RegisterRoutes(g *gin.RouterGroup) {
 	g.GET("/reports", h.Reports)
 	g.GET("/health", h.SystemHealth)
 	g.GET("/scans/:scan_id", h.ScanDetail)
+	g.GET("/scans/:scan_id/sbom", h.ScanSBOM)
+	g.GET("/scans/:scan_id/sbom/download", h.ScanSBOMDownload)
 	g.GET("/scans/:scan_id/graph", h.ScanGraph)
 	h.registerGraphRoutes(g)
 	g.GET("/findings", h.Findings)
@@ -902,7 +905,64 @@ func (h *Handler) ScanDetail(c *gin.Context) {
 		"ScanTriggerEnabled": h.ScanTriggerEnabled() && repo.ID > 0,
 		"AIReview":       aiReview,
 		"AIRecommendations": aiRecs,
-		"OpenClawEnabled": h.platform.OpenClawAIReviewEnabled,
+		"AIRecommendationsEnabled": h.platform.OpenClawAIReviewEnabled,
+		"OpenClawEnabled":          h.platform.OpenClawAIReviewEnabled,
+	})
+}
+
+func (h *Handler) ScanSBOM(c *gin.Context) {
+	if !h.requireStore(c) {
+		return
+	}
+	scanID := c.Param("scan_id")
+	scan, err := h.store.GetScan(c.Request.Context(), scanID)
+	if err != nil {
+		c.String(http.StatusNotFound, "scan not found")
+		return
+	}
+	artifact, err := h.store.GetSBOMArtifactForScan(c.Request.Context(), scanID)
+	sbomMissing := err != nil
+	repo, _ := h.store.GetRepository(c.Request.Context(), scan.RepositoryID)
+	h.renderNav(c, "sbom_detail.html", "SBOM "+scanID[:8], "scans", map[string]any{
+		"Scan": scan, "Repo": repo, "Artifact": artifact, "SBOMMissing": sbomMissing,
+		"DownloadPath": fmt.Sprintf("%s/scans/%s/sbom/download%s", h.basePath, scanID, apiKeyQueryString(clientAPIKeyFromRequest(c))),
+	})
+}
+
+func (h *Handler) ScanSBOMDownload(c *gin.Context) {
+	if !h.requireStore(c) {
+		return
+	}
+	scanID := c.Param("scan_id")
+	artifact, err := h.store.GetSBOMArtifactForScan(c.Request.Context(), scanID)
+	if err != nil || strings.TrimSpace(artifact.ArtifactPath) == "" {
+		c.String(http.StatusNotFound, "sbom not available")
+		return
+	}
+	c.File(artifact.ArtifactPath)
+}
+
+func (h *Handler) RepoSBOM(c *gin.Context) {
+	if !h.requireStore(c) {
+		return
+	}
+	id, ok := parseID(c, "id")
+	if !ok {
+		return
+	}
+	repo, err := h.store.GetRepository(c.Request.Context(), id)
+	if err != nil {
+		c.String(http.StatusNotFound, "repository not found")
+		return
+	}
+	artifact, err := h.store.GetLatestSBOMArtifactForRepository(c.Request.Context(), id)
+	sbomMissing := err != nil
+	downloadPath := ""
+	if !sbomMissing && artifact.ScanID != "" {
+		downloadPath = fmt.Sprintf("%s/scans/%s/sbom/download%s", h.basePath, artifact.ScanID, apiKeyQueryString(clientAPIKeyFromRequest(c)))
+	}
+	h.renderNav(c, "sbom_detail.html", "SBOM — "+repo.FullName, "repos", map[string]any{
+		"Repo": repo, "Artifact": artifact, "SBOMMissing": sbomMissing, "DownloadPath": downloadPath,
 	})
 }
 
@@ -1046,6 +1106,7 @@ func (h *Handler) FindingDetail(c *gin.Context) {
 		"SuppressionEnabled": h.suppressionEnabled, "RepoSuppressions": suppressions,
 		"GraphDetail": buildGraphFindingView(detail),
 		"GraphMapURL": graphMapURL(h.basePath, detail.RepositoryID, detail.FilePath, detail.Source, clientAPIKeyFromRequest(c)),
+		"Actionable":  buildActionableFindingView(detail),
 	})
 }
 
@@ -1397,8 +1458,10 @@ func (h *Handler) Learning(c *gin.Context) {
 		"Health":                health,
 		"Recommendations":       recs,
 		"AIRecommendations":     aiRecs,
-		"OpenClawEnabled":       h.platform.OpenClawAIReviewEnabled,
-		"OpenClawConfigured":    h.platform.OpenClawEndpointConfigured,
+		"AIRecommendationsEnabled":    h.platform.OpenClawAIReviewEnabled,
+		"AIRecommendationsConfigured": h.platform.OpenClawEndpointConfigured,
+		"OpenClawEnabled":             h.platform.OpenClawAIReviewEnabled,
+		"OpenClawConfigured":          h.platform.OpenClawEndpointConfigured,
 	})
 }
 

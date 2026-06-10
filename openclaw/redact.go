@@ -53,7 +53,7 @@ func RedactPacket(pkt *ReviewPacket, cfg Config) (int, error) {
 	}
 	cfg = cfg.Normalized()
 	if !cfg.RedactSecrets {
-		return 0, fmt.Errorf("secret redaction required for OpenClaw review")
+		return 0, fmt.Errorf("secret redaction required for AI recommendations")
 	}
 	total := 0
 	for i := range pkt.Findings {

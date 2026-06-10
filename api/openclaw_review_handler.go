@@ -29,19 +29,25 @@ func NewOpenClawReviewHandler(s OpenClawReviewService) *OpenClawReviewHandler {
 	return &OpenClawReviewHandler{service: s}
 }
 
-// RegisterRoutes mounts OpenClaw advisory review API routes.
+// RegisterRoutes mounts AI recommendations API routes (legacy /openclaw/* aliases retained).
 func (h *OpenClawReviewHandler) RegisterRoutes(g *gin.RouterGroup) {
+	g.GET("/ai-recommendations/config", h.GetConfig)
 	g.GET("/openclaw/config", h.GetConfig)
+	g.GET("/scans/:scan_id/ai-recommendations", h.GetReview)
+	g.POST("/scans/:scan_id/ai-recommendations", h.RunReview)
 	g.GET("/scans/:scan_id/ai-review", h.GetReview)
 	g.POST("/scans/:scan_id/ai-review", h.RunReview)
+	g.GET("/ai-recommendations/pending", h.ListPending)
 	g.GET("/ai-review/recommendations/pending", h.ListPending)
+	g.POST("/ai-recommendations/:id/accept", h.Accept)
+	g.POST("/ai-recommendations/:id/reject", h.Reject)
 	g.POST("/ai-review/recommendations/:id/accept", h.Accept)
 	g.POST("/ai-review/recommendations/:id/reject", h.Reject)
 }
 
 func (h *OpenClawReviewHandler) requireService(c *gin.Context) bool {
 	if h.service == nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "openclaw advisory review unavailable"})
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "ai recommendations unavailable"})
 		return false
 	}
 	return true
@@ -53,6 +59,8 @@ func (h *OpenClawReviewHandler) GetConfig(c *gin.Context) {
 	}
 	cfg := h.service.Config().Normalized()
 	c.JSON(http.StatusOK, gin.H{
+		"feature":                      "ai_recommendations",
+		"provider":                     cfg.Provider,
 		"enabled":                      cfg.Enabled,
 		"endpoint_configured":          cfg.EndpointConfigured(),
 		"model":                        cfg.EffectiveModel(),
@@ -67,6 +75,10 @@ func (h *OpenClawReviewHandler) GetConfig(c *gin.Context) {
 		"allow_preinstall":             cfg.AllowPreinstall,
 		"allow_container_scans":        cfg.AllowContainerScans,
 		"allow_repo_scans":             cfg.AllowRepoScans,
+		"cah_enabled":                  cfg.CAH.Enabled,
+		"cah_max_candidates":           cfg.CAH.MaxCandidates,
+		"cah_min_uncertainty_score":    cfg.CAH.MinUncertaintyScore,
+		"token_budget_per_scan":        cfg.CAH.TokenBudgetPerScan,
 		"note":                         "Advisory only — deterministic scanners remain source of truth.",
 	})
 }

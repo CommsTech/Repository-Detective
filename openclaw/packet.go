@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"git.commsnet.org/commstech/bugbot/learning"
 	"git.commsnet.org/commstech/bugbot/store"
 )
 
@@ -50,17 +49,8 @@ func BuildPacket(in PacketInput, cfg Config) (ReviewPacket, error) {
 			ContainerScanState: in.ContainerState,
 		},
 	}
-	limit := cfg.MaxFindingsPerScan
-	if limit <= 0 {
-		limit = 25
-	}
-	for _, f := range in.Findings {
-		if len(pkt.Findings) >= limit {
-			break
-		}
-		if learning.IsProtectedFromAutoDowngrade(f.Severity, f.Category) && !cfg.AllowRepoScans {
-			continue
-		}
+	candidates, _ := SelectCAHCandidates(in.Findings, in.Instances, in.History, cfg, cfg.CAH)
+	for _, f := range candidates {
 		inst := in.Instances[f.ID]
 		hist := in.History[f.Fingerprint]
 		evidence := inst.EvidenceRedacted
