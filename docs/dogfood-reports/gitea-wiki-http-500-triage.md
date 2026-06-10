@@ -74,3 +74,15 @@ Look for: wiki repo creation failure, git hook error, storage permission, LFS mi
 - Wiki populated: **no**
 - Blocker: **server-side Gitea wiki git backend**
 - Product active-present burn-down: **not blocked**
+
+## Update 2026-06-02
+
+| Check | Result |
+|---|---|
+| Current wiki status | Push still fails with HTTP 500 |
+| Server logs checked | **no** (requires Gitea host operator access) |
+| Wiki repo exists | **unknown** — API `has_wiki` check not re-run this sprint |
+| Single-page push tested | **no** — deferred until server repair |
+| Next operator action | Gitea admin: verify `bugbot.wiki.git` exists, create one manual wiki page in UI, inspect `journalctl -u gitea` during push, then retry single-page publish |
+
+This sprint focused on active-present burn-down; wiki repair remains option **A** for the next batch.

@@ -39,15 +39,11 @@ func runReliabilityChecks(files []FileInput) []Finding {
 			if lang == "go" {
 				if m := ignoredError.FindStringSubmatch(line); m != nil {
 					call := m[1]
-					if isAllowedIgnoredError(call) || isOrchestrationIgnoredErrorPath(file.Path) {
+					if isAllowedIgnoredError(call) || isOrchestrationIgnoredErrorPath(file.Path) || isBestEffortIgnoredError(call, file.Path, trimmed) {
 						continue
 					}
 					sev := "low"
 					conf := 0.72
-					if isBestEffortIgnoredError(call, file.Path, trimmed) {
-						sev = "info"
-						conf = 0.58
-					}
 					findings = append(findings, makeFinding(
 						"reliability", "reliability", "HEALTH-IGNORED-ERROR", sev, conf,
 						"Potential reliability issue: ignored error return",
@@ -71,7 +67,7 @@ func runReliabilityChecks(files []FileInput) []Finding {
 						file.Path, i+1, sampleLine(trimmed),
 					))
 				}
-				if !isTest && (httpNoTimeout.MatchString(line) || defaultClient.MatchString(line)) && !isHTTPClientWithTimeout(file.Path, lines, i) {
+				if !isTest && (httpNoTimeout.MatchString(line) || defaultClient.MatchString(line)) && !isHTTPClientWithTimeout(file.Path, lines, i) && !hasExplicitHTTPClientTimeout(lines, i) {
 					findings = append(findings, makeFinding(
 						"reliability", "reliability", "HEALTH-HTTP-NO-TIMEOUT", "medium", 0.86,
 						"Potential reliability issue: network call without explicit timeout",
@@ -176,6 +172,19 @@ func isHTTPClientWithTimeout(path string, lines []string, lineIdx int) bool {
 	for j := lineIdx; j >= 0 && j >= lineIdx-25; j-- {
 		t := strings.ToLower(strings.TrimSpace(lines[j]))
 		if strings.Contains(t, "timeout:") || strings.Contains(t, "httpclient:") {
+			return true
+		}
+		if strings.HasPrefix(t, "func ") && j < lineIdx {
+			break
+		}
+	}
+	return false
+}
+
+func hasExplicitHTTPClientTimeout(lines []string, lineIdx int) bool {
+	for j := lineIdx; j >= 0 && j >= lineIdx-8; j-- {
+		t := strings.TrimSpace(lines[j])
+		if strings.Contains(t, "&http.Client{") && strings.Contains(strings.ToLower(t), "timeout:") {
 			return true
 		}
 		if strings.HasPrefix(t, "func ") && j < lineIdx {
