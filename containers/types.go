@@ -211,10 +211,41 @@ func (c Config) RegistryAllowed(image string) bool {
 		return true
 	}
 	for _, allowed := range c.AllowedRegistries {
-		a := strings.ToLower(strings.TrimSpace(allowed))
-		if a != "" && strings.Contains(image, a) {
+		if registryMatchesAllowed(image, allowed) {
 			return true
 		}
 	}
 	return false
+}
+
+func registryMatchesAllowed(image, allowed string) bool {
+	a := strings.ToLower(strings.TrimSpace(allowed))
+	if a == "" {
+		return false
+	}
+	if strings.Contains(image, a) {
+		return true
+	}
+	if a == "docker.io" || a == "index.docker.io" {
+		return isImplicitDockerHubImage(image)
+	}
+	return false
+}
+
+func isImplicitDockerHubImage(image string) bool {
+	image = strings.TrimSpace(image)
+	if image == "" || strings.Contains(image, "://") {
+		return false
+	}
+	host := image
+	if slash := strings.Index(host, "/"); slash >= 0 {
+		host = host[:slash]
+	}
+	if colon := strings.Index(host, ":"); colon >= 0 {
+		host = host[:colon]
+	}
+	if host == "localhost" {
+		return false
+	}
+	return !strings.Contains(host, ".")
 }

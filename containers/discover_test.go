@@ -95,6 +95,10 @@ func TestRegistryAllowBlock(t *testing.T) {
 	if cfg.RegistryAllowed("evil.io/app:1") {
 		t.Fatal("should deny unlisted registry")
 	}
+	cfg.AllowedRegistries = []string{"docker.io"}
+	if !cfg.RegistryAllowed("alpine:3.20") {
+		t.Fatal("implicit docker hub image should match docker.io allowlist")
+	}
 	cfg.AllowedRegistries = nil
 	cfg.BlockedRegistries = []string{"evil.io"}
 	if cfg.RegistryAllowed("evil.io/app:1") {
