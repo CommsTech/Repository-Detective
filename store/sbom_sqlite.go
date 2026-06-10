@@ -33,3 +33,18 @@ func (s *SQLiteStore) GetSBOMArtifactForScan(ctx context.Context, scanID string)
 	rec.CreatedAt = parseTime(created)
 	return rec, nil
 }
+
+// GetLatestSBOMArtifactForRepository returns the newest SBOM artifact for a repository.
+func (s *SQLiteStore) GetLatestSBOMArtifactForRepository(ctx context.Context, repoID int64) (SBOMArtifact, error) {
+	row := s.db.QueryRowContext(ctx, `
+		SELECT id, repository_id, scan_id, format, package_count, vuln_count, status, detail, artifact_path, created_at
+		FROM sbom_artifacts WHERE repository_id = ? ORDER BY id DESC LIMIT 1
+	`, repoID)
+	var rec SBOMArtifact
+	var created string
+	if err := row.Scan(&rec.ID, &rec.RepositoryID, &rec.ScanID, &rec.Format, &rec.PackageCount, &rec.VulnCount, &rec.Status, &rec.Detail, &rec.ArtifactPath, &created); err != nil {
+		return SBOMArtifact{}, err
+	}
+	rec.CreatedAt = parseTime(created)
+	return rec, nil
+}

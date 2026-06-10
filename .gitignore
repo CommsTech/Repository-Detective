@@ -156,6 +156,10 @@ docs/dogfood-reports/*
 !docs/dogfood-reports/container-image-scan-alpine-320-report.md
 !docs/dogfood-reports/openclaw-ai-review-baseline.md
 !docs/dogfood-reports/openclaw-ai-review-verification.md
+!docs/dogfood-reports/sbom-end-to-end-verification.md
+!docs/dogfood-reports/ui-route-smoke-report.md
+!docs/dogfood-reports/container-log-health-report.md
+!docs/dogfood-reports/full-application-acceptance-report.md
 !docs/marketing/
 !docs/marketing/**
 

@@ -204,6 +204,7 @@ type QueryStore interface {
 
 	SaveSBOMArtifact(ctx context.Context, rec SBOMArtifact) error
 	GetSBOMArtifactForScan(ctx context.Context, scanID string) (SBOMArtifact, error)
+	GetLatestSBOMArtifactForRepository(ctx context.Context, repoID int64) (SBOMArtifact, error)
 
 	RecordLearningEvent(ctx context.Context, ev LearningEvent) (LearningEvent, error)
 	ListLearningEvents(ctx context.Context, repositoryID int64, limit int) ([]LearningEvent, error)
