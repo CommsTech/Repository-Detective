@@ -27,23 +27,72 @@
 </div>
 
 <div class="rd-card">
-  <h2>{{.Title}}</h2>
+  <h2>Finding summary</h2>
+  <p>{{$.Data.Actionable.Summary}}</p>
   <dl class="rd-dl">
     <dt>Lifecycle</dt><dd>{{$.Data.LifecycleLabel}}</dd>
-    <dt>Source</dt><dd><span class="rd-badge skipped">{{.Source}}</span></dd>
+    <dt>Scanner / source</dt><dd><span class="rd-badge skipped">{{.Source}}</span></dd>
+    <dt>Rule</dt><dd><code>{{$.Data.Actionable.RelatedRuleID}}</code></dd>
     <dt>Fingerprint</dt><dd><code>{{.Fingerprint}}</code></dd>
     <dt>Repository</dt><dd>{{.RepoFullName}}</dd>
     <dt>First seen</dt><dd>{{.FirstSeenAt.Format "2006-01-02 15:04 UTC"}}</dd>
     <dt>Last seen</dt><dd>{{.LastSeenAt.Format "2006-01-02 15:04 UTC"}}</dd>
-    {{if .FilePath}}<dt>Location</dt><dd><code>{{.FilePath}}{{if .Line}}:{{.Line}}{{end}}</code></dd>{{end}}
   </dl>
-  {{if .ExternalIssueURL}}<div class="rd-actions"><a class="rd-btn rd-btn-secondary" href="{{.ExternalIssueURL}}" target="_blank" rel="noopener">Open Gitea issue #{{.ExternalIssueNumber}}</a></div>{{end}}
+  {{if .ExternalIssueURL}}<div class="rd-actions"><a class="rd-btn rd-btn-secondary" href="{{.ExternalIssueURL}}" target="_blank" rel="noopener">Open forge issue #{{.ExternalIssueNumber}}</a></div>{{end}}
+</div>
+
+<div class="rd-card">
+  <h2>Risk and impact</h2>
+  <p>{{$.Data.Actionable.WhyItMatters}}</p>
+  <dl class="rd-dl">
+    <dt>Severity meaning</dt><dd>{{$.Data.Actionable.SeverityReason}}</dd>
+    <dt>Confidence meaning</dt><dd>{{$.Data.Actionable.ConfidenceReason}}</dd>
+  </dl>
+</div>
+
+<div class="rd-card">
+  <h2>Location</h2>
+  {{if .FilePath}}<p><code>{{.FilePath}}{{if .Line}}:{{.Line}}{{end}}</code></p>{{else}}<p class="rd-muted">No file path — may be repo-level, container image, or graph finding.</p>{{end}}
+  {{if $.Data.Actionable.PackageName}}<p><strong>Package:</strong> {{$.Data.Actionable.PackageName}}{{if $.Data.Actionable.PackageVersion}} @ {{$.Data.Actionable.PackageVersion}}{{end}}</p>{{end}}
+  {{if $.Data.Actionable.CVEID}}<p><strong>CVE:</strong> {{$.Data.Actionable.CVEID}}{{if $.Data.Actionable.FixedVersion}} · fixed in {{$.Data.Actionable.FixedVersion}}{{end}}</p>{{end}}
+  {{if $.Data.Actionable.CommitSHA}}<p><strong>Historical commit:</strong> <code>{{$.Data.Actionable.CommitSHA}}</code> — rotate secrets removed from history.</p>{{end}}
+  {{if $.Data.Actionable.ImageDigest}}<p><strong>Image digest:</strong> <code>{{$.Data.Actionable.ImageDigest}}</code></p>{{end}}
+  {{if $.Data.Actionable.CurrentInTree}}<p class="rd-muted">{{$.Data.Actionable.CurrentInTree}}</p>{{end}}
+</div>
+
+<div class="rd-card">
+  <h2>Why this was flagged</h2>
+  <p>{{$.Data.Actionable.WhyFlagged}}</p>
+  <p class="rd-muted">Evidence kind: {{$.Data.Actionable.EvidenceKind}}</p>
+</div>
+
+<div class="rd-card">
+  <h2>Scanner rule details</h2>
+  <dl class="rd-dl">
+    <dt>Rule ID</dt><dd><code>{{$.Data.Actionable.RelatedRuleID}}</code></dd>
+    <dt>Scanner</dt><dd>{{.Source}}</dd>
+    {{if $.Data.Actionable.ScannerCommand}}<dt>Tool / command</dt><dd><code>{{$.Data.Actionable.ScannerCommand}}</code></dd>{{end}}
+    {{if $.Data.Actionable.SBOMRelation}}<dt>SBOM component</dt><dd><code>{{$.Data.Actionable.SBOMRelation}}</code></dd>{{end}}
+  </dl>
+</div>
+
+<div class="rd-card">
+  <h2>Recommended fix</h2>
+  <p>{{$.Data.Actionable.RecommendedFix}}</p>
+  <h3>Verification steps</h3>
+  <ol>{{range $.Data.Actionable.VerificationSteps}}<li>{{.}}</li>{{end}}</ol>
+</div>
+
+<div class="rd-card">
+  <h2>Issue filing status</h2>
+  <p><strong>{{$.Data.Actionable.IssueFilingStatus}}</strong></p>
+  <p class="rd-muted">{{$.Data.Actionable.IssueFilingDetail}}</p>
 </div>
 
 {{if $.Data.SuppressionEnabled}}
 <div class="rd-card">
-  <h2>Calibration</h2>
-  <p class="rd-muted">Suppress noisy findings or mark false positives. Historical data is kept; suppressed findings are excluded from new issues, PR gates, and remediation plans.</p>
+  <h2>False positive / calibration</h2>
+  <p class="rd-muted">{{$.Data.Actionable.FalsePositiveGuide}}</p>
   <form method="post" action="{{$.BasePath}}/findings/{{$.Data.Finding.ID}}/suppress{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}" class="rd-form-inline">
     <label>Reason <input name="reason" required placeholder="e.g. test fixture noise"></label>
     <button type="submit" class="rd-btn rd-btn-secondary">Suppress this fingerprint</button>
@@ -107,14 +156,22 @@
 </div>
 
 <div class="rd-card">
-  <h2>Evidence (redacted)</h2>
+  <h2>Evidence</h2>
+  {{if $.Data.Actionable.HasSecretEvidence}}<div class="rd-alert">Secret material is redacted in UI. Verify using secure channels only.</div>{{end}}
   {{range .Instances}}<pre class="rd-pre">{{.EvidenceRedacted}}</pre>{{else}}<p class="rd-muted">No evidence instances recorded.</p>{{end}}
 </div>
 
 <div class="rd-card">
-  <h2>Lifecycle events</h2>
+  <h2>History</h2>
   <ul>{{range .LifecycleEvents}}<li><span class="rd-badge {{statusBadge .EventType}}">{{.EventType}}</span> — {{.Message}} <span class="rd-muted">({{.CreatedAt.Format "2006-01-02"}})</span></li>{{else}}<li class="rd-muted">No lifecycle events yet.</li>{{end}}</ul>
 </div>
+
+{{if $.Data.Actionable.RawMetadataPretty}}
+<div class="rd-card">
+  <h2>Raw JSON / debug details</h2>
+  <pre class="rd-pre">{{$.Data.Actionable.RawMetadataPretty}}</pre>
+</div>
+{{end}}
 {{end}}
 <div class="rd-card">
 <h2>Remediation plan</h2>
