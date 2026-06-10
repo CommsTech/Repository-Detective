@@ -52,6 +52,18 @@ type JobResult struct {
 	Errors          []string           `json:"errors,omitempty"`
 	Warnings        []string           `json:"warnings,omitempty"`
 	ForbiddenAction string             `json:"forbidden_action,omitempty"`
+	ContainerScan   *ContainerScanDTO  `json:"container_scan,omitempty"`
+}
+
+// ContainerScanDTO transports container scan metadata in job results.
+type ContainerScanDTO struct {
+	Image      string            `json:"image"`
+	Digest     string            `json:"digest,omitempty"`
+	VulnCount  int               `json:"vuln_count"`
+	SBOMPath   string            `json:"sbom_path,omitempty"`
+	SBOMFormat string            `json:"sbom_format,omitempty"`
+	Coverage   map[string]string `json:"coverage"`
+	Warnings   []string          `json:"warnings,omitempty"`
 }
 
 // EncodedSize returns the JSON byte length of the result.

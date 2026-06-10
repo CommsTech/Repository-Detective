@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-const currentSchemaVersion = 20
+const currentSchemaVersion = 21
 
 var migrationStatements = map[int][]string{
 	1: {
@@ -629,6 +629,48 @@ var migrationStatements = map[int][]string{
 		`ALTER TABLE findings ADD COLUMN structural_hash TEXT NOT NULL DEFAULT ''`,
 		`ALTER TABLE findings ADD COLUMN canonical_finding_id INTEGER`,
 		`ALTER TABLE findings ADD COLUMN calibration_note TEXT NOT NULL DEFAULT ''`,
+	},
+	21: {
+		`CREATE TABLE IF NOT EXISTS container_image_references (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			repository_id INTEGER NOT NULL,
+			image TEXT NOT NULL,
+			tag TEXT NOT NULL DEFAULT '',
+			digest TEXT NOT NULL DEFAULT '',
+			target_type TEXT NOT NULL DEFAULT '',
+			file_path TEXT NOT NULL DEFAULT '',
+			line INTEGER NOT NULL DEFAULT 0,
+			service_name TEXT NOT NULL DEFAULT '',
+			mutable_tag INTEGER NOT NULL DEFAULT 0,
+			private_registry INTEGER NOT NULL DEFAULT 0,
+			last_scan_id TEXT NOT NULL DEFAULT '',
+			last_digest TEXT NOT NULL DEFAULT '',
+			created_at TEXT NOT NULL,
+			updated_at TEXT NOT NULL,
+			meta_json TEXT NOT NULL DEFAULT '{}',
+			UNIQUE(repository_id, image, file_path, line),
+			FOREIGN KEY (repository_id) REFERENCES repositories(id) ON DELETE CASCADE
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_container_image_refs_repo ON container_image_references(repository_id)`,
+		`CREATE TABLE IF NOT EXISTS container_image_scans (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			repository_id INTEGER NOT NULL,
+			scan_id TEXT NOT NULL DEFAULT '',
+			runner_job_id TEXT NOT NULL DEFAULT '',
+			image TEXT NOT NULL,
+			image_digest TEXT NOT NULL DEFAULT '',
+			status TEXT NOT NULL DEFAULT 'queued',
+			vuln_count INTEGER NOT NULL DEFAULT 0,
+			sbom_path TEXT NOT NULL DEFAULT '',
+			sbom_format TEXT NOT NULL DEFAULT '',
+			coverage_json TEXT NOT NULL DEFAULT '{}',
+			warnings_json TEXT NOT NULL DEFAULT '[]',
+			started_at TEXT,
+			finished_at TEXT,
+			created_at TEXT NOT NULL,
+			FOREIGN KEY (repository_id) REFERENCES repositories(id) ON DELETE CASCADE
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_container_image_scans_repo ON container_image_scans(repository_id, created_at)`,
 	},
 }
 

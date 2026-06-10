@@ -145,6 +145,40 @@ func (d *Dispatcher) CreateTypedJob(ctx context.Context, jobType string, repo st
 	return created, nil
 }
 
+// CreateContainerImageScanJob enqueues a runner job to scan a container image.
+func (d *Dispatcher) CreateContainerImageScanJob(ctx context.Context, repo store.Repository, scanID string, payload ContainerScanPayload, policy analyzers.PolicySnapshot) (store.RunnerJob, error) {
+	if d.store == nil {
+		return store.RunnerJob{}, fmt.Errorf("database disabled")
+	}
+	if !jobTypeAllowed(d.cfg.AllowedJobTypes, JobTypeContainerImageScan) {
+		return store.RunnerJob{}, fmt.Errorf("job type %q not allowed by server config", JobTypeContainerImageScan)
+	}
+	jobID, err := newJobID()
+	if err != nil {
+		return store.RunnerJob{}, err
+	}
+	spec := BuildJobSpecForType(d.cfg, jobID, JobTypeContainerImageScan, repo, scanID, repo.DefaultBranch, "", policy, ContainerScanTasks)
+	spec.ContainerScan = &payload
+	specJSON, err := json.Marshal(spec)
+	if err != nil {
+		return store.RunnerJob{}, err
+	}
+	policyJSON, err := json.Marshal(policy)
+	if err != nil {
+		return store.RunnerJob{}, err
+	}
+	now := time.Now().UTC()
+	expires := now.Add(time.Duration(d.cfg.JobTimeoutSeconds) * time.Second)
+	job := store.RunnerJob{
+		JobID: jobID, RepositoryID: repo.ID, ScanID: scanID,
+		JobType: store.RunnerJobTypeContainerImageScan,
+		Status: store.RunnerJobStatusQueued, RunnerMode: selectRunnerMode(d.cfg, JobTypeContainerImageScan),
+		Ref: repo.DefaultBranch, PolicySnapshotJSON: policyJSON, JobSpecJSON: specJSON,
+		ResultSummaryJSON: json.RawMessage(`{}`), CreatedAt: now, ExpiresAt: &expires,
+	}
+	return d.store.CreateRunnerJob(ctx, job)
+}
+
 func jobTypeAllowed(allowed []string, jobType string) bool {
 	if len(allowed) == 0 {
 		return true

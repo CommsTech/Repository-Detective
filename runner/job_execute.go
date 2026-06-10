@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"git.commsnet.org/commstech/bugbot/analyzers"
+	"git.commsnet.org/commstech/bugbot/containers"
 	"git.commsnet.org/commstech/bugbot/graph"
 	"git.commsnet.org/commstech/bugbot/health"
 	"git.commsnet.org/commstech/bugbot/sbom"
@@ -39,6 +40,8 @@ func ExecuteJob(ctx context.Context, spec JobSpec, in JobExecuteInput) (JobResul
 		return executeSBOMJob(ctx, spec, in)
 	case JobTypeRemediationVerify:
 		return executeRemediationVerifyJob(ctx, spec, in)
+	case JobTypeContainerImageScan:
+		return executeContainerImageScanJob(ctx, spec, in)
 	case JobTypeScanFullRepo, JobTypePreinstallAudit:
 		return ExecuteWorkspaceScan(ctx, spec, ExecuteInput(in))
 	default:
@@ -132,6 +135,80 @@ func executeRemediationVerifyJob(ctx context.Context, spec JobSpec, in JobExecut
 	} else {
 		result.ScannerResults = scanResult.ScannerResults
 		result.FilesAnalyzed = scanResult.FilesAnalyzed
+	}
+	result.FinishedAt = time.Now().UTC()
+	return result, nil
+}
+
+func executeContainerImageScanJob(ctx context.Context, spec JobSpec, in JobExecuteInput) (JobResult, error) {
+	started := time.Now().UTC()
+	result := JobResult{
+		Version: ContractVersion, JobID: spec.JobID, ScanID: spec.ScanID,
+		Status: JobStatusCompleted, StartedAt: started,
+	}
+	if spec.ContainerScan == nil || strings.TrimSpace(spec.ContainerScan.Image) == "" {
+		result.Status = JobStatusFailed
+		result.Errors = append(result.Errors, "container scan payload missing image")
+		result.FinishedAt = time.Now().UTC()
+		return result, nil
+	}
+	payload := spec.ContainerScan
+	timeout := payload.TimeoutSeconds
+	if timeout <= 0 && spec.Limits.TimeoutSeconds > 0 {
+		timeout = spec.Limits.TimeoutSeconds
+	}
+	workDir := in.WorkspaceDir
+	if workDir == "" {
+		workDir = "."
+	}
+	scanResult, err := containers.RunImageScan(ctx, containers.ScanOptions{
+		Image:          payload.Image,
+		PullPolicy:     containers.PullPolicy(payload.PullPolicy),
+		Tools:          payload.Tools,
+		GenerateSBOM:   payload.GenerateSBOM,
+		TimeoutSeconds: timeout,
+		WorkDir:        workDir,
+	})
+	coverage := map[string]string{
+		"trivy": scanResult.Coverage.Trivy,
+		"grype": scanResult.Coverage.Grype,
+		"syft":  scanResult.Coverage.Syft,
+	}
+	result.ContainerScan = &ContainerScanDTO{
+		Image: payload.Image, Digest: scanResult.Digest, VulnCount: scanResult.VulnCount,
+		SBOMPath: scanResult.SBOMPath, SBOMFormat: scanResult.SBOMFormat,
+		Coverage: coverage, Warnings: scanResult.Warnings,
+	}
+	for _, w := range scanResult.Warnings {
+		result.Warnings = append(result.Warnings, RedactLogLine(w))
+	}
+	for _, f := range scanResult.Findings {
+		result.Findings = append(result.Findings, FindingResult{
+			Fingerprint: "container-" + payload.Image + "-" + f.RuleID,
+			Category:    "container",
+			Severity:    f.Severity,
+			Confidence:  f.Confidence,
+			Source:      "container",
+			RuleID:      f.RuleID,
+			Title:       f.Title,
+			Description: f.Description,
+			File:        payload.Image,
+		})
+	}
+	for _, sr := range []struct {
+		name, status string
+	}{
+		{"trivy", scanResult.Coverage.Trivy},
+		{"grype", scanResult.Coverage.Grype},
+		{"syft", scanResult.Coverage.Syft},
+	} {
+		result.ScannerResults = append(result.ScannerResults, ScannerResultDTO{
+			Scanner: sr.name, Status: sr.status,
+		})
+	}
+	if err != nil {
+		result.Status = JobStatusFailed
+		result.Errors = append(result.Errors, RedactLogLine(err.Error()))
 	}
 	result.FinishedAt = time.Now().UTC()
 	return result, nil

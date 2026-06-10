@@ -8,6 +8,7 @@ const (
 	JobTypeGraph              = "graph"
 	JobTypePreinstallAudit    = "preinstall_audit"
 	JobTypeRemediationVerify  = "remediation_verify"
+	JobTypeContainerImageScan = "container_image_scan"
 	JobTypeScanFullRepoLegacy = "scan_full_repo"
 
 	JobStatusCompleted = "completed"
@@ -31,4 +32,5 @@ var (
 		"issue_create", "status_update", "pull_request_create",
 		"secret_access", "dependency_install", "repo_script_execution",
 	}
+	ContainerScanTasks = []string{"container_scan"}
 )

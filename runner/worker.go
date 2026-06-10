@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -121,7 +122,20 @@ func (w *Worker) processJob(ctx context.Context, jobID string, spec JobSpec) err
 	if ref == "" {
 		ref = spec.Repository.DefaultBranch
 	}
-	if err := CloneRepository(jobCtx, spec.Repository.CloneURL, ref, workspace, w.cfg.CloneTimeout); err != nil {
+	jobType := strings.TrimSpace(spec.JobType)
+	if jobType == JobTypeScanFullRepoLegacy {
+		jobType = JobTypeScanFullRepo
+	}
+	if jobType != JobTypeContainerImageScan {
+		if err := CloneRepository(jobCtx, spec.Repository.CloneURL, ref, workspace, w.cfg.CloneTimeout); err != nil {
+			result := JobResult{
+				Version: ContractVersion, JobID: jobID, ScanID: spec.ScanID,
+				Status: JobStatusFailed, StartedAt: time.Now().UTC(), FinishedAt: time.Now().UTC(),
+				Errors: []string{RedactLogLine(err.Error())},
+			}
+			return w.client.SubmitResult(jobCtx, jobID, result)
+		}
+	} else if err := os.MkdirAll(workspace, 0o755); err != nil {
 		result := JobResult{
 			Version: ContractVersion, JobID: jobID, ScanID: spec.ScanID,
 			Status: JobStatusFailed, StartedAt: time.Now().UTC(), FinishedAt: time.Now().UTC(),

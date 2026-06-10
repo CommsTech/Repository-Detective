@@ -53,6 +53,7 @@ func (c Config) Normalized() Config {
 		out.AllowedJobTypes = []string{
 			JobTypeScanFullRepo, JobTypeScanFullRepoLegacy, JobTypeSBOM,
 			JobTypeGraph, JobTypePreinstallAudit, JobTypeRemediationVerify,
+			JobTypeContainerImageScan,
 		}
 	}
 	return out
@@ -105,6 +106,22 @@ type JobSpec struct {
 	AllowedTasks      []string                 `json:"allowed_tasks"`
 	ForbiddenTasks    []string                 `json:"forbidden_tasks"`
 	CallbackBaseURL   string                   `json:"callback_base_url"`
+	ContainerScan     *ContainerScanPayload    `json:"container_scan,omitempty"`
+}
+
+// ContainerScanPayload is runner-side container image scan input (no credentials).
+type ContainerScanPayload struct {
+	TargetType     string   `json:"target_type"`
+	Image          string   `json:"image"`
+	RepositoryID   int64    `json:"repo_id"`
+	ScanID         string   `json:"scan_id"`
+	PullPolicy     string   `json:"pull_policy"`
+	Tools          []string `json:"tools"`
+	GenerateSBOM   bool     `json:"generate_sbom"`
+	TimeoutSeconds int      `json:"timeout_seconds"`
+	SourceFile     string   `json:"source_file,omitempty"`
+	SourceLine     int      `json:"source_line,omitempty"`
+	ServiceName    string   `json:"service_name,omitempty"`
 }
 
 // BuildJobSpec constructs a runner job spec from core context.
@@ -126,6 +143,8 @@ func BuildJobSpecForType(cfg Config, jobID, jobType string, repo store.Repositor
 			allowedTasks = []string{"sbom"}
 		case JobTypeRemediationVerify:
 			allowedTasks = []string{"scanners"}
+		case JobTypeContainerImageScan:
+			allowedTasks = append([]string(nil), ContainerScanTasks...)
 		default:
 			allowedTasks = append([]string(nil), AllowedTasks...)
 		}

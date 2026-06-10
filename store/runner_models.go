@@ -6,7 +6,8 @@ import (
 )
 
 const (
-	RunnerJobTypeScanFullRepo = "scan_full_repo"
+	RunnerJobTypeScanFullRepo      = "scan_full_repo"
+	RunnerJobTypeContainerImageScan = "container_image_scan"
 
 	RunnerJobStatusQueued     = "queued"
 	RunnerJobStatusDispatched = "dispatched"

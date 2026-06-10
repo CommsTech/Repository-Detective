@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 )
 
@@ -213,4 +214,10 @@ type QueryStore interface {
 	GenerateRepoScopedRecommendations(ctx context.Context, repositoryID int64, minFindings int) (int, error)
 	LearningHealthSummary(ctx context.Context) (LearningHealthSummary, error)
 	AssignStructuralGroup(ctx context.Context, repositoryID int64, structuralHash string, findingID int64) error
+
+	UpsertContainerImageReference(ctx context.Context, ref ContainerImageReference) (ContainerImageReference, error)
+	ListContainerImageReferences(ctx context.Context, repoID int64) ([]ContainerImageReference, error)
+	CreateContainerImageScan(ctx context.Context, scan ContainerImageScan) (ContainerImageScan, error)
+	UpdateContainerImageScan(ctx context.Context, id int64, status, digest string, vulnCount int, coverage, warnings json.RawMessage, finished time.Time) error
+	ListContainerImageScans(ctx context.Context, repoID int64, limit int) ([]ContainerImageScan, error)
 }
