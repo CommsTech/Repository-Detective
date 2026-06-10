@@ -148,6 +148,10 @@ docs/dogfood-reports/*
 !docs/dogfood-reports/active-present-26-baseline.md
 !docs/dogfood-reports/active-present-26-classification.md
 !docs/dogfood-reports/active-present-26-rescan-report.md
+!docs/dogfood-reports/docker-image-scanning-baseline.md
+!docs/dogfood-reports/container-image-scan-verification.md
+!docs/marketing/
+!docs/marketing/**
 
 # Beta readiness docs (sanitized, committable)
 !docs/beta/
