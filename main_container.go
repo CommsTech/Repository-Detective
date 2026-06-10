@@ -74,14 +74,15 @@ func (containerScanBridge) Discover(c *gin.Context, repoID int64) ([]containers.
 func (containerScanBridge) EnqueueScan(c *gin.Context, repoID int64, image string) (map[string]any, error) {
 	ctx := c.Request.Context()
 	cfg := config.ContainerScan.Normalized()
-	if err := containers.ValidateEnqueue(cfg, image, true); err != nil {
-		return nil, err
-	}
 	if bugbotStore == nil {
 		return nil, fmt.Errorf("database disabled")
 	}
 	if runnerDispatcher == nil {
 		return nil, containers.ErrRunnerRequired
+	}
+	// Enqueue delegates to a native runner; not a core-local Docker socket scan.
+	if err := containers.ValidateEnqueue(cfg, image, false); err != nil {
+		return nil, err
 	}
 	repo, err := bugbotStore.GetRepository(ctx, repoID)
 	if err != nil {
