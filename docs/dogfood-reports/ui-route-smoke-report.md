@@ -1,6 +1,6 @@
 # UI route smoke report
 
-Generated: 2026-06-10T12:34:41Z
+Generated: 2026-06-11T00:04:41Z
 Base: http://127.0.0.1:8081/ui
 
 | Route | Status | Notes |
@@ -10,7 +10,7 @@ Base: http://127.0.0.1:8081/ui
 | `/repos/1` | 200 | ok |
 | `/repos/1/settings` | 200 | ok |
 | `/repos/1/containers` | 200 | ok |
-| `/repos/1/sbom` | 404 | not found (route or resource may need deploy) |
+| `/repos/1/sbom` | 200 | ok |
 | `/repos/1/graph` | 200 | ok |
 | `/scans` | 200 | ok |
 | `/findings` | 200 | ok |
@@ -22,6 +22,6 @@ Base: http://127.0.0.1:8081/ui
 | `/reports` | 200 | ok |
 
 ## Summary
-- Pass: 14
-- Warn: 1
+- Pass: 15
+- Warn: 0
 - Fail: 0
