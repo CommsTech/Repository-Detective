@@ -2,9 +2,9 @@
 
 | Provider | Status | Notes |
 |----------|--------|-------|
-| **Gitea** | supported | Tested for product dogfood; repo mapping must match source repo |
-| **GitHub** | implemented, RC not fully proven | `ForgeType: github` in issue manager; requires token and testing per org |
-| **GitLab** | not_implemented | No issue forge adapter yet |
+| **Gitea** | supported | Dry-run proven 2026-06-10; repo-mapping RC regression pending |
+| **GitHub** | implemented, not release-proven | Unit test passes; live org token 401; do not claim production-ready |
+| **GitLab** | not_implemented | No issue forge adapter |
 
 ## Policy
 
