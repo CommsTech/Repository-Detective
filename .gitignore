@@ -161,6 +161,14 @@ docs/dogfood-reports/*
 !docs/dogfood-reports/container-log-health-report.md
 !docs/dogfood-reports/full-application-acceptance-report.md
 !docs/dogfood-reports/live-rc-redeploy-baseline.md
+!docs/dogfood-reports/rc-active-present-regression-baseline.md
+!docs/dogfood-reports/rc-active-present-21-classification.md
+!docs/dogfood-reports/rc-active-present-rescan-report.md
+!docs/dogfood-reports/gitea-issue-target-regression-report.md
+!docs/dogfood-reports/github-issue-provider-rc-status.md
+!docs/dogfood-reports/sbom-artifact-download-verification.md
+!docs/dogfood-reports/rc-screenshot-visual-qa-report.md
+!docs/dogfood-reports/external-clean-install-report.md
 !docs/dogfood-reports/rc-all-in-one-build-report.md
 !docs/dogfood-reports/live-rc-redeploy-report.md
 !docs/dogfood-reports/findings-detail-live-verification.md

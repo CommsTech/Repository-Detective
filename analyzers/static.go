@@ -301,6 +301,10 @@ func isFalsePositiveInternalInfraRef(path, line string) bool {
 		// Failure-stage classifier references blocked hosts (localhost, private), not embedded endpoints.
 		return strings.Contains(line, "localhost") || strings.Contains(line, "private") ||
 			strings.Contains(line, "ClassifyFailureStage")
+	case strings.HasPrefix(lower, "containers/"):
+		// Registry/image reference classification detects localhost and private registries — not embedded infra.
+		return strings.Contains(line, "localhost") || strings.Contains(line, "127.0.0.1") ||
+			strings.Contains(line, "PrivateRegistry") || strings.Contains(line, "private")
 	case strings.HasSuffix(lower, ".example"):
 		return true
 	}

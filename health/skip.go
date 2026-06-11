@@ -55,6 +55,9 @@ func skipHealthCheckPath(path string, extraPatterns []string) bool {
 	if strings.HasPrefix(path, "health/") {
 		return true
 	}
+	if strings.HasPrefix(path, "analyzers/static") || path == "analyzers/static.go" {
+		return true
+	}
 	if strings.Contains(path, "/testdata/") || strings.Contains(path, "/fixtures/") {
 		return true
 	}

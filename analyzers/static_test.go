@@ -199,3 +199,17 @@ func TestRunStaticAnalysisSkipsHomelabDocsInfraRef(t *testing.T) {
 		}
 	}
 }
+
+func TestRunStaticAnalysisSkipsContainerRegistryClassifier(t *testing.T) {
+	findings := RunStaticAnalysis([]FileContent{{
+		Path: "containers/discover.go",
+		Content: `if strings.Contains(lower, "localhost") || strings.Contains(lower, "127.0.0.1") {
+		private = true
+	}`,
+	}}, true, false)
+	for _, f := range findings {
+		if f.ID == "REL-INTERNAL-INFRA-REF" {
+			t.Fatal("container registry classifier should not match REL-INTERNAL-INFRA-REF")
+		}
+	}
+}
