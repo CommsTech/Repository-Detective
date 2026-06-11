@@ -1,6 +1,6 @@
 # Container log health report
 
-Generated: 2026-06-11T00:04:45Z
+Generated: 2026-06-11T02:08:49Z
 Container: `repository-detective` (last 500 lines)
 
 ## Pattern counts
@@ -8,8 +8,8 @@ Container: `repository-detective` (last 500 lines)
 - Fatals: 0
 - DB lock/deadlock: 0
 - Auth failures: 0
-- AI recommendation failures: 3
-- Scanner failures: 0
+- AI recommendation failures: 0
+- Scanner failures: 11
 - Possible secrets in logs: 0
 
 ## Known expected
@@ -17,5 +17,5 @@ Container: `repository-detective` (last 500 lines)
 
 ## Recent errors (sample)
 ```
-(none)
+time="2026-06-11T01:10:51Z" level=warning msg="Failed to fetch ui/templates/error.html: failed to make request: Get \"https://git.commsnet.org/api/v1/repos/commstech/Bugbot/contents/ui/templates/error.html?ref=main\": context deadline exceeded"
 ```

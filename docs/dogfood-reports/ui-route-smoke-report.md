@@ -1,6 +1,6 @@
 # UI route smoke report
 
-Generated: 2026-06-11T00:04:41Z
+Generated: 2026-06-11T02:08:43Z
 Base: http://127.0.0.1:8081/ui
 
 | Route | Status | Notes |

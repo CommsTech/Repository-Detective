@@ -2,48 +2,44 @@
 
 **Do not start outbound marketing until all required criteria pass.**
 
-Last updated: 2026-06-10 (post live RC redeploy `rc-e3e19ec`)
+Last updated: 2026-06-11 (blocker burn-down sprint)
 
 ## Required before marketing
 
 | # | Criterion | Status |
 |---|-----------|--------|
-| 1 | Live RC deployed (`e3e19ec`+) | **ready** |
-| 2 | Findings detail actionable live | **ready** (37361 verified) |
-| 3 | SBOM UI routes live | **ready** (download pending artifact proof) |
-| 4 | AI Recommendations provider-neutral | **ready** |
-| 5 | UI route crawl passes | **ready** (15/15 HTTP 200) |
-| 6 | Container logs clean | **ready** (0 panics) |
-| 7 | Gitea wiki populated | **blocked** (HTTP 500) |
-| 8 | External clean install proven | **not tested** |
-| 9 | Screenshots current | **partial** |
-| 10 | ≥2 non-product beta scans low-noise | **partial** (2 scans run; ansible noisy) |
-| 11 | Product dogfood clean | **partial** (`active_present_open` 21 — investigate) |
-| 12 | Gitea issue mapping RC-proven | **partial** |
-| 13 | GitHub issue filing RC-proven | **not proven** |
-| 14 | GitLab honestly marked unsupported | **ready** |
+| 1 | Live RC deployed | **ready** (`rc-e3e19ec`) |
+| 2 | Product dogfood clean (0 active-present) | **ready** (scan `926a5f56a26f03c9`) |
+| 3 | Findings detail actionable live | **ready** |
+| 4 | SBOM UI routes live | **ready** |
+| 5 | SBOM artifact download proven | **ready** (Syft CycloneDX proof) |
+| 6 | Gitea issue target correctness | **partial** (dry-run + unit tests) |
+| 7 | GitHub provider honest | **ready** (not release-proven) |
+| 8 | UI route crawl | **ready** |
+| 9 | Container logs clean | **ready** |
+| 10 | 2 non-product beta scans | **ready** (report-only) |
+| 11 | Wiki populated | **blocked** (HTTP 500) |
+| 12 | Screenshots | **ready** (12 pages) |
+| 13 | External clean install | **partial** (beta package; full VM pending) |
 
-## Decision options
+## Decision
 
 | Level | Status |
 |-------|--------|
-| Marketing ready | **NO** |
-| Private beta ready | **YES** (with known caveats) |
-| Controlled demo ready | **YES** (live RC + findings + SBOM UI) |
+| **Marketing ready** | **NO** |
+| **Private beta ready** | **YES** |
+| **Controlled demo ready** | **YES** |
 
 ## Blockers
 
 - Gitea wiki HTTP 500
-- External clean install
-- Product `active_present_open` regression investigation (2 → 21)
-- GitHub live issue filing proof
-- Screenshot/visual QA batch
-- Ansible beta scan noise calibration
+- Live Gitea issue filing regression (optional before wider beta)
+- Full external VM clean install
+- GitHub issue provider live proof (demoted to not release-proven)
 
-## Explicit non-goals (pre-marketing)
+## Explicit non-goals
 
 - All-repo scanning
-- Remediation PR enabled by default
-- Runner delegation enabled by default
-- AI Recommendations enabled by default
-- Auto-submit disclosures
+- Marketing launch
+- AI recommendations enabled by default
+- Remediation PR / runner delegation by default

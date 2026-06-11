@@ -1,40 +1,25 @@
 # Full application acceptance report
 
-**Date:** 2026-06-10  
-**Live revision:** `rc-e3e19ec`  
-**Git:** `e3e19ec` + redeploy docs
+**Date:** 2026-06-11  
+**Live revision:** `rc-e3e19ec`
 
 ## Summary
 
-Repository Detective is **private-beta / controlled-demo ready** on live RC. **Marketing remains NOT READY.**
+Repository Detective is **private-beta ready** and **controlled-demo ready**. **Marketing NOT READY** (wiki, full clean install, live Gitea filing proof).
 
-## Live deploy
-
-- All-in-one image rebuilt from source (Alpine/musl — fixes hot-swap failure)
-- Container healthy; version `rc-e3e19ec`
-- RC routes verified: AI recommendations config, SBOM UI, actionable findings
-
-## Key verifications
+## Sprint results
 
 | Area | Result |
 |------|--------|
-| Findings 37361 | PASS — all actionable sections |
-| SBOM repo/scan UI | PASS |
-| AI Recommendations | PASS — disabled, provider-neutral |
-| UI route crawl | PASS — 15/15 |
-| Non-product scans | 2 dry-runs complete, 0 issues filed |
-| Container logs | PASS |
-
-## Open items
-
-1. Product `active_present_open` = 21 (was 2 pre-deploy) — investigate
-2. Gitea wiki HTTP 500
-3. GitHub issue filing not release-proven
-4. External clean install
-5. SBOM download with persisted artifact
-6. Screenshots / visual QA
+| Active-present regression | Fixed; rescan **0/0/0** |
+| SBOM download | **PASS** — CycloneDX 895 components |
+| Screenshots | **12 pages** captured |
+| Gitea issue target | Dry-run + unit tests |
+| GitHub provider | Not release-proven (honest) |
+| Wiki | HTTP 500 (server-side) |
+| External install | Beta package from clean tree |
 
 ## Marketing decision
 
 **NOT READY** for public marketing.  
-**READY** for credible private beta with invited operators.
+**READY** for invited private beta expansion.
