@@ -1,45 +1,26 @@
 # First impression checklist
 
-Use before any external demo or marketing.
+Updated: 2026-06-10 (live RC `rc-e3e19ec`)
 
-## Install
+## Live product walkthrough
 
-- [ ] Clean install from beta package or Docker all-in-one — **not tested**
-- [x] `.env.example` copied; no secrets in committed files — **ready**
-- [x] `/health` returns healthy — **ready**
-- [x] `/api/v1/about` shows product name — **ready**
+- [x] Health page loads
+- [x] Configure shows **AI recommendations** (not OpenClaw-branded feature name)
+- [x] Finding detail has summary / risk / fix / calibration sections
+- [x] Repo SBOM page loads
+- [x] Scan SBOM page loads
+- [ ] SBOM download with real artifact
+- [ ] Screenshots captured for docs/marketing
+- [ ] Wiki pages live on Gitea
 
-## Documentation
+## Trust signals
 
-- [ ] Quick Start completes without developer assistance — **not tested**
-- [ ] Scanner gaps explained when tools missing — **partially ready**
-- [x] Container scanning marked opt-in / runner-required — **ready**
-- [ ] Wiki populated — **blocked** (Gitea HTTP 500)
+- [x] Dry-run scans create 0 issues (proven on 2 non-product repos)
+- [x] AI Recommendations disabled by default
+- [ ] Product dogfood `active_present_open` at target (currently 21 — investigate)
+- [ ] GitHub issue provider live proof or explicit disabled banner
 
-## Product scan quality
+## Decision
 
-- [x] Product repo: 0 active-present, 0 high/critical — **ready**
-- [x] Reconciliation shows actionable vs informational split — **ready**
-- [x] No duplicate Gitea issues from scan — **ready**
-
-## Demo safety
-
-- [x] Report-only mode understood — **ready**
-- [x] Remediation PR disabled — **ready**
-- [x] Runner delegation disabled unless demoing runner — **ready** (rolled back post-demo)
-- [x] No credentials in screenshots or logs — **ready**
-
-## Container scan demo (2026-06-10)
-
-- [x] One controlled `alpine:3.20` registry scan on labeled runner — **ready**
-- [x] Syft/Trivy/Grype coverage reported — **ready**
-- [x] No issues/PRs created — **ready**
-
-## OpenClaw AI review (2026-06-10)
-
-- [x] Disabled by default (`max_tokens_per_scan: 0`) — **ready**
-- [x] Redacted packets only (no raw secrets in stored review) — **ready**
-- [x] Advisory-only (no auto issue/PR/suppression) — **ready**
-- [x] Operator approval required for accept/reject — **ready**
-- [x] Endpoint connection tested (`/api/v1/ai/test-connection`) — **ready**
-- [ ] Full JSON recommendation flow on live OpenClaw — **partially ready** (non-JSON response observed)
+**Private beta / demo:** acceptable for invited operators.  
+**Public marketing:** not yet.

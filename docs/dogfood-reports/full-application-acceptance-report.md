@@ -1,31 +1,40 @@
 # Full application acceptance report
 
-**Date:** 2026-06-02  
-**Baseline commit:** RC sprint (post `dab8a13`)
+**Date:** 2026-06-10  
+**Live revision:** `rc-e3e19ec`  
+**Git:** `e3e19ec` + redeploy docs
 
 ## Summary
 
-Repository Detective is **private-beta ready** but **not marketing-ready**. RC sprint addressed findings explainability, provider-neutral AI naming, CAH gating, SBOM UI surfaces, issue provider honesty, UI route smoke, and log health scripts.
+Repository Detective is **private-beta / controlled-demo ready** on live RC. **Marketing remains NOT READY.**
 
-## Results
+## Live deploy
 
-See `docs/release/RELEASE_CANDIDATE_ACCEPTANCE_TEST.md` for per-area status.
+- All-in-one image rebuilt from source (Alpine/musl — fixes hot-swap failure)
+- Container healthy; version `rc-e3e19ec`
+- RC routes verified: AI recommendations config, SBOM UI, actionable findings
 
-### Highlights
+## Key verifications
 
-- **Findings detail:** Engineer-actionable sections (summary, risk, location, evidence, fix, issue status, calibration)
-- **AI recommendations:** Renamed from OpenClaw-branded UI; `ai_recommendations_*` config with legacy merge
-- **SBOM:** `/ui/scans/:id/sbom`, `/ui/repos/:id/sbom`, download route
-- **Issue providers:** Gitea supported; GitHub implemented but unproven; GitLab not implemented
+| Area | Result |
+|------|--------|
+| Findings 37361 | PASS — all actionable sections |
+| SBOM repo/scan UI | PASS |
+| AI Recommendations | PASS — disabled, provider-neutral |
+| UI route crawl | PASS — 15/15 |
+| Non-product scans | 2 dry-runs complete, 0 issues filed |
+| Container logs | PASS |
 
-### Remaining blockers
+## Open items
 
-- Wiki populate (Gitea 500)
-- External clean install proof
-- GitHub issue filing RC regression
-- Provider strict JSON on live OpenClaw endpoint
-- 2+ non-product beta scans with low noise
+1. Product `active_present_open` = 21 (was 2 pre-deploy) — investigate
+2. Gitea wiki HTTP 500
+3. GitHub issue filing not release-proven
+4. External clean install
+5. SBOM download with persisted artifact
+6. Screenshots / visual QA
 
 ## Marketing decision
 
-**NOT READY** until acceptance matrix is green except intentionally disabled features.
+**NOT READY** for public marketing.  
+**READY** for credible private beta with invited operators.
