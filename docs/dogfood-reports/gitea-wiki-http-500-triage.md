@@ -43,6 +43,21 @@ WIKI_DRY_RUN=true ./scripts/publish-gitea-wiki.sh
 
 Result: **success** — 23 pages listed; no git operations.
 
+## RC redeploy pass (2026-06-10)
+
+| Step | Result |
+|------|--------|
+| `has_wiki` API | **true** |
+| `WIKI_DRY_RUN=true ./scripts/publish-gitea-wiki.sh` | **success** (23 pages listed) |
+| One-page git push | **still HTTP 500** (not re-tested live; prior failure unchanged) |
+| Full wiki publish | **blocked** |
+
+**Operator action:** inspect Gitea server logs during wiki git push — server-side failure, not Repository Detective application code.
+
+## Status
+
+**Blocked** — wiki content prepared locally; cannot populate remote wiki until Gitea HTTP 500 resolved.
+
 ## Server log excerpt
 
 Server-side Gitea logs not available from this host. Operator should inspect during push:
@@ -67,7 +82,7 @@ None on client. **Operator next step:**
 3. Retry one-page `git push`; then run `./scripts/publish-gitea-wiki.sh`.
 4. If still 500, repair/recreate wiki bare repo per Gitea admin docs.
 
-## Status
+## Summary
 
 - Wiki populated: **no**
-- Product dogfood: **not blocked** (0 active-present)
+- Product dogfood: monitor `active_present_open` after RC redeploy
