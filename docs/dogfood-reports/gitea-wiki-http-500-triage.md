@@ -52,6 +52,14 @@ Result: **success** — 23 pages listed; no git operations.
 | One-page git push | **still HTTP 500** (not re-tested live; prior failure unchanged) |
 | Full wiki publish | **blocked** |
 
+## Burn-down sprint re-test (2026-06-11)
+
+| Step | Result |
+|------|--------|
+| `git clone https://git.commsnet.org/commstech/Bugbot.wiki.git` | **HTTP 500** (unchanged) |
+| Manual wiki page in UI | not attempted (operator) |
+| Gitea server logs | not available from this host |
+
 **Operator action:** inspect Gitea server logs during wiki git push — server-side failure, not Repository Detective application code.
 
 ## Status
