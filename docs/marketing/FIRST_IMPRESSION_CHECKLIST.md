@@ -1,14 +1,15 @@
 # First impression checklist
 
-Updated: 2026-06-12 (first tester cohort)
+Updated: 2026-06-12 (external beta stabilization)
 
 ## Cohort 1 rehearsal
 
 - [x] Report-only scan on `commstech/PCAP_Analyser` — 0 issues filed
-- [x] Operator feedback recorded (`docs/beta/first-tester-feedback-summary.md`)
-- [x] Gitea issue templates verified (API)
-- [x] Controlled Gitea filing proof (scratch repo)
-- [ ] External named tester feedback
+- [x] Operator feedback recorded
+- [x] Full `go test ./...` PASS (SBOM fix)
+- [x] Live deploy `rc-381667a` — structured issue body verified
+- [x] External tester handoff packet prepared
+- [ ] Named external tester onboarded + feedback received
 - [ ] Second tester invited (after feedback triage)
 
 ## Live product walkthrough
@@ -25,7 +26,7 @@ Updated: 2026-06-12 (first tester cohort)
 ## Trust signals
 
 - [x] Dry-run scans create 0 issues (beta repos + scratch dry-run)
-- [x] Live Gitea filing proof on owned scratch repo only
+- [x] Live structured issue body deployed (`rc-381667a`)
 - [x] AI Recommendations disabled by default
 - [x] Product dogfood `active_present_open` = **0**
 - [x] GitHub issue provider labeled not release-proven
