@@ -169,6 +169,7 @@ docs/dogfood-reports/*
 !docs/dogfood-reports/sbom-artifact-download-verification.md
 !docs/dogfood-reports/rc-screenshot-visual-qa-report.md
 !docs/dogfood-reports/external-clean-install-report.md
+!docs/dogfood-reports/current-readiness-reconciliation.md
 !docs/dogfood-reports/rc-all-in-one-build-report.md
 !docs/dogfood-reports/live-rc-redeploy-report.md
 !docs/dogfood-reports/findings-detail-live-verification.md
