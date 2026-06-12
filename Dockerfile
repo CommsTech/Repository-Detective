@@ -22,13 +22,13 @@ ENV GOSUMDB=sum.golang.org
 COPY go.mod go.sum ./
 COPY . .
 
-RUN if [ -d vendor/modules.txt ]; then \
+RUN if [ -f vendor/modules.txt ]; then \
       echo "building with vendored modules"; \
     else \
       go mod download; \
     fi
 
-RUN if [ -d vendor/modules.txt ]; then \
+RUN if [ -f vendor/modules.txt ]; then \
       CGO_ENABLED=0 GOOS=linux go build -mod=vendor -ldflags="-s -w -X main.version=${VERSION}" -o repository-detective . && \
       CGO_ENABLED=0 GOOS=linux go build -mod=vendor -ldflags="-s -w" -o repository-detective-runner ./cmd/repository-detective-runner; \
     else \
