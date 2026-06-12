@@ -82,7 +82,19 @@ Wait for: scan complete → persistence → graph → issue sync → reconciliat
 
 ## Collect feedback
 
-Require [PRIVATE_BETA_FEEDBACK_TEMPLATE.md](PRIVATE_BETA_FEEDBACK_TEMPLATE.md) with **scan ID** attached.
+Preferred path (structured, fixable issues):
+
+1. Run **report-only** scan and capture **scan ID**
+2. Review findings in UI (detail pages include fingerprint + template links)
+3. For each item, open the matching Gitea template on `commstech/Bugbot`:
+   - General feedback → `beta_feedback`
+   - False positive → `scanner_false_positive`
+   - Missed detection → `missed_detection`
+   - UI/docs/scanner bugs → matching template under `.gitea/ISSUE_TEMPLATE/`
+4. **Never paste secrets** — redact tokens, `.env`, PHI/PII
+5. Include finding URL/fingerprint and scan ID in every report
+
+Docs fallback: [PRIVATE_BETA_FEEDBACK_TEMPLATE.md](PRIVATE_BETA_FEEDBACK_TEMPLATE.md) · triage policy [../triage/ISSUE_TRIAGE_POLICY.md](../triage/ISSUE_TRIAGE_POLICY.md)
 
 Store feedback record: `{tester, scan_id, date, category, disposition}`.
 

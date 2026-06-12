@@ -32,7 +32,7 @@ This is a **private beta for technical operators** who want self-hosted, report-
 
 - **One owned repo** — small to medium, non-sensitive (no PHI/PII/customer secrets)
 - **Report-only first scan** — no issue filing on your first run
-- Feedback using our templates with **scan ID** included
+- Feedback using Gitea issue templates ([`.gitea/ISSUE_TEMPLATE/`](https://git.commsnet.org/commstech/Bugbot/src/branch/main/.gitea/ISSUE_TEMPLATE/)) with **scan ID** included
 - Redact secrets from logs and screenshots
 
 ### What is off by default
