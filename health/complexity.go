@@ -18,10 +18,11 @@ func runMaintainabilityChecks(files []FileInput, cfg Config) []Finding {
 		}
 		lines := strings.Split(file.Content, "\n")
 		if len(lines) > largeFileThreshold(file.Path, cfg) && !skipLargeFileFinding(file.Path) {
+			sev, conf, detail := largeFileAssessment(file.Path, len(lines))
 			findings = append(findings, makeFinding(
-				"maintainability", "maintainability", "HEALTH-LARGE-FILE", "medium", 0.9,
+				"maintainability", "maintainability", "HEALTH-LARGE-FILE", sev, conf,
 				"Very large source file",
-				"File exceeds configured line threshold; consider splitting modules.",
+				detail,
 				file.Path, 1, "",
 			))
 		}
@@ -82,12 +83,36 @@ func largeFunctionThreshold(path string, cfg Config) int {
 }
 
 func skipLargeFileFinding(path string) bool {
-	switch strings.ToLower(strings.ReplaceAll(path, "\\", "/")) {
+	lower := strings.ToLower(strings.ReplaceAll(path, "\\", "/"))
+	switch lower {
 	case "main.go", "ui/handler.go", "analyzers/engine.go":
 		return true
-	default:
-		return false
 	}
+	if strings.Contains(lower, "/vendor/") || strings.Contains(lower, "/dist/") ||
+		strings.Contains(lower, "/build/") || strings.HasSuffix(lower, ".min.js") ||
+		strings.HasSuffix(lower, ".min.css") {
+		return true
+	}
+	return false
+}
+
+func largeFileAssessment(path string, lineCount int) (severity string, confidence float64, detail string) {
+	severity = "medium"
+	confidence = 0.9
+	detail = "File exceeds configured line threshold; consider splitting modules."
+	lower := strings.ToLower(strings.ReplaceAll(path, "\\", "/"))
+	switch {
+	case strings.HasSuffix(lower, ".ps1"), strings.HasSuffix(lower, ".py"), strings.HasSuffix(lower, ".sh"),
+		strings.HasSuffix(lower, ".bash"), strings.HasSuffix(lower, ".pl"), strings.HasSuffix(lower, ".rb"):
+		severity = "low"
+		confidence = 0.55
+		detail = "Large operational script — common for tooling/collectors. Split into modules or add tests if maintainability becomes a problem."
+	case strings.HasSuffix(lower, ".go"), strings.HasSuffix(lower, ".java"), strings.HasSuffix(lower, ".ts"):
+		if lineCount > 2500 {
+			detail = "Very large source file with high maintainability risk — prioritize decomposition."
+		}
+	}
+	return severity, confidence, detail
 }
 
 func analyzeGoFunctions(path string, lines []string, cfg Config) []Finding {

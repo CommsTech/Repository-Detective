@@ -117,10 +117,27 @@ func TestLargeFileDetected(t *testing.T) {
 	for _, f := range findings {
 		if f.RuleID == "HEALTH-LARGE-FILE" {
 			found = true
+			if f.Severity != "medium" {
+				t.Fatalf("expected medium for go file, got %s", f.Severity)
+			}
 		}
 	}
 	if !found {
 		t.Fatal("expected large file finding")
+	}
+}
+
+func TestLargePythonScriptLowSeverity(t *testing.T) {
+	cfg := testCfg()
+	cfg.LargeFileLines = 10
+	content := strings.Repeat("print('x')\n", 20)
+	findings := health.Run(health.RunInput{Files: []health.FileInput{{
+		Path: "collector.py", Content: content, Language: "python",
+	}}}, cfg, nil)
+	for _, f := range findings {
+		if f.RuleID == "HEALTH-LARGE-FILE" && f.Severity != "low" {
+			t.Fatalf("expected low for large python script, got %s", f.Severity)
+		}
 	}
 }
 
