@@ -1,6 +1,6 @@
 # Private beta feedback template
 
-Copy this form into your feedback channel. Redact secrets before sending.
+Copy into operator feedback channel. **Redact secrets before sending.**
 
 ---
 
@@ -8,91 +8,58 @@ Copy this form into your feedback channel. Redact secrets before sending.
 
 - **Tester name / handle:**
 - **Date:**
-- **Repository Detective version / commit:** (from `/api/v1/about` or bundle README)
+- **Repository Detective commit:** `6d011cf` or `/api/v1/about` output
+- **Live revision (if known):** e.g. `rc-e3e19ec`
 - **Install method:** [ ] Docker Compose  [ ] Binary  [ ] Other: ___
-- **Platform:** (e.g. Linux amd64, Ubuntu 24.04, Docker on macOS)
 
 ## Repository under test
 
-- **Forge:** [ ] Gitea  [ ] GitHub
+- **Forge:** [ ] Gitea  [ ] GitHub  [ ] Other
 - **Repo:** `owner/name`
-- **Primary language(s):**
-- **Approximate size:** (files / LOC if known)
-
-## Install experience
-
-- **Install succeeded:** [ ] Yes  [ ] No
-- **Issues during install:** (describe)
-- **Time to first healthy `/health`:** ___ minutes
-
-## First scan (report-only)
-
 - **Scan ID:**
-- **Used `report_only_dry_run: true`:** [ ] Yes  [ ] No
-- **Scan duration:** ___ seconds / minutes
-- **Findings count:**
-- **Issues created in forge:** (must be 0 for report-only) ___
+- **Report-only:** [ ] Yes  [ ] No — issues filed: ___
 
-## Scanner results
+## Feedback category (check one primary)
 
-| Scanner | Ran | Failed | Notes |
-|---------|-----|--------|-------|
-| trivy | | | |
-| grype | | | |
-| gitleaks | | | |
-| semgrep | | | |
-| staticcheck | | | |
-| gosec | | | |
-| hadolint | | | |
-| checkov | | | |
-| ruff / linters | | | |
-| code graph | | | |
+- [ ] Installation friction
+- [ ] Confusing UI
+- [ ] Finding unclear
+- [ ] False positive → use [PRIVATE_BETA_FALSE_POSITIVE_TEMPLATE.md](PRIVATE_BETA_FALSE_POSITIVE_TEMPLATE.md)
+- [ ] Missed issue
+- [ ] Scanner unavailable
+- [ ] Report quality
+- [ ] SBOM quality
+- [ ] Graph quality
+- [ ] Pre-install audit quality
+- [ ] Performance
+- [ ] Docs gap
+- [ ] Trust/safety concern
+- [ ] Other: ___
 
-## Quality feedback
+## Description
 
-### False positives
+What happened? What did you expect?
 
-List finding IDs or descriptions that appear incorrect:
+## Steps to reproduce
 
 1.
 2.
+3.
 
-### Missed findings
+## Evidence (redacted)
 
-Describe vulnerabilities or quality issues you expected but did not see:
+- Screenshot filename or description (no API keys in URL if possible)
+- Log excerpt (no tokens)
+- Finding IDs if applicable
 
-1.
+## Severity (tester assessment)
 
-### Confusing UI
+- [ ] Blocks my testing
+- [ ] Annoying but workable
+- [ ] Minor / suggestion
 
-Pages or flows that were unclear:
+## Operator use only
 
--
-
-### Report usefulness
-
-- **Executive report helpful:** [ ] Yes  [ ] Somewhat  [ ] No
-- **Comments:**
-
-### Calibration / learning
-
-- **Visited `/ui/learning`:** [ ] Yes  [ ] No
-- **Recommendations sensible:** [ ] Yes  [ ] Somewhat  [ ] No
-- **Suggestions:**
-
-## Logs (redacted)
-
-```
-Paste docker logs or relevant lines here.
-Remove api_key, token, secret, password values.
-```
-
-## Overall
-
-- **Would continue private beta testing:** [ ] Yes  [ ] Maybe  [ ] No
-- **Blockers for wider rollout:**
-- **Other comments:**
-
----
-
-Thank you for testing Repository Detective private beta.
+- Triage bucket:
+- Linked issue / calibration ID:
+- Resolution:
