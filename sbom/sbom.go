@@ -54,11 +54,11 @@ func GenerateAndCheck(ctx context.Context, dir, outDir string) (Result, error) {
 	if hasGoModule(dir) {
 		return generateGoModuleSBOM(ctx, dir, outDir)
 	}
-	if commandAvailable("syft") {
-		return generateSyftSBOM(ctx, dir, outDir)
-	}
 	if !hasSupportedManifest(dir) {
 		return Result{Status: StatusNoSupportedManifest, Detail: "no supported dependency manifest detected"}, nil
+	}
+	if commandAvailable("syft") {
+		return generateSyftSBOM(ctx, dir, outDir)
 	}
 	return Result{Status: StatusToolMissing, Detail: "syft not installed — install syft or use a Go module repository"}, nil
 }

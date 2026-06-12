@@ -3,6 +3,7 @@ package sbom_test
 import (
 	"context"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 
@@ -41,5 +42,19 @@ func TestEmptyDirReturnsNoManifest(t *testing.T) {
 	}
 	if res.Status != sbom.StatusNoSupportedManifest {
 		t.Fatalf("status %q", res.Status)
+	}
+}
+
+func TestEmptyWorkspaceWithSyftStillNoManifest(t *testing.T) {
+	if _, err := exec.LookPath("syft"); err != nil {
+		t.Skip("syft not installed")
+	}
+	dir := t.TempDir()
+	res, err := sbom.GenerateAndCheck(context.Background(), dir, dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Status != sbom.StatusNoSupportedManifest {
+		t.Fatalf("empty dir with syft installed: status %q want %q (detail=%q)", res.Status, sbom.StatusNoSupportedManifest, res.Detail)
 	}
 }
