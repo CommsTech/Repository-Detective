@@ -2,7 +2,7 @@
 
 **Do not start outbound marketing until all required criteria pass.**
 
-Last updated: 2026-06-12 (external beta stabilization)
+Last updated: 2026-06-12 (after external tester #1)
 
 ## Required before marketing
 
@@ -13,18 +13,19 @@ Last updated: 2026-06-12 (external beta stabilization)
 | 3 | Findings detail actionable live | **ready** |
 | 4 | SBOM UI routes live | **ready** |
 | 5 | SBOM artifact download proven | **ready** |
-| 6 | Gitea issue target correctness | **ready** (scratch-repo live proof) |
+| 6 | Gitea issue target correctness | **ready** |
 | 7 | GitHub provider honest | **ready** (not release-proven) |
 | 8 | UI route crawl | **ready** |
 | 9 | Container logs clean | **ready** |
-| 10 | 2 non-product beta scans | **ready** (report-only) |
+| 10 | 2 non-product beta scans | **ready** |
 | 11 | Gitea issue templates | **ready** (API verified) |
-| 12 | Full `go test ./...` | **ready** (SBOM fix 2026-06-12) |
-| 13 | Structured issue body live | **ready** (scratch issue #2 proof) |
+| 12 | Full `go test ./...` | **ready** |
+| 13 | Structured issue body live | **ready** |
 | 14 | Wiki populated | **blocked** (HTTP 500) |
 | 15 | Screenshots | **ready** (12 pages) |
 | 16 | External clean install | **partial** |
 | 17 | Store tests stable | **ready** |
+| 18 | ≥2 external testers clean | **partial** (1 of 2) |
 
 ## Decision
 
@@ -33,21 +34,22 @@ Last updated: 2026-06-12 (external beta stabilization)
 | **Marketing ready** | **NO** |
 | **Private beta ready** | **YES** |
 | **Controlled demo ready** | **YES** |
-| **Private beta expansion** | **YES** — small invited cohort; report-only first |
+| **Private beta expansion** | **PAUSED for calibration** — then tester #2 |
 
-## Private beta expansion (2026-06-11)
+## External tester #1 outcome (2026-06-12)
 
-- Invited operators may onboard per `docs/beta/PRIVATE_BETA_RC_RELEASE_NOTES.md`
-- Testers start with **report-only** scans; one repo initially
-- Filing, runner, AI, container scan, Remediation PR stay disabled unless operator approves
-- Operator rehearsal recorded; **external tester #1 handoff ready**
-- Marketing waits on: wiki + external VM install + named external tester feedback
+- Tester: `ext-operator-jrice`
+- Repo: `commstech/Wifi_Collector`
+- Scan: `85a8ab62e76da076` (report-only, 0 issues, 0 PRs)
+- Feedback: received; false-positive noise elevated
+- **Action:** calibration sprint before tester #2 (not a marketing blocker alone)
 
 ## Blockers
 
 - Gitea wiki HTTP 500
 - Full external VM clean install
-- External named tester feedback (operator rehearsal complete)
+- Second external tester with clean feedback
+- Optional: logged-in template screenshot
 
 ## Explicit non-goals
 
