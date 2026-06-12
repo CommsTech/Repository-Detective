@@ -1,6 +1,6 @@
 # First impression checklist
 
-Updated: 2026-06-11 (blocker burn-down sprint)
+Updated: 2026-06-11 (private beta expansion)
 
 ## Live product walkthrough
 
@@ -22,5 +22,6 @@ Updated: 2026-06-11 (blocker burn-down sprint)
 
 ## Decision
 
-**Private beta / demo:** acceptable for invited operators.  
-**Public marketing:** not yet (wiki + full clean install).
+**Private beta expansion:** YES — invited cohort with report-only first.  
+**Controlled demo:** YES.  
+**Public marketing:** NOT READY (wiki + full clean install + live filing proof).

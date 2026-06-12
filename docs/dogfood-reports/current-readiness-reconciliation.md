@@ -1,8 +1,8 @@
 # Current readiness reconciliation
 
-**Date:** 2026-06-11  
-**Commit:** `1c862aa`  
-**Method:** Read existing post-burn-down docs + live checks (no rescans, no redeploy)
+**Date:** 2026-06-11 (private beta expansion packet)  
+**Commit:** `6d011cf` (pre-expansion docs); expansion docs commit pending  
+**Method:** Read existing docs + live checks (no rescans, no redeploy)
 
 ## Git
 
@@ -78,6 +78,18 @@ Prior regression baseline (stale): scan `e42b3e175e313904`, active-present **21*
 
 ## Reconciliation conclusion
 
-Blocker burn-down sprint is **complete**. Product dogfood is **clean**. Marketing remains **blocked** on wiki, live Gitea filing proof, and full external VM install.
+Blocker burn-down sprint is **complete**. Private beta expansion packet added. Product dogfood is **clean**. Marketing remains **blocked** on wiki, live Gitea filing proof, and full external VM install.
 
-**Recommended next move:** operator/server batch (wiki + live Gitea filing + clean VM), **not** another product fix sprint.
+**Recommended next move:** onboard first invited tester (report-only) + operator/server validation — **not** another product fix sprint.
+
+## Expansion artifacts (this packet)
+
+| Document | Purpose |
+|----------|---------|
+| `docs/beta/PRIVATE_BETA_RC_RELEASE_NOTES.md` | Tester-facing RC notes |
+| `docs/beta/PRIVATE_BETA_TEST_SCOPE.md` | Allowed / not allowed |
+| `docs/beta/PRIVATE_BETA_*_TEMPLATE.md` | Feedback intake |
+| `docs/beta/PRIVATE_BETA_OPERATOR_RUNBOOK_RC.md` | Operator procedures |
+| `docs/dogfood-reports/gitea-wiki-server-repair-plan.md` | Wiki blocker |
+| `docs/dogfood-reports/gitea-filing-controlled-test-plan.md` | Filing proof (not_run) |
+| `docs/dogfood-reports/external-clean-install-test-plan.md` | VM proof (not_run) |

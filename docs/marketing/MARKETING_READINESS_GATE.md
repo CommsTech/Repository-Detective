@@ -2,7 +2,7 @@
 
 **Do not start outbound marketing until all required criteria pass.**
 
-Last updated: 2026-06-11 (blocker burn-down sprint)
+Last updated: 2026-06-11 (private beta expansion packet)
 
 ## Required before marketing
 
@@ -29,6 +29,14 @@ Last updated: 2026-06-11 (blocker burn-down sprint)
 | **Marketing ready** | **NO** |
 | **Private beta ready** | **YES** |
 | **Controlled demo ready** | **YES** |
+| **Private beta expansion** | **YES** — small invited cohort; report-only first |
+
+## Private beta expansion (2026-06-11)
+
+- Invited operators may onboard per `docs/beta/PRIVATE_BETA_RC_RELEASE_NOTES.md`
+- Testers start with **report-only** scans; one repo initially
+- Filing, runner, AI, container scan, Remediation PR stay disabled unless operator approves
+- Marketing waits on: wiki + external VM install + live Gitea filing proof
 
 ## Blockers
 

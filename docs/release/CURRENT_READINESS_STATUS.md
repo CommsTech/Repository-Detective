@@ -1,7 +1,7 @@
 # Current readiness status
 
-**Reconciled:** 2026-06-11  
-**Source commit:** `1c862aa`  
+**Reconciled:** 2026-06-11 (private beta expansion packet)  
+**Source commit:** `6d011cf`  
 **Live revision:** `rc-e3e19ec` (all-in-one, healthy)
 
 > The baseline at `76bd87d` with active-present 21 is **stale**. Blocker burn-down completed in commits `581d534`–`1c862aa`.
@@ -11,8 +11,9 @@
 | Level | Status | Notes |
 |-------|--------|-------|
 | **Marketing ready** | **NO** | Wiki blocked; live Gitea filing unproven; full VM install pending |
-| **Private beta ready** | **YES** | Dogfood clean; core routes verified; honest provider matrix |
+| **Private beta ready** | **YES** | Dogfood clean; expansion packet at `6d011cf+`; small invited cohort OK |
 | **Controlled demo ready** | **YES** | Findings detail, SBOM UI/download, screenshots available |
+| **Private beta expansion** | **YES** | Report-only first; see `docs/beta/PRIVATE_BETA_*` |
 
 ## Product dogfood (live DB, scan `926a5f56a26f03c9`)
 
@@ -59,10 +60,18 @@
 
 ## Next recommended batch
 
-1. Operator: fix Gitea wiki bare repo / storage
-2. Controlled Gitea filing test on owned scratch repo
-3. Clean VM install following `docs/SETUP.md`
-4. Optional: redeploy `repository-detective:rc-dogfood` when operator approves (not required for private beta)
+1. Operator: onboard first invited tester (report-only, one repo)
+2. Operator: fix Gitea wiki bare repo / storage
+3. Controlled Gitea filing test on scratch repo (when approved)
+4. Clean VM install following external-clean-install-test-plan.md
+5. Collect beta feedback; triage false positives via templates
+
+## Private beta expansion (2026-06-11)
+
+- Small **invited cohort** may start with report-only scans
+- Testers: [PRIVATE_BETA_RC_RELEASE_NOTES.md](../beta/PRIVATE_BETA_RC_RELEASE_NOTES.md), [PRIVATE_BETA_TEST_SCOPE.md](../beta/PRIVATE_BETA_TEST_SCOPE.md)
+- Operators: [PRIVATE_BETA_OPERATOR_RUNBOOK_RC.md](../beta/PRIVATE_BETA_OPERATOR_RUNBOOK_RC.md)
+- Advanced features (filing, runner, AI, container scan) stay disabled unless operator approves
 
 ## Do not repeat
 
