@@ -1,7 +1,7 @@
 # Current readiness status
 
-**Reconciled:** 2026-06-11 (private beta expansion packet)  
-**Source commit:** `6d011cf`  
+**Reconciled:** 2026-06-12 (first tester cohort onboarding)  
+**Source commit:** `e4892d9`+  
 **Live revision:** `rc-e3e19ec` (all-in-one, healthy)
 
 > The baseline at `76bd87d` with active-present 21 is **stale**. Blocker burn-down completed in commits `581d534`–`1c862aa`.
@@ -58,13 +58,23 @@
 4. GitHub issue provider live proof (optional; demoted honestly)
 5. Bundle syft in image for native repo SBOM (operational gap; controlled proof exists)
 
+## First tester cohort (2026-06-12)
+
+| Item | Status |
+|------|--------|
+| Tester | `operator-cohort-1` (internal proxy; external name pending) |
+| Repo | `commstech/PCAP_Analyser` |
+| Scan ID | `512145e55d4488ea` |
+| Report-only | **PASS** — 0 issues, 0 PRs, 12 findings, 0 high/critical |
+| External feedback | **pending** |
+
 ## Next recommended batch
 
-1. Operator: onboard first invited tester (report-only, one repo)
+1. Send outreach to first external tester; collect feedback template
 2. Operator: fix Gitea wiki bare repo / storage
 3. Controlled Gitea filing test on scratch repo (when approved)
 4. Clean VM install following external-clean-install-test-plan.md
-5. Collect beta feedback; triage false positives via templates
+5. Triage PCAP_Analyser medium/info findings after feedback
 
 ## Private beta expansion (2026-06-11)
 

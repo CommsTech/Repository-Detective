@@ -2,7 +2,7 @@
 
 **Do not start outbound marketing until all required criteria pass.**
 
-Last updated: 2026-06-11 (private beta expansion packet)
+Last updated: 2026-06-12 (first tester cohort scan rehearsal)
 
 ## Required before marketing
 
@@ -36,7 +36,8 @@ Last updated: 2026-06-11 (private beta expansion packet)
 - Invited operators may onboard per `docs/beta/PRIVATE_BETA_RC_RELEASE_NOTES.md`
 - Testers start with **report-only** scans; one repo initially
 - Filing, runner, AI, container scan, Remediation PR stay disabled unless operator approves
-- Marketing waits on: wiki + external VM install + live Gitea filing proof
+- First tester scan rehearsal PASS (`512145e55d4488ea`); external feedback pending
+- Marketing waits on: wiki + external VM install + live Gitea filing proof + tester feedback
 
 ## Blockers
 

@@ -1,6 +1,12 @@
 # First impression checklist
 
-Updated: 2026-06-11 (private beta expansion)
+Updated: 2026-06-12 (first tester cohort)
+
+## Cohort 1 rehearsal
+
+- [x] Report-only scan on `commstech/PCAP_Analyser` — 0 issues filed
+- [ ] External tester feedback received
+- [ ] Second tester invited (after feedback triage)
 
 ## Live product walkthrough
 
