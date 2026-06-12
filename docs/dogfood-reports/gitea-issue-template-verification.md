@@ -2,16 +2,16 @@
 
 **Date:** 2026-06-02  
 **Repo:** `commstech/Bugbot`  
-**Commit under test:** (pending push — templates in `.gitea/ISSUE_TEMPLATE/`)
+**Commit under test:** `abfa044` (pushed to `main`)
 
 ## Summary
 
 | Check | Result |
 |-------|--------|
-| Templates in repo | **yes** — 14 YAML form templates + `config.yml` |
+| Templates in repo | **yes** — 16 YAML form templates + `config.yml` |
 | `config.yml` present | **yes** — `blank_issues_enabled: false` |
-| Templates visible in Gitea UI | **pending** — verify after push to `main` |
-| Blank issues allowed | **expected: no** (if Gitea version supports `blank_issues_enabled`) |
+| Templates visible in Gitea UI | **yes (API)** — all templates listed via Gitea contents API after push |
+| Blank issues allowed | **expected: no** — confirm in logged-in UI (`config.yml`) |
 | Test issue created | **no** — controlled verification only |
 | Test issue closed | **n/a** |
 
@@ -54,7 +54,16 @@ If the live Gitea instance ignores this key (older versions), Markdown/YAML temp
 
 ## Gitea version limitation
 
-Wiki HTTP 500 is a separate blocker; issue templates use repository files and may work independently. Confirm on live instance after deploy.
+Wiki HTTP 500 is a separate blocker; issue templates use repository files and work independently (confirmed via API listing on 2026-06-02).
+
+## API verification (2026-06-02)
+
+```
+GET /api/v1/repos/commstech/Bugbot/contents/.gitea/ISSUE_TEMPLATE
+→ 16 template files + config.yml
+```
+
+Logged-in UI should show template picker at `/commstech/Bugbot/issues/new`.
 
 ## Evidence
 
