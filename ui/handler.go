@@ -888,6 +888,16 @@ func (h *Handler) ScanDetail(c *gin.Context) {
 		repoName = repo.FullName
 	}
 	recon, _ := h.loadReconciliation(c, scan.RepositoryID, scanID)
+	findingBreakdown := ScanFindingsBreakdown{}
+	if instances, err := h.store.ListFindingInstancesByScan(c.Request.Context(), scanID); err == nil && len(instances) > 0 {
+		ids := make([]int64, 0, len(instances))
+		for fid := range instances {
+			ids = append(ids, fid)
+		}
+		if byID, err := h.store.ListFindingsByIDs(c.Request.Context(), ids); err == nil {
+			findingBreakdown = BuildScanFindingsBreakdown(byID)
+		}
+	}
 	aiReview, _ := h.store.GetAIAdvisoryReviewByScanID(c.Request.Context(), scanID)
 	var aiRecs []store.AIAdvisoryRecommendation
 	if aiReview.ReviewID != "" {
@@ -908,6 +918,9 @@ func (h *Handler) ScanDetail(c *gin.Context) {
 		"AIRecommendationsEnabled": h.platform.OpenClawAIReviewEnabled,
 		"OpenClawEnabled":          h.platform.OpenClawAIReviewEnabled,
 		"BetaFeedbackURL":          BuildScanBetaFeedbackLink(scanID, repoName),
+		"FindingBreakdown":         findingBreakdown,
+		"SBOMStatus":               sbomStatusFromSummary(scan.SummaryJSON),
+		"SBOMDetail":               sbomDetailFromSummary(scan.SummaryJSON),
 	})
 }
 

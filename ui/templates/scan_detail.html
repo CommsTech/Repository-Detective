@@ -19,8 +19,19 @@
   </div>
   <div class="rd-stat high">
     <div class="rd-stat-value">{{$.Data.Summary.IssuesFound}}</div>
-    <div class="rd-stat-label">Issues found</div>
+    <div class="rd-stat-label">Findings (raw)</div>
   </div>
+  {{with $.Data.FindingBreakdown}}{{if gt .ActionableCount 0}}
+  <div class="rd-stat medium">
+    <div class="rd-stat-value">{{.ActionableCount}}</div>
+    <div class="rd-stat-label">Actionable (ungrouped)</div>
+  </div>
+  {{end}}{{if gt .GroupedCount 0}}
+  <div class="rd-stat info">
+    <div class="rd-stat-value">{{.GroupedCount}}</div>
+    <div class="rd-stat-label">Informational (grouped)</div>
+  </div>
+  {{end}}{{end}}
   <div class="rd-stat info">
     <div class="rd-stat-value">{{$.Data.Summary.FilesAnalyzed}}</div>
     <div class="rd-stat-label">Files analyzed</div>
@@ -117,8 +128,28 @@
   {{end}}
 </div>
 
+{{with $.Data.FindingBreakdown}}{{if .Grouped}}
+<div class="rd-card">
+  <div class="rd-card-head"><h2>Grouped informational findings</h2><span class="rd-chip">{{.GroupedCount}} in {{len .Grouped}} groups</span></div>
+  <p class="rd-muted">Repeated graph/quality heuristics are summarized here. Actionable findings remain listed individually in the findings queue.</p>
+  <table class="rd-table rd-table-compact">
+    <tr><th>Rule</th><th>Source</th><th>Severity</th><th>Count</th><th>Summary</th></tr>
+    {{range .Grouped}}
+    <tr>
+      <td><code>{{.RuleID}}</code></td>
+      <td>{{.Source}}</td>
+      <td><span class="rd-badge {{severityBadge .Severity}}">{{.Severity}}</span></td>
+      <td>{{.Count}}</td>
+      <td class="rd-muted">{{.Description}}</td>
+    </tr>
+    {{end}}
+  </table>
+</div>
+{{end}}{{end}}
+
 <div class="rd-card">
   <h2>Scanner results</h2>
+  <p class="rd-muted"><strong>binary_missing</strong> means the tool was not installed in this runtime — the repo was <em>not</em> scanned by that engine. A missing scanner does <em>not</em> mean the repository is clean.</p>
   <table class="rd-table">
     <tr><th>Scanner</th><th>Status</th><th>Findings</th><th>Detail</th></tr>
     {{range $.Data.ScannerResults}}
@@ -132,8 +163,21 @@
     <tr><td colspan="4" class="rd-muted">No scanner results recorded</td></tr>
     {{end}}
   </table>
-  <p class="rd-muted">Missing scanners need binaries in the Docker image or host PATH. Trivy and Grype are bundled in the official image.</p>
+  <p class="rd-muted">Install optional scanners (trivy, grype, gitleaks, semgrep, syft) in the image or host PATH to improve coverage. See Configure → scanner availability.</p>
 </div>
+
+{{if $.Data.SBOMStatus}}
+<div class="rd-card">
+  <h2>SBOM status</h2>
+  {{if eq $.Data.SBOMStatus "sbom_tool_missing"}}
+  <div class="rd-alert info">
+    <strong>SBOM tool unavailable.</strong> Dependency manifests may be present (e.g. <code>requirements.txt</code>) but Syft was not installed in this runtime, so no SBOM was generated. Install <code>syft</code> or use the full scanner image to enable Python/Node SBOM export.
+  </div>
+  {{else}}
+  <p><span class="rd-badge">{{$.Data.SBOMStatus}}</span>{{if $.Data.SBOMDetail}} — {{$.Data.SBOMDetail}}{{end}}</p>
+  {{end}}
+</div>
+{{end}}
 
 <div class="rd-card">
   <h2>Scan summary</h2>

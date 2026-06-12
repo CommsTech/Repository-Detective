@@ -295,6 +295,28 @@ type scanDetailView struct {
 	PersistenceIncomplete    bool
 }
 
+func sbomStatusFromSummary(raw json.RawMessage) string {
+	if len(raw) == 0 {
+		return ""
+	}
+	var summary map[string]any
+	if err := json.Unmarshal(raw, &summary); err != nil {
+		return ""
+	}
+	return stringFromAny(summary["sbom_status"])
+}
+
+func sbomDetailFromSummary(raw json.RawMessage) string {
+	if len(raw) == 0 {
+		return ""
+	}
+	var summary map[string]any
+	if err := json.Unmarshal(raw, &summary); err != nil {
+		return ""
+	}
+	return stringFromAny(summary["sbom_detail"])
+}
+
 func buildScanDetailView(raw json.RawMessage) scanDetailView {
 	view := scanDetailView{}
 	if len(raw) == 0 {
