@@ -9,7 +9,13 @@
 
 {{if .Data.SBOMMissing}}
 <div class="rd-card"><h2>SBOM not available</h2>
-<p class="rd-muted">No SBOM artifact was stored for this scope. Generation may be disabled, the scan may have failed before SBOM export, or syft was not available in the runner.</p>
+<p class="rd-muted">No SBOM artifact was stored for this scope. Common causes:</p>
+<ul class="rd-muted">
+  <li><strong>sbom_tool_missing</strong> — Syft is not installed in this runtime even though dependency files (e.g. <code>requirements.txt</code>, <code>go.mod</code>) may exist.</li>
+  <li>SBOM generation disabled in scan profile.</li>
+  <li>Scan failed before SBOM export completed.</li>
+</ul>
+<p class="rd-muted">Install <code>syft</code> or use the full scanner image, then re-run a scan. Missing SBOM does <em>not</em> mean the repo has no dependencies.</p>
 </div>
 {{else}}
 {{with .Data.Artifact}}

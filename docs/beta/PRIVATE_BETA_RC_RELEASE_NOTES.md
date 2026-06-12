@@ -67,6 +67,16 @@ This is an **invited operator beta**, not a production-ready public repo scanner
 - **Gitea preferred** for first cohort
 - Feedback via templates in `docs/beta/` — redact secrets
 
+## Scanner and SBOM coverage (read before first scan)
+
+| Message | Meaning |
+|---------|---------|
+| `binary_missing` | That scanner binary is not installed in this runtime — **the repo was not checked by that tool**. Not a clean result. |
+| `sbom_tool_missing` | A dependency manifest exists but **Syft** is unavailable — no SBOM file was produced. |
+| High finding count | Small homelab repos may trigger many **low/info** graph and debug heuristics; use severity filters and the scan page **grouped informational** summary. |
+
+Install optional tools (trivy, grype, gitleaks, semgrep, syft) or use the full scanner image for broader coverage.
+
 ## Expected scan modes
 
 1. **First scan:** `report_only_dry_run: true` or repo profile with issue filing off

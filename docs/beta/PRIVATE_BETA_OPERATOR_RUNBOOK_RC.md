@@ -69,6 +69,14 @@ curl -X POST http://127.0.0.1:8081/api/v1/analyze \
 
 Wait for: scan complete → persistence → graph → issue sync → reconciliation.
 
+## Scanner / SBOM expectations
+
+Explain to testers before first scan:
+
+- **binary_missing** on trivy/grype/gitleaks/semgrep means that engine did not run — not a clean bill of health.
+- **sbom_tool_missing** with `requirements.txt` present means Syft is absent; recommend full image or install `syft`.
+- First-scan volume can be high on graph-heavy repos; scan detail shows **actionable** vs **grouped informational** counts.
+
 ## Review findings
 
 - UI: `/ui/repos/{id}` → latest scan → findings list

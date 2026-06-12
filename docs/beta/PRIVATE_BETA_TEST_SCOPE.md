@@ -56,6 +56,18 @@
 7. Only with operator approval: issue filing trial on scratch repo
 ```
 
+## Scanner coverage (slim image)
+
+The default beta Docker image includes **deterministic** scanners (static, health, graph, linters) but may **not** bundle every optional binary.
+
+| Status | Meaning for testers |
+|--------|---------------------|
+| **found / clean** | Tool ran on this scan |
+| **binary_missing** | Tool was **not available** in this runtime — repo was **not** scanned by that engine. This does **not** mean the repo is clean. |
+| **sbom_tool_missing** | Dependency manifest detected (e.g. `requirements.txt`) but **Syft** is unavailable — no SBOM was generated. Install Syft or use the full scanner image. |
+
+See Configure → Health for installed vs configured tools. First scans on small homelab repos may show **many low/info findings** (graph + debug heuristics) — use severity filters and grouped informational summary on the scan page.
+
 ## Feedback expectations
 
 Every beta session should produce:
