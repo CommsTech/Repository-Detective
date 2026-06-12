@@ -176,6 +176,7 @@ docs/dogfood-reports/*
 !docs/dogfood-reports/private-beta-first-tester-scan.md
 !docs/dogfood-reports/gitea-wiki-server-repair-result.md
 !docs/dogfood-reports/gitea-filing-controlled-proof-result.md
+!docs/dogfood-reports/store-timeout-triage-report.md
 !docs/dogfood-reports/external-clean-install-result.md
 !docs/dogfood-reports/rc-all-in-one-build-report.md
 !docs/dogfood-reports/live-rc-redeploy-report.md
