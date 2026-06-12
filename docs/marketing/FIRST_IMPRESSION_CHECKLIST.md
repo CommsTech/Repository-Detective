@@ -5,7 +5,10 @@ Updated: 2026-06-12 (first tester cohort)
 ## Cohort 1 rehearsal
 
 - [x] Report-only scan on `commstech/PCAP_Analyser` — 0 issues filed
-- [ ] External tester feedback received
+- [x] Operator feedback recorded (`docs/beta/first-tester-feedback-summary.md`)
+- [x] Gitea issue templates verified (API)
+- [x] Controlled Gitea filing proof (scratch repo)
+- [ ] External named tester feedback
 - [ ] Second tester invited (after feedback triage)
 
 ## Live product walkthrough
@@ -21,7 +24,8 @@ Updated: 2026-06-12 (first tester cohort)
 
 ## Trust signals
 
-- [x] Dry-run scans create 0 issues (2 non-product repos)
+- [x] Dry-run scans create 0 issues (beta repos + scratch dry-run)
+- [x] Live Gitea filing proof on owned scratch repo only
 - [x] AI Recommendations disabled by default
 - [x] Product dogfood `active_present_open` = **0**
 - [x] GitHub issue provider labeled not release-proven
@@ -30,4 +34,4 @@ Updated: 2026-06-12 (first tester cohort)
 
 **Private beta expansion:** YES — invited cohort with report-only first.  
 **Controlled demo:** YES.  
-**Public marketing:** NOT READY (wiki + full clean install + live filing proof).
+**Public marketing:** NOT READY (wiki + full clean install + external named tester).
