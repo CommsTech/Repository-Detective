@@ -185,6 +185,7 @@ docs/dogfood-reports/*
 !docs/dogfood-reports/issue-provider-rc-verification.md
 !docs/dogfood-reports/non-product-beta-scan-1.md
 !docs/dogfood-reports/non-product-beta-scan-2.md
+!docs/dogfood-reports/gitea-issue-template-verification.md
 !docs/marketing/
 !docs/marketing/**
 
