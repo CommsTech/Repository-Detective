@@ -220,6 +220,9 @@ func isFalsePositiveHardcodedSecret(path, line string) bool {
 	if regexp.MustCompile(`(?i)api[_-]?key\s*=\s*["']\$\{`).MatchString(line) {
 		return true
 	}
+	if assessHardcodedSecret(path, line).Skip {
+		return true
+	}
 	return false
 }
 
@@ -286,7 +289,34 @@ func isFalsePositiveDebugLine(path, line string) bool {
 	return false
 }
 
+var privateCIDRExamplePattern = regexp.MustCompile(`\b(?:10|172\.(?:1[6-9]|2\d|3[01])|192\.168)\.\d{1,3}\.\d{1,3}(?:\.\d{1,3})?/\d{1,2}\b`)
+
+func isInfraReferenceExampleContext(path, line string) bool {
+	trimmed := strings.TrimSpace(line)
+	lower := strings.ToLower(line)
+	if strings.HasPrefix(trimmed, "#") || strings.HasPrefix(trimmed, "//") || strings.HasPrefix(trimmed, "*") {
+		return true
+	}
+	if strings.Contains(lower, `write("#`) || strings.Contains(lower, `write(' #`) || strings.Contains(lower, "example") {
+		return true
+	}
+	if privateCIDRExamplePattern.MatchString(line) && (strings.Contains(lower, "example") || strings.Contains(lower, "sample") || strings.HasPrefix(trimmed, "#")) {
+		return true
+	}
+	norm := strings.ToLower(strings.ReplaceAll(path, "\\", "/"))
+	if strings.HasSuffix(norm, ".md") || strings.HasSuffix(norm, ".rst") {
+		return true
+	}
+	if !strings.Contains(norm, "/") && strings.HasSuffix(norm, ".md") {
+		return true
+	}
+	return false
+}
+
 func isFalsePositiveInternalInfraRef(path, line string) bool {
+	if isInfraReferenceExampleContext(path, line) {
+		return true
+	}
 	norm := strings.ReplaceAll(path, "\\", "/")
 	lower := strings.ToLower(norm)
 	switch {
@@ -370,13 +400,28 @@ func RunStaticAnalysisWithProfile(files []FileContent, enableSecurity, enableQua
 				}
 				severity := rule.Severity
 				confidence := staticRuleConfidence(rule)
+				hypothesis := rule.Title
+				evidenceNote := rule.Description
+				if rule.ID == "SEC-HARDCODED-SECRET" {
+					assessment := assessHardcodedSecret(file.Path, line)
+					if assessment.Skip {
+						continue
+					}
+					severity = assessment.Severity
+					confidence = assessment.Confidence
+					if assessment.Evidence != "" {
+						evidenceNote = assessment.Evidence
+						hypothesis = rule.Title + " — " + assessment.Evidence
+					}
+				}
 				severity, confidence = profile.HomelabInfraSeverity(rule.ID, severity, confidence, file.Path, line, repoProfile)
 				findings = append(findings, models.CandidateFinding{
 					ID:         rule.ID,
-					Hypothesis: rule.Title,
+					Hypothesis: hypothesis,
 					Evidence: models.Evidence{
 						Code:      strings.TrimSpace(line),
 						CallChain: []string{file.Path},
+						ASTNode:   evidenceNote,
 					},
 					Severity:    severity,
 					Confidence:  confidence,

@@ -56,6 +56,9 @@ func buildActionableFindingView(detail store.FindingDetail) ActionableFindingVie
 	if detail.Category == "secret" || detail.Source == "gitleaks" {
 		view.HasSecretEvidence = true
 	}
+	if detail.RuleID == "SEC-HARDCODED-SECRET" {
+		view.FalsePositiveGuide = "Static heuristic only — verify the literal is a live credential. Placeholders (e.g. status messages like \"Decryption failed\"), examples, and env-backed config are often false positives. Use the Gitea false-positive template with scan ID."
+	}
 	if detail.FilePath != "" {
 		view.CurrentInTree = "Inspect path in latest scan workspace; re-scan to confirm still present."
 	}
