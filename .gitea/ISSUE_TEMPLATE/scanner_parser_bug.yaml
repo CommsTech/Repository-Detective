@@ -1,0 +1,47 @@
+name: Scanner or parser bug
+about: Scanner output wrong, parser failed, or tool integration broken
+labels:
+  - type/bug
+  - area/scanner
+  - status/needs-triage
+body:
+  - type: markdown
+    attributes:
+      value: Redact logs — no tokens or secrets.
+  - type: input
+    id: version
+    attributes:
+      label: Repository Detective commit / version
+    validations:
+      required: true
+  - type: input
+    id: scan_id
+    attributes:
+      label: Scan ID
+  - type: input
+    id: scanner
+    attributes:
+      label: Scanner / tool
+      placeholder: trivy, semgrep, gitleaks, staticcheck, ...
+    validations:
+      required: true
+  - type: input
+    id: rule
+    attributes:
+      label: Rule ID (if any)
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Redacted logs / stderr
