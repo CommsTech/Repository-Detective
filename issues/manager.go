@@ -461,6 +461,8 @@ func (m *Manager) createIssueBody(issue *ai.CodeIssue, req *IssueCreationRequest
 		Ref:          req.Commit,
 		PullRequest:  req.PullRequest,
 		ScanID:       req.ScanID,
+		Provider:     m.normalizeForgeType(req.ForgeType),
+		ReportOnly:   !req.ForceIssueCreation,
 	})
 }
 

@@ -1,6 +1,7 @@
 package issues
 
 import (
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -24,6 +25,16 @@ type IssueRenderInput struct {
 	PullRequest int
 	ScanID      string
 	Now         time.Time
+	// Extended metadata for actionable forge issues
+	FindingID      int64
+	Provider       string
+	ProductVersion string
+	ReportOnly     bool
+	IssuePolicy    string
+	ConfidenceGate string
+	SeverityGate   string
+	ScanType       string
+	PublicBaseURL  string
 }
 
 // RenderIssueBody renders the structured Repository Detective issue template.
@@ -51,52 +62,15 @@ func RenderIssueBody(in IssueRenderInput) string {
 	b.WriteString("## Summary\n\n")
 	b.WriteString(summary + "\n\n")
 
-	b.WriteString("## Finding Type\n\n")
-	b.WriteString(fmt.Sprintf("- Category: %s\n", category))
-	b.WriteString(fmt.Sprintf("- Severity: %s\n", strings.ToLower(issue.Severity)))
-	b.WriteString(fmt.Sprintf("- Confidence: %.2f\n", issue.Confidence))
-	b.WriteString(fmt.Sprintf("- Source: %s\n", displaySource(issue)))
-	if issue.SourceType != "" {
-		b.WriteString(fmt.Sprintf("- Source type: %s\n", issue.SourceType))
-	}
-	if issue.ReportingAction != "" {
-		b.WriteString(fmt.Sprintf("- Reporting action: %s\n", issue.ReportingAction))
-	}
-	if issue.FalsePositiveRisk != "" {
-		b.WriteString(fmt.Sprintf("- False-positive risk: %s\n", issue.FalsePositiveRisk))
-	}
-	if issue.RepoProfileSummary != "" {
-		b.WriteString(fmt.Sprintf("- Repo profile: %s\n", issue.RepoProfileSummary))
-	}
-	if issue.RuleID != "" {
-		b.WriteString(fmt.Sprintf("- Rule ID: %s\n", issue.RuleID))
-	}
-	if in.ScanID != "" {
-		b.WriteString(fmt.Sprintf("- Scan ID: %s\n", in.ScanID))
-	}
+	b.WriteString("## Finding\n\n")
+	b.WriteString(renderFindingSection(issue, in) + "\n")
 
 	b.WriteString("\n## Location\n\n")
-	if issue.File != "" {
-		if link := fileSourceLink(in); link != "" {
-			b.WriteString(fmt.Sprintf("- File: [`%s`](%s)\n", locationRef(issue), link))
-		} else {
-			b.WriteString(fmt.Sprintf("- File: `%s`\n", locationRef(issue)))
-		}
-	}
-	if issue.LineNumber > 0 {
-		b.WriteString(fmt.Sprintf("- Line: %d\n", issue.LineNumber))
-	}
-	if in.Repository != "" {
-		b.WriteString(fmt.Sprintf("- Repository: `%s`\n", in.Repository))
-	}
-	if in.Context != "" {
-		b.WriteString(fmt.Sprintf("- Trigger context: %s\n", in.Context))
-	}
-	if in.Commit != "" {
-		b.WriteString(fmt.Sprintf("- Commit / ref: `%s`\n", in.Commit))
-	}
-	if in.PullRequest > 0 {
-		b.WriteString(fmt.Sprintf("- Pull request: #%d\n", in.PullRequest))
+	b.WriteString(renderLocationSection(issue, in) + "\n")
+
+	if extra := renderSpecializedFindingSection(issue, in); extra != "" {
+		b.WriteString("\n")
+		b.WriteString(extra)
 	}
 
 	b.WriteString("\n## Why this matters\n\n")
@@ -117,7 +91,19 @@ func RenderIssueBody(in IssueRenderInput) string {
 	b.WriteString("## Recommended fix\n\n")
 	b.WriteString(recommendedFix(issue) + "\n\n")
 
-	b.WriteString("## Regression risk\n\n")
+	b.WriteString("## Verification\n\n")
+	b.WriteString(verificationSteps(issue, in) + "\n\n")
+
+	b.WriteString("## Issue filing policy\n\n")
+	b.WriteString(renderIssueFilingPolicy(in) + "\n")
+
+	b.WriteString("\n## False-positive guidance\n\n")
+	b.WriteString(falsePositiveGuidance(in) + "\n")
+
+	b.WriteString("\n## Repository Detective metadata\n\n")
+	b.WriteString(renderProductMetadata(in, issue) + "\n")
+
+	b.WriteString("\n## Regression risk\n\n")
 	b.WriteString(fmt.Sprintf("%s — %s\n\n", capitalize(issue.RegressionRisk), regressionReason(issue)))
 
 	b.WriteString("## Suggested tests\n\n")
@@ -131,9 +117,6 @@ func RenderIssueBody(in IssueRenderInput) string {
 
 	b.WriteString("## Acceptance criteria\n\n")
 	b.WriteString(acceptanceCriteria(issue) + "\n\n")
-
-	b.WriteString("## Links\n\n")
-	b.WriteString(reportLinks(in, issue) + "\n\n")
 
 	b.WriteString("## Tracking\n\n")
 	b.WriteString(fmt.Sprintf("- %s %s\n", FingerprintBodyMarker, issue.Fingerprint))
@@ -375,21 +358,330 @@ func acceptanceCriteria(issue *ai.CodeIssue) string {
 	return strings.Join(items, "\n")
 }
 
-func reportLinks(in IssueRenderInput, issue *ai.CodeIssue) string {
-	var links []string
+func renderFindingSection(issue *ai.CodeIssue, in IssueRenderInput) string {
+	category := NormalizeCategory(issue.Category, issue.Source)
+	var b strings.Builder
+	b.WriteString(fmt.Sprintf("- Fingerprint: `%s`\n", defaultString(issue.Fingerprint, "unknown")))
+	if in.FindingID > 0 {
+		b.WriteString(fmt.Sprintf("- Finding ID: `%d`\n", in.FindingID))
+	}
+	b.WriteString(fmt.Sprintf("- Rule: `%s`\n", defaultString(issue.RuleID, "unknown")))
+	b.WriteString(fmt.Sprintf("- Scanner/source: %s\n", displaySource(issue)))
+	b.WriteString(fmt.Sprintf("- Severity: %s\n", strings.ToLower(defaultString(issue.Severity, "unknown"))))
+	b.WriteString(fmt.Sprintf("- Confidence: %.2f\n", issue.Confidence))
+	b.WriteString(fmt.Sprintf("- Category: %s\n", category))
+	b.WriteString(fmt.Sprintf("- Status: %s\n", lifecycleStatusLabel(issue)))
+	if !in.Now.IsZero() {
+		b.WriteString(fmt.Sprintf("- First seen: %s\n", in.Now.Format(time.RFC3339)))
+		b.WriteString(fmt.Sprintf("- Last seen: %s\n", in.Now.Format(time.RFC3339)))
+	}
+	if issue.SourceType != "" {
+		b.WriteString(fmt.Sprintf("- Source type: %s\n", issue.SourceType))
+	}
+	if issue.ReportingAction != "" {
+		b.WriteString(fmt.Sprintf("- Reporting action: %s\n", issue.ReportingAction))
+	}
+	if issue.FalsePositiveRisk != "" {
+		b.WriteString(fmt.Sprintf("- False-positive risk: %s\n", issue.FalsePositiveRisk))
+	}
+	return strings.TrimRight(b.String(), "\n")
+}
+
+func renderLocationSection(issue *ai.CodeIssue, in IssueRenderInput) string {
+	provider := defaultString(in.Provider, inferProvider(in))
+	ref := strings.TrimSpace(in.Ref)
+	if ref == "" {
+		ref = strings.TrimSpace(in.Commit)
+	}
+	var b strings.Builder
 	if in.Repository != "" {
-		links = append(links, fmt.Sprintf("- Repository: `%s`", in.Repository))
+		b.WriteString(fmt.Sprintf("- Repository: `%s`\n", in.Repository))
 	}
-	if link := fileSourceLink(in); link != "" {
-		links = append(links, fmt.Sprintf("- Source file: %s", link))
+	b.WriteString(fmt.Sprintf("- Provider: %s\n", provider))
+	if ref != "" {
+		b.WriteString(fmt.Sprintf("- Branch/ref: `%s`\n", ref))
 	}
-	if in.ScanID != "" {
-		links = append(links, fmt.Sprintf("- Scan ID: `%s`", in.ScanID))
+	if in.Commit != "" {
+		b.WriteString(fmt.Sprintf("- Commit: `%s`\n", in.Commit))
+	} else if issue.CommitSHA != "" {
+		b.WriteString(fmt.Sprintf("- Commit: `%s`\n", issue.CommitSHA))
 	}
-	if issue.RuleID != "" {
-		links = append(links, fmt.Sprintf("- Rule ID: `%s`", issue.RuleID))
+	if issue.File != "" {
+		if link := fileSourceLink(in); link != "" {
+			b.WriteString(fmt.Sprintf("- File: [`%s`](%s)\n", locationRef(issue), link))
+		} else {
+			b.WriteString(fmt.Sprintf("- File: `%s`\n", locationRef(issue)))
+		}
 	}
-	return strings.Join(links, "\n")
+	if issue.LineNumber > 0 {
+		b.WriteString(fmt.Sprintf("- Line: %d\n", issue.LineNumber))
+	}
+	if issue.PackageName != "" {
+		b.WriteString(fmt.Sprintf("- Function/package/component: `%s`\n", issue.PackageName))
+	}
+	if isHistoricalFinding(issue) {
+		b.WriteString("- Current tree or historical: historical (may not exist at HEAD)\n")
+	} else if issue.File != "" {
+		b.WriteString("- Current tree or historical: current tree\n")
+	}
+	if in.Context != "" {
+		b.WriteString(fmt.Sprintf("- Trigger context: %s\n", in.Context))
+	}
+	if in.PullRequest > 0 {
+		b.WriteString(fmt.Sprintf("- Pull request: #%d\n", in.PullRequest))
+	}
+	return strings.TrimRight(b.String(), "\n")
+}
+
+func renderSpecializedFindingSection(issue *ai.CodeIssue, in IssueRenderInput) string {
+	meta := parseIssueEvidence(issue)
+	var sections []string
+
+	if isHistoricalFinding(issue) || NormalizeCategory(issue.Category, issue.Source) == CategorySecret && issue.CommitSHA != "" {
+		var b strings.Builder
+		b.WriteString("## Secret / history context\n\n")
+		commit := firstNonEmptyStr(issue.CommitSHA, evidenceField(meta, "commit", "commit_sha"))
+		b.WriteString(fmt.Sprintf("- Commit hash: `%s`\n", defaultString(commit, "unknown")))
+		present := evidenceField(meta, "current_tree_present", "present_in_tree")
+		if present == "" {
+			if isHistoricalFinding(issue) {
+				present = "unknown — verify at HEAD"
+			} else {
+				present = "yes (current tree)"
+			}
+		}
+		b.WriteString(fmt.Sprintf("- Current-tree present: %s\n", present))
+		rotation := "yes — rotate if credential was ever active"
+		if NormalizeCategory(issue.Category, issue.Source) != CategorySecret {
+			rotation = "review if secret material was exposed"
+		}
+		b.WriteString(fmt.Sprintf("- Rotation required: %s\n", rotation))
+		sections = append(sections, b.String())
+	}
+
+	if isContainerFinding(issue) {
+		var b strings.Builder
+		b.WriteString("## Container context\n\n")
+		b.WriteString(fmt.Sprintf("- Image: `%s`\n", defaultString(evidenceField(meta, "image", "Image"), issue.File)))
+		b.WriteString(fmt.Sprintf("- Digest: `%s`\n", defaultString(evidenceField(meta, "image_digest", "digest", "ImageID"), "unknown")))
+		b.WriteString(fmt.Sprintf("- Package: `%s`\n", defaultString(firstNonEmptyStr(issue.PackageName, evidenceField(meta, "package", "PackageName", "pkg_name")), "unknown")))
+		b.WriteString(fmt.Sprintf("- Installed version: `%s`\n", defaultString(evidenceField(meta, "version", "installed_version", "PackageVersion"), "unknown")))
+		b.WriteString(fmt.Sprintf("- Fixed version: `%s`\n", defaultString(evidenceField(meta, "fixed_version", "FixedVersion"), "unknown")))
+		b.WriteString(fmt.Sprintf("- CVE: `%s`\n", defaultString(evidenceField(meta, "cve", "cve_id", "VulnerabilityID", "vulnerability_id"), "unknown")))
+		sections = append(sections, b.String())
+	}
+
+	if isSBOMFinding(issue) {
+		var b strings.Builder
+		b.WriteString("## SBOM context\n\n")
+		component := firstNonEmptyStr(issue.PackageName, evidenceField(meta, "sbom_component", "component", "purl", "bom_ref"))
+		b.WriteString(fmt.Sprintf("- Package/component: `%s`\n", defaultString(component, "unknown")))
+		b.WriteString(fmt.Sprintf("- Ecosystem: `%s`\n", defaultString(evidenceField(meta, "ecosystem", "type", "package_type"), "unknown")))
+		if lic := evidenceField(meta, "license", "License"); lic != "" {
+			b.WriteString(fmt.Sprintf("- License: `%s`\n", lic))
+		}
+		sections = append(sections, b.String())
+	}
+
+	if isGraphFinding(issue) {
+		var b strings.Builder
+		b.WriteString("## Graph context\n\n")
+		b.WriteString(fmt.Sprintf("- Node type: `%s`\n", defaultString(evidenceField(meta, "node_type", "NodeType"), "unknown")))
+		reach := evidenceField(meta, "entrypoint_reachable", "EntrypointReachable", "path_classification")
+		if reach != "" {
+			b.WriteString(fmt.Sprintf("- Reachability/entrypoint context: %s\n", reach))
+		} else {
+			b.WriteString("- Reachability/entrypoint context: review Repository Map for inbound/outbound edges\n")
+		}
+		sections = append(sections, b.String())
+	}
+
+	if isPreinstallFinding(issue, in) {
+		sections = append(sections, "## Pre-install audit context\n\n"+
+			"- Report-only: yes — pre-install audits do not file upstream issues automatically\n"+
+			"- Issue filed upstream: no (operator review required)\n")
+	}
+
+	return strings.Join(sections, "\n")
+}
+
+func renderIssueFilingPolicy(in IssueRenderInput) string {
+	reportOnly := "no"
+	if in.ReportOnly {
+		reportOnly = "yes"
+	}
+	backlog := "disabled"
+	if in.IssuePolicy != "" && strings.Contains(strings.ToLower(in.IssuePolicy), "backlog") {
+		backlog = "active"
+	}
+	var b strings.Builder
+	b.WriteString(fmt.Sprintf("- Scan ID: `%s`\n", defaultString(in.ScanID, "unknown")))
+	b.WriteString(fmt.Sprintf("- Scan type: %s\n", defaultString(in.ScanType, "repository scan")))
+	b.WriteString(fmt.Sprintf("- Report-only: %s\n", reportOnly))
+	b.WriteString(fmt.Sprintf("- Issue policy: %s\n", defaultString(in.IssuePolicy, "default")))
+	b.WriteString(fmt.Sprintf("- Confidence gate: %s\n", defaultString(in.ConfidenceGate, "profile default")))
+	b.WriteString(fmt.Sprintf("- Severity gate: %s\n", defaultString(in.SeverityGate, "profile default")))
+	b.WriteString(fmt.Sprintf("- Backlog-control: %s\n", backlog))
+	return strings.TrimRight(b.String(), "\n")
+}
+
+func falsePositiveGuidance(in IssueRenderInput) string {
+	repo := defaultString(in.Repository, "owner/repo")
+	return fmt.Sprintf(
+		"If this is noise or acceptable risk:\n\n"+
+			"1. Mark false positive in Repository Detective with a short reason (repo-scoped calibration).\n"+
+			"2. Or file a **Scanner false positive** issue on the product repo using template `scanner_false_positive`.\n"+
+			"3. Include fingerprint `%s`, scan ID `%s`, rule, and redacted evidence — **never paste raw secrets**.\n\n"+
+			"Global suppressions require operator review; prefer repo-scoped calibration for beta feedback.",
+		defaultString(in.Issue.Fingerprint, "unknown"),
+		defaultString(in.ScanID, "unknown"),
+	) + fmt.Sprintf("\n\nRepository under test: `%s`.", repo)
+}
+
+func renderProductMetadata(in IssueRenderInput, issue *ai.CodeIssue) string {
+	var b strings.Builder
+	b.WriteString(fmt.Sprintf("- Product version: %s\n", defaultString(in.ProductVersion, "see /api/v1/about")))
+	if in.PublicBaseURL != "" && in.ScanID != "" {
+		base := strings.TrimRight(in.PublicBaseURL, "/")
+		b.WriteString(fmt.Sprintf("- Scan URL: %s/scans/%s\n", base, in.ScanID))
+		if in.FindingID > 0 {
+			b.WriteString(fmt.Sprintf("- Finding URL: %s/findings/%d\n", base, in.FindingID))
+		}
+		b.WriteString(fmt.Sprintf("- Report URL: %s/scans/%s\n", base, in.ScanID))
+	} else if in.ScanID != "" {
+		b.WriteString(fmt.Sprintf("- Scan ID reference: `%s`\n", in.ScanID))
+	}
+	if issue != nil && issue.Fingerprint != "" {
+		b.WriteString(fmt.Sprintf("- Fingerprint reference: `%s`\n", issue.Fingerprint))
+	}
+	return strings.TrimRight(b.String(), "\n")
+}
+
+func verificationSteps(issue *ai.CodeIssue, in IssueRenderInput) string {
+	category := NormalizeCategory(issue.Category, issue.Source)
+	switch category {
+	case CategorySecret:
+		return "1. Confirm secret is revoked/rotated.\n2. Remove from source and history if exposed.\n3. Re-scan; fingerprint should not reappear as active-present."
+	case CategoryDependency:
+		return "1. Upgrade dependency to fixed version.\n2. Run tests and dependency scan.\n3. Re-scan lockfile or image; CVE fingerprint should clear."
+	default:
+		steps := reproductionSteps(issue, in)
+		return steps + "\n5. Re-scan or manually confirm; close when fingerprint no longer reproduces."
+	}
+}
+
+func parseIssueEvidence(issue *ai.CodeIssue) map[string]string {
+	out := map[string]string{}
+	if issue == nil {
+		return out
+	}
+	raw := strings.TrimSpace(issue.Evidence)
+	if raw == "" {
+		return out
+	}
+	var generic map[string]any
+	if err := json.Unmarshal([]byte(raw), &generic); err != nil {
+		return out
+	}
+	for k, v := range generic {
+		if s := strings.TrimSpace(fmt.Sprint(v)); s != "" && s != "<nil>" {
+			out[k] = s
+		}
+	}
+	return out
+}
+
+func evidenceField(meta map[string]string, keys ...string) string {
+	for _, k := range keys {
+		if v := meta[k]; strings.TrimSpace(v) != "" {
+			return v
+		}
+	}
+	return ""
+}
+
+func firstNonEmptyStr(vals ...string) string {
+	for _, v := range vals {
+		if strings.TrimSpace(v) != "" {
+			return v
+		}
+	}
+	return ""
+}
+
+func inferProvider(in IssueRenderInput) string {
+	base := strings.ToLower(in.GiteaBaseURL)
+	switch {
+	case strings.Contains(base, "github.com"):
+		return "github"
+	case strings.Contains(base, "gitlab"):
+		return "gitlab"
+	case in.GiteaBaseURL != "":
+		return "gitea"
+	default:
+		return "gitea"
+	}
+}
+
+func isHistoricalFinding(issue *ai.CodeIssue) bool {
+	if issue == nil {
+		return false
+	}
+	if issue.CommitSHA != "" && issue.File == "" {
+		return true
+	}
+	meta := parseIssueEvidence(issue)
+	if v := evidenceField(meta, "historical", "is_historical"); strings.EqualFold(v, "true") || v == "1" {
+		return true
+	}
+	return strings.Contains(strings.ToLower(issue.SourceType), "history")
+}
+
+func isContainerFinding(issue *ai.CodeIssue) bool {
+	if issue == nil {
+		return false
+	}
+	src := strings.ToLower(issue.Source)
+	cat := strings.ToLower(issue.Category)
+	if strings.Contains(src, "container") || strings.Contains(src, "trivy") || strings.Contains(src, "grype") {
+		return true
+	}
+	if cat == "container" || cat == "vulnerability" && issue.PackageName != "" {
+		meta := parseIssueEvidence(issue)
+		return evidenceField(meta, "image", "image_digest", "digest") != ""
+	}
+	return false
+}
+
+func isSBOMFinding(issue *ai.CodeIssue) bool {
+	if issue == nil {
+		return false
+	}
+	src := strings.ToLower(issue.Source)
+	if strings.Contains(src, "sbom") {
+		return true
+	}
+	meta := parseIssueEvidence(issue)
+	return evidenceField(meta, "sbom_component", "purl", "bom_ref") != ""
+}
+
+func isGraphFinding(issue *ai.CodeIssue) bool {
+	if issue == nil {
+		return false
+	}
+	return strings.EqualFold(issue.Source, "graph")
+}
+
+func isPreinstallFinding(issue *ai.CodeIssue, in IssueRenderInput) bool {
+	if issue == nil {
+		return false
+	}
+	src := strings.ToLower(issue.Source)
+	st := strings.ToLower(issue.SourceType)
+	if strings.Contains(src, "preinstall") || strings.Contains(st, "preinstall") {
+		return true
+	}
+	return strings.EqualFold(in.ScanType, "pre-install") || strings.EqualFold(in.ScanType, "preinstall")
 }
 
 // AIGeneratedRiskWording returns cautious phrasing for future AI-code findings.
