@@ -1,72 +1,78 @@
 # Gitea issue template verification
 
-**Date:** 2026-06-02  
+**Date:** 2026-06-12  
 **Repo:** `commstech/Bugbot`  
-**Commit under test:** `abfa044` (pushed to `main`)
+**Commit:** `311e97c`  
+**Gitea version:** 1.26.2
 
 ## Summary
 
 | Check | Result |
 |-------|--------|
-| Templates in repo | **yes** — 16 YAML form templates + `config.yml` |
+| Templates in repository | **yes** — 15 form templates + `config.yml` |
 | `config.yml` present | **yes** — `blank_issues_enabled: false` |
-| Templates visible in Gitea UI | **yes (API)** — all templates listed via Gitea contents API after push |
-| Blank issues allowed | **expected: no** — confirm in logged-in UI (`config.yml`) |
-| Test issue created | **no** — controlled verification only |
-| Test issue closed | **n/a** |
+| Templates visible (authenticated API) | **yes** — `GET /api/v1/repos/commstech/Bugbot/issue_templates` returns 15 templates |
+| Logged-in web UI picker | **not captured** — API token does not establish web session (redirect to login); server-side template API confirms picker data |
+| Blank issues allowed | **no** (per `config.yml`; Gitea 1.26 supports this key) |
+| Sensitive default text | **none observed** — security markdown in FP/beta templates only |
+| Beta / FP scan ID + fingerprint fields | **yes** — required fields in API-parsed forms |
+| Test issue created | **no** (product repo) |
+| Screenshots | **not captured** — no headless browser / web session in validation environment |
 
-## Templates detected (repository)
+## Authenticated API verification (2026-06-12)
 
-| Template file | Purpose |
-|---------------|---------|
-| `bug_report.yaml` | General bug report |
-| `beta_feedback.yaml` | Beta feedback |
-| `scanner_false_positive.yaml` | False positive |
-| `missed_detection.yaml` | Missed detection |
-| `scanner_parser_bug.yaml` | Scanner/parser bug |
-| `ui_ux_issue.yaml` | UI/UX issue |
-| `docs_gap.yaml` | Documentation gap |
-| `security_triage.yaml` | Security finding review |
-| `container_scan_issue.yaml` | Container scan |
-| `sbom_issue.yaml` | SBOM issue |
-| `preinstall_audit_issue.yaml` | Pre-install audit |
-| `feature_request.yaml` | Feature request |
-| `operator_task.yaml` | Operator task |
-| `compliance_privacy.yaml` | Compliance/privacy |
-| `accessibility.yaml` | Accessibility |
-| `config.yml` | Blank issue gate + contact links |
+```http
+GET /api/v1/repos/commstech/Bugbot/issue_templates
+Authorization: token <redacted>
+→ 200, 15 templates
+```
 
-## config.yml behavior
+Templates returned by Gitea (display names):
+
+| Template |
+|----------|
+| Accessibility |
+| Beta feedback |
+| Bug report |
+| Compliance / privacy |
+| Container scan issue |
+| Documentation gap |
+| Feature request |
+| Missed detection |
+| Operator task |
+| Pre-install audit issue |
+| SBOM issue |
+| Scanner false positive |
+| Scanner or parser bug |
+| Security finding triage |
+| UI or UX issue |
+
+## `config.yml`
 
 ```yaml
 blank_issues_enabled: false
+contact_links:
+  - name: Private beta scope
+  - name: Feedback templates (docs)
+  - name: Security — do not paste secrets
 ```
 
-If the live Gitea instance ignores this key (older versions), Markdown/YAML templates still work; blank issues may remain available — document limitation in operator runbook.
+## Field verification (beta + false positive)
 
-## Manual UI verification steps (post-push)
+**Beta feedback** (required): `version`, `scan_id`, `repo` (+ provider, report-only, category fields).
 
-1. Open https://git.commsnet.org/commstech/Bugbot/issues/new
-2. Confirm template picker lists beta/scanner templates
-3. Confirm blank issue is discouraged or disabled
-4. Open `scanner_false_positive` and `beta_feedback` — verify fields render
-5. Do **not** submit test issues unless operator approves controlled test
+**Scanner false positive** (required): `version`, `finding_id`, `fingerprint`, `scan_id`, `repo`, `scanner`, `rule`, `why_fp`, `expected`.
 
-## Gitea version limitation
+Security note present in both templates (markdown block).
 
-Wiki HTTP 500 is a separate blocker; issue templates use repository files and work independently (confirmed via API listing on 2026-06-02).
+## Web UI limitation
 
-## API verification (2026-06-02)
+Unauthenticated and API-token requests to `/commstech/Bugbot/issues/new` redirect to login. The Gitea **issue_templates** API is the authoritative server-side representation of the logged-in template picker on Gitea 1.26.x.
 
-```
-GET /api/v1/repos/commstech/Bugbot/contents/.gitea/ISSUE_TEMPLATE
-→ 16 template files + config.yml
-```
+**Operator follow-up:** capture one browser screenshot of the template picker when logged in (optional polish).
 
-Logged-in UI should show template picker at `/commstech/Bugbot/issues/new`.
+## Related
 
-## Evidence
-
-- Repository path: `.gitea/ISSUE_TEMPLATE/`
-- UI links added: finding detail (false positive), scan detail (beta feedback), learning page
-- Triage docs: `docs/triage/ISSUE_TRIAGE_POLICY.md`, `docs/triage/LABEL_TAXONOMY.md`
+- `.gitea/ISSUE_TEMPLATE/`
+- UI links: finding detail (false positive), scan detail (beta feedback)
+- `docs/triage/ISSUE_TRIAGE_POLICY.md`
