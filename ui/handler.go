@@ -907,6 +907,7 @@ func (h *Handler) ScanDetail(c *gin.Context) {
 		"AIRecommendations": aiRecs,
 		"AIRecommendationsEnabled": h.platform.OpenClawAIReviewEnabled,
 		"OpenClawEnabled":          h.platform.OpenClawAIReviewEnabled,
+		"BetaFeedbackURL":          BuildScanBetaFeedbackLink(scanID, repoName),
 	})
 }
 
@@ -1104,9 +1105,10 @@ func (h *Handler) FindingDetail(c *gin.Context) {
 		"ClosureEnabled": h.closureEnabled, "ClosureEvidence": h.closureEvidenceForUI(c.Request.Context(), id),
 		"LifecycleLabel":     lifecycleStageLabel(plan, patchAttempts, h.closureEvidenceForUI(c.Request.Context(), id)),
 		"SuppressionEnabled": h.suppressionEnabled, "RepoSuppressions": suppressions,
-		"GraphDetail": buildGraphFindingView(detail),
-		"GraphMapURL": graphMapURL(h.basePath, detail.RepositoryID, detail.FilePath, detail.Source, clientAPIKeyFromRequest(c)),
-		"Actionable":  buildActionableFindingView(detail),
+		"GraphDetail":        buildGraphFindingView(detail),
+		"GraphMapURL":        graphMapURL(h.basePath, detail.RepositoryID, detail.FilePath, detail.Source, clientAPIKeyFromRequest(c)),
+		"Actionable":         buildActionableFindingView(detail),
+		"IssueTemplateLinks": BuildFindingIssueTemplateLinks(detail, h.basePath),
 	})
 }
 

@@ -82,6 +82,7 @@
     {{if $.Data.ScanTriggerEnabled}}{{with $.Data.Repo}}<a class="rd-btn" href="{{$.BasePath}}/repos/{{.ID}}/scan{{apiKeyQS $.APIKey}}">Scan again</a>{{end}}{{end}}
     <a class="rd-btn rd-btn-secondary" href="{{$.BasePath}}/findings{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}">View findings</a>
     <a class="rd-btn rd-btn-ghost" href="{{$.BasePath}}/scans/{{.ID}}/graph{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}">Repository map</a>
+    {{if $.Data.BetaFeedbackURL}}<a class="rd-btn rd-btn-ghost" href="{{$.Data.BetaFeedbackURL}}" target="_blank" rel="noopener">Submit beta feedback</a>{{end}}
   </div>
 </div>
 

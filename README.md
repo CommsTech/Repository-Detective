@@ -25,6 +25,8 @@
 
 Repo: https://git.commsnet.org/commstech/Bugbot.git
 
+**Beta feedback:** use [Gitea issue templates](https://git.commsnet.org/commstech/Bugbot/issues/new) (`.gitea/ISSUE_TEMPLATE/`) — include scan ID and finding fingerprint; never paste secrets.
+
 ## Setup
 
 **Start here:** [docs/SETUP.md](docs/SETUP.md) — step-by-step from clone to working webhooks.
