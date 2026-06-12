@@ -29,7 +29,7 @@ func hasHomelabManifest(manifests []string) bool {
 		base := strings.ToLower(filepath.Base(m))
 		switch base {
 		case "docker-compose.yml", "docker-compose.yaml", "compose.yml", "compose.yaml",
-			"dockerfile", "makefile", "readme.md":
+			"dockerfile", "makefile", "readme.md", "requirements.txt", "pyproject.toml", "setup.py":
 			return true
 		default:
 			if strings.HasPrefix(base, "docker-compose.") || strings.HasPrefix(base, "dockerfile.") {
@@ -55,6 +55,17 @@ func ShouldDowngradeInternalInfraRef(path, line string, p RepoProfile) bool {
 		if strings.Contains(lower, hint) {
 			return false
 		}
+	}
+	norm := strings.ToLower(strings.ReplaceAll(path, "\\", "/"))
+	if strings.HasSuffix(norm, ".md") || strings.HasSuffix(norm, ".rst") {
+		return true
+	}
+	trimmed := strings.TrimSpace(line)
+	if strings.HasPrefix(trimmed, "#") || strings.HasPrefix(trimmed, "//") {
+		return true
+	}
+	if strings.Contains(lower, "example") || strings.Contains(lower, "sample") || strings.Contains(lower, `write("#`) {
+		return true
 	}
 	return true
 }

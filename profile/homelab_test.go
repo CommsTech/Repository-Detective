@@ -16,6 +16,13 @@ func TestIsHomelabInfra(t *testing.T) {
 	}) {
 		t.Fatal("small python repo with compose should match")
 	}
+	if !IsHomelabInfra(RepoProfile{
+		FileCount:        28,
+		PrimaryEcosystem: EcosystemPython,
+		Manifests:        []string{"requirements.txt"},
+	}) {
+		t.Fatal("small python repo with requirements.txt should match homelab infra")
+	}
 	if IsHomelabInfra(RepoProfile{
 		FileCount:        500,
 		PrimaryEcosystem: EcosystemGo,
