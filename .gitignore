@@ -66,6 +66,10 @@ runner-work/
 
 # Dogfood reports (may contain operator-specific details — keep local by default)
 docs/dogfood-reports/*
+# Local runtime state (nightly learner)
+state/nightly-rd-evolution/
+reports/nightly-rd-evolution/
+
 # Sanitized, committable dogfood reports (no keys, tokens, or internal hostnames)
 !docs/dogfood-reports/qdrant-redacted-local-test.md
 !docs/dogfood-reports/qdrant-redacted-test-result.json
