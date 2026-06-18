@@ -29,8 +29,10 @@ Read:
 ## Run once (allow Tier 1 promotion)
 
 ```bash
-python3 scripts/nightly-rd-skill-loop.py --daily-mode --promote
+python3 scripts/nightly-rd-skill-loop.py --daily-mode --promote --max-tier 1
 ```
+
+`--max-tier` defaults to **1** when `--promote` is set. Tier 2 requires `--max-tier 2` and two consecutive clean runs. Tier 3 never auto-applies.
 
 Requirements:
 
@@ -78,10 +80,25 @@ chmod +x scripts/rd-deterministic-daily.sh
 crontab -e
 ```
 
-Example (02:30 daily):
+Example (02:17 daily, Tier 1 only):
 
 ```cron
-30 2 * * * /home/commstech/Bugbot/scripts/rd-deterministic-daily.sh >> /home/commstech/Bugbot/logs/nightly-rd-skill-loop.log 2>&1
+17 2 * * * cd /home/commstech/Bugbot && ./scripts/rd-deterministic-daily.sh >> reports/nightly-rd-evolution/cron.log 2>&1
+```
+
+**Cron-environment smoke test** (minimal env, same as cron):
+
+```bash
+env -i HOME="$HOME" PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
+  bash -lc 'cd /home/commstech/Bugbot && ./scripts/rd-deterministic-daily.sh'
+```
+
+After the first scheduled run:
+
+```bash
+cat reports/nightly-rd-evolution/latest/full_loop_state.json
+cat reports/nightly-rd-evolution/latest/OPERATOR-DIGEST.md
+tail -100 reports/nightly-rd-evolution/cron.log
 ```
 
 **Cron notes:**

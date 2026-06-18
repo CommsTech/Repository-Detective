@@ -95,8 +95,9 @@ def recompute(api_key: str) -> dict:
 
 
 def list_recommendations(api_key: str, status: str = "proposed") -> list[dict]:
-    out = api("GET", f"/api/v1/calibration/recommendations?status={status}", api_key)
-    return out.get("recommendations", [])
+    out = api("GET", f"/api/v1/calibration/recommendations?status={status}", api_key) or {}
+    recs = out.get("recommendations")
+    return recs if isinstance(recs, list) else []
 
 
 def accept(api_key: str, rec_id: int) -> None:

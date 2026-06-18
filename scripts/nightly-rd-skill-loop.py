@@ -232,6 +232,7 @@ class LoopState:
     finished_at: str = ""
     mode: str = ""
     promote: bool = False
+    max_tier_allowed: int = 0
     test_runner: str = ""
     phases: dict[str, Any] = field(default_factory=dict)
     consecutive_successful_runs: int = 0
@@ -269,6 +270,7 @@ class NightlySkillLoop:
         dry_run_only: bool,
         promote: bool,
         no_promote: bool,
+        max_tier: int = 0,
     ) -> None:
         self.state_dir = state_dir
         self.report_dir = report_dir
@@ -277,6 +279,7 @@ class NightlySkillLoop:
         self.dry_run_only = dry_run_only
         self.promote = promote and not no_promote
         self.no_promote = no_promote or not promote
+        self.max_tier_allowed = max(0, min(3, max_tier)) if self.promote else 0
         self.state_dir.mkdir(parents=True, exist_ok=True)
         self.report_dir.mkdir(parents=True, exist_ok=True)
         self.go_runner = GoTestRunner(self.state_dir)
@@ -291,6 +294,7 @@ class NightlySkillLoop:
             started_at=iso(),
             mode="daily" if daily_mode else "manual",
             promote=self.promote,
+            max_tier_allowed=self.max_tier_allowed,
             test_runner=self.go_runner.test_runner,
         )
         self.candidates: list[CandidateRule] = []
@@ -716,7 +720,7 @@ class NightlySkillLoop:
                     f"- **Tier 3 (manual):** `{cand.repo_full_name}` `{cand.source}/{cand.rule_id}` — {cand.reason}"
                 )
             elif cand.tier == 2:
-                if self.promote and consecutive >= 2:
+                if self.promote and self.max_tier_allowed >= 2 and consecutive >= 2:
                     decision["action"] = "eligible_tier2"
                     if conn and not self.rule_exists(conn, cand):
                         rid = self.apply_repo_rule(conn, cand)
@@ -727,11 +731,14 @@ class NightlySkillLoop:
                     else:
                         decision["action"] = "skip_exists"
                         skipped += 1
+                elif self.promote and self.max_tier_allowed < 2:
+                    decision["action"] = "pending_tier2_max_tier_cap"
+                    pending += 1
                 else:
                     decision["action"] = "pending_tier2"
                     pending += 1
             elif cand.tier == 1:
-                if self.promote:
+                if self.promote and self.max_tier_allowed >= 1:
                     if conn and not self.rule_exists(conn, cand):
                         rid = self.apply_repo_rule(conn, cand)
                         if rid:
@@ -758,6 +765,7 @@ class NightlySkillLoop:
         self.state.phases["promotion_policy"] = {
             "ok": True,
             "promote": self.promote,
+            "max_tier_allowed": self.max_tier_allowed,
             "promoted": promoted,
             "pending": pending,
             "skipped": skipped,
@@ -845,7 +853,15 @@ class NightlySkillLoop:
             json.dumps(learning_summary, indent=2) + "\n"
         )
         (self.report_dir / "promotion_decisions.json").write_text(
-            json.dumps(self.promotion_decisions, indent=2) + "\n"
+            json.dumps(
+                {
+                    "max_tier_allowed": self.max_tier_allowed,
+                    "promote": self.promote,
+                    "decisions": self.promotion_decisions,
+                },
+                indent=2,
+            )
+            + "\n"
         )
         (self.report_dir / "full_loop_state.json").write_text(json.dumps(asdict(self.state), indent=2) + "\n")
         self.loop_state_path.write_text(json.dumps(asdict(self.state), indent=2) + "\n")
@@ -857,6 +873,7 @@ class NightlySkillLoop:
             f"**Started:** {self.state.started_at}",
             f"**Finished:** {self.state.finished_at}",
             f"**Promote:** {self.promote}",
+            f"**Max tier allowed:** {self.max_tier_allowed}",
             f"**Test runner:** `{self.state.test_runner}`",
             f"**Overall pass:** {self.state.overall_pass}",
             "",
@@ -868,34 +885,79 @@ class NightlySkillLoop:
         md.extend(["", "## Safety", "", "```json", json.dumps(self.state.safety, indent=2), "```"])
         (self.report_dir / "full_loop_report.md").write_text("\n".join(md) + "\n")
 
-        digest = [
+        (self.report_dir / "OPERATOR-DIGEST.md").write_text("\n".join(self._operator_digest_body()) + "\n")
+
+    def _rollback_count_this_run(self) -> int:
+        phase = self.state.phases.get("rollback_check", {})
+        if phase.get("rolled_back") is not None:
+            return int(phase.get("rolled_back") or 0)
+        if not self.rollback_path.exists():
+            return 0
+        try:
+            events = json.loads(self.rollback_path.read_text())
+        except json.JSONDecodeError:
+            return 0
+        return sum(1 for e in events if e.get("run_id") == self.run_id)
+
+    def _tier2_pending_count(self) -> int:
+        pending_actions = {"pending_tier2", "pending_tier2_max_tier_cap"}
+        return sum(1 for d in self.promotion_decisions if d.get("action") in pending_actions)
+
+    def _tier1_promoted_count(self) -> int:
+        return sum(1 for d in self.promotion_decisions if d.get("tier") == 1 and d.get("action") == "applied")
+
+    def _recommended_operator_action(self, tier3_count: int, rollback_count: int) -> str:
+        if not self.state.overall_pass:
+            return "Investigate gate failures in full_loop_report.md before the next cron run."
+        if rollback_count > 0:
+            return "Review rollback_events.json and confirm deactivated rules before re-enabling promotion."
+        if tier3_count > 0:
+            return "Review Tier 3 manual candidates; do not enable --max-tier 2 until Tier 2 list is audited."
+        if self.promote and self._tier1_promoted_count() > 0:
+            return "Spot-check new Tier 1 rules in promotion_decisions.json; no Tier 2 escalation needed yet."
+        if self._tier2_pending_count() > 0 and self.max_tier_allowed < 2:
+            return "Let Tier 1 accumulate evidence (3–7 nightly cycles) before testing --max-tier 2."
+        return "No action required — cron may continue Tier 1-only promotion."
+
+    def _operator_digest_body(self) -> list[str]:
+        tier3_count = sum(1 for c in self.candidates if c.tier == 3)
+        rollback_count = self._rollback_count_this_run()
+        protected_ok = self.state.safety.get("protected_hashes_unchanged", True)
+        lines = [
             "# Operator digest — nightly RD skill loop",
             "",
             f"**Run:** `{self.run_id}` · **Pass:** {self.state.overall_pass}",
             "",
+            "## Nightly promotion summary",
+            "",
+            f"- **Run ID:** `{self.run_id}`",
+            f"- **Test runner:** `{self.state.test_runner}`",
+            f"- **Promote / max tier:** {self.promote} / {self.max_tier_allowed}",
+            f"- **Tier 1 promoted:** {self._tier1_promoted_count()}",
+            f"- **Tier 2 pending:** {self._tier2_pending_count()}",
+            f"- **Tier 3 manual:** {tier3_count}",
+            f"- **Rollbacks this run:** {rollback_count}",
+            f"- **Protected hashes unchanged:** {protected_ok}",
+            f"- **Recommended action:** {self._recommended_operator_action(tier3_count, rollback_count)}",
+            "",
         ]
         if self.digest_lines:
-            digest.append("## Action required / review")
-            digest.extend(self.digest_lines)
+            lines.extend(["## Action required / review", *self.digest_lines, ""])
         else:
-            digest.append("No Tier 3 items or gate failures this run.")
-        digest.extend(
+            lines.extend(["## Action required / review", "", "No Tier 3 items or gate failures this run.", ""])
+        lines.extend(
             [
-                "",
                 "## Summary",
                 f"- Candidates synthesized: {len(self.candidates)}",
-                f"- Tier 1: {sum(1 for c in self.candidates if c.tier == 1)}",
-                f"- Tier 2 pending: {sum(1 for d in self.promotion_decisions if d.get('action') == 'pending_tier2')}",
-                f"- Tier 3 (manual): {sum(1 for c in self.candidates if c.tier == 3)}",
-                f"- Promoted this run: {len(self.applied_rule_ids)}",
+                f"- Tier 1 candidates: {sum(1 for c in self.candidates if c.tier == 1)}",
                 f"- Consecutive successful runs: {self.state.consecutive_successful_runs}",
                 "",
-                "See `promotion_decisions.json` for full Tier 2 pending list.",
+                "See `promotion_decisions.json` for per-candidate decisions.",
                 "",
                 "Tier 3 and protected security categories are never auto-applied.",
             ]
         )
-        (self.report_dir / "OPERATOR-DIGEST.md").write_text("\n".join(digest) + "\n")
+        return lines
 
     def run(self) -> int:
         load_env_file()
@@ -944,8 +1006,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Nightly RD calibration skill loop")
     p.add_argument("--daily-mode", action="store_true", help="Enable scheduled scan triggers on configured repos")
     p.add_argument("--dry-run-only", action="store_true", help="Skip live scan triggers; ingest existing DB data")
-    p.add_argument("--promote", action="store_true", help="Allow Tier 1 (and Tier 2 when converged) auto-apply")
+    p.add_argument("--promote", action="store_true", help="Allow auto-apply for tiers up to --max-tier (default 1)")
     p.add_argument("--no-promote", action="store_true", help="Never apply; decisions only")
+    p.add_argument(
+        "--max-tier",
+        type=int,
+        choices=[1, 2, 3],
+        default=None,
+        help="Highest tier allowed to auto-apply when --promote is set (default: 1). Tier 3 never auto-applies.",
+    )
     p.add_argument(
         "--test-runner-smoke",
         action="store_true",
@@ -964,6 +1033,9 @@ def main(argv: list[str] | None = None) -> int:
     promote = args.promote
     if args.no_promote:
         promote = False
+    max_tier = 0
+    if promote:
+        max_tier = 1 if args.max_tier is None else args.max_tier
     loop = NightlySkillLoop(
         state_dir=args.state_dir,
         report_dir=args.report_dir,
@@ -972,6 +1044,7 @@ def main(argv: list[str] | None = None) -> int:
         dry_run_only=args.dry_run_only,
         promote=promote,
         no_promote=args.no_promote,
+        max_tier=max_tier,
     )
     return loop.run()
 

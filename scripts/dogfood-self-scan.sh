@@ -33,20 +33,20 @@ echo ""
 
 echo "==> Analyze (connected repo must exist in DB)"
 payload=$(cat <<EOF
-{"owner":"${OWNER}","repo":"${REPO}","ref":"main","force":false}
+{"owner":"${OWNER}","repository":"${REPO}","ref":"main","report_only_dry_run":true}
 EOF
 )
 code=$(curl -s -o /tmp/rd-dogfood-analyze.json -w "%{http_code}" \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer ${API_KEY}" \
+  -H "X-Repository-Detective-API-Key: ${API_KEY}" \
   -d "${payload}" \
   "${BASE}/api/v1/analyze" 2>/dev/null || echo "000")
 
-if [[ "${code}" == "000" ]]; then
-  curl -s -o /tmp/rd-dogfood-analyze.json -w "%{http_code}" \
+if [[ "${code}" == "000" || "${code}" == "401" ]]; then
+  code=$(curl -s -o /tmp/rd-dogfood-analyze.json -w "%{http_code}" \
     -H "Content-Type: application/json" \
     -d "${payload}" \
-    "${BASE}/api/v1/analyze?api_key=${API_KEY}"
+    "${BASE}/api/v1/analyze?api_key=${API_KEY}")
 fi
 
 echo "HTTP ${code}"
