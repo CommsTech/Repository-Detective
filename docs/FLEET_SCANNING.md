@@ -60,6 +60,23 @@ curl -H "X-Repository-Detective-API-Key: $KEY" \
   http://127.0.0.1:8081/api/v1/repos/ID/reconcile-issues/preview
 ```
 
+**Issue filing is separate from scan scheduling.** Enabling nightly schedules does not file thousands of backlog findings automatically.
+
+### Unmapped reason audit (before any filing canary)
+
+```bash
+python3 scripts/issue-filing-reconcile-audit.py --summary
+```
+
+### One-repo filing canary
+
+```bash
+python3 scripts/issue-filing-reconcile-audit.py --repo commstech/Infrastructure_as_Code --dry-run --limit 10
+python3 scripts/issue-filing-reconcile-audit.py --repo commstech/Infrastructure_as_Code --apply --limit 10
+```
+
+Apply requires `--repo`, `--apply`, and `--limit` (default 10). It never bulk-files all repos.
+
 ## Related docs
 
 - [NIGHTLY_SKILL_LOOP_RUNBOOK.md](learning/NIGHTLY_SKILL_LOOP_RUNBOOK.md) — calibration learner

@@ -207,6 +207,7 @@ def write_report(path: Path, rows: list[dict], summary: dict, mode: str) -> None
 
 def apply_enable_nightly(conn: sqlite3.Connection, rows: list[dict], only_scan_enabled: bool) -> list[dict]:
     changed = []
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     for r in rows:
         if only_scan_enabled and not r["scan_enabled"]:
             continue
@@ -219,16 +220,16 @@ def apply_enable_nightly(conn: sqlite3.Connection, rows: list[dict], only_scan_e
         ).fetchone()
         if existing:
             conn.execute(
-                "UPDATE repo_settings SET schedule_enabled = 1, schedule_cron = ? WHERE repository_id = ?",
-                (cron, repo_id),
+                "UPDATE repo_settings SET schedule_enabled = 1, schedule_cron = ?, updated_at = ? WHERE repository_id = ?",
+                (cron, now, repo_id),
             )
         else:
             conn.execute(
                 """
-                INSERT INTO repo_settings (repository_id, enabled, schedule_enabled, schedule_cron)
-                VALUES (?, 1, 1, ?)
+                INSERT INTO repo_settings (repository_id, enabled, schedule_enabled, schedule_cron, updated_at)
+                VALUES (?, 1, 1, ?, ?)
                 """,
-                (repo_id, cron),
+                (repo_id, cron, now),
             )
         changed.append({**r, "proposed_cron": cron})
     conn.commit()
