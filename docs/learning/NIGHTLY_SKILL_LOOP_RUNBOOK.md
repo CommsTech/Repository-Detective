@@ -13,6 +13,8 @@
 
 It does **not** modify `analyzers/static.go` or other protected scanner source.
 
+It is **not** the nightly fleet scanner. For repo cron schedules and webhook vs scheduler behavior, see [FLEET_SCANNING.md](../FLEET_SCANNING.md).
+
 ## Run once (observe only)
 
 ```bash

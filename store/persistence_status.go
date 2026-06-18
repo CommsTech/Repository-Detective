@@ -14,6 +14,7 @@ const (
 	IssueSyncStatusPending  = "pending"
 	IssueSyncStatusComplete = "complete"
 	IssueSyncStatusSkipped  = "skipped"
+	IssueSyncStatusFailed   = "failed"
 )
 
 // ScanPipelineState tracks analysis → persistence → issue sync progress for a scan.

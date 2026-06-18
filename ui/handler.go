@@ -613,6 +613,23 @@ func (h *Handler) SystemHealth(c *gin.Context) {
 	h.renderNav(c, "health.html", "System Health", "health", data)
 }
 
+func (h *Handler) fleetHealthSummary(ctx context.Context) store.FleetHealthSummary {
+	sqlite, ok := h.store.(*store.SQLiteStore)
+	if !ok || sqlite == nil {
+		return store.FleetHealthSummary{}
+	}
+	schedulerOn := true
+	if h.readinessFn != nil {
+		schedulerOn = h.readinessFn().Features.SchedulerEnabled
+	}
+	audit, err := store.FleetHealthAudit(ctx, sqlite, h.global, schedulerOn, 24*time.Hour)
+	if err != nil {
+		h.logger.WithError(err).Warn("fleet health audit failed")
+		return store.FleetHealthSummary{}
+	}
+	return audit
+}
+
 func (h *Handler) Repositories(c *gin.Context) {
 	if !h.requireStore(c) {
 		return
@@ -622,7 +639,8 @@ func (h *Handler) Repositories(c *gin.Context) {
 		c.String(http.StatusInternalServerError, "failed to list repositories")
 		return
 	}
-	page := h.buildRepoControlPage(rows)
+	fleet := h.fleetHealthSummary(c.Request.Context())
+	page := h.buildRepoControlPage(rows, fleet)
 	fleetForm := h.buildFleetScanFormPlaceholder()
 	data := map[string]any{"ControlPage": page, "FleetScanForm": fleetForm}
 	if n := strings.TrimSpace(c.Query("notice")); n != "" {

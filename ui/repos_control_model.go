@@ -6,8 +6,9 @@ import (
 
 // RepoControlPageView is template data for the fleet control page.
 type RepoControlPageView struct {
-	Rows              []RepoControlRowView
-	ScanTriggerEnabled bool
+	Rows                 []RepoControlRowView
+	FleetHealth          store.FleetHealthSummary
+	ScanTriggerEnabled   bool
 	Profiles          []string
 	RemediationPREnabled  bool
 	LLMSanityGateEnabled  bool
@@ -21,10 +22,21 @@ type RepoControlRowView struct {
 	IssueFilingLabel string
 	ReportOnlyLabel  string
 	CountsDiffer     bool
+	ScanStale        bool
+	LastWebhookAt    string
 }
 
-func (h *Handler) buildRepoControlPage(rows []store.RepositoryControlRow) RepoControlPageView {
+func (h *Handler) buildRepoControlPage(rows []store.RepositoryControlRow, fleet store.FleetHealthSummary) RepoControlPageView {
+	staleByID := make(map[int64]bool, len(fleet.Rows))
+	webhookByID := make(map[int64]string, len(fleet.Rows))
+	for _, fr := range fleet.Rows {
+		staleByID[fr.RepositoryID] = fr.StaleScan
+		if fr.LastWebhookAt != nil {
+			webhookByID[fr.RepositoryID] = fr.LastWebhookAt.UTC().Format("2006-01-02 15:04")
+		}
+	}
 	out := RepoControlPageView{
+		FleetHealth:           fleet,
 		ScanTriggerEnabled:    h.ScanTriggerEnabled(),
 		Profiles:              store.AllowedScanProfiles,
 		RemediationPREnabled:  h.remediationPREnabled,
@@ -55,6 +67,8 @@ func (h *Handler) buildRepoControlPage(rows []store.RepositoryControlRow) RepoCo
 		}
 		view.CountsDiffer = !filing.IssueFilingAllowed || row.DryRunReportOnly || row.ReportOnlyFindings > 0 ||
 			row.ScanFindingsTotal != row.ForgeOpenIssues
+		view.ScanStale = staleByID[row.ID]
+		view.LastWebhookAt = webhookByID[row.ID]
 		out.Rows = append(out.Rows, view)
 	}
 	return out

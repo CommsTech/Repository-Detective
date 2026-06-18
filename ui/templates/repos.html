@@ -15,9 +15,21 @@
     <span class="rd-chip rd-fleet-count">{{len .Data.ControlPage.Rows}} tracked</span>
   </div>
 
-  <p class="rd-fleet-help rd-muted" title="Scan findings and forge issues can differ. Report-only scans persist findings without filing Gitea issues. Open Gitea issues are mapped by fingerprint when available.">
-    Findings and forge issues may differ in report-only mode.
+  <p class="rd-fleet-help rd-muted" title="Webhook/commit scans are separate from nightly scheduler. The nightly calibration learner (02:17) is not a full-fleet scan.">
+    Webhook scans fire on push when configured. Nightly fleet scans require <code>Sched on</code> per repo.
   </p>
+
+  {{if .Data.ControlPage.FleetHealth.Warning}}
+  <div class="rd-alert warn rd-fleet-warning">
+    <strong>Fleet scan status:</strong> {{.Data.ControlPage.FleetHealth.Warning}}
+    {{if gt .Data.ControlPage.FleetHealth.StaleScanCount 0}}
+    <span> · {{.Data.ControlPage.FleetHealth.StaleScanCount}} repos have stale scans (&gt;24h).</span>
+    {{end}}
+    <div class="rd-fleet-warning-actions">
+      <span class="rd-muted">Audit: <code>python3 scripts/fleet-scheduler-audit.py --dry-run</code></span>
+    </div>
+  </div>
+  {{end}}
 
   <div class="rd-toolbar rd-fleet-toolbar">
     <div class="rd-search">
@@ -45,28 +57,30 @@
       </div>
 
       <div class="rd-fleet-cell rd-fleet-state">
-        <div class="rd-fleet-kv"><span class="rd-fleet-k">Scan</span>{{if .ScanEnabled}}<span class="rd-badge enforce rd-badge-xs">on</span>{{else}}<span class="rd-badge skipped rd-badge-xs">off</span>{{end}}</div>
-        <div class="rd-fleet-kv"><span class="rd-fleet-k">Sched</span>{{if .ScheduleEnabled}}<span class="rd-badge info rd-badge-xs">on</span>{{else}}<span class="rd-muted">off</span>{{end}}</div>
-        <div class="rd-fleet-kv"><span class="rd-fleet-k">Filing</span><span class="rd-badge {{if .IssueFilingOn}}warn{{else}}monitor{{end}} rd-badge-xs">{{if .IssueFilingOn}}on{{else}}off{{end}}</span></div>
+        <div class="rd-fleet-kv" title="Repo allowed for webhook/manual scans"><span class="rd-fleet-k">Webhook/manual</span>{{if .ScanEnabled}}<span class="rd-badge enforce rd-badge-xs">enabled</span>{{else}}<span class="rd-badge skipped rd-badge-xs">disabled</span>{{end}}</div>
+        <div class="rd-fleet-kv" title="In-process nightly scheduler"><span class="rd-fleet-k">Nightly sched</span>{{if .ScheduleEnabled}}<span class="rd-badge info rd-badge-xs">on</span>{{else}}<span class="rd-muted" title="Nightly schedule off — no cron fleet scan">off</span>{{end}}</div>
+        <div class="rd-fleet-kv" title="Forge issue filing policy"><span class="rd-fleet-k">Filing</span><span class="rd-badge {{if .IssueFilingOn}}warn{{else}}monitor{{end}} rd-badge-xs">{{if .IssueFilingOn}}on{{else}}off{{end}}</span></div>
         <div class="rd-fleet-kv"><span class="rd-fleet-k">Profile</span><code class="rd-fleet-code">{{.ScanProfile}}</code></div>
-        <div class="rd-fleet-kv"><span class="rd-fleet-k">Report</span><span class="rd-muted rd-badge-xs">{{.ReportOnlyLabel}}</span></div>
+        <div class="rd-fleet-kv"><span class="rd-fleet-k">Report-only</span><span class="rd-muted rd-badge-xs">{{.ReportOnlyLabel}}</span></div>
       </div>
 
       <div class="rd-fleet-cell rd-fleet-scan">
+        {{if .ScanStale}}<span class="rd-badge warn rd-badge-xs" title="Last scan older than 24h or never scanned">stale</span>{{end}}
         {{if .LastScanStatus}}<span class="rd-badge {{scanBadge .LastScanStatus}} rd-badge-xs">{{.LastScanStatus}}</span>{{else}}<span class="rd-muted">never</span>{{end}}
         <span class="rd-fleet-scan-time">{{if .LastScanAt}}{{.LastScanAt.Format "2006-01-02 15:04"}}{{else}}—{{end}}</span>
         {{if .LastScanID}}<a class="rd-link rd-link-sm" href="{{$.BasePath}}/scans/{{.LastScanID}}{{apiKeyQS $.APIKey}}">{{shortID .LastScanID 8}}</a>{{end}}
         <span class="rd-fleet-sync" title="Issue sync status"><code>{{if .IssueSyncStatus}}{{.IssueSyncStatus}}{{else}}—{{end}}</code></span>
+        {{if .LastWebhookAt}}<span class="rd-fleet-subcount" title="Last push webhook scan">webhook {{.LastWebhookAt}}</span>{{end}}
       </div>
 
       <div class="rd-fleet-cell rd-fleet-findings" title="Active-present / scan findings total">
         <strong>{{.ActivePresentOpen}}</strong><span class="rd-muted"> / {{.ScanFindingsTotal}}</span>
-        {{if gt .ReportOnlyFindings 0}}<span class="rd-fleet-subcount">{{.ReportOnlyFindings}} no issue</span>{{end}}
+        {{if gt .ReportOnlyFindings 0}}<span class="rd-fleet-subcount" title="Open findings with no mapped forge issue">{{.ReportOnlyFindings}} unmapped</span>{{end}}
       </div>
 
       <div class="rd-fleet-cell rd-fleet-forge">
-        <strong>{{.ForgeOpenIssues}}</strong> <span class="rd-muted">mapped</span>
-        {{if gt .UnmappedOpenIssues 0}}<span class="rd-fleet-subcount">{{.UnmappedOpenIssues}} unmapped</span>{{end}}
+        <strong>{{.ForgeOpenIssues}}</strong> <span class="rd-muted">mapped forge issues</span>
+        {{if gt .UnmappedOpenIssues 0}}<span class="rd-fleet-subcount" title="Forge issues not linked to latest scan findings">{{.UnmappedOpenIssues}} unmapped issues</span>{{end}}
       </div>
 
       <div class="rd-fleet-cell rd-fleet-actions-cell">
