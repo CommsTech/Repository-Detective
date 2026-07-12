@@ -9,7 +9,7 @@ import (
 func (s *SQLiteStore) listFleetAuditRows(ctx context.Context) ([]fleetAuditBase, error) {
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT r.id, r.full_name, r.forge_type, r.connected_repo,
-			ls.started_at, ls.trigger_type, COALESCE(ls.commit_sha, ''),
+			ls.started_at, COALESCE(ls.trigger_type, ''), COALESCE(ls.commit_sha, ''),
 			COALESCE(ls.dry_run, 0),
 			lw.started_at,
 			COALESCE(fc.open_findings, 0),

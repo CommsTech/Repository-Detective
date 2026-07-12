@@ -15,8 +15,9 @@
     <span class="rd-chip rd-fleet-count">{{len .Data.ControlPage.Rows}} tracked</span>
   </div>
 
-  <p class="rd-fleet-help rd-muted" title="Webhook/commit scans are separate from nightly scheduler. The nightly calibration learner (02:17) is not a full-fleet scan.">
+  <p class="rd-fleet-help rd-muted" title="Webhook/commit scans are separate from nightly scheduler. The nightly calibration learner (02:17) is not a full-fleet scan. Findings and forge issues may differ in report-only mode.">
     Webhook scans fire on push when configured. Nightly fleet scans require <code>Sched on</code> per repo.
+    Findings and forge issues may differ in report-only mode.
   </p>
 
   {{if .Data.ControlPage.FleetHealth.Warning}}
