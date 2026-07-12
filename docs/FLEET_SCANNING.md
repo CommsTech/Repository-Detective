@@ -66,7 +66,10 @@ curl -H "X-Repository-Detective-API-Key: $KEY" \
 
 ```bash
 python3 scripts/issue-filing-reconcile-audit.py --summary
+python3 scripts/issue-filing-reconcile-audit.py --unknown-details
 ```
+
+`--unknown-details` writes `docs/dogfood-reports/unknown-unmapped-finding-audit.md` and must show `unknown_count: 0` (or an explained remainder) before any `--apply`.
 
 ### One-repo filing canary
 

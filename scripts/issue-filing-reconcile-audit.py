@@ -70,7 +70,8 @@ def severity_passes(severity: str, gate: str) -> bool:
 
 def classify_unmapped(
     finding_status: str,
-    has_mapped: bool,
+    has_open_mapped: bool,
+    has_closed_mapped: bool,
     scan_dry_run: bool,
     issue_sync: str,
     filing_enabled: bool,
@@ -80,11 +81,15 @@ def classify_unmapped(
     severity_gate: str,
     confidence: float,
     confidence_gate: float,
+    is_duplicate: bool = False,
 ) -> str:
-    if has_mapped:
+    """Return a reason code. Gate-passers with no blockers become eligible_to_file (not unknown)."""
+    if has_open_mapped or has_closed_mapped:
         return "already_mapped"
     if finding_status in ("suppressed", "false_positive"):
         return "suppressed"
+    if is_duplicate:
+        return "duplicate"
     if scan_dry_run or issue_sync == "skipped":
         return "report_only"
     if issue_policy == "off" or policy_level == "monitor_only":
@@ -97,7 +102,33 @@ def classify_unmapped(
         return "below_threshold"
     if confidence < confidence_gate:
         return "below_threshold"
-    return "unknown"
+    return "eligible_to_file"
+
+
+def looks_like_fixture_path(path: str | None, rule_id: str | None) -> bool:
+    p = (path or "").lower()
+    rule = (rule_id or "").lower()
+    if any(
+        x in p
+        for x in (
+            "_test.go",
+            "/testdata/",
+            "/fixture/",
+            "/fixtures/",
+            "benchmark/",
+            ".example",
+            "/tmp/bugbot-",
+        )
+    ):
+        return True
+    if "gitleaks" in rule and ("test" in p or "/tmp/bugbot" in p):
+        return True
+    # Docs / archive markdown often quote secrets or eval examples
+    if p.endswith((".md", ".txt", ".rst")) and any(
+        x in rule for x in ("sec-", "gitleaks", "gov-pipeline", "trivy-")
+    ):
+        return True
+    return False
 
 
 def repo_settings(conn: sqlite3.Connection, repo_id: int) -> dict:
@@ -156,8 +187,9 @@ def fetch_unmapped_findings(conn: sqlite3.Connection, repo_id: int | None = None
     rows = conn.execute(
         f"""
         SELECT f.id, f.repository_id, r.full_name, f.rule_id, f.severity, f.confidence,
-               f.title, f.status, f.file_path, f.line,
-               EXISTS(SELECT 1 FROM external_issues e WHERE e.finding_id = f.id AND e.state = 'open')
+               f.title, f.status, f.file_path, f.line, f.canonical_finding_id,
+               EXISTS(SELECT 1 FROM external_issues e WHERE e.finding_id = f.id AND e.state = 'open'),
+               EXISTS(SELECT 1 FROM external_issues e WHERE e.finding_id = f.id AND e.state = 'closed')
         FROM findings f
         JOIN repositories r ON r.id = f.repository_id
         {where}
@@ -166,14 +198,30 @@ def fetch_unmapped_findings(conn: sqlite3.Connection, repo_id: int | None = None
     ).fetchall()
     out = []
     for row in rows:
-        fid, rid, full_name, rule_id, severity, confidence, title, status, file_path, line, has_mapped = row
-        if has_mapped:
+        (
+            fid,
+            rid,
+            full_name,
+            rule_id,
+            severity,
+            confidence,
+            title,
+            status,
+            file_path,
+            line,
+            canonical_id,
+            has_open,
+            has_closed,
+        ) = row
+        if has_open:
             continue
         settings = repo_settings(conn, rid)
         dry, sync = latest_scan_meta(conn, rid)
+        is_dup = is_duplicate_finding(canonical_id, fid)
         reason = classify_unmapped(
             status,
             False,
+            bool(has_closed),
             dry,
             sync,
             settings["filing_enabled"],
@@ -183,7 +231,9 @@ def fetch_unmapped_findings(conn: sqlite3.Connection, repo_id: int | None = None
             settings["severity_gate"],
             confidence or 0.0,
             settings["confidence_gate"],
+            is_duplicate=is_dup,
         )
+        fixture = looks_like_fixture_path(file_path, rule_id)
         out.append(
             {
                 "finding_id": fid,
@@ -196,10 +246,19 @@ def fetch_unmapped_findings(conn: sqlite3.Connection, repo_id: int | None = None
                 "file_path": file_path,
                 "line": line,
                 "reason": reason,
-                "eligible_to_file": reason in ("unknown",),
+                "eligible_to_file": reason == "eligible_to_file" and not fixture,
+                "likely_fixture_fp": fixture and reason == "eligible_to_file",
+                "had_closed_forge_issue": bool(has_closed),
             }
         )
     return out
+
+
+def is_duplicate_finding(canonical_id: int | None, finding_id: int) -> bool:
+    """True only when this row is a secondary alias of another finding."""
+    if canonical_id is None:
+        return False
+    return int(canonical_id) != int(finding_id)
 
 
 def forge_errors(conn: sqlite3.Connection, limit: int = 20) -> list[dict]:
@@ -255,11 +314,16 @@ def cmd_summary(conn: sqlite3.Connection) -> int:
     reasons = Counter(f["reason"] for f in findings)
     by_repo = Counter(f["full_name"] for f in findings)
     by_rule = Counter(f["rule_id"] for f in findings)
+    eligible = [f for f in findings if f["eligible_to_file"]]
+    fixtures = [f for f in findings if f.get("likely_fixture_fp")]
     payload = {
         "open_findings": open_total,
         "mapped_forge_issues": mapped,
         "unmapped_findings": len(findings),
         "reason_counts": dict(reasons),
+        "eligible_to_file_count": len(eligible),
+        "likely_fixture_fp_count": len(fixtures),
+        "unknown_count": reasons.get("unknown", 0),
         "top_repos_by_unmapped": by_repo.most_common(10),
         "top_rules_by_unmapped": by_rule.most_common(10),
         "recent_forge_errors": forge_errors(conn),
@@ -267,6 +331,139 @@ def cmd_summary(conn: sqlite3.Connection) -> int:
     body = json.dumps(payload, indent=2)
     write_report(REPORT_DIR / "issue-filing-reconcile-summary.md", "Issue filing reconcile summary", f"```json\n{body}\n```")
     print(body)
+    return 0
+
+
+def cmd_unknown_details(conn: sqlite3.Connection) -> int:
+    """Detail former-unknown / eligible_to_file bucket for operator review."""
+    findings = fetch_unmapped_findings(conn)
+    # Include legacy "unknown" if any, plus eligible_to_file and fixture-flagged
+    focus = [
+        f
+        for f in findings
+        if f["reason"] in ("unknown", "eligible_to_file") or f.get("likely_fixture_fp")
+    ]
+    by_repo: dict[str, list] = {}
+    for f in focus:
+        by_repo.setdefault(f["full_name"], []).append(f)
+
+    lines = [
+        "## Overnight fleet context",
+        "",
+        "After the first scheduled fleet window (03:30–04:25 UTC), expect stale scans near zero,",
+        "mapped issues to rise only when filing policies allow, and `unknown` to stay at 0.",
+        "",
+        "## Reclassification summary",
+        "",
+        f"- Focus set (eligible_to_file / unknown / fixture-flagged): **{len(focus)}**",
+        f"- True `eligible_to_file` (canary-safe heuristic): **{sum(1 for f in focus if f['eligible_to_file'])}**",
+        f"- Likely fixture FP (paths/tests): **{sum(1 for f in focus if f.get('likely_fixture_fp'))}**",
+        f"- Remaining literal `unknown`: **{sum(1 for f in focus if f['reason'] == 'unknown')}**",
+        "",
+        "Former `unknown` findings were reclassified primarily as:",
+        "- `already_mapped` — closed forge issue already exists (re-open/reconcile, do not re-file)",
+        "- `below_threshold` / `report_only` / `duplicate` — policy or dedup",
+        "- `eligible_to_file` + `likely_fixture_fp` — test fixtures, benchmark paths, or docs quoting secrets/eval",
+        "",
+        "### By repo",
+        "",
+        "| Repo | Count | Eligible | Fixture FP | Severities | Top rules |",
+        "|------|-------|----------|------------|------------|-----------|",
+    ]
+    for repo, items in sorted(by_repo.items(), key=lambda x: -len(x[1])):
+        sevs = Counter(i["severity"] for i in items)
+        rules = Counter(i["rule_id"] for i in items)
+        lines.append(
+            f"| {repo} | {len(items)} | {sum(1 for i in items if i['eligible_to_file'])} | "
+            f"{sum(1 for i in items if i.get('likely_fixture_fp'))} | "
+            f"{dict(sevs)} | {', '.join(r for r,_ in rules.most_common(3))} |"
+        )
+
+    lines.extend(["", "### By rule ID", "", "| Rule | Count | Severities | Repos |", "|------|-------|------------|-------|"])
+    by_rule: dict[str, list] = {}
+    for f in focus:
+        by_rule.setdefault(f["rule_id"] or "(none)", []).append(f)
+    for rule, items in sorted(by_rule.items(), key=lambda x: -len(x[1])):
+        sevs = Counter(i["severity"] for i in items)
+        repos = sorted({i["full_name"] for i in items})
+        lines.append(f"| `{rule}` | {len(items)} | {dict(sevs)} | {', '.join(repos[:5])}{'…' if len(repos)>5 else ''} |")
+
+    lines.extend(["", "### Detail rows", "", "| ID | Repo | Sev | Conf | Rule | Path | Reason | Notes |", "|----|------|-----|------|------|------|--------|-------|"])
+    for f in sorted(focus, key=lambda x: (x["full_name"], x["severity"] or "", x["finding_id"])):
+        notes = []
+        if f.get("likely_fixture_fp"):
+            notes.append("likely_fixture_fp")
+        if f.get("had_closed_forge_issue"):
+            notes.append("had_closed_forge_issue")
+        if f["eligible_to_file"]:
+            notes.append("eligible_to_file")
+        lines.append(
+            f"| {f['finding_id']} | {f['full_name']} | {f['severity']} | {f['confidence']} | "
+            f"`{f['rule_id']}` | `{f['file_path']}:{f['line']}` | {f['reason']} | {', '.join(notes) or '—'} |"
+        )
+
+    # Canary recommendation
+    canary_candidates = []
+    for repo, items in by_repo.items():
+        eligible = [i for i in items if i["eligible_to_file"]]
+        if not eligible:
+            continue
+        rid = eligible[0]["repository_id"]
+        settings = repo_settings(conn, rid)
+        dry, sync = latest_scan_meta(conn, rid)
+        high_crit = any((i["severity"] or "").lower() in ("high", "critical") for i in eligible)
+        canary_candidates.append(
+            {
+                "repo": repo,
+                "eligible": len(eligible),
+                "filing_enabled": settings["filing_enabled"],
+                "report_only_latest": dry,
+                "issue_sync": sync,
+                "high_or_critical": high_crit,
+            }
+        )
+
+    lines.extend(["", "## Canary gate", ""])
+    safe = [
+        c
+        for c in canary_candidates
+        if c["filing_enabled"]
+        and not c["report_only_latest"]
+        and c["eligible"] > 0
+        and not c["high_or_critical"]
+    ]
+    if safe:
+        lines.append("Safe canary candidates (filing on, non-report-only, no HIGH/CRITICAL):")
+        for c in safe:
+            lines.append(f"- `{c['repo']}` — {c['eligible']} eligible")
+    else:
+        lines.append(
+            "**No safe canary repo.** Remaining eligible findings are HIGH/CRITICAL security "
+            "(secrets/eval/cmd/sql) or fixture noise — do not `--apply` until operator triage."
+        )
+        if canary_candidates:
+            lines.append("")
+            lines.append("Blocked candidates:")
+            for c in canary_candidates:
+                why = []
+                if not c["filing_enabled"]:
+                    why.append("filing_off")
+                if c["report_only_latest"]:
+                    why.append("report_only")
+                if c["high_or_critical"]:
+                    why.append("high_critical")
+                lines.append(f"- `{c['repo']}` eligible={c['eligible']} blocked_by={','.join(why) or '—'}")
+
+    report_path = REPORT_DIR / "unknown-unmapped-finding-audit.md"
+    write_report(report_path, "Unknown / eligible unmapped finding audit", "\n".join(lines))
+    print(json.dumps({
+        "focus": len(focus),
+        "eligible_to_file": sum(1 for f in focus if f["eligible_to_file"]),
+        "likely_fixture_fp": sum(1 for f in focus if f.get("likely_fixture_fp")),
+        "unknown": sum(1 for f in focus if f["reason"] == "unknown"),
+        "safe_canary_repos": [c["repo"] for c in safe],
+        "report": str(report_path),
+    }, indent=2))
     return 0
 
 
@@ -374,6 +571,7 @@ def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description="Issue filing reconciliation audit")
     p.add_argument("--db-path", type=Path, default=DEFAULT_DB)
     p.add_argument("--summary", action="store_true", help="Fleet-wide unmapped reason summary")
+    p.add_argument("--unknown-details", action="store_true", help="Detail eligible_to_file / unknown unmapped findings")
     p.add_argument("--repo", help="owner/repo for repo-scoped dry-run or apply")
     p.add_argument("--dry-run", action="store_true", help="Repo filing dry-run preview")
     p.add_argument("--apply", action="store_true", help="One-repo canary: reconcile + analyze with filing")
@@ -396,7 +594,9 @@ def main(argv: list[str] | None = None) -> int:
                 print("--dry-run requires --repo owner/name", file=sys.stderr)
                 return 2
             return cmd_repo_dry_run(conn, args.repo, args.limit)
-        if args.summary or not any([args.apply, args.dry_run]):
+        if args.unknown_details:
+            return cmd_unknown_details(conn)
+        if args.summary or not any([args.apply, args.dry_run, args.unknown_details]):
             return cmd_summary(conn)
         return 0
     finally:
