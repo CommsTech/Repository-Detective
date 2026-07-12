@@ -31,7 +31,9 @@ Last cron run `20260712T081702` reported **Pass: False** because `TestReposContr
 1. Restore reconciliation hint text on `/ui/repos` (keep clearer webhook/sched copy).
 2. `COALESCE(ls.trigger_type, '')` in fleet audit SQL.
 
-Re-run observe-only / promote Tier-1 loop after deploy to restore consecutive successful runs.
+Re-run observe-only after the gate fix restored **Pass: True** (`20260712T151124`, consecutive successful runs: 1).
+
+**Ops note (2026-07-12):** Docker/systemd became unresponsive (cgroup unit timeouts), which stopped the `repository-detective` container. Service was restored by running the **statically linked** `bin/repository-detective` on the host against the same `data/` and `.env`. When Docker recovers, recreate the container from `rc-a7f3fc7`/`all-in-one` (or a newer image) and stop the host process.
 
 ### Still blocked
 
@@ -43,7 +45,7 @@ Re-run observe-only / promote Tier-1 loop after deploy to restore consecutive su
 
 | Path | State |
 |------|-------|
-| Tier 1 calibration learner | Cron 02:17 — repair test gate then resume |
-| Fleet repo scans | 03:30–04:25 UTC — healthy |
+| Tier 1 calibration learner | Cron 02:17 — gate fixed; observe-only green again |
+| Fleet repo scans | 03:30–04:25 UTC — healthy (40/40, 0 stale) |
 | Webhooks | Separate |
 | Issue filing | Guarded / canary-only |
