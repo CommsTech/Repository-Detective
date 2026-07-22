@@ -17,6 +17,15 @@ func TestResolveRefUsesDefaultBranch(t *testing.T) {
 		switch {
 		case r.URL.Path == "/api/v1/repos/o/r":
 			_ = json.NewEncoder(w).Encode(map[string]any{"default_branch": "develop"})
+		case r.URL.Path == "/api/v1/repos/o/r/branches":
+			_ = json.NewEncoder(w).Encode([]map[string]any{{"name": "develop"}, {"name": "feature"}})
+		case strings.HasPrefix(r.URL.Path, "/api/v1/repos/o/r/git/refs/heads/"):
+			ref := strings.TrimPrefix(r.URL.Path, "/api/v1/repos/o/r/git/refs/heads/")
+			if ref == "develop" {
+				_ = json.NewEncoder(w).Encode([]map[string]any{{"ref": "refs/heads/develop"}})
+				return
+			}
+			http.NotFound(w, r)
 		case strings.HasPrefix(r.URL.Path, "/api/v1/repos/o/r/contents"):
 			if r.URL.Query().Get("ref") == "main" {
 				http.NotFound(w, r)

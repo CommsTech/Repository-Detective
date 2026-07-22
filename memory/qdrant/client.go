@@ -62,7 +62,9 @@ func (c *Client) Enabled() bool {
 	return c != nil && c.cfg.Enabled && c.cfg.URL != ""
 }
 
-// EnsureCollection creates the collection if missing.
+// EnsureCollection creates the collection if missing. When an existing collection
+// has a different vector size than configured, it is recreated so embeddings from
+// the active provider (e.g. OpenClaw 768-d) can be stored.
 func (c *Client) EnsureCollection(ctx context.Context) error {
 	if !c.Enabled() {
 		return nil
@@ -70,7 +72,15 @@ func (c *Client) EnsureCollection(ctx context.Context) error {
 
 	status, err := c.do(ctx, http.MethodGet, fmt.Sprintf("/collections/%s", c.cfg.Collection), nil)
 	if err == nil && status == http.StatusOK {
-		return nil
+		if verr := c.ValidateCollection(ctx); verr == nil {
+			return nil
+		} else if errors.Is(verr, ErrCollectionMismatch) {
+			if _, delErr := c.do(ctx, http.MethodDelete, fmt.Sprintf("/collections/%s", c.cfg.Collection), nil); delErr != nil {
+				return fmt.Errorf("recreate collection delete failed: %w", delErr)
+			}
+		} else {
+			return verr
+		}
 	}
 
 	body := map[string]any{

@@ -39,7 +39,11 @@ func MinimalSubprocessEnv() []string {
 	if path != "" {
 		env = append(env, "PATH="+path)
 	}
-	for _, key := range []string{"HOME", "USERPROFILE", "SystemRoot", "TEMP", "TMP", "APPDATA", "LOCALAPPDATA", "LANG", "LC_ALL"} {
+	for _, key := range []string{
+		"HOME", "USERPROFILE", "SystemRoot", "TEMP", "TMP", "TMPDIR",
+		"XDG_CACHE_HOME", "XDG_CONFIG_HOME", "APPDATA", "LOCALAPPDATA",
+		"LANG", "LC_ALL",
+	} {
 		if v := os.Getenv(key); v != "" {
 			env = append(env, key+"="+v)
 		}

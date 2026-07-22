@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -1235,20 +1236,38 @@ func initializeComponents() error {
 	}
 	analysisEngine = analyzers.NewEngine(giteaClient, githubClient, aiClient, analysisConfig, logger)
 
-	// Initialize semantic dedup (optional Qdrant)
+	embedModel := strings.TrimSpace(config.EmbeddingModel)
+	usingOpenClawEmbed := false
+	if embedModel == "" || embedModel == "text-embedding-3-small" {
+		provider := strings.ToLower(strings.TrimSpace(config.AIProvider))
+		base := strings.ToLower(firstNonEmpty(config.EmbeddingBaseURL, config.AIBaseURL, config.OpenWebUIURL))
+		if provider == "openclaw" || strings.Contains(base, "18789") || strings.Contains(base, "openclaw") {
+			embedModel = "openclaw"
+			usingOpenClawEmbed = true
+			logger.Info("Embedding model defaulted to openclaw for OpenClaw-compatible gateway")
+		}
+	} else if strings.EqualFold(embedModel, "openclaw") || strings.HasPrefix(strings.ToLower(embedModel), "openclaw/") {
+		usingOpenClawEmbed = true
+	}
+	vectorSize := config.QdrantVectorSize
+	if usingOpenClawEmbed && (vectorSize <= 0 || vectorSize == 1024) {
+		// OpenClaw gateway currently returns fixed 768-d embeddings.
+		vectorSize = 768
+		logger.Info("Qdrant vector size adjusted to 768 for OpenClaw embeddings")
+	}
 	qdrantCfg := qdrant.Config{
 		Enabled:             config.QdrantEnabled,
 		URL:                 config.QdrantURL,
 		APIKey:              config.QdrantAPIKey,
 		Collection:          config.QdrantCollection,
-		VectorSize:          config.QdrantVectorSize,
+		VectorSize:          vectorSize,
 		SimilarityThreshold: config.QdrantSimilarityThreshold,
 	}
 	embedder := ai.NewEmbedder(ai.EmbedderConfig{
 		BaseURL:               firstNonEmpty(config.EmbeddingBaseURL, config.AIBaseURL, config.OpenWebUIURL),
 		APIKey:                firstNonEmpty(config.EmbeddingAPIKey, config.AIAPIKey, config.OpenWebUIToken),
-		Model:                 config.EmbeddingModel,
-		Dimensions:            config.QdrantVectorSize,
+		Model:                 embedModel,
+		Dimensions:            vectorSize,
 		InsecureSkipTLSVerify: config.AIInsecureSkipTLSVerify,
 	})
 	semanticStore := issues.NewSemanticStore(qdrant.NewStore(qdrantCfg), embedder, logger)
@@ -1304,6 +1323,14 @@ func initializeComponents() error {
 
 	analysisLimiter = limiter.New(config.MaxConcurrentAnalyses)
 	logger.Infof("Analysis concurrency limit: %d", config.MaxConcurrentAnalyses)
+
+	tmpDir := scanners.EnsureScannerTempDir(filepath.Dir(config.DatabasePath), logger)
+	if tmpDir == "" {
+		tmpDir = scanners.EnsureScannerTempDir("/app/data", logger)
+	}
+	scanners.CleanupStaleScannerScratch(tmpDir, 0, logger)
+	scanners.CleanupStaleScannerScratch("/tmp", 0, logger)
+	go scanners.WarmGrypeDB(context.Background(), logger)
 
 	if config.SchedulerEnabled && bugbotStore != nil {
 		schedulerCtx, schedulerCancel = context.WithCancel(context.Background())
@@ -1504,19 +1531,26 @@ func runScheduledRepositoryScan(ctx context.Context, repo store.ScheduledReposit
 		if ref == "" {
 			ref = "main"
 		}
+		forgeType := normalizeForgeType(repo.ForgeType)
+		if client := repoClientForForge(forgeType); client != nil {
+			if resolved, rerr := client.ResolveRef(analysisCtx, repo.Owner, repo.Name, ref); rerr != nil {
+				logger.WithError(rerr).Warnf("Scheduled scan ref resolve failed for %s (continuing with %q)", repo.FullName, ref)
+			} else if strings.TrimSpace(resolved) != "" {
+				ref = strings.TrimSpace(resolved)
+			}
+		}
 
 		scanCtx := store.ScanContext{
 			Owner:         repo.Owner,
 			Repo:          repo.Name,
 			ForgeType:     repo.ForgeType,
 			CloneURL:      repo.CloneURL,
-			DefaultBranch: repo.DefaultBranch,
+			DefaultBranch: firstNonEmpty(ref, repo.DefaultBranch),
 			TriggerType:   store.TriggerScheduled,
 			Ref:           ref,
 			ConnectedRepo: true,
 		}
 		scanCtxInner, repositoryID := beginPersistedScan(analysisCtx, &scanCtx)
-		forgeType := normalizeForgeType(repo.ForgeType)
 		scanCtxInner = analyzers.WithForgeType(scanCtxInner, forgeType)
 		scanCtxInner, effective := resolveEffectiveSettingsForRepo(scanCtxInner, forgeType, repo.Owner, repo.Name)
 		if !effective.Enabled {
@@ -1525,6 +1559,17 @@ func runScheduledRepositoryScan(ctx context.Context, repo store.ScheduledReposit
 		}
 
 		if bugbotStore != nil && repositoryID > 0 {
+			if _, uerr := bugbotStore.UpsertRepository(scanCtxInner, store.Repository{
+				ForgeType:     forgeType,
+				Owner:         repo.Owner,
+				Name:          repo.Name,
+				FullName:      repo.FullName,
+				CloneURL:      repo.CloneURL,
+				DefaultBranch: ref,
+				ConnectedRepo: true,
+			}); uerr != nil {
+				logger.WithError(uerr).Debugf("Scheduled scan: could not refresh default_branch for %s", repo.FullName)
+			}
 			if dbRepo, rerr := bugbotStore.GetRepository(scanCtxInner, repositoryID); rerr == nil {
 				if delegated, derr := tryDelegateScan(scanCtxInner, &scanCtx, dbRepo, effective); delegated {
 					logger.WithFields(logrus.Fields{

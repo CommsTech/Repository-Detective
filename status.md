@@ -1,7 +1,33 @@
 # Gitea Bugbot Plugin - Implementation Status
 
-**Last updated:** 2026-05-30  
+**Last updated:** 2026-07-22  
 **Repository:** https://git.commsnet.org/commstech/Bugbot.git
+
+## Live deploy (2026-07-22 ops hardening)
+
+See `docs/dogfood-reports/container-ops-health-2026-07-22.md`.
+
+Key runtime fixes shipped:
+
+- Scanner temp under `/app/data/tmp` + startup cleanup of abandoned grype/getter scratch (prevents overlay disk fill)
+- Grype DB warmup when missing/invalid
+- OpenClaw embedding model + 768-d Qdrant collection alignment
+- Stronger scheduled-scan ref resolution + default_branch refresh
+- `apk-retry.sh` source-safe function (full scanner image install)
+
+## Live deploy (2026-07-13)
+
+| Item | Value |
+|------|-------|
+| Image | `repository-detective:rc-04db228` (also tagged `all-in-one`) |
+| Variant | Full all-in-one with `INSTALL_EXTERNAL_TOOLS=true` |
+| Size | ~3.87GB (was ~542MB without external scanners) |
+| `/health` | healthy, ready=true, version=`rc-04db228` |
+| `tools_summary` | **10/10 available**, missing=[] |
+| Scanners present | trivy, grype, gitleaks, semgrep, hadolint, checkov, ruff, shellcheck, gosec, govulncheck, staticcheck |
+| Network | host; mounts `config/`, `data/`, `certs/`; `--env-file .env` |
+
+Root cause of prior “missing scanners” image: `scripts/apk-retry.sh` used `exit 0` when sourced, which aborted `install-scanner-tools.sh` before any scanner install. Fixed to define `apk_retry()` (uncommitted until operator asks to commit).
 
 ## Current State: BUILD PASSING + TESTS PASSING
 
