@@ -17,6 +17,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
+
+	"git.commsnet.org/commstech/bugbot/internal/security"
 )
 
 // rateLimiters per IP (bounded map to avoid unbounded growth).
@@ -193,10 +195,10 @@ func (h *WebhookHandler) HandleWebhook(c *gin.Context) {
 	// JSON body secret is not a supported auth mechanism — rely on HMAC header only.
 
 	h.logger.Infof("Processing webhook for repository: %s, action: %q",
-		payload.Repository.FullName, payload.Action)
+		security.RedactLogField(payload.Repository.FullName, 200), security.RedactLogField(payload.Action, 50))
 
 	if !RepoAllowed(payload.Repository.FullName, h.config.IncludePatterns, h.config.ExcludePatterns) {
-		h.logger.Infof("Repository %s skipped by include/exclude filters", payload.Repository.FullName)
+		h.logger.Infof("Repository %s skipped by include/exclude filters", security.RedactLogField(payload.Repository.FullName, 200))
 		c.JSON(http.StatusOK, gin.H{"status": "filtered"})
 		return
 	}
@@ -207,7 +209,7 @@ func (h *WebhookHandler) HandleWebhook(c *gin.Context) {
 	case webhookEventPullRequest:
 		h.handlePullRequestEvent(c, &payload)
 	default:
-		h.logger.Infof("Unhandled webhook event (action=%q)", payload.Action)
+		h.logger.Infof("Unhandled webhook event (action=%q)", security.RedactLogField(payload.Action, 50))
 		c.JSON(http.StatusOK, gin.H{"status": "ignored"})
 	}
 }

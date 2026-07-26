@@ -193,7 +193,11 @@ func (c *Client) GetRepositoryContent(ctx context.Context, owner, repo, ref, pat
 
 // GetFileContent fetches the content of a specific file
 func (c *Client) GetFileContent(ctx context.Context, owner, repo, ref, filePath string) (string, error) {
-	content, err := c.GetRepositoryContent(ctx, owner, repo, ref, filePath)
+	// Issue #10: Shorter timeout for file downloads (30s)
+	fileCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	content, err := c.GetRepositoryContent(fileCtx, owner, repo, ref, filePath)
 	if err != nil {
 		return "", err
 	}
@@ -298,6 +302,10 @@ func decodeRepositoryContents(body []byte) ([]RepositoryContent, error) {
 
 // CreateIssue creates a new issue in a repository
 func (c *Client) CreateIssue(ctx context.Context, owner, repo string, issueReq *CreateIssueRequest) (*Issue, error) {
+	// Issue #10: Medium timeout for issue creation (45s)
+	issueCtx, cancel := context.WithTimeout(ctx, 45*time.Second)
+	defer cancel()
+
 	url := fmt.Sprintf("%s/api/v1/repos/%s/%s/issues", c.baseURL, owner, repo)
 
 	jsonData, err := json.Marshal(issueReq)
@@ -305,7 +313,7 @@ func (c *Client) CreateIssue(ctx context.Context, owner, repo string, issueReq *
 		return nil, fmt.Errorf("failed to marshal issue request: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonData))
+	req, err := http.NewRequestWithContext(issueCtx, "POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
