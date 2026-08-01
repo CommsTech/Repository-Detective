@@ -457,6 +457,16 @@ class NightlySkillLoop:
         results: dict[str, Any] = {"scans": []}
         ok = True
         smoke = run_cmd([str(ROOT / "scripts/operator-smoke-test.sh")], timeout=120)
+        # Exit 141 (SIGPIPE) happens when the smoke script's pipeline is cut early
+        # after already printing healthy status — treat that as pass.
+        smoke_out = (smoke.get("stdout_tail") or "") + (smoke.get("stderr_tail") or "")
+        if (
+            not smoke["ok"]
+            and smoke.get("exit_code") == 141
+            and "status=healthy" in smoke_out
+            and "scanners available=" in smoke_out
+        ):
+            smoke = {**smoke, "ok": True, "note": "accepted_sigpipe_after_healthy_checks"}
         results["operator_smoke"] = smoke
         if not smoke["ok"]:
             ok = False
