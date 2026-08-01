@@ -8,7 +8,7 @@
     <img src="{{.BasePath}}/static/logo.svg" alt="Repository Detective" width="64" height="64">
     <h1>Unlock dashboard</h1>
     <p class="rd-muted">Repository Detective — Inspect · Analyze · Improve</p>
-    {{with .Data.Error}}{{if .}}<p class="rd-alert rd-alert-danger" role="alert">{{.}}</p>{{end}}{{end}}
+    {{with .Data.Error}}{{if .}}<p class="rd-alert danger rd-alert-danger" role="alert">{{.}}</p>{{end}}{{end}}
     <p class="rd-muted">An API key is required to access the operator dashboard in <code>api_key_only</code> mode.</p>
     <ul class="rd-muted rd-auth-hint">
       <li>Preferred header for API calls: <code>X-Repository-Detective-API-Key</code></li>

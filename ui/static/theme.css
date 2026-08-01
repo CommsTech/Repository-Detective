@@ -1018,10 +1018,12 @@ table.rd-table tbody tr:focus-within td {
   border-left-color: var(--rd-teal);
 }
 
-.rd-alert.danger {
+.rd-alert.danger,
+.rd-alert-danger {
   background: rgba(239, 68, 68, 0.08);
   border-color: rgba(239, 68, 68, 0.25);
   border-left-color: var(--rd-red);
+  color: var(--rd-text);
 }
 
 .rd-alert code {
@@ -1558,31 +1560,87 @@ table td { padding: 12px; border-bottom: 1px solid var(--rd-border); }
   font-size: 0.9rem;
 }
 
+/* Auth / unlock pages: self-contained high-contrast palette.
+   Avoids light-theme text tokens on a dark card (and the reverse), which made
+   "Invalid API key" and muted copy unreadable in Brave/system theme mixes. */
 .rd-page-auth {
+  --rd-auth-page-bg: #e8eef5;
+  --rd-auth-card-bg: #ffffff;
+  --rd-auth-text: #0f172a;
+  --rd-auth-muted: #334155;
+  --rd-auth-border: #cbd5e1;
+  --rd-auth-input-bg: #f8fafc;
+  --rd-auth-danger-bg: #fef2f2;
+  --rd-auth-danger-border: #f87171;
+  --rd-auth-danger-text: #7f1d1d;
+  --rd-auth-info-bg: #f0fdfa;
+  --rd-auth-info-border: #2dd4bf;
+  --rd-auth-info-text: #115e59;
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--rd-bg, #0d1b2a);
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(14, 165, 164, 0.18), transparent 55%),
+    radial-gradient(900px 500px at 100% 0%, rgba(37, 99, 235, 0.14), transparent 50%),
+    var(--rd-auth-page-bg);
+  color: var(--rd-auth-text);
 }
 
 .rd-auth-wrap {
   width: 100%;
-  max-width: 420px;
+  max-width: 440px;
   padding: 2rem 1.25rem;
 }
 
 .rd-auth-card {
-  background: var(--rd-surface, #132238);
-  border: 1px solid var(--rd-border, #1e3a5f);
+  background: var(--rd-auth-card-bg);
+  border: 1px solid var(--rd-auth-border);
   border-radius: var(--rd-radius);
   padding: 2rem;
   text-align: center;
+  color: var(--rd-auth-text);
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.12);
 }
 
 .rd-auth-card h1 {
   margin: 1rem 0 0.25rem;
   font-size: 1.5rem;
+  color: var(--rd-auth-text);
+}
+
+.rd-page-auth .rd-muted,
+.rd-page-auth .rd-auth-hint {
+  color: var(--rd-auth-muted);
+}
+
+.rd-page-auth .rd-alert,
+.rd-page-auth .rd-alert.info,
+.rd-page-auth .rd-alert.danger,
+.rd-page-auth .rd-alert-danger {
+  text-align: left;
+  color: var(--rd-auth-text);
+}
+
+.rd-page-auth .rd-alert.danger,
+.rd-page-auth .rd-alert-danger {
+  background: var(--rd-auth-danger-bg);
+  border: 1px solid var(--rd-auth-danger-border);
+  border-left: 4px solid #dc2626;
+  color: var(--rd-auth-danger-text);
+  font-weight: 600;
+}
+
+.rd-page-auth .rd-alert.info {
+  background: var(--rd-auth-info-bg);
+  border: 1px solid var(--rd-auth-info-border);
+  border-left: 4px solid var(--rd-teal);
+  color: var(--rd-auth-info-text);
+}
+
+.rd-page-auth code {
+  background: #e2e8f0;
+  color: #0f172a;
 }
 
 .rd-auth-form {
@@ -1596,19 +1654,26 @@ table td { padding: 12px; border-bottom: 1px solid var(--rd-border); }
   display: grid;
   gap: 0.35rem;
   font-size: 0.9rem;
+  color: var(--rd-auth-text);
+  font-weight: 600;
 }
 
 .rd-auth-form input {
-  padding: 0.65rem 0.75rem;
+  padding: 0.75rem 0.85rem;
   border-radius: var(--rd-radius-sm);
-  border: 1px solid var(--rd-border, #1e3a5f);
-  background: var(--rd-bg, #0d1b2a);
-  color: inherit;
+  border: 1px solid var(--rd-auth-border);
+  background: var(--rd-auth-input-bg);
+  color: var(--rd-auth-text);
+}
+
+.rd-auth-form input::placeholder {
+  color: #64748b;
 }
 
 .rd-auth-hint {
   font-size: 0.8rem;
   margin: -0.5rem 0 0;
+  text-align: left;
 }
 
 .rd-user-meta {
