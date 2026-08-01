@@ -34,12 +34,17 @@ RUN if [ -f vendor/modules.txt ]; then \
     else \
       CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w -X main.version=${VERSION}" -o repository-detective . && \
       CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o repository-detective-runner ./cmd/repository-detective-runner; \
-    fi && \
-    for attempt in 1 2 3 4 5; do \
-      go install golang.org/x/vuln/cmd/govulncheck@v1.1.3 && \
-      go install github.com/securego/gosec/v2/cmd/gosec@v2.21.4 && \
-      go install honnef.co/go/tools/cmd/staticcheck@v0.5.1 && break || sleep 15; \
-    done
+    fi
+
+# Install analysis CLIs required by the all-in-one/runner images. Fail the build
+# if any binary is missing (older loop + `|| sleep` could mask install failures).
+RUN set -eu; \
+    go install golang.org/x/vuln/cmd/govulncheck@latest; \
+    go install github.com/securego/gosec/v2/cmd/gosec@latest; \
+    go install honnef.co/go/tools/cmd/staticcheck@latest; \
+    test -x /go/bin/govulncheck; \
+    test -x /go/bin/gosec; \
+    test -x /go/bin/staticcheck
 
 # Satisfy image scanners (build artifacts copied out before this stage is discarded).
 USER nobody

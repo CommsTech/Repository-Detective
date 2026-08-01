@@ -6,6 +6,9 @@ data/
 build/
 bin/
 dist/
+state/
+reports/
+.cargo-home/
 *.db
 coverage.out
 coverage.html

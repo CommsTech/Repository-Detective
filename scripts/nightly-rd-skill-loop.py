@@ -28,6 +28,17 @@ DEFAULT_STATE = ROOT / "state/nightly-rd-evolution"
 DEFAULT_REPORT = ROOT / "reports/nightly-rd-evolution/latest"
 DEFAULT_DB = ROOT / "data/bugbot.db"
 
+
+def _json_default(obj: Any) -> Any:
+    """Make loop state JSON-safe (TimeoutExpired tails can be bytes)."""
+    if isinstance(obj, bytes):
+        return obj.decode("utf-8", errors="replace")
+    if isinstance(obj, Path):
+        return str(obj)
+    if isinstance(obj, set):
+        return sorted(obj)
+    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
+
 PROTECTED_FILES = [
     "analyzers/static.go",
     "analyzers/engine.go",
@@ -214,12 +225,19 @@ def run_cmd(cmd: list[str], timeout: int, cwd: Path | None = None) -> dict[str, 
             "ok": proc.returncode == 0,
         }
     except subprocess.TimeoutExpired as exc:
+        def _tail(value: str | bytes | None, limit: int = 2000) -> str:
+            if value is None:
+                return ""
+            if isinstance(value, bytes):
+                value = value.decode("utf-8", errors="replace")
+            return value[-limit:]
+
         return {
             "cmd": cmd,
             "exit_code": -1,
             "duration_s": round(time.time() - start, 2),
-            "stdout_tail": (exc.stdout or b"")[-2000:] if exc.stdout else "",
-            "stderr_tail": (exc.stderr or b"")[-2000:] if exc.stderr else "",
+            "stdout_tail": _tail(exc.stdout),
+            "stderr_tail": _tail(exc.stderr),
             "ok": False,
             "error": "timeout",
         }
@@ -383,7 +401,9 @@ class NightlySkillLoop:
             self.digest_lines.append("- **Test gate failed:** need host `go` (or `$GO`) or Docker")
             return False
         tests = [
-            (["./...", "-count=1", "-timeout=300s"], 360),
+            # Full suite can exceed 5m when live scanners (grype) participate;
+            # keep the gate meaningful but allow enough wall time to finish.
+            (["./...", "-count=1", "-timeout=600s"], 720),
             (["./benchmark/...", "-count=1", "-v"], 120),
             (["./calibration/...", "./graph/...", "-count=1"], 180),
             (["./analyzers/...", "-run", "Hardcoded|Install|Homelab|Decryption", "-count=1"], 120),
@@ -412,6 +432,8 @@ class NightlySkillLoop:
             f"{base}{path}",
             data=data,
             headers={
+                "Authorization": f"Bearer {api_key}",
+                "X-API-Key": api_key,
                 "X-Repository-Detective-API-Key": api_key,
                 "X-Bugbot-API-Key": api_key,
                 "Content-Type": "application/json",
@@ -863,8 +885,10 @@ class NightlySkillLoop:
             )
             + "\n"
         )
-        (self.report_dir / "full_loop_state.json").write_text(json.dumps(asdict(self.state), indent=2) + "\n")
-        self.loop_state_path.write_text(json.dumps(asdict(self.state), indent=2) + "\n")
+        (self.report_dir / "full_loop_state.json").write_text(
+            json.dumps(asdict(self.state), indent=2, default=_json_default) + "\n"
+        )
+        self.loop_state_path.write_text(json.dumps(asdict(self.state), indent=2, default=_json_default) + "\n")
 
         md = [
             "# Nightly RD skill loop report",
