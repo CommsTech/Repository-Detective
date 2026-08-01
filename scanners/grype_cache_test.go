@@ -45,6 +45,21 @@ func TestCleanupStaleScannerScratch(t *testing.T) {
 }
 
 func TestEnsureScannerTempDir(t *testing.T) {
+	prevTMPDIR := os.Getenv("TMPDIR")
+	prevCache := os.Getenv("XDG_CACHE_HOME")
+	t.Cleanup(func() {
+		if prevTMPDIR == "" {
+			_ = os.Unsetenv("TMPDIR")
+		} else {
+			_ = os.Setenv("TMPDIR", prevTMPDIR)
+		}
+		if prevCache == "" {
+			_ = os.Unsetenv("XDG_CACHE_HOME")
+		} else {
+			_ = os.Setenv("XDG_CACHE_HOME", prevCache)
+		}
+	})
+
 	data := t.TempDir()
 	got := scanners.EnsureScannerTempDir(data, logrus.New())
 	want := filepath.Join(data, "tmp")

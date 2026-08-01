@@ -47,7 +47,7 @@ MAINTAINABILITY_RULES = {
 }
 QUALITY_RULES = {"QUAL-DEBUG", "OPT-NESTED-LOOP", "OPT-HTTP-CLIENT-PER-CALL"}
 
-DOCKER_GO_IMAGE = "golang:1.23-bookworm"
+DOCKER_GO_IMAGE = "golang:1.25-bookworm"
 
 
 def is_executable(path: str | None) -> bool:

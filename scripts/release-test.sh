@@ -13,13 +13,13 @@ need_go() {
   if command -v go >/dev/null 2>&1; then
     return 0
   fi
-  log "go not in PATH — trying Docker golang:1.23-alpine"
+  log "go not in PATH — trying Docker golang:1.25-alpine"
   export USE_DOCKER_GO=1
 }
 
 run_go() {
   if [ "${USE_DOCKER_GO:-0}" = "1" ]; then
-    docker run --rm -v "$ROOT:/app" -w /app golang:1.23-alpine sh -c "$1"
+    docker run --rm -v "$ROOT:/app" -w /app golang:1.25-alpine sh -c "$1"
   else
     bash -c "$1"
   fi

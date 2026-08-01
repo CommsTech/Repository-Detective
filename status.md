@@ -1,7 +1,27 @@
 # Gitea Bugbot Plugin - Implementation Status
 
-**Last updated:** 2026-07-22  
+**Last updated:** 2026-08-01  
 **Repository:** https://git.commsnet.org/commstech/Bugbot.git
+
+## Current sprint (2026-08-01)
+
+Addressing stalled open issues:
+
+| Item | Status |
+|------|--------|
+| #352 CVE-2026-39829 (`golang.org/x/crypto`) | **Fixed locally** — `v0.52.0` + Go 1.25 toolchain; awaiting commit/push |
+| #48 AI/Qdrant connectivity | Ops note — soft-fail paths already present; no code change this pass |
+| Rate-limiter unbounded map | Already fixed on `main` (bounded at 4096) |
+| Scanner test TMPDIR leak | Fixed in `scanners/grype_cache_test.go` |
+
+Verify:
+
+```bash
+export PATH="$HOME/.local/go/bin:$PATH"
+go test -mod=vendor ./issues ./handlers ./internal/auth ./gitea ./scanners -run 'TestEnsureScannerTempDir|TestCleanupStale|Hadolint|Checkov'
+go build -mod=vendor -o /tmp/repository-detective .
+go list -m golang.org/x/crypto   # expect v0.52.0
+```
 
 ## Live deploy (2026-07-22 ops hardening)
 
@@ -27,13 +47,11 @@ Key runtime fixes shipped:
 | Scanners present | trivy, grype, gitleaks, semgrep, hadolint, checkov, ruff, shellcheck, gosec, govulncheck, staticcheck |
 | Network | host; mounts `config/`, `data/`, `certs/`; `--env-file .env` |
 
-Root cause of prior “missing scanners” image: `scripts/apk-retry.sh` used `exit 0` when sourced, which aborted `install-scanner-tools.sh` before any scanner install. Fixed to define `apk_retry()` (uncommitted until operator asks to commit).
-
-## Current State: BUILD PASSING + TESTS PASSING
+## Current State: BUILD PASSING (Go 1.25) + CORE TESTS PASSING
 
 ```bash
-go build -o bin/gitea-bugbot .
-go test ./...
+go build -mod=vendor -o bin/gitea-bugbot .
+go test -mod=vendor ./issues ./handlers ./internal/auth ./gitea
 ```
 
 ## Recent additions
@@ -68,6 +86,8 @@ Requires `public_url` / `BUGBOT_PUBLIC_URL` for webhook registration.
 |----------|---------|---------|
 | `.gitea/workflows/ci.yml` | push/PR to main | lint, vet, staticcheck, tests, build, Docker smoke |
 | `.gitea/workflows/release.yml` | tag `v*` | multi-platform binaries + Gitea release |
+
+Go version pin: **1.25** (matches `go.mod` after `x/crypto` v0.52.0).
 
 ## Architecture
 

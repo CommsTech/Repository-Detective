@@ -54,13 +54,13 @@ echo "Building repository-detective $VERSION (stage: $STAGE)..."
 if command -v go >/dev/null 2>&1; then
   CGO_ENABLED=1 go build -buildvcs=false -ldflags "-s -w -X main.version=${VERSION}" -o "$BIN" .
 else
-  echo "go not found locally — building in golang:1.23-bookworm container..."
+  echo "go not found locally — building in golang:1.25-bookworm container..."
   rel_out="${OUT#$ROOT/}"
   docker run --rm \
     -v "$ROOT:/src" \
     -w /src \
     -e CGO_ENABLED=1 \
-    golang:1.23-bookworm \
+    golang:1.25-bookworm \
     go build -buildvcs=false -ldflags "-s -w -X main.version=${VERSION}" -o "/src/${rel_out}/repository-detective" .
   chown "$(id -u):$(id -g)" "$BIN" 2>/dev/null || \
     docker run --rm -v "$ROOT:/src" alpine:3.20 chown "$(id -u):$(id -g)" "/src/${rel_out}/repository-detective"

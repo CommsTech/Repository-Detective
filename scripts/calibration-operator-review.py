@@ -67,7 +67,7 @@ def migrate_db() -> None:
             "-v", f"{ROOT}:/src",
             "-v", f"{DB.parent}:/data",
             "-w", "/src",
-            "golang:1.23-bookworm",
+            "golang:1.25-bookworm",
             "go", "run", "./cmd/rd-migrate",
         ],
         check=True,

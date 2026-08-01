@@ -218,7 +218,7 @@ func (m *Manager) CreateIssuesFromAnalysis(ctx context.Context, req *IssueCreati
 			if err != nil {
 				errorMsg := fmt.Sprintf("Failed to process issue for %s: %v", issue.Title, err)
 				result.Errors = append(result.Errors, errorMsg)
-				m.logger.Errorf(errorMsg)
+				m.logger.Error(errorMsg)
 				continue
 			}
 			if action == "updated" {
@@ -243,7 +243,7 @@ func (m *Manager) CreateIssuesFromAnalysis(ctx context.Context, req *IssueCreati
 		} else if err := m.createSummaryIssue(ctx, req, result); err != nil {
 			errorMsg := fmt.Sprintf("Failed to create summary issue: %v", err)
 			result.Errors = append(result.Errors, errorMsg)
-			m.logger.Errorf(errorMsg)
+			m.logger.Error(errorMsg)
 		}
 	}
 

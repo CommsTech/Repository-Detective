@@ -24,7 +24,7 @@ docker build -t "${IMAGE}" \
   "${WORK}"
 
 echo "==> Run tests inside builder-equivalent (Go container)"
-docker run --rm -v "${WORK}:/src" -w /src golang:1.23-bookworm \
+docker run --rm -v "${WORK}:/src" -w /src golang:1.25-bookworm \
   go test ./... -count=1
 
 echo "==> Smoke container"

@@ -1,5 +1,13 @@
 # Development Issues Log
 
+## Fixed (2026-08-01) — open Gitea issues + Go 1.25 toolchain
+
+| Priority | Issue | Resolution |
+|----------|-------|------------|
+| HIGH | Gitea #352 CVE-2026-39829 in `golang.org/x/crypto` (< 0.52.0) | Bumped to `v0.52.0`; toolchain Go **1.25** (required by crypto); Dockerfile + CI/release workflows + build scripts aligned |
+| MEDIUM | `issues/manager.go` non-constant `Errorf` format (vet fail on Go 1.25) | Switched to `logger.Error(errorMsg)` |
+| MEDIUM | `TestEnsureScannerTempDir` leaked `TMPDIR` / `XDG_CACHE_HOME` and broke later scanner tests | Restore prior env in `t.Cleanup` |
+
 ## Fixed (2026-07-22) — long-running container ops health
 
 | Priority | Issue | Resolution |
@@ -49,20 +57,10 @@
 
 | Priority | Issue | Notes |
 |----------|-------|-------|
-| MEDIUM | `handlers/webhook.go` rate limiter map grows unbounded | Add periodic cleanup or LRU |
+| LOW | Gitea #48 Ops: homelab AI/Qdrant connectivity from Docker | Ops/infra — not a code defect; document runbook or soft-fail already covers |
 | LOW | `WebhookHandler` still allows empty secret (logs warning only) | Consider failing closed in production mode |
+| LOW | Full `./scanners` suite can timeout when live `grype db` warmup runs | Unit subset passes; consider skipping network warmup under `testing.Short()` |
 | LOW | Integration tests with mocked Gitea/OpenWebUI | Unit tests added for core logic |
-| LOW | Stashed local change: `docker-compose.minimal.yml` version `2.4` → `3.8` | Run `git stash pop` if still wanted |
-
-### Completed improvements (2026-05-30)
-
-| Item | Resolution |
-|------|------------|
-| Push scans entire repo | `AnalyzeChangedFiles` + `CollectChangedFiles` |
-| PR scans entire branch | Uses `GetChangedFiles` with scoped CAH pipeline |
-| `max_concurrent_analyses` unused | `limiter` package semaphore in `runAnalysis` |
-| OpenWebUI model hardcoded | `openwebui_model` config + client field |
-| No unit tests | Tests in `handlers/`, `analyzers/`, `limiter/` |
 
 ## Common Challenges to Watch For
 
