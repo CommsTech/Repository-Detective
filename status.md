@@ -3,16 +3,25 @@
 **Last updated:** 2026-08-01  
 **Repository:** https://git.commsnet.org/commstech/Bugbot.git
 
-## Current sprint (2026-08-01)
+## Live deploy (2026-08-01)
 
-Addressing stalled open issues:
+| Item | Value |
+|------|-------|
+| Image | `repository-detective:rc-c45ebb8` (hotpatched scanners base + current `main` binary/entrypoint) |
+| `/health` | healthy, ready=true, version=`rc-c45ebb8`, tools **10/10** |
+| Ops fixes applied | Embedding model + vector size from `.env`; corrupt grype DB cleared; TMPDIR scratch cleanup; skill-loop JSON/auth fixes on `b18f53c` |
+| Learning | Nightly cron `17 2 * * *` → `scripts/rd-deterministic-daily.sh`; manual promote run kicked after redeploy |
+| Follow-up | Full `docker build --target all-in-one` once Go-tool install fix (`b18f53c`) is used; refresh expired GitHub token (401 on startup) |
+
+## Current sprint (2026-08-01)
 
 | Item | Status |
 |------|--------|
-| #352 CVE-2026-39829 (`golang.org/x/crypto`) | **Fixed locally** — `v0.52.0` + Go 1.25 toolchain; awaiting commit/push |
-| #48 AI/Qdrant connectivity | Ops note — soft-fail paths already present; no code change this pass |
+| #352 CVE-2026-39829 (`golang.org/x/crypto`) | **Shipped** on `main` (`c45ebb8`) and live as `rc-c45ebb8` |
+| #48 AI/Qdrant connectivity | Soft-fail + `.env` embedding/Qdrant settings loaded into live container |
 | Rate-limiter unbounded map | Already fixed on `main` (bounded at 4096) |
 | Scanner test TMPDIR leak | Fixed in `scanners/grype_cache_test.go` |
+| Skill-loop crash (bytes JSON) + API Bearer auth | Fixed on `main` (`b18f53c`) |
 
 Verify:
 

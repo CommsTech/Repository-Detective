@@ -1,15 +1,22 @@
 #!/bin/sh
 set -eu
 
+# Durable scanner temp/cache under the data volume (avoids filling overlay /tmp).
+# Use sticky world-writable TMPDIR so host-side `go test ./...` can traverse the
+# bind mount even when the process user inside the container differs from the host uid.
+mkdir -p /app/data/tmp /app/data/cache
+chmod 1777 /app/data/tmp 2>/dev/null || true
+
 if [ -d /app/data ] && [ "$(id -u)" -eq 0 ]; then
-  chown -R repositorydetective:repositorydetective /app/data
+  # Own the DB/cache for the runtime user, but do not recursively re-own TMPDIR
+  # scratch (that breaks host tooling walking the repo tree).
+  chown repositorydetective:repositorydetective /app/data 2>/dev/null || true
+  chown -R repositorydetective:repositorydetective /app/data/cache 2>/dev/null || true
+  if [ -e /app/data/bugbot.db ]; then
+    chown repositorydetective:repositorydetective /app/data/bugbot.db 2>/dev/null || true
+  fi
 fi
 
-# Durable scanner temp/cache under the data volume (avoids filling overlay /tmp).
-mkdir -p /app/data/tmp /app/data/cache
-if [ "$(id -u)" -eq 0 ]; then
-  chown -R repositorydetective:repositorydetective /app/data/tmp /app/data/cache 2>/dev/null || true
-fi
 export TMPDIR="${TMPDIR:-/app/data/tmp}"
 export XDG_CACHE_HOME="${XDG_CACHE_HOME:-/app/data/cache}"
 
