@@ -17,7 +17,7 @@ func TestBuildScannerFailureReportPrefillsIssue(t *testing.T) {
 		ScanID:       "abc123def456",
 		RepoFullName: "commstech/Repository-Detective",
 		StartedAt:    time.Date(2026, 8, 2, 12, 0, 0, 0, time.UTC),
-	}, "rc-health-ux", "http://192.168.255.10:8081/ui")
+	}, "rc-health-ux", "http://127.0.0.1:8081/ui")
 
 	if !strings.Contains(link.URL, "template=system_health.md") {
 		t.Fatalf("expected system_health template, got %s", link.URL)

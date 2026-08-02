@@ -67,6 +67,9 @@ if [[ -n "$(git status --porcelain)" ]]; then
   die "working tree is dirty — commit or stash before syncing"
 fi
 
+# Refuse to publish if live secrets/configs leaked into the git tree.
+"$ROOT/scripts/check-public-release-secrets.sh" || die "public secret gate failed — fix before sync"
+
 current="$(git branch --show-current)"
 [[ "$current" == "$BRANCH" ]] || die "checkout $BRANCH first (on $current)"
 

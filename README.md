@@ -61,7 +61,7 @@ Sync policy: [docs/GITHUB_MIRROR.md](docs/GITHUB_MIRROR.md).
 
 **Operator docs:** [docs/README.md](docs/README.md) · [Dashboard](docs/DASHBOARD_GUIDE.md) · [Auth (local)](docs/AUTH_LOCAL.md) · [Privacy](docs/PRIVACY_AND_DATA_PROTECTION.md)
 
-The published tree is a sanitized install base. Operator secrets (`.env`), local config (`config/config.yaml`), and the SQLite database under `data/` are gitignored and must stay private on your host.
+The published tree is a sanitized install base. **Only examples ship** (`.env.example`, `config/*.example.yaml`). Operator secrets (`.env`), local config (`config/config.yaml`), and the SQLite database under `data/` are gitignored and must stay private on your host. Gate: `./scripts/check-public-release-secrets.sh`.
 
 Quick local trial (minimal compose uses port **8080**):
 

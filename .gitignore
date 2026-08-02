@@ -44,12 +44,17 @@ Thumbs.db
 *.log
 logs/
 
-# Environment files
+# Environment files — never commit live operator secrets
 .env
 .env.local
 .env.*.local
-# Local operator config may contain secrets; use config.yaml.example + .env instead.
+.env.production
+.env.homelab
+!.env.example
+# Local operator config may contain secrets; ship examples only.
 config/config.yaml
+config/*.local.yaml
+config/config.yaml.bak-*
 
 # Local SQLite databases
 data/
@@ -252,7 +257,6 @@ deploy/bin/gitleaks
 # Local deployment artifacts and drills (operator-only)
 deployment-backups/
 restore-drill-test/
-config/config.yaml.bak-*
 
 # Root-level build outputs (use build/ or Docker images)
 /repository-detective
@@ -269,3 +273,12 @@ docker-compose.prod.yml
 docker-compose.override.yml
 .env
 bugbot-build
+
+# Operator SSH / deploy keys (never publish)
+*.pem
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+secrets/
+.secrets/

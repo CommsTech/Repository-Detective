@@ -123,7 +123,7 @@ dogfood_backlog_update_existing_only: true
 
 preinstall_audit_enabled: true
 preinstall_report_include_project_link: true
-repository_detective_project_url: "https://git.commsnet.org/commstech/repository-detective"
+repository_detective_project_url: "https://github.com/CommsTech/Repository-Detective"
 
 notifications_enabled: false
 runner_delegation_enabled: false

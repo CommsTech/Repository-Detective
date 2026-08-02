@@ -24,7 +24,23 @@
 
 Full constraints: [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md).
 
-## 15-minute try
+What ships in git (Gitea + GitHub):
+
+| Included | Not included (gitignored / local only) |
+|----------|------------------------------------------|
+| `.env.example`, `config/*.example.yaml` | Live `.env`, `config/config.yaml` |
+| Compose files that read `env_file: .env` | Your forge tokens, API keys, webhook secrets |
+| Docs + wiki source | SQLite DB under `data/` |
+
+Copy examples, then fill **your** forge URL/token:
+
+```bash
+cp .env.example .env
+cp config/config.yaml.example config/config.yaml
+# edit .env — never commit it
+```
+
+Before publishing mirrors, operators run `./scripts/check-public-release-secrets.sh`.
 
 ```bash
 git clone https://github.com/CommsTech/Repository-Detective.git

@@ -15,8 +15,8 @@ import urllib.error
 import urllib.request
 from collections import Counter
 
-API = os.environ.get("RD_API", "http://192.168.255.10:8081/api/v1").rstrip("/")
-KEY = os.environ.get("REPOSITORY_DETECTIVE_API_KEY") or os.environ.get("REPOSITORY_DETECTIVE_API_KEY") or ""
+API = os.environ.get("RD_API", "http://127.0.0.1:8081/api/v1").rstrip("/")
+KEY = os.environ.get("REPOSITORY_DETECTIVE_API_KEY") or os.environ.get("BUGBOT_API_KEY") or ""
 REPO_ID = 1
 
 # Rule families that are calibrated product-repo noise after the 2026-08-02 closeout.
