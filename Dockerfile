@@ -80,6 +80,18 @@ COPY --from=builder /go/bin/cyclonedx-gomod /usr/local/bin/cyclonedx-gomod
 COPY --from=builder /usr/local/go /usr/local/go
 ENV PATH="/usr/local/go/bin:${PATH}"
 
+# Fail the build if SBOM / Go analysis CLIs did not land on PATH.
+RUN set -eu; \
+    test -x /usr/local/bin/govulncheck; \
+    test -x /usr/local/bin/gosec; \
+    test -x /usr/local/bin/staticcheck; \
+    test -x /usr/local/bin/cyclonedx-gomod; \
+    if [ "$INSTALL_EXTERNAL_TOOLS" = "true" ]; then \
+      test -x /usr/local/bin/syft; \
+      /usr/local/bin/syft version >/dev/null; \
+      /usr/local/bin/cyclonedx-gomod version >/dev/null || /usr/local/bin/cyclonedx-gomod -h >/dev/null; \
+    fi
+
 RUN adduser -D -u 65532 scanner
 USER scanner
 

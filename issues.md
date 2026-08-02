@@ -1,5 +1,12 @@
 # Development Issues Log
 
+## Fixed (2026-08-02) — Syft / cyclonedx-gomod missing from live image
+
+| Priority | Issue | Resolution |
+|----------|-------|------------|
+| HIGH | Health showed syft + cyclonedx-gomod as enabled/missing binary | Layered binaries into `repository-detective:rc-sbom-tools`; redeployed host-network container |
+| MEDIUM | Soft `syft install skipped` could hide failures | `install-scanner-tools.sh` now fails the build if syft is absent; Dockerfile verifies both CLIs |
+
 ## Fixed (2026-08-02) — Full WebUI flow evaluation (theme / brand / charts)
 
 | Priority | Issue | Resolution |

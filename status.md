@@ -3,6 +3,15 @@
 **Last updated:** 2026-08-02  
 **Repository:** https://git.commsnet.org/commstech/Repository-Detective.git
 
+## Live deploy (2026-08-02) — SBOM tools in base image
+
+| Item | Value |
+|------|-------|
+| Focus | Health no longer reports syft / cyclonedx-gomod as missing binaries |
+| Shipped | Image `repository-detective:rc-sbom-tools` (also tagged `all-in-one`); Dockerfile verify gate; install script requires syft |
+| Live | `tools_summary` **12/12 available**, `missing: []` |
+| Versions | syft **1.18.1**, cyclonedx-gomod **v1.10.0** |
+
 ## Live deploy (2026-08-02) — Full WebUI flow evaluation
 
 | Item | Value |

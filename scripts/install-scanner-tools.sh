@@ -92,7 +92,7 @@ apk_retry curl bash tar python3 py3-pip git ca-certificates
 install_trivy
 install_grype
 refresh_grype_db
-install_syft || echo "syft install skipped"
+install_syft
 install_gitleaks || echo "gitleaks install skipped"
 install_hadolint || echo "hadolint install skipped"
 install_semgrep || echo "semgrep install skipped"
@@ -100,6 +100,14 @@ install_checkov || echo "checkov install skipped"
 install_golangci || echo "golangci-lint install skipped (optional)"
 install_shellcheck || echo "shellcheck install skipped"
 install_ruff || echo "ruff install skipped"
+
+# Required SBOM toolchain — fail the image build if these are absent.
+for required in trivy grype syft; do
+  if ! command -v "$required" >/dev/null 2>&1; then
+    echo "ERROR: required scanner binary missing after install: $required" >&2
+    exit 1
+  fi
+done
 
 for bin in trivy grype syft gitleaks semgrep govulncheck gosec staticcheck hadolint checkov shellcheck ruff cyclonedx-gomod; do
   if command -v "$bin" >/dev/null 2>&1; then
