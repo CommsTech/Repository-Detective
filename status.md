@@ -3,6 +3,14 @@
 **Last updated:** 2026-08-02  
 **Repository:** https://git.commsnet.org/commstech/repository-detective.git
 
+## Live deploy (2026-08-02) — Prime-time readiness evaluation
+
+| Item | Value |
+|------|-------|
+| Verdict | **Conditional GO** for private beta; not public prime-time yet |
+| Evidence | [docs/dogfood-reports/prime-time-readiness-2026-08-02.md](docs/dogfood-reports/prime-time-readiness-2026-08-02.md) |
+| Blockers | 244 critical+high open findings; 251 parse_failed (14d); rebuild image from main |
+
 ## Live deploy (2026-08-02) — Full brand purge
 
 | Item | Value |

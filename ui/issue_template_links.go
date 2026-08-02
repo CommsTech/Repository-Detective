@@ -8,7 +8,7 @@ import (
 	"git.commsnet.org/commstech/repository-detective/store"
 )
 
-const defaultProductIssueBase = "https://git.commsnet.org/commstech/repository-detective"
+const defaultProductIssueBase = "https://git.commsnet.org/commstech/Repository-Detective"
 
 // IssueTemplateLinks surfaces Gitea issue template URLs and copy guidance for beta feedback.
 type IssueTemplateLinks struct {

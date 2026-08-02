@@ -16,7 +16,7 @@ PORT="${RD_PORT:-8081}"
 BASE="${RD_BASE_URL:-http://127.0.0.1:${PORT}}"
 API_KEY="${REPOSITORY_DETECTIVE_API_KEY}"
 HEADER="X-Repository-Detective-API-Key"
-LEGACY_HEADER="X-Repository-Detective-API-Key"
+LEGACY_HEADER="X-Bugbot-API-Key"
 
 log() { printf '==> %s\n' "$*"; }
 warn() { printf 'WARN: %s\n' "$*" >&2; }
@@ -115,15 +115,16 @@ check_database_healthy() {
   fi
 }
 
-check_legacy_header() {
+check_legacy_header_rejected() {
   if [ -z "$API_KEY" ]; then
     return 0
   fi
-  log "legacy header ${LEGACY_HEADER} (compatibility)"
-  if curl -sfS -m 15 -H "${LEGACY_HEADER}: ${API_KEY}" "${BASE}/api/v1/status" >/dev/null; then
-    log "legacy API header accepted"
+  log "legacy header ${LEGACY_HEADER} must be rejected"
+  code=$(curl -sS -o /dev/null -w '%{http_code}' -m 15 -H "${LEGACY_HEADER}: ${API_KEY}" "${BASE}/api/v1/status" || echo 000)
+  if [ "$code" = "401" ] || [ "$code" = "403" ]; then
+    log "legacy API header correctly rejected (HTTP ${code})"
   else
-    warn "legacy API header rejected — may be OK if only preferred header is configured"
+    fail "legacy API header should be rejected, got HTTP ${code}"
   fi
 }
 
@@ -140,7 +141,7 @@ main() {
   check_about
   check_status
   check_dashboard
-  check_legacy_header
+  check_legacy_header_rejected
 
   log "operator-smoke-test: completed"
 }
