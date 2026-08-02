@@ -67,13 +67,13 @@ Preferred API header: `X-Repository-Detective-API-Key`. Legacy `X-Repository-Det
 
 ## Private beta
 
-Community Edition is sufficient for **limited private beta** on homelab Gitea. See [BETA_READINESS.md](BETA_READINESS.md).
+Community Edition is sufficient for **homelab and public community beta** on self-hosted Gitea (GitHub forge optional). See [PUBLIC_BETA.md](PUBLIC_BETA.md) and [BETA_READINESS.md](BETA_READINESS.md).
 
 ---
 
-## License (proposed)
+## License
 
-AGPL-3.0-or-later — see [LICENSING_STRATEGY.md](LICENSING_STRATEGY.md). Not yet applied in `LICENSE` file; legal review pending.
+AGPL-3.0-or-later — root [LICENSE](../LICENSE) and [NOTICE](../NOTICE). Strategy notes: [LICENSING_STRATEGY.md](LICENSING_STRATEGY.md).
 
 ---
 

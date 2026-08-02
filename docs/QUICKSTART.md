@@ -9,8 +9,9 @@ Get a single-operator homelab running in ~15 minutes. Generic placeholders only.
 ## 1. Clone
 
 ```bash
-git clone https://git.example.com/your-org/repository-detective.git
-cd repository-detective
+git clone https://github.com/CommsTech/Repository-Detective.git
+# or canonical: https://git.commsnet.org/commstech/Repository-Detective.git
+cd Repository-Detective
 ```
 
 ## 2. Configure environment

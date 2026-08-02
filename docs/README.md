@@ -13,6 +13,7 @@ detect → issue → plan → approve → patch PR → merge → rescan → veri
 | Document | Description |
 |----------|-------------|
 | [QUICKSTART.md](QUICKSTART.md) | Zero to first scan (~15 min) |
+| [PUBLIC_BETA.md](PUBLIC_BETA.md) | Public community beta — try it + feedback |
 | [AGENT_QUICKSTART.md](AGENT_QUICKSTART.md) | AI agents — REST + MCP for OpenClaw / automations |
 | [MCP.md](MCP.md) | MCP stdio bridge (`repository-detective-mcp`) |
 | [OPENCLAW_INTEGRATION.md](OPENCLAW_INTEGRATION.md) | RD↔OpenClaw both directions |
@@ -127,7 +128,7 @@ See [examples/](examples/) for copy-paste YAML profiles:
 | [BRANDING_MIGRATION.md](BRANDING_MIGRATION.md) | Repository-Detective → Repository Detective migration |
 | [BRANDING_COMPATIBILITY_AUDIT.md](BRANDING_COMPATIBILITY_AUDIT.md) | Preferred vs legacy naming audit |
 | [EDITIONS.md](EDITIONS.md) | Community / Commercial / Enterprise matrix |
-| [LICENSING_STRATEGY.md](LICENSING_STRATEGY.md) | Proposed AGPL + commercial licensing |
+| [LICENSING_STRATEGY.md](LICENSING_STRATEGY.md) | AGPL Community + commercial editions |
 | [COMMUNITY_EDITION.md](COMMUNITY_EDITION.md) | Community scope and limits |
 | [COMMERCIAL_ENTERPRISE.md](COMMERCIAL_ENTERPRISE.md) | Paid tiers and feature-gate plan |
 | [SCANNER_ROADMAP.md](SCANNER_ROADMAP.md) | Future scanner plans (not shipped) |

@@ -16,8 +16,8 @@
   <a href="https://pkg.go.dev/git.commsnet.org/commstech/repository-detective">
     <img src="https://img.shields.io/badge/go-1.25-00ADD8?style=flat&logo=go&logoColor=white" alt="Go 1.25">
   </a>
-  <a href="docs/LICENSING_STRATEGY.md">
-    <img src="https://img.shields.io/badge/license-AGPL--3.0%20(proposed)-blue?style=flat" alt="License: AGPL-3.0 proposed">
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/license-AGPL--3.0--or--later-blue?style=flat" alt="License: AGPL-3.0-or-later">
   </a>
   <a href="docs/DOCKER.md">
     <img src="https://img.shields.io/badge/platforms-linux%2Famd64-lightgrey?style=flat&logo=linux&logoColor=white" alt="Platforms: linux/amd64">
@@ -25,42 +25,48 @@
   <a href="docs/DOCKER.md">
     <img src="https://img.shields.io/badge/docker-all--in--one-2496ED?style=flat&logo=docker&logoColor=white" alt="Docker">
   </a>
-  <a href="docs/COMMUNITY_EDITION.md">
-    <img src="https://img.shields.io/badge/edition-private%20beta-orange?style=flat" alt="Private beta">
+  <a href="docs/PUBLIC_BETA.md">
+    <img src="https://img.shields.io/badge/edition-public%20community%20beta-brightgreen?style=flat" alt="Public community beta">
   </a>
 </p>
 
 ---
 
-## Community private beta
+## Community public beta
 
 | | |
 |---|---|
-| **Edition** | Community private beta — single-operator homelab |
-| **Forge** | Gitea-first (GitHub manual/bulk scans optional) |
+| **Edition** | Community public beta — single-operator self-host |
+| **Forge** | Gitea-first (GitHub manual/bulk scans optional; issue filing less proven) |
 | **UI auth** | API-key mode by default; optional local login (`auth_mode=local`) |
 | **Not yet** | SaaS, multi-tenant, billing, auto-merge, third-party auto-submit |
+| **Try it** | [Public beta guide](docs/PUBLIC_BETA.md) · [Quickstart](docs/QUICKSTART.md) · [Contributing](CONTRIBUTING.md) |
 | **Editions docs** | [Community](docs/COMMUNITY_EDITION.md) · [Commercial](docs/COMMERCIAL_ENTERPRISE.md) · [Editions overview](docs/EDITIONS.md) |
 
 > **Naming:** The product is **Repository Detective**. Use `REPOSITORY_DETECTIVE_*` env vars and `X-Repository-Detective-API-Key`. See [docs/NAMING.md](docs/NAMING.md).
 
-Repo (canonical Gitea): https://git.commsnet.org/commstech/Repository-Detective.git  
-GitHub mirror (public release only): https://github.com/CommsTech/Repository-Detective.git — keep Gitea current; push GitHub when public: [docs/GITHUB_MIRROR.md](docs/GITHUB_MIRROR.md)
+| Host | Role |
+|------|------|
+| [Gitea](https://git.commsnet.org/commstech/Repository-Detective.git) | Canonical — CI, wiki, day-to-day development |
+| [GitHub](https://github.com/CommsTech/Repository-Detective.git) | Public mirror for discovery and community testers |
 
-**Beta feedback:** use [Gitea issue templates](https://git.commsnet.org/commstech/Repository-Detective/issues/new) (`.gitea/ISSUE_TEMPLATE/`) — include scan ID and finding fingerprint; never paste secrets.
+Sync policy: [docs/GITHUB_MIRROR.md](docs/GITHUB_MIRROR.md).
+
+**Feedback:** [GitHub issues](https://github.com/CommsTech/Repository-Detective/issues) or [Gitea issue templates](https://git.commsnet.org/commstech/Repository-Detective/issues/new) — include scan ID and finding fingerprint; never paste secrets. Security reports: [SECURITY.md](SECURITY.md).
 
 ## Setup
 
-**Start here:** [docs/SETUP.md](docs/SETUP.md) — step-by-step from clone to working webhooks.
+**Start here:** [docs/SETUP.md](docs/SETUP.md) — step-by-step from clone to working webhooks.  
+**Public beta testers:** [docs/PUBLIC_BETA.md](docs/PUBLIC_BETA.md).
 
 **Operator docs:** [docs/README.md](docs/README.md) · [Dashboard](docs/DASHBOARD_GUIDE.md) · [Auth (local)](docs/AUTH_LOCAL.md) · [Privacy](docs/PRIVACY_AND_DATA_PROTECTION.md)
 
-The Gitea tree is a sanitized install base. Operator secrets (`.env`), local config (`config/config.yaml`), and the SQLite database under `data/` are gitignored and must stay private on your host.
+The published tree is a sanitized install base. Operator secrets (`.env`), local config (`config/config.yaml`), and the SQLite database under `data/` are gitignored and must stay private on your host.
 
 Quick local trial (minimal compose uses port **8080**):
 
 ```bash
-git clone https://git.commsnet.org/commstech/Repository-Detective.git && cd Repository-Detective
+git clone https://github.com/CommsTech/Repository-Detective.git && cd Repository-Detective
 docker compose -f docker-compose.minimal.yml up -d --build
 curl http://localhost:8080/health
 ```
@@ -134,7 +140,5 @@ See [docs/README.md](docs/README.md) for the full index. Agent entry points: [AG
 
 ## License
 
-**Community (proposed):** AGPL-3.0-or-later — see [docs/LICENSING_STRATEGY.md](docs/LICENSING_STRATEGY.md).  
+**Community:** [AGPL-3.0-or-later](LICENSE) — see also [NOTICE](NOTICE) and [docs/LICENSING_STRATEGY.md](docs/LICENSING_STRATEGY.md).  
 **Commercial / Enterprise:** paid terms — see [docs/EDITIONS.md](docs/EDITIONS.md).
-
-License text is not yet published as a root `LICENSE` file; treat the strategy doc as planning guidance until formal SPDX text is added.

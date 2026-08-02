@@ -1,0 +1,29 @@
+name: Scanner false positive
+description: A finding that should not have been reported
+labels: ["scanner/false-positive", "status/needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Redact secrets. Prefer rule ID + fingerprint over full file contents.
+  - type: input
+    id: rule_id
+    attributes:
+      label: Rule ID / source
+      placeholder: G304 / trivy CVE-… / shellcheck SC…
+    validations:
+      required: true
+  - type: input
+    id: fingerprint
+    attributes:
+      label: Finding fingerprint (if known)
+  - type: textarea
+    id: why
+    attributes:
+      label: Why this is a false positive
+    validations:
+      required: true
+  - type: textarea
+    id: snippet
+    attributes:
+      label: Minimal redacted snippet (optional)

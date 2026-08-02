@@ -2,6 +2,17 @@
 
 All notable changes to Repository Detective (formerly an internal prototype) are documented here.
 
+## [Unreleased] — Public community beta
+
+### Added
+- Root `LICENSE` (AGPL-3.0) + `NOTICE`, `CONTRIBUTING.md`, `SECURITY.md`
+- Public beta guide (`docs/PUBLIC_BETA.md`) and GitHub issue templates
+- GitHub mirror sync via deploy key (`scripts/sync-gitea-to-github.sh --github`)
+
+### Changed
+- README framed as **public community beta** (Gitea canonical, GitHub mirror)
+- Learning Accept installs `report_only` calibration rules only (no rule-wide suppressions)
+
 ## [Unreleased] — Closeout sprint
 
 ### Added

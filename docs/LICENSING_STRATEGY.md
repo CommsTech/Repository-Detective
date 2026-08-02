@@ -1,7 +1,8 @@
 # Licensing strategy
 
-**Status:** Planning only — **no license enforcement implemented**  
-**Not legal advice** — consult a lawyer before publishing license text.
+**Status:** Community edition published under **AGPL-3.0-or-later** (see root [LICENSE](../LICENSE) and [NOTICE](../NOTICE)).  
+Commercial / Enterprise remain separate paid terms.  
+**Not legal advice** — consult a lawyer for distribution and dual-licensing questions.
 
 ---
 
@@ -10,7 +11,7 @@
 **One codebase, three editions**, differentiated by **feature gates** and **license terms**:
 
 ```text
-Repository Detective Community     → AGPL-3.0-or-later (proposed)
+Repository Detective Community     → AGPL-3.0-or-later
 Repository Detective Commercial    → paid commercial license
 Repository Detective Enterprise    → paid commercial license + enterprise features
 ```
@@ -24,7 +25,7 @@ Repository Detective Enterprise    → paid commercial license + enterprise feat
 - Source available; modify and self-host
 - Network use triggers copyleft obligations for modified versions offered as a service
 - Suitable for homelab, evaluators, and contributors who accept AGPL terms
-- Reference: [GNU AGPL v3.0 (SPDX)](https://spdx.org/licenses/AGPL-3.0.html)
+- Reference: [GNU AGPL v3.0 (SPDX)](https://spdx.org/licenses/AGPL-3.0.html) · root [LICENSE](../LICENSE)
 
 ### Commercial / Enterprise (proprietary license)
 
@@ -48,7 +49,7 @@ Paid if you need commercial terms, enterprise features, support, or closed modif
 |--------|------|------|
 | **Elastic License 2.0** | Blocks hosted reselling | Not OSI open source; adoption friction |
 | **Business Source License** | Converts to OSS later | Complex; restricted period |
-| **MIT (current README)** | Maximum adoption | No SaaS protection; weak commercial lever |
+| **MIT (historical draft)** | Maximum adoption | No SaaS protection; weak commercial lever |
 
 AGPL fits a **networked self-hosted security product** while preserving a commercial exception path.
 
@@ -89,7 +90,7 @@ Monetize **scale, teams, governance, support** — not basic findings:
 
 Operating Repository Detective as a **managed service for third parties** is reserved for **Commercial/Enterprise licensees** unless AGPL compliance is met for modified/network-deployed versions.
 
-Community operators may run it for **their own** repos and **trusted private beta** users on their infrastructure.
+Community operators may run it for **their own** repos and community beta users on their infrastructure.
 
 ---
 
@@ -110,7 +111,7 @@ Contribution license should align with chosen OSS license (CLA or DCO — TBD wi
 
 | Item | Status |
 |------|--------|
-| License file in repo | **TBD** — README still says MIT until legal review |
+| License file in repo | **Done** — root `LICENSE` (AGPL-3.0) + `NOTICE` |
 | `edition` config key | Not implemented |
 | Capability struct / gates | Not implemented |
 | License key validation | Not implemented |

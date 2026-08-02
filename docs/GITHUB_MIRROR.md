@@ -1,18 +1,18 @@
 # Sync Gitea → GitHub
 
-Repository Detective’s **canonical** git host is Gitea:
+Repository Detective’s **canonical** git host is Gitea; **GitHub** is the public discovery mirror.
 
 - Gitea: https://git.commsnet.org/commstech/repository-detective  
-- GitHub mirror: https://github.com/CommsTech/Repository-Detective  
+- GitHub: https://github.com/CommsTech/Repository-Detective  
 
 **Policy**
 
 | Host | Role | When to push |
 |------|------|--------------|
 | **Gitea** | Canonical — day-to-day commits, Issues, Actions, wiki | Keep `main` updated continuously |
-| **GitHub** | Public discovery mirror | Only when a release is ready for public visibility (`--github`) |
+| **GitHub** | Public community mirror | After each publish-ready `main` update (or batch with `--github`) |
 
-Do not treat GitHub as a second active development remote until you intentionally open that release.
+Day-to-day development stays on Gitea. GitHub is for testers and discovery — not a second active development remote.
 
 ## Everyday: keep Gitea updated
 
@@ -24,9 +24,7 @@ set -a && source .env && set +a
 
 Or a normal `git push origin main` after committing.
 
-## Public release: mirror to GitHub
-
-When the product is ready for a public GitHub presence:
+## Publish / refresh the public GitHub mirror
 
 ```bash
 set -a && source .env && set +a
@@ -43,7 +41,7 @@ Required credentials:
 | **GitHub deploy key** (preferred) | `~/.ssh/repository-detective-github-deploy` with **write** on the mirror repo |
 | `REPOSITORY_DETECTIVE_GITHUB_TOKEN` | Fallback HTTPS PAT if no deploy key |
 
-### Deploy key (already generated on the operator host)
+### Deploy key
 
 Public key path: `~/.ssh/repository-detective-github-deploy.pub`  
 Add under GitHub → **Settings** → **Deploy keys** → enable **Allow write access**.
@@ -56,4 +54,4 @@ The script never stores tokens in `git remote` URLs.
 
 - Do not push `.env`, `config/config.yaml`, or `data/*.db` (gitignored).
 - Do not force-push `main` on either remote unless recovering a broken mirror intentionally.
-- After the first public GitHub push, set the GitHub repo description/website to point at the Gitea project and wiki.
+- After publish, keep the GitHub repo description/website pointing at the Gitea project and wiki.

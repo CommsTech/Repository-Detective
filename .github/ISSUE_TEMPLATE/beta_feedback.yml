@@ -1,0 +1,49 @@
+name: Beta feedback
+description: Installation, UX, or report-quality feedback from public beta
+labels: ["beta/feedback", "status/needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Public community beta feedback. Do **not** paste secrets or private repo contents.
+  - type: input
+    id: version
+    attributes:
+      label: Version / commit / image tag
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: Install path
+      options:
+        - docker-compose.minimal.yml
+        - docker-compose.yml (all-in-one)
+        - local go build
+        - other
+    validations:
+      required: true
+  - type: textarea
+    id: what_worked
+    attributes:
+      label: What worked
+  - type: textarea
+    id: friction
+    attributes:
+      label: Friction / surprises
+      description: Install steps, first scan, triage, docs gaps
+    validations:
+      required: true
+  - type: input
+    id: scan_id
+    attributes:
+      label: Scan ID (if relevant)
+  - type: dropdown
+    id: forge
+    attributes:
+      label: Forge
+      options:
+        - Gitea
+        - GitHub
+        - none / local only
+        - other
