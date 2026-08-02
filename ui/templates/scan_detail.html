@@ -45,7 +45,7 @@
 <div class="rd-card">
   <h2>Scan {{shortID .ID 12}}</h2>
   {{if $.Data.RepoName}}<p><strong>Repository:</strong> {{$.Data.RepoName}}</p>{{end}}
-  <p><strong>Trigger:</strong> {{.TriggerType}} · <strong>Ref:</strong> {{.Ref}} · <strong>Profile:</strong> {{$.Data.Summary.ScanProfile}}</p>
+  <p><strong>Trigger:</strong> {{.TriggerType}} · <strong>Ref:</strong> {{.Ref}} · <strong>Profile:</strong> {{profileLabel $.Data.Summary.ScanProfile}}</p>
   <p><strong>Commit:</strong> {{if .CommitSHA}}{{.CommitSHA}}{{else}}<span class="rd-muted">not pinned</span>{{end}}
      · <strong>Workspace:</strong> {{.WorkspaceModeUsed}}</p>
   <p><strong>Started:</strong> {{.StartedAt.Format "2006-01-02 15:04:05 UTC"}}
@@ -72,8 +72,10 @@
     <div class="rd-pipeline-step done">Dedup</div>
     <div class="rd-pipeline-step done">Prove</div>
   </div>
-  {{else if eq .Status "running"}}
-  <div class="rd-alert info">Scan is still running. Refresh this page to see updated results.</div>
+  {{else if or (eq .Status "running") (eq .Status "started")}}
+  <div class="rd-alert info" data-scan-auto-refresh="5">
+    Scan is {{.Status}} — this page refreshes automatically every 5 seconds.
+  </div>
   <div class="rd-pipeline">
     <div class="rd-pipeline-step done">Prepare</div>
     <div class="rd-pipeline-step active">Scan</div>
@@ -81,6 +83,7 @@
     <div class="rd-pipeline-step">Dedup</div>
     <div class="rd-pipeline-step">Prove</div>
   </div>
+  <p class="rd-muted" data-scan-refresh-label>Refreshing soon…</p>
   {{end}}
 
   {{if .Error}}<div class="rd-alert">{{.Error}}</div>{{end}}
@@ -150,14 +153,16 @@
 <div class="rd-card">
   <h2>Scanner results</h2>
   <p class="rd-muted"><strong>binary_missing</strong> means the tool was not installed in this runtime — the repo was <em>not</em> scanned by that engine. A missing scanner does <em>not</em> mean the repository is clean.</p>
+  <p class="rd-muted"><strong>parse_failed</strong> means the scanner ran but its output could not be parsed — treat coverage for that tool as incomplete and check Detail/Error below.</p>
+  <p class="rd-muted"><strong>timed_out</strong> / <strong>failed</strong> mean the tool did not finish successfully.</p>
   <table class="rd-table">
     <tr><th>Scanner</th><th>Status</th><th>Findings</th><th>Detail</th></tr>
     {{range $.Data.ScannerResults}}
-    <tr>
+    <tr {{if or (eq .Status "parse_failed") (eq .Status "timed_out") (eq .Status "failed") (eq .Status "error")}}class="rd-row-warn"{{end}}>
       <td><strong>{{.ScannerName}}</strong></td>
       <td><span class="rd-badge {{scannerBadge .Status}}">{{.Status}}</span></td>
       <td>{{.FindingsCount}}</td>
-      <td class="rd-muted">{{if .Detail}}{{.Detail}}{{else}}—{{end}}</td>
+      <td class="rd-muted">{{if .Error}}{{.Error}}{{else if .Detail}}{{.Detail}}{{else}}—{{end}}</td>
     </tr>
     {{else}}
     <tr><td colspan="4" class="rd-muted">No scanner results recorded</td></tr>

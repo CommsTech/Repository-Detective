@@ -29,7 +29,6 @@ scan_profile: beta_standard
 ai_startup_test_enabled: false
 enable_llm_auditors: false
 enable_ai_risk_checks: false
-qdrant_enabled: false
 remediation_pr_enabled: false
 evidence_closure_enabled: true
 evidence_closure_close_issues: false
@@ -56,7 +55,7 @@ Per-repo AI policy: use `ai_policy: disabled` unless explicitly testing LLM feat
 | Scoring fixed (non-zero when findings exist) | **Pass** | `analyzers/scoring.go` |
 | Gitleaks parser fixed (8.x report file) | **Pass** | `957421f` |
 | Theme persistence fixed | **Pass** | `ui/static/theme.js`, bootstrap in `layout.html`, tests |
-| Qdrant disabled by default | **Pass** | Redacted/local-only code path; not production-enabled |
+| Qdrant | **Removed** | Fingerprint + SQLite forge mappings only |
 | AI startup test disabled by default | **Pass** | `ai_startup_test_enabled: false` |
 | Pre-install audit works | **Pass** | On-demand API; RuView dogfood complete |
 | Remediation PRs disabled by default | **Pass** | `remediation_pr_enabled: false` |
@@ -90,7 +89,6 @@ Per-repo AI policy: use `ai_policy: disabled` unless explicitly testing LLM feat
 | Gap | Classification |
 |-----|----------------|
 | `/health` ~4s latency (scanner probes) | nice-to-have |
-| Qdrant embedding 1024 + UUID point-id | blocks Qdrant enablement only |
 | checkov/grype intermittent timeouts | nice-to-have |
 | Full multi-user RBAC | blocks SaaS; slice 1 local login optional (`auth_mode=local`); default `api_key_only` |
 | No tenant isolation | blocks SaaS |
@@ -115,7 +113,7 @@ Per-repo AI policy: use `ai_policy: disabled` unless explicitly testing LLM feat
 
 ### Blocks SaaS
 
-- Auth/RBAC, tenant isolation, billing, Qdrant production path, health latency SLA.
+- Auth/RBAC, tenant isolation, billing, health latency SLA.
 
 ### Nice-to-have
 

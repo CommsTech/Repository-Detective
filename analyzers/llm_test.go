@@ -3,7 +3,7 @@ package analyzers_test
 import (
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/analyzers"
+	"git.commsnet.org/commstech/repository-detective/analyzers"
 )
 
 func TestLLMEnabledMatrix(t *testing.T) {

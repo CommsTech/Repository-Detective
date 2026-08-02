@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/store"
 )
 
 type recordedPost struct {

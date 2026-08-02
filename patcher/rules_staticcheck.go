@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	"git.commsnet.org/commstech/bugbot/remediation"
+	"git.commsnet.org/commstech/repository-detective/remediation"
 )
 
 var fmtSprintfLiteral = regexp.MustCompile(`fmt\.Sprintf\("([^"\\]|\\.)*"\)`)

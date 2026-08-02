@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"strings"
 
-	"git.commsnet.org/commstech/bugbot/redact"
+	"git.commsnet.org/commstech/repository-detective/redact"
 )
 
 var logSecretPatterns = []*regexp.Regexp{

@@ -1,4 +1,4 @@
-module git.commsnet.org/commstech/bugbot
+module git.commsnet.org/commstech/repository-detective
 
 go 1.25.0
 

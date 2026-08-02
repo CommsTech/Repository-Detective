@@ -4,13 +4,13 @@ Recorded: 2026-06-10 (updated)
 
 ## Wiki remote
 
-`https://git.commsnet.org/commstech/Bugbot.wiki.git`
+`https://git.commsnet.org/commstech/repository-detective.wiki.git`
 
 ## Repo wiki enabled?
 
 ```bash
 curl -s -H "Authorization: token $BUGBOT_GITEA_TOKEN" \
-  https://git.commsnet.org/api/v1/repos/commstech/Bugbot | jq '.has_wiki'
+  https://git.commsnet.org/api/v1/repos/commstech/repository-detective | jq '.has_wiki'
 ```
 
 Result: **`true`** (admin/push/pull permissions present).
@@ -18,9 +18,9 @@ Result: **`true`** (admin/push/pull permissions present).
 ## Failing command (token redacted)
 
 ```bash
-AUTH_URL="https://oauth2:***@git.commsnet.org/commstech/Bugbot.wiki.git"
+AUTH_URL="https://oauth2:***@git.commsnet.org/commstech/repository-detective.wiki.git"
 git clone "$AUTH_URL" /tmp/wiki-test
-# fatal: unable to access '...Bugbot.wiki.git/': The requested URL returned error: 500
+# fatal: unable to access '...repository-detective.wiki.git/': The requested URL returned error: 500
 ```
 
 ## One-page push (2026-06-10)
@@ -56,7 +56,7 @@ Result: **success** — 23 pages listed; no git operations.
 
 | Step | Result |
 |------|--------|
-| `git clone https://git.commsnet.org/commstech/Bugbot.wiki.git` | **HTTP 500** (unchanged) |
+| `git clone https://git.commsnet.org/commstech/repository-detective.wiki.git` | **HTTP 500** (unchanged) |
 | Manual wiki page in UI | not attempted (operator) |
 | Gitea server logs | not available from this host |
 
@@ -85,7 +85,7 @@ Look for: uninitialized `bugbot.wiki.git`, hook failure, storage permissions, DB
 
 None on client. **Operator next step:**
 
-1. On Gitea host, verify `{data}/gitea-repositories/commstech/bugbot.wiki.git` exists and is writable.
+1. On Gitea host, verify `{data}/gitea-repositories/commstech/repository-detective.wiki.git` exists and is writable.
 2. Create one manual wiki page in Gitea UI (initializes wiki storage).
 3. Retry one-page `git push`; then run `./scripts/publish-gitea-wiki.sh`.
 4. If still 500, repair/recreate wiki bare repo per Gitea admin docs.

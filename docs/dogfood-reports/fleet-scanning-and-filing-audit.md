@@ -23,7 +23,7 @@ Mode: **dry-run**
 | commstech/AI_Money_Maker | on | off | on | 2026-06-03T00:41:35.787874486Z | yes | 70 | 0 | schedule_disabled |
 | commstech/AMMBER | on | off | on | 2026-06-09T23:59:35.809418802Z | yes | 318 | 0 | schedule_disabled |
 | commstech/Alexa_to_Homeassistant | on | off | on | 2026-06-01T14:34:20.821461276Z | yes | 14 | 0 | schedule_disabled |
-| commstech/Bugbot | on | off | on | 2026-06-17T17:23:25.958180513Z | no | 2457 | 0 | schedule_disabled |
+| commstech/repository-detective | on | off | on | 2026-06-17T17:23:25.958180513Z | no | 2457 | 0 | schedule_disabled |
 | commstech/Business | on | off | on | 2026-06-17T12:12:09.215223279Z | no | 137 | 0 | schedule_disabled |
 | commstech/Dockhand | on | off | on | 2026-06-17T12:12:18.94524582Z | no | 0 | 0 | schedule_disabled |
 | commstech/DriveRepair | on | off | on | 2026-06-02T14:31:58.923467517Z | yes | 77 | 0 | schedule_disabled |

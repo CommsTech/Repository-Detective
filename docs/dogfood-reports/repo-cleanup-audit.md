@@ -1,7 +1,7 @@
 # Repository cleanup audit
 
 **Date:** 2026-06-05  
-**Scope:** `commstech/Bugbot` working tree — classify operator leftovers vs product artifacts.
+**Scope:** `commstech/repository-detective` working tree — classify operator leftovers vs product artifacts.
 
 ---
 

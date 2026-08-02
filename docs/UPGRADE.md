@@ -11,7 +11,7 @@ Use this guide when moving Repository Detective between versions on a homelab or
 ## Standard upgrade (Docker Compose)
 
 ```bash
-cd /path/to/Bugbot
+cd /path/to/repository-detective
 git pull   # or replace image tag
 docker compose build repository-detective
 docker compose up -d repository-detective

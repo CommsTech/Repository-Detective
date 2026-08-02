@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/store"
 )
 
 // dashboardChartPayload is embedded in the dashboard for Chart.js initialization.
@@ -71,6 +71,11 @@ func buildDashboardChartJSONWithStore(ctx context.Context, qs store.QueryStore, 
 	}
 
 	trend := scanTrendFromRecent(summary.RecentScans, 14)
+	if qs != nil && ctx != nil {
+		if byDay, err := qs.CountCompletedScansByDay(ctx, time.Now().UTC().AddDate(0, 0, -13)); err == nil {
+			trend = scanTrendFromDayCounts(byDay, 14)
+		}
+	}
 	for _, t := range trend {
 		payload.ScanTrendLabels = append(payload.ScanTrendLabels, t.label)
 		payload.ScanTrendValues = append(payload.ScanTrendValues, t.value)
@@ -155,9 +160,17 @@ func scanTrendFromRecent(scans []store.ScanWithRepo, days int) []trendPoint {
 		if _, ok := byDay[day]; !ok {
 			continue
 		}
-		byDay[day] += issuesFromScanSummary(s.SummaryJSON)
+		byDay[day]++
 	}
-	var out []trendPoint
+	return scanTrendFromDayCounts(byDay, days)
+}
+
+func scanTrendFromDayCounts(byDay map[string]int, days int) []trendPoint {
+	if days <= 0 {
+		days = 14
+	}
+	now := time.Now().UTC()
+	out := make([]trendPoint, 0, days)
 	for i := days - 1; i >= 0; i-- {
 		d := now.AddDate(0, 0, -i)
 		key := d.Format("2006-01-02")

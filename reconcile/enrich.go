@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/store"
 )
 
 // EnrichmentComment builds a structured update for an existing forge issue.

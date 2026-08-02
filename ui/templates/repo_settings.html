@@ -44,14 +44,14 @@
 <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
 <div class="rd-card">
 <h2>Scan profile</h2>
-<p class="rd-muted">Effective profile: <strong>{{.Data.ProfileMeta.ScanProfile}}</strong>
+<p class="rd-muted">Effective profile: <strong>{{profileLabel .Data.ProfileMeta.ScanProfile}}</strong>
 {{if .Data.ProfileMeta.ProfileModified}}<span class="rd-alert">(modified)</span>{{end}}
 · source={{.Data.ProfileMeta.ProfileSource}}</p>
 <label>Scan profile<select name="scan_profile">
-<option value="">inherit ({{.Data.ProfileMeta.ScanProfile}})</option>
-{{range .Data.Profiles}}<option value="{{.}}" {{if eq $.Data.SelectedProfile .}}selected{{end}}>{{.}}</option>{{end}}
+<option value="">inherit ({{profileLabel .Data.ProfileMeta.ScanProfile}})</option>
+{{range .Data.Profiles}}<option value="{{.ID}}" {{if eq $.Data.SelectedProfile .ID}}selected{{end}}>{{.Label}} — {{.Summary}}</option>{{end}}
 </select></label>
-<p class="rd-muted">{{index .Data.ProfileDescriptions .Data.ProfileMeta.ScanProfile}}</p>
+<p class="rd-muted">{{profileDesc .Data.ProfileMeta.ScanProfile}}</p>
 <div class="badges">
 <span class="badge">Security {{if .Data.ProfileMeta.EffectiveProfileSummary.SecurityScanners}}on{{else}}off{{end}}</span>
 <span class="badge">Go {{if .Data.ProfileMeta.EffectiveProfileSummary.GoScanners}}on{{else}}off{{end}}</span>

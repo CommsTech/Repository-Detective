@@ -128,9 +128,10 @@ func BetaNoiseRuleOverrides() map[string]string {
 }
 
 // ProfileAllowsBetaNoiseSuppression reports whether graph/debug rules should stay report-only.
+// Deep (and legacy maintainer_deep) keep graph findings actionable; Light/Standard calm noise.
 func ProfileAllowsBetaNoiseSuppression(scanProfile string) bool {
 	switch normalizeKey(scanProfile) {
-	case "maintainer_deep", "strict_security", "custom", "":
+	case "deep", "maintainer_deep", "custom", "":
 		return false
 	default:
 		return true

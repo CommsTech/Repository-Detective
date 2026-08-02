@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"strings"
 
-	"git.commsnet.org/commstech/bugbot/forge"
+	"git.commsnet.org/commstech/repository-detective/forge"
 )
 
 const defaultRepoPageSize = 100

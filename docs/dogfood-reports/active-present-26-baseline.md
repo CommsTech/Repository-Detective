@@ -4,7 +4,7 @@ Recorded: 2026-06-02
 Latest commit: `14ddb7c`  
 Latest scan: `27fbd37be97ef5f7`
 
-## Product repo (commstech/Bugbot)
+## Product repo (commstech/repository-detective)
 
 | Metric | Value |
 |---|---:|
@@ -56,7 +56,7 @@ Regression guard: `TestPersistFindingsWithRepoCalibrationRules` in `store/persis
 
 ## Remaining blockers
 
-1. Gitea wiki HTTP 500 on `Bugbot.wiki.git` push (server-side; does not block burn-down)
+1. Gitea wiki HTTP 500 on `repository-detective.wiki.git` push (server-side; does not block burn-down)
 2. Gitea issue #48 (operator task)
 3. act_runner token rotation if earlier soak token was real
 

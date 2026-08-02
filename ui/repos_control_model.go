@@ -1,7 +1,7 @@
 package ui
 
 import (
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/store"
 )
 
 // RepoControlPageView is template data for the fleet control page.
@@ -9,7 +9,7 @@ type RepoControlPageView struct {
 	Rows                 []RepoControlRowView
 	FleetHealth          store.FleetHealthSummary
 	ScanTriggerEnabled   bool
-	Profiles          []string
+	Profiles          []store.ScanProfileOption
 	RemediationPREnabled  bool
 	LLMSanityGateEnabled  bool
 	BacklogControlEnabled bool
@@ -38,7 +38,7 @@ func (h *Handler) buildRepoControlPage(rows []store.RepositoryControlRow, fleet 
 	out := RepoControlPageView{
 		FleetHealth:           fleet,
 		ScanTriggerEnabled:    h.ScanTriggerEnabled(),
-		Profiles:              store.AllowedScanProfiles,
+		Profiles:              store.PrimaryScanProfileOptions,
 		RemediationPREnabled:  h.remediationPREnabled,
 		LLMSanityGateEnabled:  h.platform.LLMSanityGateEnabled,
 		BacklogControlEnabled: h.platform.BacklogControlEnabled,

@@ -3,7 +3,7 @@ package issues
 import (
 	"strings"
 
-	"git.commsnet.org/commstech/bugbot/ai"
+	"git.commsnet.org/commstech/repository-detective/ai"
 )
 
 // BuildLabels returns Repository Detective labels for Gitea issue submission.

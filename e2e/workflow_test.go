@@ -6,11 +6,11 @@ import (
 	"testing"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/closure"
-	"git.commsnet.org/commstech/bugbot/gitea"
-	"git.commsnet.org/commstech/bugbot/issues"
-	"git.commsnet.org/commstech/bugbot/remediation"
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/closure"
+	"git.commsnet.org/commstech/repository-detective/gitea"
+	"git.commsnet.org/commstech/repository-detective/issues"
+	"git.commsnet.org/commstech/repository-detective/remediation"
+	"git.commsnet.org/commstech/repository-detective/store"
 )
 
 // End-to-end lifecycle tests using SQLite + fakes (no live Gitea).

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/graph"
+	"git.commsnet.org/commstech/repository-detective/graph"
 )
 
 func TestOrphanFileDescriptionIncludesPathAndCounts(t *testing.T) {

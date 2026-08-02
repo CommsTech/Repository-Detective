@@ -6,9 +6,8 @@ Repository Detective stores scan history, findings, suppressions, remediation pl
 
 | Asset | Default path | Notes |
 |-------|----------------|-------|
-| SQLite database | `./data/bugbot.db` (or `database.path` in config) | Primary state: repos, scans, findings, suppressions, remediation |
+| SQLite database | `./data/bugbot.db` (or `database.path` in config) | Primary state: repos, scans, findings, suppressions, remediation, forge issue mappings |
 | Configuration | `config/config.yaml`, `.env` | Not in git if gitignored; includes Gitea token, API keys, AI endpoints |
-| Qdrant (optional) | External volume if `qdrant` enabled | Semantic dedup / embeddings only when configured |
 
 ## SQLite backup (recommended)
 
@@ -41,10 +40,6 @@ Restart the service after copy.
 2. Rotate tokens if the backup may have been exposed.
 3. Reconcile `gitea_token`, `github_token`, `runner_shared_secret`, and `api_key` with current forge settings.
 
-## Qdrant (if enabled)
-
-Back up the Qdrant storage volume or snapshot per your Qdrant deployment docs. Restoring Qdrant without SQLite is safe but may require re-indexing; restoring SQLite without Qdrant may reduce semantic dedup quality until rescans repopulate vectors.
-
 ## Verification checklist
 
 - [ ] Dashboard loads with expected repo count
@@ -67,7 +62,6 @@ Back up the Qdrant storage volume or snapshot per your Qdrant deployment docs. R
 | SQLite database | `data/bugbot.db` (~30 MB) | All repos, scans, findings, remediation, closure |
 | Configuration | `config/config.yaml` | Operator config (tokens live in host `.env`, not copied into docs) |
 | TLS CAs | `certs/` | Optional; copied into restore test for parity |
-| Qdrant | External (`BUGBOT_QDRANT_*` in `.env`) | **Not** included in file backup — note only |
 
 ### Procedure (executed)
 
@@ -134,7 +128,6 @@ docker start repository-detective
 
 ### Known caveats
 
-- **Qdrant** vectors are not restored with SQLite; semantic dedup may be weaker until rescans repopulate embeddings.
 - **`.env` secrets** are not in the DB backup; restore host must supply the same `.env` or equivalent secrets.
 - **Schema forward migration:** Restoring an older DB into a **newer** binary applies pending migrations on startup (tested at v13; v14+ will apply when image is upgraded).
 - **File copy vs online backup:** Drill used `cp` while container was stopped for consistency; for zero-downtime, use `sqlite3 .backup`.

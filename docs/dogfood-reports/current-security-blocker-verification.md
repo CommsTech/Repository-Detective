@@ -69,7 +69,7 @@ evidence:
   - registerControlPlaneRoutes: same middleware on control plane group
   - /api/v1/onboard/* requires API key
   - /api/v1/runner/* worker routes use RequireRunnerHMAC (not operator API key)
-  - Preferred X-Repository-Detective-API-Key + legacy X-Bugbot-API-Key + Bearer
+  - Preferred X-Repository-Detective-API-Key + legacy X-Repository-Detective-API-Key + Bearer
   - Local session auth applies to /ui only, not JSON API
 tests:
   - TestRequireAPIKeyAuthAcceptsPreferredAndLegacyHeaders

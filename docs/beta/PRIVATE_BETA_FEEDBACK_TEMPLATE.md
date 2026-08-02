@@ -1,6 +1,6 @@
 # Private beta feedback template
 
-Copy into operator feedback channel or use Gitea template [`beta_feedback`](https://git.commsnet.org/commstech/Bugbot/issues/new?template=beta_feedback). **Redact secrets before sending.**
+Copy into operator feedback channel or use Gitea template [`beta_feedback`](https://git.commsnet.org/commstech/repository-detective/issues/new?template=beta_feedback). **Redact secrets before sending.**
 
 **Workflow:** report-only scan → capture scan ID → review findings → file Gitea issue with correct template → never paste secrets.
 

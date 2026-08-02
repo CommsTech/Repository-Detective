@@ -1,8 +1,12 @@
 package operator
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestCheckToolsRespectsConfig(t *testing.T) {
+	InvalidateToolsCache()
 	tools := CheckTools(ScannerConfig{EnableTrivy: true, EnableGrype: false})
 	byName := map[string]ToolStatus{}
 	for _, tool := range tools {
@@ -21,5 +25,8 @@ func TestCheckToolsRespectsConfig(t *testing.T) {
 		if tool.LastChecked == "" {
 			t.Fatalf("tool %s missing last_checked", tool.Name)
 		}
+	}
+	if byName["git"].BinaryInstalled && strings.TrimSpace(byName["git"].Version) == "" {
+		t.Fatal("installed git should report a version string")
 	}
 }

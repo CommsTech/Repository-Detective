@@ -40,7 +40,7 @@ type grypeLocation struct {
 func RunGrype(ctx context.Context, logger *logrus.Logger, dir string, cfg Config) RunResult {
 	result := RunResult{Scanner: "grype"}
 	if !commandAvailable("grype") {
-		logger.Warn("[SCANNER:grype] binary not found — install grype or use the official Bugbot Docker image")
+		logger.Warn("[SCANNER:grype] binary not found — install grype or use the official Repository Detective Docker image")
 		result.Status = StatusBinaryMissing
 		return result
 	}

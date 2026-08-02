@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/analyzers"
-	"git.commsnet.org/commstech/bugbot/internal/scanid"
-	"git.commsnet.org/commstech/bugbot/runner"
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/analyzers"
+	"git.commsnet.org/commstech/repository-detective/internal/scanid"
+	"git.commsnet.org/commstech/repository-detective/runner"
+	"git.commsnet.org/commstech/repository-detective/store"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )

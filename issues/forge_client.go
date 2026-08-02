@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"git.commsnet.org/commstech/bugbot/gitea"
-	"git.commsnet.org/commstech/bugbot/github"
+	"git.commsnet.org/commstech/repository-detective/gitea"
+	"git.commsnet.org/commstech/repository-detective/github"
 )
 
 // ForgeIssue is a normalized issue from Gitea or GitHub.

@@ -43,6 +43,7 @@ func (c *Client) ResolveRef(ctx context.Context, owner, repo, ref string) (strin
 	seen := make(map[string]struct{}, len(candidates))
 	tried := make([]string, 0, len(candidates))
 	var lastProbeErr error
+	definitiveProbes := 0
 	for _, candidate := range candidates {
 		candidate = strings.TrimSpace(candidate)
 		if candidate == "" {
@@ -57,12 +58,22 @@ func (c *Client) ResolveRef(ctx context.Context, owner, repo, ref string) (strin
 		if probeErr != nil {
 			lastProbeErr = probeErr
 			if ctx.Err() != nil {
-				return "", fmt.Errorf("no valid ref found for %s/%s (context canceled while probing %q): %w", owner, repo, candidate, ctx.Err())
+				return "", fmt.Errorf("unable to verify refs for %s/%s (context canceled while probing %q): %w", owner, repo, candidate, ctx.Err())
 			}
 			continue
 		}
+		definitiveProbes++
 		if ok {
 			return candidate, nil
+		}
+	}
+
+	if definitiveProbes == 0 {
+		if lastProbeErr != nil {
+			return "", fmt.Errorf("unable to verify refs for %s/%s: %w", owner, repo, lastProbeErr)
+		}
+		if repoErr != nil {
+			return "", fmt.Errorf("unable to verify refs for %s/%s: %w", owner, repo, repoErr)
 		}
 	}
 

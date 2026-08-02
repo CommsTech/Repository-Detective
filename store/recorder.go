@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/ai"
-	"git.commsnet.org/commstech/bugbot/issues"
-	"git.commsnet.org/commstech/bugbot/scanners"
+	"git.commsnet.org/commstech/repository-detective/ai"
+	"git.commsnet.org/commstech/repository-detective/issues"
+	"git.commsnet.org/commstech/repository-detective/scanners"
 	"github.com/sirupsen/logrus"
 )
 

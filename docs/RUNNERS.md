@@ -32,7 +32,6 @@ Runners must **not** create Gitea issues, labels, PRs, commit statuses, or notif
 
 - Gitea token
 - AI / embedding keys
-- Qdrant credentials
 - Operator API key
 - Database DSN
 - Webhook secret
@@ -169,7 +168,7 @@ Example Gitea Actions step:
             --workspace "$REPOSITORY_DETECTIVE_WORKSPACE"
 ```
 
-Legacy `BUGBOT_*` env names still work via [envcompat](../internal/config/envcompat).
+Legacy `REPOSITORY_DETECTIVE_*` env names still work via [envcompat](../internal/config/envcompat).
 
 ### Runner binary (source build)
 

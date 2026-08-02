@@ -10,7 +10,7 @@ gitea_status_context: bugbot/security-scan
 gitea_status_fail_on: high
 gitea_status_warn_on: medium
 gitea_status_include_scanner_failures: true
-public_url: https://bugbot.example.com
+public_url: https://repository-detective.example.com
 ```
 
 Environment equivalents:
@@ -21,7 +21,7 @@ BUGBOT_GITEA_STATUS_CONTEXT=bugbot/security-scan
 BUGBOT_GITEA_STATUS_FAIL_ON=high
 BUGBOT_GITEA_STATUS_WARN_ON=medium
 BUGBOT_GITEA_STATUS_INCLUDE_SCANNER_FAILURES=true
-BUGBOT_PUBLIC_URL=https://bugbot.example.com
+BUGBOT_PUBLIC_URL=https://repository-detective.example.com
 ```
 
 Default is **disabled** (`enable_gitea_status: false`).

@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/remediation"
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/remediation"
+	"git.commsnet.org/commstech/repository-detective/store"
 )
 
 func TestRemediationPlanCRUD(t *testing.T) {

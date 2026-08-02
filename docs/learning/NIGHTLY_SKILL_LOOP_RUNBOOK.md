@@ -18,7 +18,7 @@ It is **not** the nightly fleet scanner. For repo cron schedules and webhook vs 
 ## Run once (observe only)
 
 ```bash
-cd /path/to/Bugbot
+cd /path/to/repository-detective
 python3 scripts/nightly-rd-skill-loop.py --daily-mode --no-promote
 ```
 
@@ -85,14 +85,14 @@ crontab -e
 Example (02:17 daily, Tier 1 only):
 
 ```cron
-17 2 * * * cd /home/commstech/Bugbot && ./scripts/rd-deterministic-daily.sh >> reports/nightly-rd-evolution/cron.log 2>&1
+17 2 * * * cd /home/commstech/repository-detective && ./scripts/rd-deterministic-daily.sh >> reports/nightly-rd-evolution/cron.log 2>&1
 ```
 
 **Cron-environment smoke test** (minimal env, same as cron):
 
 ```bash
 env -i HOME="$HOME" PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
-  bash -lc 'cd /home/commstech/Bugbot && ./scripts/rd-deterministic-daily.sh'
+  bash -lc 'cd /home/commstech/repository-detective && ./scripts/rd-deterministic-daily.sh'
 ```
 
 After the first scheduled run:

@@ -3,7 +3,7 @@ package store
 import (
 	"encoding/json"
 
-	"git.commsnet.org/commstech/bugbot/patcher"
+	"git.commsnet.org/commstech/repository-detective/patcher"
 )
 
 // PatchAttemptFromDomain converts a domain attempt to a store record.

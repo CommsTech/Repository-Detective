@@ -12,7 +12,7 @@
 | Repository | `commstech/rd-filing-scratch` (private) |
 | RD repo ID | 221 |
 | Filing enabled | per-repo only (`policy_level=issue_only`, `issue_policy=all`, `severity_gate=low`) |
-| Product repo `commstech/Bugbot` | unchanged — 0 forge issues |
+| Product repo `commstech/repository-detective` | unchanged — 0 forge issues |
 | Beta repo `commstech/PCAP_Analyser` | unchanged — 0 forge issues |
 
 ## Fixture

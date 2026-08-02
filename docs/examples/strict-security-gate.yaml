@@ -1,7 +1,7 @@
 # Strict security gate — more scanners, higher bar before merge
 # Use after baseline dogfooding succeeds.
 
-scan_profile: strict_security
+scan_profile: standard
 enable_trivy: true
 enable_grype: true
 enable_gitleaks: true

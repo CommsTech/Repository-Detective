@@ -3,7 +3,7 @@ package profile
 import (
 	"strings"
 
-	"git.commsnet.org/commstech/bugbot/ai"
+	"git.commsnet.org/commstech/repository-detective/ai"
 )
 
 // NormalizeInput carries context for finding normalization.

@@ -1,6 +1,6 @@
 package preinstall
 
-import "git.commsnet.org/commstech/bugbot/store"
+import "git.commsnet.org/commstech/repository-detective/store"
 
 // AuditNotifier receives sanitized pre-install audit events (optional).
 type AuditNotifier interface {

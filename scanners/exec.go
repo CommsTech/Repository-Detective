@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/internal/security"
+	"git.commsnet.org/commstech/repository-detective/internal/security"
 )
 
 // commandExitError wraps subprocess failures with timeout and output context.

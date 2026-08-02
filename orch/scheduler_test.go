@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/limiter"
-	"git.commsnet.org/commstech/bugbot/orch"
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/limiter"
+	"git.commsnet.org/commstech/repository-detective/orch"
+	"git.commsnet.org/commstech/repository-detective/store"
 	"github.com/sirupsen/logrus"
 )
 

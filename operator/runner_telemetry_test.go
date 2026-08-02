@@ -3,7 +3,7 @@ package operator_test
 import (
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/operator"
+	"git.commsnet.org/commstech/repository-detective/operator"
 )
 
 func TestToolStatusStates(t *testing.T) {

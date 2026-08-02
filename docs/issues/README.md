@@ -1,6 +1,6 @@
 # Prepared Gitea backlog (closeout sprint)
 
-These files are **issue-ready markdown** for `commstech/Bugbot`. They were **not** auto-created on Gitea (no unattended API bulk create).
+These files are **issue-ready markdown** for `commstech/repository-detective`. They were **not** auto-created on Gitea (no unattended API bulk create).
 
 Create manually or extend `scripts/gitea-backlog-setup.sh` after reviewing for duplicates against [ISSUE_BACKLOG.md](../ISSUE_BACKLOG.md).
 

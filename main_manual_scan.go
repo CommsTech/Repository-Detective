@@ -3,8 +3,8 @@ package main
 import (
 	"context"
 
-	"git.commsnet.org/commstech/bugbot/internal/scanid"
-	"git.commsnet.org/commstech/bugbot/ui"
+	"git.commsnet.org/commstech/repository-detective/internal/scanid"
+	"git.commsnet.org/commstech/repository-detective/ui"
 )
 
 func wireScanTrigger() {

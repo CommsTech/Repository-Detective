@@ -5,8 +5,8 @@ import (
 	"sync"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/limiter"
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/limiter"
+	"git.commsnet.org/commstech/repository-detective/store"
 	"github.com/robfig/cron/v3"
 	"github.com/sirupsen/logrus"
 )

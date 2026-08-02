@@ -15,32 +15,31 @@ import (
 	"syscall"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/ai"
-	"git.commsnet.org/commstech/bugbot/analyzers"
-	"git.commsnet.org/commstech/bugbot/api"
-	"git.commsnet.org/commstech/bugbot/containers"
-	"git.commsnet.org/commstech/bugbot/openclaw"
-	"git.commsnet.org/commstech/bugbot/forge"
-	"git.commsnet.org/commstech/bugbot/gitea"
-	"git.commsnet.org/commstech/bugbot/github"
-	"git.commsnet.org/commstech/bugbot/graph"
-	"git.commsnet.org/commstech/bugbot/handlers"
-	"git.commsnet.org/commstech/bugbot/health"
-	"git.commsnet.org/commstech/bugbot/internal/config/envcompat"
-	"git.commsnet.org/commstech/bugbot/internal/middleware"
-	"git.commsnet.org/commstech/bugbot/internal/scanid"
-	"git.commsnet.org/commstech/bugbot/internal/security"
-	"git.commsnet.org/commstech/bugbot/issues"
-	"git.commsnet.org/commstech/bugbot/limiter"
-	"git.commsnet.org/commstech/bugbot/memory/qdrant"
-	"git.commsnet.org/commstech/bugbot/operator"
-	"git.commsnet.org/commstech/bugbot/orch"
-	"git.commsnet.org/commstech/bugbot/preinstall"
-	"git.commsnet.org/commstech/bugbot/profile"
-	"git.commsnet.org/commstech/bugbot/runner"
-	"git.commsnet.org/commstech/bugbot/scanners"
-	"git.commsnet.org/commstech/bugbot/store"
-	"git.commsnet.org/commstech/bugbot/ui"
+	"git.commsnet.org/commstech/repository-detective/ai"
+	"git.commsnet.org/commstech/repository-detective/analyzers"
+	"git.commsnet.org/commstech/repository-detective/api"
+	"git.commsnet.org/commstech/repository-detective/containers"
+	"git.commsnet.org/commstech/repository-detective/openclaw"
+	"git.commsnet.org/commstech/repository-detective/forge"
+	"git.commsnet.org/commstech/repository-detective/gitea"
+	"git.commsnet.org/commstech/repository-detective/github"
+	"git.commsnet.org/commstech/repository-detective/graph"
+	"git.commsnet.org/commstech/repository-detective/handlers"
+	"git.commsnet.org/commstech/repository-detective/health"
+	"git.commsnet.org/commstech/repository-detective/internal/config/envcompat"
+	"git.commsnet.org/commstech/repository-detective/internal/middleware"
+	"git.commsnet.org/commstech/repository-detective/internal/scanid"
+	"git.commsnet.org/commstech/repository-detective/internal/security"
+	"git.commsnet.org/commstech/repository-detective/issues"
+	"git.commsnet.org/commstech/repository-detective/limiter"
+	"git.commsnet.org/commstech/repository-detective/operator"
+	"git.commsnet.org/commstech/repository-detective/orch"
+	"git.commsnet.org/commstech/repository-detective/preinstall"
+	"git.commsnet.org/commstech/repository-detective/profile"
+	"git.commsnet.org/commstech/repository-detective/runner"
+	"git.commsnet.org/commstech/repository-detective/scanners"
+	"git.commsnet.org/commstech/repository-detective/store"
+	"git.commsnet.org/commstech/repository-detective/ui"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -139,15 +138,6 @@ type Config struct {
 	IACScannerMaxFindings                   int                                  `mapstructure:"iac_scanner_max_findings"`
 	ScannerTimeoutSeconds                   int                                  `mapstructure:"scanner_timeout_seconds"`
 	MinIssueConfidence                      float64                              `mapstructure:"min_issue_confidence"`
-	QdrantEnabled                           bool                                 `mapstructure:"qdrant_enabled"`
-	QdrantURL                               string                               `mapstructure:"qdrant_url"`
-	QdrantAPIKey                            string                               `mapstructure:"qdrant_api_key"`
-	QdrantCollection                        string                               `mapstructure:"qdrant_collection"`
-	QdrantVectorSize                        int                                  `mapstructure:"qdrant_vector_size"`
-	QdrantSimilarityThreshold               float64                              `mapstructure:"qdrant_similarity_threshold"`
-	EmbeddingModel                          string                               `mapstructure:"embedding_model"`
-	EmbeddingBaseURL                        string                               `mapstructure:"embedding_base_url"`
-	EmbeddingAPIKey                         string                               `mapstructure:"embedding_api_key"`
 	AutoCreateIssues                        bool                                 `mapstructure:"auto_create_issues"`
 	MaxIssuesPerRun                         int                                  `mapstructure:"max_issues_per_run"`
 	SkipLowSeverity                         bool                                 `mapstructure:"skip_low_severity"`
@@ -462,12 +452,6 @@ func loadConfig() error {
 	viper.SetDefault("iac_scanner_max_findings", 100)
 	viper.SetDefault("scanner_timeout_seconds", 120)
 	viper.SetDefault("min_issue_confidence", 0.5)
-	viper.SetDefault("qdrant_enabled", false)
-	viper.SetDefault("qdrant_url", "http://127.0.0.1:6333")
-	viper.SetDefault("qdrant_collection", "cah_findings")
-	viper.SetDefault("qdrant_vector_size", 1024)
-	viper.SetDefault("qdrant_similarity_threshold", 0.7)
-	viper.SetDefault("embedding_model", "text-embedding-3-small")
 	viper.SetDefault("auto_create_issues", true)
 	viper.SetDefault("max_issues_per_run", 50)
 	viper.SetDefault("max_concurrent_analyses", 5)
@@ -511,7 +495,7 @@ func loadConfig() error {
 	viper.SetDefault("preinstall_sandbox_allow_submodules", false)
 	viper.SetDefault("preinstall_sandbox_network_mode", "restricted")
 	viper.SetDefault("preinstall_sandbox_readonly_workspace", true)
-	viper.SetDefault("repository_detective_project_url", "https://git.commsnet.org/commstech/bugbot")
+	viper.SetDefault("repository_detective_project_url", "https://git.commsnet.org/commstech/repository-detective")
 	viper.SetDefault("enable_health_checks", true)
 	viper.SetDefault("enable_tech_debt_checks", true)
 	viper.SetDefault("enable_reliability_checks", true)
@@ -873,7 +857,7 @@ func requireAPIKeyAuth() gin.HandlerFunc {
 
 		apiKey := c.GetHeader("X-Repository-Detective-API-Key")
 		if apiKey == "" {
-			apiKey = c.GetHeader("X-Bugbot-API-Key")
+			apiKey = c.GetHeader("X-Bugbot-API-Key") // legacy alias
 		}
 		if apiKey == "" {
 			if auth := c.GetHeader("Authorization"); strings.HasPrefix(auth, "Bearer ") {
@@ -1085,6 +1069,7 @@ func initializeComponents() error {
 				MaxIssuesPerScan:             config.Reporting.MaxIssuesPerScan,
 				ScanPolicyMode:               store.DeploymentScanMode(globalSnapshot),
 				NotificationsEnabled:         config.NotificationsEnabled,
+				SchedulerEnabled:             config.SchedulerEnabled,
 				RunnerDelegationEnabled:      config.RunnerDelegationEnabled,
 				RunnerRequireHMAC:            config.RunnerRequireHMAC,
 				RunnerMode:                   config.RunnerMode,
@@ -1177,7 +1162,7 @@ func initializeComponents() error {
 		logger,
 	)
 
-	// Initialize AI client (multi-provider) when LLM or Qdrant embeddings are required
+	// Initialize AI client (multi-provider) when LLM auditors are required
 	initAIStatus()
 	if config.needsAIProvider() {
 		var err error
@@ -1218,7 +1203,7 @@ func initializeComponents() error {
 			logger.Info("AI startup test disabled — provider configured but not tested until manual test or AI-enabled scan")
 		}
 	} else {
-		logger.Info("AI provider not required — deterministic-only mode (no LLM auditors, Qdrant disabled)")
+		logger.Info("AI provider not required — deterministic-only mode (no LLM auditors)")
 		aiClient = nil
 	}
 	initOpenClawReview()
@@ -1249,54 +1234,6 @@ func initializeComponents() error {
 	}
 	analysisEngine = analyzers.NewEngine(giteaClient, githubClient, aiClient, analysisConfig, logger)
 
-	embedModel := strings.TrimSpace(config.EmbeddingModel)
-	usingOpenClawEmbed := false
-	if embedModel == "" || embedModel == "text-embedding-3-small" {
-		provider := strings.ToLower(strings.TrimSpace(config.AIProvider))
-		base := strings.ToLower(firstNonEmpty(config.EmbeddingBaseURL, config.AIBaseURL, config.OpenWebUIURL))
-		if provider == "openclaw" || strings.Contains(base, "18789") || strings.Contains(base, "openclaw") {
-			embedModel = "openclaw"
-			usingOpenClawEmbed = true
-			logger.Info("Embedding model defaulted to openclaw for OpenClaw-compatible gateway")
-		}
-	} else if strings.EqualFold(embedModel, "openclaw") || strings.HasPrefix(strings.ToLower(embedModel), "openclaw/") {
-		usingOpenClawEmbed = true
-	}
-	vectorSize := config.QdrantVectorSize
-	if usingOpenClawEmbed && (vectorSize <= 0 || vectorSize == 1024) {
-		// OpenClaw gateway currently returns fixed 768-d embeddings.
-		vectorSize = 768
-		logger.Info("Qdrant vector size adjusted to 768 for OpenClaw embeddings")
-	}
-	qdrantCfg := qdrant.Config{
-		Enabled:             config.QdrantEnabled,
-		URL:                 config.QdrantURL,
-		APIKey:              config.QdrantAPIKey,
-		Collection:          config.QdrantCollection,
-		VectorSize:          vectorSize,
-		SimilarityThreshold: config.QdrantSimilarityThreshold,
-	}
-	embedder := ai.NewEmbedder(ai.EmbedderConfig{
-		BaseURL:               firstNonEmpty(config.EmbeddingBaseURL, config.AIBaseURL, config.OpenWebUIURL),
-		APIKey:                firstNonEmpty(config.EmbeddingAPIKey, config.AIAPIKey, config.OpenWebUIToken),
-		Model:                 embedModel,
-		Dimensions:            vectorSize,
-		InsecureSkipTLSVerify: config.AIInsecureSkipTLSVerify,
-	})
-	semanticStore := issues.NewSemanticStore(qdrant.NewStore(qdrantCfg), embedder, logger)
-	if semanticStore.Enabled() {
-		if err := semanticStore.Prepare(ctx); err != nil {
-			if config.SkipStartupChecks {
-				logger.Debugf("Qdrant prepare failed (semantic dedup disabled): %v", err)
-			} else {
-				logger.Warnf("Qdrant prepare failed (semantic dedup disabled): %v", err)
-			}
-		} else {
-			logger.Infof("Qdrant semantic dedup enabled (collection=%s, threshold=%.2f)",
-				config.QdrantCollection, config.QdrantSimilarityThreshold)
-		}
-	}
-
 	// Initialize issue manager
 	issueConfig := &issues.Config{
 		AutoCreateIssues:   config.AutoCreateIssues,
@@ -1321,7 +1258,7 @@ func initializeComponents() error {
 	if issueConfig.GitHubBaseURL == "" || strings.Contains(issueConfig.GitHubBaseURL, "api.github.com") {
 		issueConfig.GitHubBaseURL = "https://github.com"
 	}
-	issueManager = issues.NewManager(giteaClient, githubIssueClient, issueConfig, logger, semanticStore)
+	issueManager = issues.NewManager(giteaClient, githubIssueClient, issueConfig, logger)
 	initIssueLinkBridge()
 	initReconcileEngine()
 	if operatorUI != nil && reconcileEngine != nil {
@@ -1988,7 +1925,6 @@ func createIssuesFromResult(ctx context.Context, forgeType, owner, repo string, 
 				Commit:             commitRef,
 				PullRequest:        prNumber,
 				ScanID:             result.ScanID,
-				UseSemanticDedup:   store.UseSemanticDedup(effective),
 				MinIssueConfidence: effective.ConfidenceGate,
 				ForceIssueCreation: true,
 			}
@@ -2450,15 +2386,14 @@ func handleStatus(c *gin.Context) {
 func handleAbout(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"product_name":        "Repository Detective",
-		"legacy_name":         "Bugbot",
 		"tagline":             "Inspect. Analyze. Improve.",
 		"version":             version,
 		"documentation_index": "/docs/README.md",
 		"compatibility": gin.H{
-			"bugbot_env":          true,
-			"bugbot_labels":       true,
-			"bugbot_fingerprints": true,
-			"label_compat_mode":   issues.LabelCompatMode(),
+			"legacy_env_aliases":       true,
+			"legacy_label_lookup":      true,
+			"legacy_fingerprint_prefix": true,
+			"label_compat_mode":        issues.LabelCompatMode(),
 		},
 		"safe_loop": "detect → issue → plan → approve → patch PR → merge → rescan → verified closure",
 	})
@@ -2492,9 +2427,6 @@ func (c *Config) effectiveAIProvider() string {
 
 // needsAIProvider reports whether an AI backend must be configured at startup.
 func (c *Config) needsAIProvider() bool {
-	if c.QdrantEnabled {
-		return true
-	}
 	depth := c.AnalysisDepth
 	if depth <= 0 {
 		depth = 3

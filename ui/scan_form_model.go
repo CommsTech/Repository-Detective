@@ -3,7 +3,7 @@ package ui
 import (
 	"strings"
 
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/store"
 )
 
 // ScanFormView drives manual scan UI (modal and full-page form).
@@ -11,7 +11,7 @@ type ScanFormView struct {
 	Repo              store.Repository
 	Effective         store.EffectiveSettings
 	ProfileMeta       store.EffectiveSettingsMeta
-	Profiles          []string
+	Profiles          []store.ScanProfileOption
 	ScanEnabled       bool
 	DefaultReportOnly bool
 	IssueFilingOn     bool
@@ -47,7 +47,7 @@ func (h *Handler) buildScanFormView(repo store.Repository, effective store.Effec
 		Repo:                  repo,
 		Effective:             effective,
 		ProfileMeta:           meta,
-		Profiles:              store.AllowedScanProfiles,
+		Profiles:              store.PrimaryScanProfileOptions,
 		ScanEnabled:           h.ScanTriggerEnabled(),
 		DefaultReportOnly:     filing.DryRunCheckboxDefault,
 		IssueFilingOn:         filing.IssueFilingAllowed,

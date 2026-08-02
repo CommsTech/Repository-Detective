@@ -4,7 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"git.commsnet.org/commstech/bugbot/scanners"
+	"git.commsnet.org/commstech/repository-detective/scanners"
 )
 
 // LoadWorkspaceFiles reads text files from a workspace for graph analysis.

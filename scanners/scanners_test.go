@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/scanners"
+	"git.commsnet.org/commstech/repository-detective/scanners"
 )
 
 func TestCreateWorkspace(t *testing.T) {

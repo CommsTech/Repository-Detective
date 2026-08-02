@@ -39,7 +39,7 @@ func preserveGlobalAIPreferences(merged EffectiveSettings, global GlobalSettings
 		return merged
 	}
 	switch normalizedGlobalProfile(global.ScanProfile) {
-	case ScanProfileFast, ScanProfilePreinstallCautious:
+	case ScanProfileLight:
 		return merged
 	}
 	merged.EnableLLMAuditors = true
@@ -369,10 +369,11 @@ func ApplySettingsUpdateWithProfilePolicy(existing RepoSettings, u SettingsUpdat
 	if u.ScanProfile != nil {
 		if err := ValidateScanProfile(*u.ScanProfile); err == nil {
 			profile := NormalizeScanProfile(*u.ScanProfile)
+			u.ScanProfile = &profile
 			if profile != ScanProfileCustom && !SettingsUpdateHasAdvancedFields(u) {
 				return RepoSettings{
 					RepositoryID: existing.RepositoryID,
-					ScanProfile:  u.ScanProfile,
+					ScanProfile:  &profile,
 					UpdatedAt:    existing.UpdatedAt,
 				}
 			}

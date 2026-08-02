@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/ai"
+	"git.commsnet.org/commstech/repository-detective/ai"
 )
 
 const systemPrompt = `You are an advisory security reviewer for Repository Detective.

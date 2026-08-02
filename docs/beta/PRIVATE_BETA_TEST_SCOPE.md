@@ -13,7 +13,7 @@
 | Review findings pages | Including detail, severity, confidence, calibration hints |
 | Review SBOM pages | Empty state or artifact when available |
 | Review repository map / graph | When graph enabled on scan |
-| Submit feedback | Using [Gitea issue templates](https://git.commsnet.org/commstech/Bugbot/issues/new) (`.gitea/ISSUE_TEMPLATE/`) or docs in `docs/beta/` |
+| Submit feedback | Using [Gitea issue templates](https://git.commsnet.org/commstech/repository-detective/issues/new) (`.gitea/ISSUE_TEMPLATE/`) or docs in `docs/beta/` |
 | View configure / health pages | Read-only config review |
 | Export executive report | Browser print/PDF when available |
 

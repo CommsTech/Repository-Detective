@@ -9,7 +9,7 @@ import (
 	"syscall"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/runner"
+	"git.commsnet.org/commstech/repository-detective/runner"
 	"github.com/sirupsen/logrus"
 )
 

@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/sbom"
+	"git.commsnet.org/commstech/repository-detective/sbom"
 )
 
 func TestGenerateAndCheckNoManifest(t *testing.T) {

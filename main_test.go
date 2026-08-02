@@ -13,7 +13,6 @@ func TestNeedsAIProvider(t *testing.T) {
 	cfg := &Config{
 		AnalysisDepth:     1,
 		EnableLLMAuditors: false,
-		QdrantEnabled:     false,
 	}
 	if cfg.needsAIProvider() {
 		t.Fatal("deterministic-only config should not require AI")
@@ -28,12 +27,6 @@ func TestNeedsAIProvider(t *testing.T) {
 	cfg.EnableLLMAuditors = true
 	if !cfg.needsAIProvider() {
 		t.Fatal("depth 3 with LLM auditors enabled should require AI")
-	}
-
-	cfg.EnableLLMAuditors = false
-	cfg.QdrantEnabled = true
-	if !cfg.needsAIProvider() {
-		t.Fatal("Qdrant enabled should require AI for embeddings")
 	}
 }
 

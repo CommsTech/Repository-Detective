@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/openclaw"
+	"git.commsnet.org/commstech/repository-detective/openclaw"
 )
 
 func TestSecretValueRedacted(t *testing.T) {

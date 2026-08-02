@@ -36,10 +36,12 @@ Recorded at sprint start (parent commit `e7ecd2f`).
 | `ui/static/graph.js` | `__bugbotGraph` → `__rdGraph` |
 | `ui/configure_model.go` | bugbot.db display → legacy note |
 | `docs/beta/CURSOR_BUGBOT_COMPARISON.md` | Keep — external product comparison |
-| `BUGBOT_*` env / `X-Bugbot-API-Key` | Keep — legacy compatibility |
+| `REPOSITORY_DETECTIVE_*` env / `X-Repository-Detective-API-Key` | Keep — legacy compatibility |
 | `data/bugbot.db` path | Keep — migration risk |
 
-## Qdrant config state
+## Qdrant
+
+Removed from the product. Historical note: prior builds had optional semantic dedup via Qdrant; current builds use fingerprint + SQLite forge mappings only.
 
 | Setting | Value |
 |---------|-------|

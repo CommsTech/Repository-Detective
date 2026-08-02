@@ -2,7 +2,7 @@
 
 Use for reproducible defects (crashes, wrong HTTP status, data loss, scan failures).
 
-**Preferred:** Gitea template [`bug_report`](https://git.commsnet.org/commstech/Bugbot/issues/new?template=bug_report) on the product repo.
+**Preferred:** Gitea template [`bug_report`](https://git.commsnet.org/commstech/repository-detective/issues/new?template=bug_report) on the product repo.
 
 ---
 

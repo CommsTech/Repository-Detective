@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"git.commsnet.org/commstech/bugbot/internal/security"
+	"git.commsnet.org/commstech/repository-detective/internal/security"
 	"github.com/gin-gonic/gin"
 )
 
@@ -59,7 +59,7 @@ func (h *Handler) extractUIAPIKey(c *gin.Context) (string, bool) {
 	if key := c.GetHeader("X-Repository-Detective-API-Key"); key != "" {
 		return key, false
 	}
-	if key := c.GetHeader("X-Bugbot-API-Key"); key != "" {
+	if key := c.GetHeader("X-Bugbot-API-Key"); key != "" { // legacy alias
 		return key, false
 	}
 	if auth := c.GetHeader("Authorization"); strings.HasPrefix(auth, "Bearer ") {

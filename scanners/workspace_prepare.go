@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/models"
+	"git.commsnet.org/commstech/repository-detective/models"
 )
 
 // ArchiveDownloader fetches a repository archive from Gitea.

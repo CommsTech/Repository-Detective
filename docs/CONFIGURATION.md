@@ -49,7 +49,7 @@ At least one forge token: Gitea and/or GitHub (see `.env.example`).
 X-Repository-Detective-API-Key: <same as REPOSITORY_DETECTIVE_API_KEY>
 ```
 
-Legacy `X-Bugbot-API-Key` and `?api_key=` (UI homelab only) still accepted.
+Legacy `X-Repository-Detective-API-Key` and `?api_key=` (UI homelab only) still accepted.
 
 ### Local admin auth (optional slice 1)
 
@@ -64,7 +64,7 @@ Default: `auth_mode: api_key_only` (no behavior change).
 | `csrf_enabled` | `true` | UI form POST protection |
 | `local_admin_bootstrap_enabled` | `true` | First-owner setup at `/ui/bootstrap` |
 
-Env: `REPOSITORY_DETECTIVE_AUTH_MODE`, `REPOSITORY_DETECTIVE_SESSION_SECRET`, `REPOSITORY_DETECTIVE_SESSION_TTL_HOURS`, `REPOSITORY_DETECTIVE_CSRF_ENABLED` (legacy `BUGBOT_*` aliases supported).
+Env: `REPOSITORY_DETECTIVE_AUTH_MODE`, `REPOSITORY_DETECTIVE_SESSION_SECRET`, `REPOSITORY_DETECTIVE_SESSION_TTL_HOURS`, `REPOSITORY_DETECTIVE_CSRF_ENABLED` (legacy `REPOSITORY_DETECTIVE_*` aliases supported).
 
 Full guide: [AUTH_LOCAL.md](AUTH_LOCAL.md).
 
@@ -74,9 +74,8 @@ Full guide: [AUTH_LOCAL.md](AUTH_LOCAL.md).
 
 | Key | Beta default | Notes |
 |-----|--------------|-------|
-| `scan_profile` | `beta_standard` | [SCAN_PROFILES.md](SCAN_PROFILES.md) |
+| `scan_profile` | `standard` | [SCAN_PROFILES.md](SCAN_PROFILES.md) — Light / Standard / Deep / Custom |
 | `enable_llm_auditors` | `false` | Deterministic-first |
-| `qdrant_enabled` | `false` | Local/redacted only when enabled |
 | `remediation_pr_enabled` | `false` | Safe PRs off until operator enables |
 | `evidence_closure_close_issues` | `false` | Comments only |
 | `preinstall_audit_enabled` | `true` | Pre-install audit on-ramp (report-only; no issue filing) |
@@ -97,7 +96,7 @@ Stored in SQLite `repo_settings` — override global policy per repo from UI or 
 
 ## Scan profiles
 
-Set globally or per repo. Private beta: **`beta_standard`**.
+Set globally or per repo. Recommended day-to-day: **`standard`**.
 
 ---
 

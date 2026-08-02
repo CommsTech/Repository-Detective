@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/gitea"
+	"git.commsnet.org/commstech/repository-detective/gitea"
 	"github.com/sirupsen/logrus"
 )
 

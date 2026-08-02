@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/ai"
-	"git.commsnet.org/commstech/bugbot/gitea"
+	"git.commsnet.org/commstech/repository-detective/ai"
+	"git.commsnet.org/commstech/repository-detective/gitea"
 	"github.com/sirupsen/logrus"
 )
 
@@ -64,7 +64,7 @@ func TestCreateIssuesUpdatesExistingFingerprint(t *testing.T) {
 	defer server.Close()
 
 	client := gitea.NewClient(server.URL, "token", logrus.New())
-	manager := NewManager(client, nil, GetDefaultConfig(), logrus.New(), nil)
+	manager := NewManager(client, nil, GetDefaultConfig(), logrus.New())
 
 	issue := ai.CodeIssue{
 		Title:       "Secret finding",
@@ -101,23 +101,5 @@ func TestCreateIssuesUpdatesExistingFingerprint(t *testing.T) {
 	}
 	if comments != 1 {
 		t.Fatalf("expected one still-present comment, got %d", comments)
-	}
-}
-
-func TestDuplicateCommentBodySanitizesSecrets(t *testing.T) {
-	body := DuplicateCommentBody(&ai.CodeIssue{
-		Title:       "Secret",
-		Severity:    "high",
-		Category:    "secret",
-		Confidence:  0.9,
-		Source:      "gitleaks",
-		Fingerprint: "bugbot-x",
-		File:        "a.py",
-		LineNumber:  1,
-		Description: "desc",
-		CodeSnippet: `token="AKIAIOSFODNN7EXAMPLE"`,
-	}, 0.91)
-	if strings.Contains(body, "AKIAIOSFODNN7EXAMPLE") {
-		t.Fatal("duplicate comment leaked raw secret")
 	}
 }

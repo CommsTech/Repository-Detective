@@ -18,7 +18,7 @@ remediation_pr_max_diff_lines: 100
 remediation_pr_validation_timeout_seconds: 300
 ```
 
-Environment variables (prefer `REPOSITORY_DETECTIVE_*`; legacy `BUGBOT_*` via envcompat):
+Environment variables (prefer `REPOSITORY_DETECTIVE_*`; legacy `REPOSITORY_DETECTIVE_*` via envcompat):
 
 ```text
 REPOSITORY_DETECTIVE_REMEDIATION_PR_ENABLED

@@ -34,7 +34,7 @@ func TestCreateCommitStatusPayload(t *testing.T) {
 	client := NewClient(server.URL, "secret-token", logrus.New())
 	err := client.CreateCommitStatus(context.Background(), "owner", "repo", "abc1234", &CommitStatus{
 		State:       CommitStatePending,
-		TargetURL:   "https://bugbot.example.com",
+		TargetURL:   "https://repository-detective.example.com",
 		Description: "Bugbot scan started",
 		Context:     "bugbot/security-scan",
 	})
@@ -77,7 +77,7 @@ func TestStatusReporterPending(t *testing.T) {
 	reporter := NewStatusReporter(
 		NewClient(server.URL, "token", logrus.New()),
 		true,
-		ChecksConfig{Context: "bugbot/security-scan", TargetURL: "https://bugbot.example.com"},
+		ChecksConfig{Context: "bugbot/security-scan", TargetURL: "https://repository-detective.example.com"},
 		logrus.New(),
 	)
 	reporter.ReportPending(context.Background(), "owner", "repo", "abc1234567890")

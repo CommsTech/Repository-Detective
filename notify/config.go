@@ -4,7 +4,7 @@ import (
 	"sort"
 	"strings"
 
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/store"
 )
 
 // Config holds global notification configuration (credentials stay here only).

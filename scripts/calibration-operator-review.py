@@ -49,7 +49,7 @@ def api(method: str, path: str, api_key: str, body: dict | None = None) -> dict:
         f"http://127.0.0.1:8081{path}",
         data=data,
         headers={
-            "X-Bugbot-API-Key": api_key,
+            "X-Repository-Detective-API-Key": api_key,
             "Content-Type": "application/json",
         },
         method=method,

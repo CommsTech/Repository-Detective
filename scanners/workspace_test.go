@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/scanners"
+	"git.commsnet.org/commstech/repository-detective/scanners"
 )
 
 func TestValidateWorkspacePathRejectsTraversal(t *testing.T) {

@@ -4,9 +4,9 @@ import (
 	"strconv"
 	"strings"
 
-	"git.commsnet.org/commstech/bugbot/notify"
-	"git.commsnet.org/commstech/bugbot/operator"
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/notify"
+	"git.commsnet.org/commstech/repository-detective/operator"
+	"git.commsnet.org/commstech/repository-detective/store"
 )
 
 // ConfigureSetting is one config key row on the Configure page.
@@ -57,12 +57,12 @@ func buildConfigureSections(
 		{
 			ID: "scheduler", Title: "Scheduler",
 			Status: statusLabel(f.SchedulerEnabled), StatusClass: statusClass(f.SchedulerEnabled),
-			Summary: "Cron-driven scheduled repository scans.", RestartRequired: true,
+			Summary: "Cron-driven scheduled repository scans.", RestartRequired: false,
 			DocPath: "docs/CONFIGURATION.md",
 			Settings: []ConfigureSetting{
 				boolSetting("scheduler_enabled", f.SchedulerEnabled),
 				boolSetting("schedule_enabled", global.ScheduleEnabled),
-				{Key: "schedule_cron", DisplayValue: emptyOrValue(global.ScheduleCron), Source: "config"},
+				{Key: "schedule_cron", DisplayValue: emptyOrValue(global.ScheduleCron), Source: "live"},
 			},
 		},
 		{
@@ -87,7 +87,7 @@ func buildConfigureSections(
 			Status: notificationsConfigureStatus(f.NotificationsEnabled, notifyCfg),
 			StatusClass: notificationsConfigureClass(f.NotificationsEnabled, notifyCfg),
 			Summary: "Webhook, Slack, Discord, or Telegram alerts on scan events.",
-			BetaDefault: "disabled until channel configured", RestartRequired: true,
+			BetaDefault: "disabled until channel configured", RestartRequired: false,
 			DocPath: "docs/CONFIGURATION.md",
 			Settings: []ConfigureSetting{
 				boolSetting("notifications_enabled", f.NotificationsEnabled),
@@ -103,7 +103,7 @@ func buildConfigureSections(
 			StatusClass: preinstallConfigureClass(f.PreinstallAuditEnabled, platform),
 			Summary: "Audit third-party repositories before install — marketing/on-ramp flow. Report-only; never files issues or PRs.",
 			SafetyNote: "HTTPS public repos only; private IPs blocked unless preinstall_allow_private_networks=true. Disclosure drafts require operator approval before external submission.",
-			BetaDefault: "enabled (report-only)", RestartRequired: true, DocPath: "docs/PREINSTALL_AUDIT.md",
+			BetaDefault: "enabled (report-only)", RestartRequired: false, DocPath: "docs/PREINSTALL_AUDIT.md",
 			WorkflowURL: basePath + "/preinstall", WorkflowLabel: "Open pre-install audit workflow",
 			Settings: []ConfigureSetting{
 				boolSetting("preinstall_audit_enabled", f.PreinstallAuditEnabled),
@@ -114,11 +114,11 @@ func buildConfigureSections(
 		{
 			ID: "remediation-planner", Title: "Remediation planner",
 			Status: statusLabel(f.RemediationPlannerEnabled), StatusClass: statusClass(f.RemediationPlannerEnabled),
-			Summary: "Generate remediation plans from findings (no automatic PR).", RestartRequired: true,
+			Summary: "Generate remediation plans from findings (no automatic PR).", RestartRequired: false,
 			DocPath: "docs/REMEDIATION.md",
 			Settings: []ConfigureSetting{
 				boolSetting("remediation_planner_enabled", f.RemediationPlannerEnabled),
-				{Key: "remediation_policy", DisplayValue: global.RemediationPolicy, Source: "config"},
+				{Key: "remediation_policy", DisplayValue: global.RemediationPolicy, Source: "live"},
 			},
 		},
 		{
@@ -127,7 +127,7 @@ func buildConfigureSections(
 			StatusClass: remediationPRConfigureClass(f.RemediationPREnabled, f.RemediationPlannerEnabled, platform),
 			Summary: "Create gated pull requests from approved remediation plans.",
 			SafetyNote: "Beta recommendation: keep disabled until planner output is reviewed. Requires operator approval and passing tests when enabled.",
-			BetaDefault: "disabled", RestartRequired: true, DocPath: "docs/REMEDIATION_PR.md",
+			BetaDefault: "disabled", RestartRequired: false, DocPath: "docs/REMEDIATION_PR.md",
 			Settings: []ConfigureSetting{
 				boolSetting("remediation_pr_enabled", f.RemediationPREnabled),
 				boolSetting("remediation_pr_require_approval", platform.RemediationPRRequireApproval),
@@ -142,7 +142,7 @@ func buildConfigureSections(
 		{
 			ID: "evidence-closure", Title: "Evidence closure",
 			Status: statusLabel(f.EvidenceClosureEnabled), StatusClass: statusClass(f.EvidenceClosureEnabled),
-			Summary: "Verify fixes via rescan evidence before closing findings.", RestartRequired: true,
+			Summary: "Verify fixes via rescan evidence before closing findings.", RestartRequired: false,
 			DocPath: "docs/CLOSURE.md",
 			Settings: []ConfigureSetting{
 				boolSetting("evidence_closure_enabled", f.EvidenceClosureEnabled),
@@ -163,7 +163,7 @@ func buildConfigureSections(
 			StatusClass: openclawConfigureClass(platform),
 			Summary: "Optional second-opinion advisory recommendations on redacted finding summaries — provider-neutral (OpenClaw, OpenAI-compatible, Ollama, custom HTTP JSON).",
 			SafetyNote: "Disabled by default. CAH harness selects uncertain findings only. No raw secrets, full source, or PHI/PII. Deterministic scanners remain source of truth.",
-			BetaDefault: "disabled", RestartRequired: true, DocPath: "docs/AI_RECOMMENDATIONS.md",
+			BetaDefault: "disabled", RestartRequired: false, DocPath: "docs/AI_RECOMMENDATIONS.md",
 			Settings: []ConfigureSetting{
 				boolSetting("ai_recommendations_enabled", platform.OpenClawAIReviewEnabled),
 				{Key: "ai_recommendations_provider", DisplayValue: "openclaw", Source: "default", Hint: "openclaw | openai-compatible | ollama | custom-http-json"},
@@ -179,13 +179,13 @@ func buildConfigureSections(
 		},
 		{
 			ID: "scan-profile", Title: "Scan profile",
-			Status: f.ScanProfile, StatusClass: "medium",
-			Summary: "Deterministic scanner bundle and calibration defaults.", RestartRequired: true,
+			Status: store.ScanProfileLabel(f.ScanProfile), StatusClass: "medium",
+			Summary: store.ScanProfileDescription(f.ScanProfile), RestartRequired: false,
 			DocPath: "docs/SCAN_PROFILES.md",
 			Settings: []ConfigureSetting{
-				{Key: "scan_profile", DisplayValue: f.ScanProfile, Source: "config"},
-				{Key: "analysis_depth", DisplayValue: strconv.Itoa(global.AnalysisDepth), Source: "config"},
-				{Key: "severity_gate", DisplayValue: global.SeverityGate, Source: "config"},
+				{Key: "scan_profile", DisplayValue: store.ScanProfileLabel(f.ScanProfile), Source: "live"},
+				{Key: "analysis_depth", DisplayValue: strconv.Itoa(global.AnalysisDepth), Source: "live"},
+				{Key: "severity_gate", DisplayValue: global.SeverityGate, Source: "live"},
 			},
 		},
 		{

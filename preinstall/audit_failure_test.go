@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/preinstall"
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/preinstall"
+	"git.commsnet.org/commstech/repository-detective/store"
 )
 
 func TestFailedCloneShowsRiskUnavailable(t *testing.T) {

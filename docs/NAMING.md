@@ -2,46 +2,28 @@
 
 | Name | Usage |
 |------|--------|
-| **Repository Detective** | Product/platform name — docs, UI headings, reports, new issue bodies |
-| **Bugbot** | Legacy/internal service name — compatibility for env vars, labels, fingerprints, DB path |
+| **Repository Detective** | Product name — docs, UI, reports, issue bodies, binaries, compose, Gitea repo |
 | **Tagline** | Inspect. Analyze. Improve. |
 
-Repository Detective is the product name. Bugbot remains supported for existing deployments during the transition.
+## Release branding
 
-## Phase 12B (implemented)
+Public release surfaces must say **Repository Detective** only. Do not document or display the old internal project name.
 
-Branding compatibility migration is **implemented**. See [BRANDING_MIGRATION.md](BRANDING_MIGRATION.md) for operator details.
+| Surface | Public release |
+|---------|----------------|
+| Env vars (docs/examples) | `REPOSITORY_DETECTIVE_*` only |
+| API key header (docs/UI) | `X-Repository-Detective-API-Key` |
+| Issue labels (new writes) | `repository-detective/*` (`label_compat_mode: new_only`) |
+| Fingerprint body marker | `Repository Detective fingerprint:` |
+| Go module / Gitea repo | `repository-detective` |
+| Binary / container / image | `repository-detective` |
 
-| Feature | Status |
-|---------|--------|
-| Dual env vars (`BUGBOT_*` + `REPOSITORY_DETECTIVE_*`) | Shipped |
-| Label compat modes (`dual`, `legacy_only`, `new_only`) | Shipped |
-| Dual fingerprint body markers | Shipped |
-| Fingerprint values (`bugbot-<hex>`) | Unchanged |
-| API header alias | Shipped — preferred `X-Repository-Detective-API-Key`; legacy `X-Bugbot-API-Key` accepted |
-| `/api/v1/about` | Shipped |
-| DB table / API path renames | Not in scope |
+## Silent compatibility (not advertised)
 
-## Environment variables
+Existing deployments may still send legacy env prefixes or headers. Runtime continues to accept them via `internal/config/envcompat` and dual API-key header parsing. Fingerprint **values** keep their historical prefix so dedup is not broken. Label **lookup** still finds older issues. These are compatibility shims — not product branding.
 
-**Prefer** `REPOSITORY_DETECTIVE_*` for new deployments.
+See [BRANDING_MIGRATION.md](BRANDING_MIGRATION.md) for operator migration details.
 
-**Legacy** `BUGBOT_*` variables remain fully supported. If both are set for the same key, `REPOSITORY_DETECTIVE_*` wins.
+## Cursor product comparisons
 
-## Issue labels
-
-Default write mode: **`new_only`** — new issues receive `repository-detective`, `repository-detective/*` category and lifecycle labels, `severity/*`, and `automated-review`.
-
-Legacy `bugbot/*` labels are no longer written in `dual` mode (lookup still searches both for existing issues). Use `label_compat_mode: legacy_only` only for rollback.
-
-Configure with `label_compat_mode` in `config.yaml` or `REPOSITORY_DETECTIVE_LABEL_COMPAT_MODE`.
-
-## Fingerprints
-
-New issue bodies use `Repository Detective fingerprint:` but values remain `bugbot-<hex>`.
-
-## Scanner expansion
-
-Deterministic-first scanner roadmap: [SCANNER_ROADMAP.md](SCANNER_ROADMAP.md).
-
-CLI / runner binary: `repository-detective-runner` (Phase 12).
+Docs that compare against **Cursor Bugbot** keep that external product name on purpose (`docs/beta/CURSOR_BUGBOT_*`).

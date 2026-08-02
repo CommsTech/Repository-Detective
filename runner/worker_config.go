@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/internal/config/envcompat"
+	"git.commsnet.org/commstech/repository-detective/internal/config/envcompat"
 )
 
 // WorkerConfig controls a native Repository Detective runner worker process.

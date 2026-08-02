@@ -1,8 +1,8 @@
 package runner
 
 import (
-	"git.commsnet.org/commstech/bugbot/analyzers"
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/analyzers"
+	"git.commsnet.org/commstech/repository-detective/store"
 )
 
 // Config controls runner delegation on the core service.

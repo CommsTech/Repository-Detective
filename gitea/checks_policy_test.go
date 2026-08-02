@@ -3,7 +3,7 @@ package gitea_test
 import (
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/gitea"
+	"git.commsnet.org/commstech/repository-detective/gitea"
 )
 
 func TestEvaluateCommitStatusForPolicyIssueOnly(t *testing.T) {

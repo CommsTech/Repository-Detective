@@ -3,7 +3,7 @@ package analyzers
 import (
 	"strings"
 
-	"git.commsnet.org/commstech/bugbot/gitea"
+	"git.commsnet.org/commstech/repository-detective/gitea"
 )
 
 // looksLikeCommitSHA reports whether ref appears to be a git commit hash.

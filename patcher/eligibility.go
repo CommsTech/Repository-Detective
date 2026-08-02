@@ -3,7 +3,7 @@ package patcher
 import (
 	"strings"
 
-	"git.commsnet.org/commstech/bugbot/remediation"
+	"git.commsnet.org/commstech/repository-detective/remediation"
 )
 
 // SafeFixRolloutPolicy is shown in UI and docs for owned-repo remediation PRs.

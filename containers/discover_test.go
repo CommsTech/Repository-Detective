@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/containers"
+	"git.commsnet.org/commstech/repository-detective/containers"
 )
 
 func TestDiscoverComposeImages(t *testing.T) {

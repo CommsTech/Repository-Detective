@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/closure"
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/closure"
+	"git.commsnet.org/commstech/repository-detective/store"
 	"github.com/gin-gonic/gin"
 )
 

@@ -1,8 +1,25 @@
-# Gitea Bugbot Plugin Architecture
+# Repository Detective Architecture
 
-## Overview
+## Scan profiles
 
-Bugbot integrates with Gitea via webhooks to automatically review code on push and pull request events. It uses a CAH (Contextual Analysis Harness) pipeline with deterministic pre-scanning and multi-provider AI backends.
+Operator-facing profiles are **Light**, **Standard**, **Deep**, and **Custom** (`store/profiles.go`). Legacy IDs (`beta_standard`, `fast`, `maintainer_deep`, …) normalize to these. UI pickers show Label — Summary; display helpers use `profileLabel` / `profileDesc`.
+
+## Issue deduplication
+
+Forge issue filing dedups via **finding fingerprints** and local SQLite `external_issues` mappings (plus forge issue search). There is no external vector / Qdrant integration.
+
+## Scan failure classification
+
+Dashboard/health treat scan `.error` text via `store.ClassifyScanFailure`:
+- `stale_reaped` — restart cleanup noise (`IsNoiseScanFailure`); demoted from primary failed lists
+- `forge_unavailable` — ResolveRef could not definitively probe refs (API/transport outage)
+- `invalid_ref` — missing/default branch after definitive probes
+- Plus clone/auth, timeout, prepare, scanner, config, other
+
+**Actionable failed** = non-noise failures in the last **14 days** (not lifetime).  
+**Unhealthy repos** = repositories whose **latest** scan failed (excluding restart noise).  
+Lifetime `FailedScansCount` remains for historical totals. Parse failures are windowed to 14 days.
+
 
 ## Core Components
 
@@ -61,7 +78,7 @@ Gitea webhook
 ## Module Path
 
 ```
-git.commsnet.org/commstech/bugbot
+git.commsnet.org/commstech/repository-detective
 ```
 
 ## Configuration

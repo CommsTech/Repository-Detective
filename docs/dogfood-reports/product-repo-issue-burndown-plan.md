@@ -1,7 +1,7 @@
 # Product repo issue burndown plan
 
 **Date:** 2026-06-06  
-**Repository:** commstech/Bugbot (Gitea)  
+**Repository:** commstech/repository-detective (Gitea)  
 **Open issues exported:** **241** (paginated API)
 
 ## Summary
@@ -123,7 +123,7 @@ staticcheck ./...   # or CI container
 ./scripts/docker-build-verify.sh   # when Docker changes land
 ```
 
-Then: rescan `commstech/Bugbot`, use `POST /api/v1/findings/{id}/verify-closure`, apply `repository-detective/resolved-verified`, keep `evidence_closure_close_issues=false`.
+Then: rescan `commstech/repository-detective`, use `POST /api/v1/findings/{id}/verify-closure`, apply `repository-detective/resolved-verified`, keep `evidence_closure_close_issues=false`.
 
 ## Issues fixed this sprint (product code, not Gitea close)
 

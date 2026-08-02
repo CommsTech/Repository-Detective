@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/store"
 )
 
 // ActionableFindingView enriches a finding for engineer-actionable UI sections.

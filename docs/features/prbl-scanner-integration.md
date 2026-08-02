@@ -1,7 +1,7 @@
 # Feature Request: Integrate prbl-scanner for AI Code Security
 
 ## Summary
-Add prbl-scanner as a deterministic scanner in Bugbot's security analysis pipeline to catch AI-specific code vulnerabilities that traditional scanners miss.
+Add prbl-scanner as a deterministic scanner in Repository Detective's security analysis pipeline to catch AI-specific code vulnerabilities that traditional scanners miss.
 
 ## Source
 - **prbl-scanner:** https://github.com/noreplywmsplaybook-pixel/prbl-scanner
@@ -25,7 +25,7 @@ Add prbl-scanner as a deterministic scanner in Bugbot's security analysis pipeli
 ## Integration Approach
 
 ### Option 1: Direct Integration (Recommended)
-Add prbl-scanner rules to Bugbot's deterministic scanner registry:
+Add prbl-scanner rules to Repository Detective's deterministic scanner registry:
 
 **Files to modify:**
 - `scanners/deterministic.go` — Register "prbl-scanner" as deterministic source
@@ -63,7 +63,7 @@ func (s *PrblScanner) Scan(ctx context.Context, workspaceRoot string) ([]Finding
     }
     
     // Parse JSON output into Finding structs
-    // Map PRBL-* rule IDs to Bugbot finding schema
+    // Map PRBL-* rule IDs to Repository Detective finding schema
     // Return findings for CAH processing
 }
 
@@ -73,7 +73,7 @@ func init() {
 ```
 
 ### Option 2: Submodule + CI Integration
-Add prbl-scanner as git submodule, run in CI pipeline before Bugbot analysis:
+Add prbl-scanner as git submodule, run in CI pipeline before Repository Detective analysis:
 ```bash
 git submodule add https://github.com/noreplywmsplaybook-pixel/prbl-scanner.git scanners/prbl-scanner
 # Run in .gitea/workflows/security.yml
@@ -82,9 +82,9 @@ git submodule add https://github.com/noreplywmsplaybook-pixel/prbl-scanner.git s
 ```
 
 ### Option 3: Rule Porting
-Port prbl-scanner regex/AST patterns directly into Bugbot's existing deterministic rules (`scanners/deterministic.go`):
+Port prbl-scanner regex/AST patterns directly into Repository Detective's existing deterministic rules (`scanners/deterministic.go`):
 - No external dependency
-- Tighter integration with Bugbot finding schema
+- Tighter integration with Repository Detective finding schema
 - More maintenance burden (sync upstream changes)
 
 ## Configuration
@@ -125,14 +125,14 @@ prbl_scanner_skip_patterns:
 
 ## Testing Strategy
 
-1. Clone prbl-scanner testdata into Bugbot `testdata/prbl/`
+1. Clone prbl-scanner testdata into Repository Detective `testdata/prbl/`
 2. Add Go tests verifying each rule detection
-3. Run against known vulnerable repos (Bugbot itself, internal projects)
+3. Run against known vulnerable repos (Repository Detective itself, internal projects)
 4. Measure false positive rate vs prbl-scanner baseline
 
 ## Next Steps
 
-- [ ] Review prbl-scanner LICENSE (ensure compatible with Bugbot)
+- [ ] Review prbl-scanner LICENSE (ensure compatible with Repository Detective)
 - [ ] Choose integration approach (Option 1 recommended)
 - [ ] Create CMB draft for approval
 - [ ] Implement scanner wrapper

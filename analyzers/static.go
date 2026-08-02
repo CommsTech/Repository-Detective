@@ -4,8 +4,8 @@ import (
 	"regexp"
 	"strings"
 
-	"git.commsnet.org/commstech/bugbot/models"
-	"git.commsnet.org/commstech/bugbot/profile"
+	"git.commsnet.org/commstech/repository-detective/models"
+	"git.commsnet.org/commstech/repository-detective/profile"
 )
 
 type staticRule struct {

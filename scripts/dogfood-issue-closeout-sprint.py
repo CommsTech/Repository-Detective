@@ -353,7 +353,7 @@ def write_plan(rows: list[dict], open_before: int, scan_id: str) -> None:
     close_resolved = counts.get("close_now_resolved_verified", 0)
     close_dup = counts.get("close_now_duplicate", 0)
     lines = [
-        f"# Issue closeout plan — commstech/Bugbot\n",
+        f"# Issue closeout plan — commstech/repository-detective\n",
         f"Generated: {now}\n",
         f"Gitea open issues (start): **{open_before}**\n",
         f"Latest scan: **`{scan_id}`**\n",

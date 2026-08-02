@@ -3,7 +3,7 @@ package preinstall_test
 import (
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/preinstall"
+	"git.commsnet.org/commstech/repository-detective/preinstall"
 )
 
 func TestValidateRepoURLRejectsFileScheme(t *testing.T) {

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/ai"
+	"git.commsnet.org/commstech/repository-detective/ai"
 )
 
 // Lifecycle label constants (Repository Detective namespace; legacy bugbot/* recognized in lookup).

@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/store"
 )
 
 func TestListScheduledRepositories(t *testing.T) {

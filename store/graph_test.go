@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/graph"
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/graph"
+	"git.commsnet.org/commstech/repository-detective/store"
 )
 
 func TestScanGraphSaveGet(t *testing.T) {

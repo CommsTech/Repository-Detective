@@ -3,8 +3,8 @@ package main
 import (
 	"context"
 
-	"git.commsnet.org/commstech/bugbot/issues"
-	"git.commsnet.org/commstech/bugbot/issuelink"
+	"git.commsnet.org/commstech/repository-detective/issues"
+	"git.commsnet.org/commstech/repository-detective/issuelink"
 )
 
 type issueLinkBridge struct {

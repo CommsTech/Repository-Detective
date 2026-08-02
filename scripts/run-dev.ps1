@@ -19,7 +19,7 @@ $env:BUGBOT_LOG_LEVEL = "info"
 
 Write-Host "Starting Gitea Bugbot on http://localhost:8080"
 Write-Host "  Health:  http://localhost:8080/health"
-Write-Host "  Status:  http://localhost:8080/api/v1/status  (header X-Bugbot-API-Key: demo-bugbot-key)"
+Write-Host "  Status:  http://localhost:8080/api/v1/status  (header X-Repository-Detective-API-Key: demo-bugbot-key)"
 Write-Host ""
 
 go run .

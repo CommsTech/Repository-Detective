@@ -1,7 +1,105 @@
-# Gitea Bugbot Plugin - Implementation Status
+# Repository Detective - Implementation Status
 
 **Last updated:** 2026-08-02  
-**Repository:** https://git.commsnet.org/commstech/Bugbot.git
+**Repository:** https://git.commsnet.org/commstech/repository-detective.git
+
+## Live deploy (2026-08-02) — Product rename + Gitea sync
+
+| Item | Value |
+|------|-------|
+| Focus | Sync uncommitted work; public brand is Repository Detective |
+| Shipped | Go module `repository-detective`; Gitea repo `commstech/repository-detective`; docs/UI scrub; silent legacy env/header/fingerprint shims retained |
+| Live hotpatch baseline | `rc-invalid-ref-truth` (+ rename in source) |
+
+## Live deploy (2026-08-02) — Invalid-ref / fleet failure truthfulness
+
+| Item | Value |
+|------|-------|
+| Focus | `no valid ref` mass failures + dashboard counting historical noise as actionable |
+| Finding | July 25–26 fleet failures were forge-probe outages mislabeled as missing refs; repos recovered (latest scans completed) |
+| Shipped | ResolveRef returns `unable to verify refs` on probe outages; actionable failures = 14d non-noise; unhealthy-repos = failed latest scan; buckets windowed |
+| Live | `rc-invalid-ref-truth` |
+
+## Live deploy (2026-08-02) — Review follow-ups (stale scans / parse failures / AI UX)
+
+| Item | Value |
+|------|-------|
+| Focus | External review: stale-reaped noise, parse failures, AI enablement friction |
+| Shipped | Actionable vs stale failed-scan split; failure reason buckets; parse_failed surfacing; Deep/AI callout on Configure; Pre-install + health CTAs on dashboard |
+| Live | `rc-review-followups` |
+| Note | ~332 failed scans are **invalid_ref** (missing default branch), not stale reaps (~15). Stale reaps are demoted from primary lists. |
+
+### Deferred backlog (from same review)
+
+| Priority | Item | Why deferred |
+|----------|------|--------------|
+| HIGH | Root-cause fix for `no valid ref` fleet failures | Needs forge/ref investigation per repo class |
+| MEDIUM | Decompose flat `Config` (~180 fields) + split `main.go` bootstrap | Large safe refactor; schedule separately |
+| MEDIUM | GitHub forge parity (RC-unproven) | Product expansion |
+| MEDIUM | Syft/SBOM completeness | Image/tooling |
+| MEDIUM | Finding interactive filters / MTTR charts / exports | UI expansion |
+| LOW | RBAC multi-operator | Auth slice 2 |
+| LOW | Notifications default-on polish | Ops preference |
+
+## Live deploy (2026-08-02) — System Health UX
+
+| Item | Value |
+|------|-------|
+| Focus | Scanner versions showed `unknown`; no failure drill-down; no easy product issue report |
+| Change | Parallel cached version probes; scanner-failure + failed-scan tables; Report issue prefills `system_health.md` on Gitea (no auto-submit) |
+| Live | `rc-health-ux` |
+| Note | Hard-refresh `/ui/health`; first version probe after restart may take a few seconds then caches 5m |
+
+## Live deploy (2026-08-02) — Qdrant removed
+
+| Item | Value |
+|------|-------|
+| Focus | Qdrant semantic dedup unused / empty collections / ops cost |
+| Change | Removed `memory/qdrant`, embeddings, semantic issue path; fingerprint + SQLite forge mappings only |
+| Live | `rc-no-qdrant` (after hotpatch + env recreate) |
+| Monitor | Fingerprint dedup accuracy via SQLite `external_issues` + forge reopen/update behavior |
+
+## Live deploy (2026-08-02) — Intuitive scan profile names
+
+| Item | Value |
+|------|-------|
+| Focus | Unintuitive profile IDs (`beta_standard`, `fast`, `maintainer_deep`, …) |
+| Change | Operator profiles are **Light / Standard / Deep / Custom**; legacy IDs still map |
+| Live | `rc-scan-profiles` (after hotpatch) |
+| Note | Hard-refresh Configure / Repos / Scan form so labels update |
+
+## Live deploy (2026-08-02) — Learning page graphical UI
+
+| Item | Value |
+|------|-------|
+| Focus | Learning page was tables/wall of text vs dashboard Learning health cards |
+| Live | `rc-learning-ui`; `/ui/learning` has stats, meters, charts, recommendation cards |
+| Note | Hard-refresh so `learning-charts.js` / `theme.css` load |
+
+## Live deploy (2026-08-02) — Dashboard 14-day scan trend fix
+
+| Item | Value |
+|------|-------|
+| Focus | Scan activity graph showed everything on the last day |
+| Live | `rc-scan-trend`; chart counts completed scans per UTC day across full 14-day window |
+| Note | Hard-refresh dashboard; Jul 25–26 stay at 0 because those days were failed-only in DB |
+
+## Live deploy (2026-08-02) — Manual scan UX + health responsiveness
+
+| Item | Value |
+|------|-------|
+| Focus | Start scan felt locked; health/UI stalled on tool probes |
+| Live | `rc-scan-ux`; `/health` ~1ms after warm; Start scan → scan detail with auto-refresh |
+| Note | Hard-refresh browser so embedded `app.js` updates load |
+
+## Live deploy (2026-08-02) — Configure UI save fix
+
+| Item | Value |
+|------|-------|
+| Focus | Configure page save appeared to do nothing |
+| Live | `rc-configure-save`, healthy; `/ui/configure` ~90ms |
+| Fix | Skip tool probes on Configure; sticky Save; live apply of feature toggles; clear saved banner |
+| Note | Notifications can show **degraded** when enabled but no webhook/Slack/etc. secrets in `.env` — that is expected |
 
 ## Live deploy (2026-08-02) — release readiness / fleet burn-down
 
@@ -20,7 +118,7 @@
 
 | Item | Value |
 |------|-------|
-| Focus | Clear open findings for `commstech/Bugbot` (repo_id=1) from Repository Detective |
+| Focus | Clear open findings for `commstech/repository-detective` (repo_id=1) from Repository Detective |
 | Commits | `adff149`, `a26a5f1`, plus placeholder TECH-MARKER fix on `main` |
 | Live | `rc-adff149`, healthy, tools **10/10** |
 | Dogfood scan | `fed458d08455a5f8` completed (report-only) |
@@ -84,7 +182,7 @@ Key runtime fixes shipped:
 ## Current State: BUILD PASSING (Go 1.25) + CORE TESTS PASSING
 
 ```bash
-go build -mod=vendor -o bin/gitea-bugbot .
+go build -mod=vendor -o bin/repository-detective .
 go test -mod=vendor ./issues ./handlers ./internal/auth ./gitea
 ```
 
@@ -141,7 +239,7 @@ web/                 → Embedded onboarding assets
 
 ```yaml
 api_key: ""   # set via .env only — never commit secrets
-public_url: "https://bugbot.example.com"
+public_url: "https://repository-detective.example.com"
 ai_provider: openai
 enable_security: true
 enable_quality: true

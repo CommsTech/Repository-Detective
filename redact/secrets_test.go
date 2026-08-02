@@ -23,7 +23,7 @@ func TestSecretEvidenceRedactsAPIKeyPatterns(t *testing.T) {
 }
 
 func TestSecretEvidencePreservesSafeText(t *testing.T) {
-	in := "scan completed for repository commstech/Bugbot"
+	in := "scan completed for repository commstech/repository-detective"
 	if got := SecretEvidence(in); got != in {
 		t.Fatalf("expected unchanged safe text, got %q", got)
 	}

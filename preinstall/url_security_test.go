@@ -4,7 +4,7 @@ import (
 	"net"
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/preinstall"
+	"git.commsnet.org/commstech/repository-detective/preinstall"
 )
 
 func mockPublicDNS() func() {

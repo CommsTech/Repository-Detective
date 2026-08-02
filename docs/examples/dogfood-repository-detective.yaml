@@ -8,7 +8,7 @@
 # Repository Detective — Inspect. Analyze. Improve.
 
 # --- Scan profile (deterministic-first, AI off) ---
-scan_profile: standard_deterministic
+scan_profile: standard
 analysis_depth: 2
 workspace_mode: api
 
@@ -64,7 +64,6 @@ evidence_closure_require_scanner_success: true
 notifications_enabled: false
 runner_delegation_enabled: false
 preinstall_audit_enabled: false
-qdrant_enabled: false
 
 # --- Issues (review before widening rollout) ---
 auto_create_issues: true

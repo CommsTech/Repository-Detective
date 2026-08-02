@@ -16,7 +16,7 @@
 
 <div class="rd-report rd-print-block">
   <h2>Repository audit report — {{.FullName}}</h2>
-  <p class="rd-report-meta">{{.ForgeType}} · Policy: {{$.Data.Effective.PolicyLevel}} · Profile: {{$.Data.ProfileMeta.ScanProfile}}</p>
+  <p class="rd-report-meta">{{.ForgeType}} · Policy: {{$.Data.Effective.PolicyLevel}} · Profile: {{profileLabel $.Data.ProfileMeta.ScanProfile}}</p>
   <div class="rd-kpi-row">
     {{range $sev, $count := $.Data.SeverityCounts}}
     <div class="rd-kpi"><strong>{{$count}}</strong><span>{{$sev}} open</span></div>

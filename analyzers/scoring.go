@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"git.commsnet.org/commstech/bugbot/ai"
-	"git.commsnet.org/commstech/bugbot/profile"
-	"git.commsnet.org/commstech/bugbot/scanners"
+	"git.commsnet.org/commstech/repository-detective/ai"
+	"git.commsnet.org/commstech/repository-detective/profile"
+	"git.commsnet.org/commstech/repository-detective/scanners"
 )
 
 const lowNoisePenaltyCap = 10.0

@@ -1,6 +1,6 @@
 # Per-repo scan policy (Phase 8)
 
-Repository Detective merges **global config** with **per-repo settings** from the local database on every scan. Global `config.yaml` / `REPOSITORY_DETECTIVE_*` (or legacy `BUGBOT_*`) env vars remain the fallback when a repo has no overrides.
+Repository Detective merges **global config** with **per-repo settings** from the local database on every scan. Global `config.yaml` / `REPOSITORY_DETECTIVE_*` (or legacy `REPOSITORY_DETECTIVE_*`) env vars remain the fallback when a repo has no overrides.
 
 > **Naming:** See [NAMING.md](NAMING.md).
 

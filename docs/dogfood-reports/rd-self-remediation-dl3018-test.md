@@ -1,7 +1,7 @@
 # Repository Detective DL3018 Self-Remediation Test
 
 **Date:** 2026-06-06  
-**Repository:** commstech/Bugbot  
+**Repository:** commstech/repository-detective  
 **Rule:** hadolint DL3018 (pin apk package versions)  
 **Outcome:** **PASS** — full loop completed with verified closure
 
@@ -23,7 +23,7 @@
 | File | `Dockerfile:100` |
 | Severity | medium |
 | Category | container |
-| Gitea issue | [#259](https://git.commsnet.org/commstech/Bugbot/issues/259) |
+| Gitea issue | [#259](https://git.commsnet.org/commstech/repository-detective/issues/259) |
 
 ## Workflow artifacts
 
@@ -31,7 +31,7 @@
 |------|----------|
 | Remediation plan (approved) | **rp-59815d80d8d32abb** |
 | Patch attempt (PR opened) | **pa-6cbc72da69690560** |
-| Pull request | [#274](https://git.commsnet.org/commstech/Bugbot/pulls/274) |
+| Pull request | [#274](https://git.commsnet.org/commstech/repository-detective/pulls/274) |
 | PR branch | `repository-detective/fix/bugbot-2e9bf` |
 | PR commit | `8adaa9d6c86fc61abd13cadb47e245f01938e53a` |
 | Merge commit (manual) | **6f42552233ed15521085b51dca26fb82dfb86d6f** |
@@ -96,7 +96,7 @@ POST /api/v1/findings/9971/verify-closure
 
 ## Bugs found during test
 
-1. **Empty `clone_url` in SQLite** — connected repo row had blank clone URL; patch attempts failed with `clone URL unavailable`. Fixed by setting `https://git.commsnet.org/commstech/Bugbot.git` on repo id=1.
+1. **Empty `clone_url` in SQLite** — connected repo row had blank clone URL; patch attempts failed with `clone URL unavailable`. Fixed by setting `https://git.commsnet.org/commstech/repository-detective.git` on repo id=1.
 
 2. **Deterministic scanners misclassified as AI** — `issues.isAIAuditor()` treated `hadolint` (and other scanners) as AI sources, setting `from_ai: true` in metadata and blocking `safe_for_auto_pr`. Fixed by extending the deterministic scanner allowlist and ignoring stale `from_ai` metadata for those sources in plan generation.
 

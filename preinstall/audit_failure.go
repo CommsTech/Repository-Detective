@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/redact"
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/redact"
+	"git.commsnet.org/commstech/repository-detective/store"
 )
 
 // Failure stage labels for operator debugging.

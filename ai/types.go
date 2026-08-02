@@ -3,8 +3,8 @@ package ai
 import (
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/gitea"
-	"git.commsnet.org/commstech/bugbot/models"
+	"git.commsnet.org/commstech/repository-detective/gitea"
+	"git.commsnet.org/commstech/repository-detective/models"
 )
 
 // AttackSurfaceRequest is the input for attack surface analysis.

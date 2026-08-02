@@ -12,12 +12,12 @@ import (
 	"testing"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/graph"
-	"git.commsnet.org/commstech/bugbot/ai"
-	"git.commsnet.org/commstech/bugbot/internal/security"
-	"git.commsnet.org/commstech/bugbot/notify"
-	"git.commsnet.org/commstech/bugbot/store"
-	"git.commsnet.org/commstech/bugbot/ui"
+	"git.commsnet.org/commstech/repository-detective/graph"
+	"git.commsnet.org/commstech/repository-detective/ai"
+	"git.commsnet.org/commstech/repository-detective/internal/security"
+	"git.commsnet.org/commstech/repository-detective/notify"
+	"git.commsnet.org/commstech/repository-detective/store"
+	"git.commsnet.org/commstech/repository-detective/ui"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )

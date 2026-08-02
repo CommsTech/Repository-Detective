@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/store"
-	"git.commsnet.org/commstech/bugbot/ui"
+	"git.commsnet.org/commstech/repository-detective/store"
+	"git.commsnet.org/commstech/repository-detective/ui"
 )
 
 func TestThemeJSUsesRDThemeStorageKey(t *testing.T) {

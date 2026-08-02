@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/internal/security"
+	"git.commsnet.org/commstech/repository-detective/internal/security"
 	"github.com/gin-gonic/gin"
 )
 

@@ -135,11 +135,6 @@ func ApplyReportOnlyDryRunSettings(e *EffectiveSettings) {
 	e.RemediationPolicy = "off"
 }
 
-// UseSemanticDedup reports whether semantic dedup should skip new issue creation.
-func UseSemanticDedup(e EffectiveSettings) bool {
-	return e.IssuePolicy == IssuePolicyFingerprint
-}
-
 // ShouldFailCommitStatus reports whether findings can fail commit status.
 func ShouldFailCommitStatus(e EffectiveSettings) bool {
 	switch normalizePolicyLevel(e.PolicyLevel) {

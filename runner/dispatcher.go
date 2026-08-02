@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/analyzers"
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/analyzers"
+	"git.commsnet.org/commstech/repository-detective/store"
 	"github.com/sirupsen/logrus"
 )
 

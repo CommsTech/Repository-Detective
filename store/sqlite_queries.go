@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -113,6 +114,43 @@ func (s *SQLiteStore) ListScannerResultsByScan(ctx context.Context, scanID strin
 			rec.DurationMS = duration.Int64
 		}
 		out = append(out, rec)
+	}
+	return out, rows.Err()
+}
+
+// ListRecentScannerFailures returns recent scanner_results rows that indicate tool/run failures.
+func (s *SQLiteStore) ListRecentScannerFailures(ctx context.Context, limit int) ([]ScannerFailureEvent, error) {
+	if limit <= 0 {
+		limit = 25
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT sr.scanner_name, sr.status, COALESCE(sr.error, ''), COALESCE(sr.detail, ''),
+			sr.scan_id, s.repository_id, r.full_name, s.started_at, COALESCE(sr.duration_ms, 0)
+		FROM scanner_results sr
+		JOIN scans s ON s.id = sr.scan_id
+		JOIN repositories r ON r.id = s.repository_id
+		WHERE sr.status IN ('failed', 'timed_out', 'parse_failed', 'error')
+		ORDER BY s.started_at DESC
+		LIMIT ?
+	`, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list recent scanner failures: %w", err)
+	}
+	defer rows.Close()
+
+	var out []ScannerFailureEvent
+	for rows.Next() {
+		var ev ScannerFailureEvent
+		var started string
+		if err := rows.Scan(&ev.ScannerName, &ev.Status, &ev.Error, &ev.Detail, &ev.ScanID,
+			&ev.RepositoryID, &ev.RepoFullName, &started, &ev.DurationMS); err != nil {
+			return nil, fmt.Errorf("scan scanner failure row: %w", err)
+		}
+		ev.StartedAt = parseTime(started)
+		out = append(out, ev)
 	}
 	return out, rows.Err()
 }
@@ -438,6 +476,41 @@ func (s *SQLiteStore) ListRecentScans(ctx context.Context, opts ListOptions) ([]
 	return out, rows.Err()
 }
 
+// CountCompletedScansByDay returns completed scan counts keyed by UTC day (YYYY-MM-DD)
+// for scans started on or after since.
+func (s *SQLiteStore) CountCompletedScansByDay(ctx context.Context, since time.Time) (map[string]int, error) {
+	if since.IsZero() {
+		since = time.Now().UTC().AddDate(0, 0, -13)
+	}
+	sinceDay := since.UTC().Format("2006-01-02")
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT substr(started_at, 1, 10) AS day, COUNT(1)
+		FROM scans
+		WHERE lower(status) = 'completed'
+		  AND substr(started_at, 1, 10) >= ?
+		GROUP BY substr(started_at, 1, 10)
+	`, sinceDay)
+	if err != nil {
+		return nil, fmt.Errorf("count completed scans by day: %w", err)
+	}
+	defer rows.Close()
+
+	out := map[string]int{}
+	for rows.Next() {
+		var day string
+		var n int
+		if err := rows.Scan(&day, &n); err != nil {
+			return nil, fmt.Errorf("scan completed-by-day row: %w", err)
+		}
+		day = strings.TrimSpace(day)
+		if day == "" {
+			continue
+		}
+		out[day] = n
+	}
+	return out, rows.Err()
+}
+
 func (s *SQLiteStore) CountActiveScans(ctx context.Context) (int, error) {
 	var count int
 	err := s.db.QueryRowContext(ctx, `
@@ -464,6 +537,51 @@ func (s *SQLiteStore) DashboardSummary(ctx context.Context, recentLimit int) (Da
 
 	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(1) FROM scans WHERE status = 'failed'`).Scan(&summary.FailedScansCount); err != nil {
 		return summary, fmt.Errorf("count failed scans: %w", err)
+	}
+	if err := s.db.QueryRowContext(ctx, `
+		SELECT COUNT(1) FROM scans WHERE status = 'failed'
+		  AND (error LIKE '%stale%reaped%' OR error LIKE '%interrupted by process restart%')
+	`).Scan(&summary.StaleReapedScansCount); err != nil {
+		return summary, fmt.Errorf("count stale reaped scans: %w", err)
+	}
+	// Actionable = recent non-noise failures that have not been superseded by a
+	// later successful scan for the same repo. Lifetime totals stay in FailedScansCount.
+	// Historical forge outages produced hundreds of "no valid ref" rows that no longer
+	// reflect current fleet health once repos scan successfully again.
+	if err := s.db.QueryRowContext(ctx, `
+		SELECT COUNT(1) FROM scans s
+		WHERE s.status = 'failed'
+		  AND s.started_at >= datetime('now', '-14 days')
+		  AND NOT (COALESCE(s.error, '') LIKE '%stale%reaped%'
+		           OR COALESCE(s.error, '') LIKE '%interrupted by process restart%')
+		  AND NOT EXISTS (
+			SELECT 1 FROM scans later
+			WHERE later.repository_id = s.repository_id
+			  AND later.status = 'completed'
+			  AND later.started_at > s.started_at
+		  )
+	`).Scan(&summary.ActionableFailedScansCount); err != nil {
+		return summary, fmt.Errorf("count actionable failed scans: %w", err)
+	}
+	if err := s.db.QueryRowContext(ctx, `
+		SELECT COUNT(1) FROM repositories r
+		WHERE (
+			SELECT s.status FROM scans s
+			WHERE s.repository_id = r.id
+			ORDER BY s.started_at DESC LIMIT 1
+		) = 'failed'
+		AND NOT (
+			SELECT COALESCE(s.error, '') FROM scans s
+			WHERE s.repository_id = r.id
+			ORDER BY s.started_at DESC LIMIT 1
+		) LIKE '%stale%reaped%'
+		AND NOT (
+			SELECT COALESCE(s.error, '') FROM scans s
+			WHERE s.repository_id = r.id
+			ORDER BY s.started_at DESC LIMIT 1
+		) LIKE '%interrupted by process restart%'
+	`).Scan(&summary.UnhealthyReposCount); err != nil {
+		return summary, fmt.Errorf("count unhealthy repos: %w", err)
 	}
 
 	if err := s.db.QueryRowContext(ctx, `

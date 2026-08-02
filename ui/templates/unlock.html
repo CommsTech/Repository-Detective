@@ -12,11 +12,11 @@
     <p class="rd-muted">An API key is required to access the operator dashboard in <code>api_key_only</code> mode.</p>
     <ul class="rd-muted rd-auth-hint">
       <li>Preferred header for API calls: <code>X-Repository-Detective-API-Key</code></li>
-      <li>Legacy header also accepted: <code>X-Bugbot-API-Key</code></li>
+      <li>Authorization Bearer tokens are also accepted</li>
       <li>Paste your key below to unlock this browser session (HttpOnly cookie, 7 days)</li>
     </ul>
     {{if not .Data.SetupComplete}}
-    <p class="rd-alert info">First-time setup may be incomplete. See <a href="https://git.commsnet.org/commstech/Bugbot/src/branch/main/docs/DEPLOYMENT.md">deployment docs</a> for configuration.</p>
+    <p class="rd-alert info">First-time setup may be incomplete. See <a href="https://git.commsnet.org/commstech/repository-detective/src/branch/main/docs/DEPLOYMENT.md">deployment docs</a> for configuration.</p>
     {{end}}
     <form method="post" action="{{.BasePath}}/unlock" class="rd-auth-form">
       <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">

@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/internal/auth"
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/internal/auth"
+	"git.commsnet.org/commstech/repository-detective/store"
 )
 
 func TestAuthMigrationAndBootstrapUser(t *testing.T) {

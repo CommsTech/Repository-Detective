@@ -3,10 +3,9 @@ package ui
 import (
 	"fmt"
 	"net/http"
-	"net/url"
 	"strings"
 
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/store"
 	"github.com/gin-gonic/gin"
 )
 
@@ -92,7 +91,10 @@ func (h *Handler) RepoScanStart(c *gin.Context) {
 		return
 	}
 
-	q := apiKeyQueryString(h.apiKeyFromContext(c))
+	q := ""
+	if key := displayAPIKey(c); key != "" {
+		q = apiKeyQueryString(key)
+	}
 	scanURL := fmt.Sprintf("%s/scans/%s%s", h.basePath, result.ScanID, q)
 	repoURL := fmt.Sprintf("%s/repos/%d%s", h.basePath, id, q)
 
@@ -106,17 +108,18 @@ func (h *Handler) RepoScanStart(c *gin.Context) {
 			"scan_policy_mode":    filing.Mode,
 			"scan_url":            scanURL,
 			"repo_url":            repoURL,
+			"redirect":            scanURL,
 		})
 		return
 	}
 
-	redirectURL := fmt.Sprintf("%s/repos/%d%s", h.basePath, id, q)
+	redirectURL := scanURL
 	if strings.Contains(redirectURL, "?") {
 		redirectURL += "&"
 	} else {
 		redirectURL += "?"
 	}
-	redirectURL += "scan_started=" + url.QueryEscape(result.ScanID)
+	redirectURL += "started=1"
 	c.Redirect(http.StatusSeeOther, redirectURL)
 }
 

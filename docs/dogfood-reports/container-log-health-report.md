@@ -17,5 +17,5 @@ Container: `repository-detective` (last 500 lines)
 
 ## Recent errors (sample)
 ```
-time="2026-06-11T01:10:51Z" level=warning msg="Failed to fetch ui/templates/error.html: failed to make request: Get \"https://git.commsnet.org/api/v1/repos/commstech/Bugbot/contents/ui/templates/error.html?ref=main\": context deadline exceeded"
+time="2026-06-11T01:10:51Z" level=warning msg="Failed to fetch ui/templates/error.html: failed to make request: Get \"https://git.commsnet.org/api/v1/repos/commstech/repository-detective/contents/ui/templates/error.html?ref=main\": context deadline exceeded"
 ```

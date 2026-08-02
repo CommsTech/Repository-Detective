@@ -3,7 +3,7 @@ package openclaw_test
 import (
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/openclaw"
+	"git.commsnet.org/commstech/repository-detective/openclaw"
 )
 
 func TestLegacyConfigKeysMerge(t *testing.T) {

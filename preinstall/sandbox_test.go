@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/preinstall"
+	"git.commsnet.org/commstech/repository-detective/preinstall"
 )
 
 func TestValidateWorkspacePathBlocksTraversal(t *testing.T) {

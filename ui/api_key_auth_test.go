@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/store"
-	"git.commsnet.org/commstech/bugbot/ui"
+	"git.commsnet.org/commstech/repository-detective/store"
+	"git.commsnet.org/commstech/repository-detective/ui"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )

@@ -3,8 +3,8 @@ package preinstall_test
 import (
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/preinstall"
-	"git.commsnet.org/commstech/bugbot/scanners"
+	"git.commsnet.org/commstech/repository-detective/preinstall"
+	"git.commsnet.org/commstech/repository-detective/scanners"
 )
 
 func TestScannerConfigForDepthQuickSkipsGoScanners(t *testing.T) {

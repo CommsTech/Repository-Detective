@@ -2,15 +2,15 @@
 
 Follow these steps in order.
 
-Repository: https://git.commsnet.org/commstech/Bugbot.git
+Repository: https://git.commsnet.org/commstech/repository-detective.git
 
 ---
 
 ## Step 1 — Clone and configure
 
 ```bash
-git clone https://git.commsnet.org/commstech/Bugbot.git
-cd Bugbot
+git clone https://git.commsnet.org/commstech/repository-detective.git
+cd repository-detective
 cp .env.example .env
 ```
 
@@ -32,7 +32,7 @@ Leave `BUGBOT_PUBLIC_URL` empty until Step 4.
 
 ---
 
-## Step 2 — Start Bugbot
+## Step 2 — Start Repository Detective
 
 **Server / LAN (port 8081):**
 
@@ -73,23 +73,23 @@ BUGBOT_SKIP_STARTUP_CHECKS=true   # in .env
 
 ---
 
-## Step 4 — Expose Bugbot to Gitea
+## Step 4 — Expose Repository Detective to Gitea
 
 If Gitea runs on the public internet and Bugbot is on a private network, Gitea must reach Bugbot via a public URL. See [NETWORKING.md](NETWORKING.md) for port forwarding, reverse proxy, Traefik, or Cloudflare tunnel.
 
 After exposure:
 
 ```bash
-BUGBOT_PUBLIC_URL=https://bugbot.example.com   # in .env
+BUGBOT_PUBLIC_URL=https://repository-detective.example.com   # in .env
 docker compose up -d
-curl https://bugbot.example.com/health
+curl https://repository-detective.example.com/health
 ```
 
 ---
 
 ## Step 5 — Register webhooks
 
-Open `https://bugbot.example.com/onboard`, enter your API key, test Gitea and AI, select repos, register webhooks.
+Open `https://repository-detective.example.com/onboard`, enter your API key, test Gitea and AI, select repos, register webhooks.
 
 Manual alternative (per repo → Settings → Webhooks):
 

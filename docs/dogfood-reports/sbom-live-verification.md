@@ -11,7 +11,7 @@
 | `/ui/scans/1a4fc7a409f6d376/sbom` | 200 | SBOM summary for beta scan |
 | `/ui/scans/1a4fc7a409f6d376/sbom/download` | 404 | No artifact on disk for this scan (expected) |
 
-## Repo SBOM (commstech/Bugbot)
+## Repo SBOM (commstech/repository-detective)
 
 - Page renders **SBOM summary** with format/status/package counts when artifact exists.
 - Detail text: `cyclonedx-gomod and syft unavailable for Go SBOM` — **does not claim success** when generation failed/unavailable.

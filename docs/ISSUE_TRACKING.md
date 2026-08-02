@@ -1,6 +1,6 @@
 # Issue and feature tracking
 
-Repository Detective uses **Gitea** for product backlog (`commstech/Bugbot`). Scan findings use separate `repository-detective/*` labels via the issue manager.
+Repository Detective uses **Gitea** for product backlog (`commstech/repository-detective`). Scan findings use separate `repository-detective/*` labels via the issue manager.
 
 ## Templates
 
@@ -17,7 +17,7 @@ Issue forms live in [.gitea/ISSUE_TEMPLATE/](../.gitea/ISSUE_TEMPLATE/):
 
 ## Recommended Gitea labels
 
-Product backlog labels (create on the **Bugbot** repo, not finding issues):
+Product backlog labels (create on the **repository-detective** product repo, not finding issues):
 
 - `type/bug`, `type/feature`, `type/docs`, `type/compliance`, `type/privacy`, `type/accessibility`, `type/security`, `type/scanner`, `type/false-positive`, `type/ui`, `type/api`, `type/reporting`
 - `severity/critical` … `severity/low`
@@ -46,7 +46,7 @@ Markdown issue specs: [issues/](issues/README.md). Create on Gitea with:
 ./scripts/gitea-backlog-setup.sh --issues        # documents manual create only (no bulk API)
 ```
 
-**Closeout evidence:** When `GITEA_TOKEN` is present in `.env`, `gitea-backlog-setup.sh --labels-only` created `type/*`, `severity/*`, `status/*`, `priority/*` labels and Sprint 1–6 milestones on `commstech/Bugbot` (verified via Gitea API list). Individual backlog **issues** were not bulk-created.
+**Closeout evidence:** When `GITEA_TOKEN` is present in `.env`, `gitea-backlog-setup.sh --labels-only` created `type/*`, `severity/*`, `status/*`, `priority/*` labels and Sprint 1–6 milestones on `commstech/repository-detective` (verified via Gitea API list). Individual backlog **issues** were not bulk-created.
 
 ## Scan finding issues vs product issues
 
@@ -54,6 +54,6 @@ Markdown issue specs: [issues/](issues/README.md). Create on Gitea with:
 |--|----------------------|----------------------------|
 | Created by | Humans / closeout script | `issues.Manager` after scans |
 | Labels | `type/*`, `status/*` | `repository-detective/*` |
-| Dedup | Manual | Fingerprint + optional Qdrant |
+| Dedup | Manual | Fingerprint + SQLite forge mappings |
 
 See [ISSUE_BACKLOG.md](ISSUE_BACKLOG.md) for historical Gitea issue numbers.

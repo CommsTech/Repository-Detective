@@ -31,11 +31,11 @@ Hi — you're invited to the **Repository Detective private operator beta**.
 2. Use the access URL and API key sent on this secure channel (not in email/wiki)
 3. Run **one report-only scan** on `commstech/Wifi_Collector` with `report_only_dry_run: true`
 4. Record the **scan ID** — required in all feedback
-5. Submit feedback via Gitea templates on `commstech/Bugbot`:
-   - General: [beta_feedback](https://git.commsnet.org/commstech/Bugbot/issues/new?template=beta_feedback)
-   - Bug: [bug_report](https://git.commsnet.org/commstech/Bugbot/issues/new?template=bug_report)
-   - False positive: [scanner_false_positive](https://git.commsnet.org/commstech/Bugbot/issues/new?template=scanner_false_positive)
-   - Missed detection: [missed_detection](https://git.commsnet.org/commstech/Bugbot/issues/new?template=missed_detection)
+5. Submit feedback via Gitea templates on `commstech/repository-detective`:
+   - General: [beta_feedback](https://git.commsnet.org/commstech/repository-detective/issues/new?template=beta_feedback)
+   - Bug: [bug_report](https://git.commsnet.org/commstech/repository-detective/issues/new?template=bug_report)
+   - False positive: [scanner_false_positive](https://git.commsnet.org/commstech/repository-detective/issues/new?template=scanner_false_positive)
+   - Missed detection: [missed_detection](https://git.commsnet.org/commstech/repository-detective/issues/new?template=missed_detection)
 
 Doc fallbacks if needed: [PRIVATE_BETA_FEEDBACK_TEMPLATE.md](PRIVATE_BETA_FEEDBACK_TEMPLATE.md), [PRIVATE_BETA_BUG_REPORT_TEMPLATE.md](PRIVATE_BETA_BUG_REPORT_TEMPLATE.md), [PRIVATE_BETA_FALSE_POSITIVE_TEMPLATE.md](PRIVATE_BETA_FALSE_POSITIVE_TEMPLATE.md).
 

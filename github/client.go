@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/forge"
+	"git.commsnet.org/commstech/repository-detective/forge"
 	"github.com/sirupsen/logrus"
 )
 

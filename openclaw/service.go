@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/ai"
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/ai"
+	"git.commsnet.org/commstech/repository-detective/store"
 )
 
 // ReviewStore persists advisory reviews.

@@ -10,15 +10,15 @@ Date: 2026-06-08
 
 ## Allowed legacy references
 
-- `BUGBOT_*` env vars (envcompat)
-- `X-Bugbot-API-Key` header
+- `REPOSITORY_DETECTIVE_*` env vars (envcompat)
+- `X-Repository-Detective-API-Key` header
 - `data/bugbot.db` path
 - `legacy_name: Bugbot` in `/api/v1/about` compatibility block
 - Comparison docs (`CURSOR_BUGBOT_COMPARISON.md`)
 
 ## Intentional archive/historical
 
-- Gitea repo path `commstech/Bugbot`
+- Gitea repo path `commstech/repository-detective`
 - Go module import path
 
 No new product-facing Bugbot branding added in this sprint.

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/store"
 )
 
 // ExecutiveRisk is a concise risk item for executive summaries.
@@ -45,8 +45,8 @@ func buildFleetExecutiveSummary(summary store.DashboardSummary) ExecutiveSummary
 	open := summary.OpenFindingsCount
 
 	out := ExecutiveSummary{
-		RiskPosture:     fleetRiskPosture(crit, high, open, summary.FailedScansCount),
-		BusinessImpact:  fleetBusinessImpact(crit, high, open, summary.TotalRepositories, summary.FailedScansCount),
+		RiskPosture:     fleetRiskPosture(crit, high, open, summary.UnhealthyReposCount),
+		BusinessImpact:  fleetBusinessImpact(crit, high, open, summary.TotalRepositories, summary.UnhealthyReposCount),
 		TopRisks:        topRisksFromDashboard(summary),
 		ConfidenceLevel: fleetConfidenceLevel(summary),
 		ScopeScanned: fmt.Sprintf("%d repositories monitored; %d open findings across fleet backlog",
@@ -62,11 +62,13 @@ func buildFleetExecutiveSummary(summary store.DashboardSummary) ExecutiveSummary
 		EvidenceBacked: fmt.Sprintf("%d findings verified resolved through evidence-based closure",
 			summary.Lifecycle.ResolvedVerified),
 	}
-	out.Recommendation, out.RecommendationLabel = fleetRecommendation(crit, high, summary.FailedScansCount)
+	out.Recommendation, out.RecommendationLabel = fleetRecommendation(crit, high, summary.UnhealthyReposCount)
 	out.ChangesSinceLastScan = fmt.Sprintf("%d raw issues detected in completed scans (7d window)",
 		summary.IssuesDetectedInScans)
-	if summary.FailedScansCount > 0 {
-		out.RiskTrend = fmt.Sprintf("Elevated — %d failed scans require operator attention", summary.FailedScansCount)
+	if summary.UnhealthyReposCount > 0 {
+		out.RiskTrend = fmt.Sprintf("Elevated — %d repositories have a failed latest scan", summary.UnhealthyReposCount)
+	} else if summary.ActionableFailedScansCount > 0 {
+		out.RiskTrend = fmt.Sprintf("Watch — %d failed scans in the last 14 days (repos recovered)", summary.ActionableFailedScansCount)
 	} else if crit+high > 0 {
 		out.RiskTrend = "Stable with open critical/high backlog requiring triage"
 	} else {
@@ -223,12 +225,19 @@ func topRisksFromDashboard(summary store.DashboardSummary) []ExecutiveRisk {
 			})
 		}
 	}
-	if summary.FailedScansCount > 0 {
+	if summary.UnhealthyReposCount > 0 {
 		risks = append(risks, ExecutiveRisk{
-			Title:      fmt.Sprintf("%d failed repository scans", summary.FailedScansCount),
+			Title:      fmt.Sprintf("%d repositories with failed latest scan", summary.UnhealthyReposCount),
 			Severity:   "high",
 			Category:   "reliability",
 			ReviewNote: "Incomplete scan coverage reduces confidence",
+		})
+	} else if summary.ActionableFailedScansCount > 0 {
+		risks = append(risks, ExecutiveRisk{
+			Title:      fmt.Sprintf("%d failed scans in the last 14 days", summary.ActionableFailedScansCount),
+			Severity:   "medium",
+			Category:   "reliability",
+			ReviewNote: "Repos may have recovered; review recent failure buckets",
 		})
 	}
 	if len(risks) > 5 {

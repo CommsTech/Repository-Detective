@@ -20,7 +20,7 @@ Full isolated VM not available; clean-path simulation on same host.
 
 ## Documented install path
 
-1. Clone `https://git.commsnet.org/commstech/Bugbot.git`
+1. Clone `https://git.commsnet.org/commstech/repository-detective.git`
 2. `cp .env.example .env` — set secrets locally only
 3. `docker build --target all-in-one -t repository-detective:all-in-one .`
 4. `docker compose -f docker-compose.beta.yml up -d`

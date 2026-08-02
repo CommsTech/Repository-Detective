@@ -1,10 +1,12 @@
 package operator
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os/exec"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -66,22 +68,85 @@ var toolDefs = []struct {
 	{name: "checkov", binary: "checkov", versionArg: []string{"--version"}, enabled: func(c ScannerConfig) bool { return c.EnableCheckov }},
 }
 
-// CheckTools probes PATH for configured scanner binaries.
+var (
+	toolsCacheMu  sync.Mutex
+	toolsCacheAt  time.Time
+	toolsCacheKey string
+	toolsCacheOut []ToolStatus
+	toolsInflight sync.Mutex // serialize uncached probes so health/UI don't stampede
+)
+
+const toolsCacheTTL = 5 * time.Minute
+
+// CheckTools probes PATH for configured scanner binaries and records version strings.
+// Results are cached (5m) with singleflight so health/UI pages do not re-exec scanners on every request.
 func CheckTools(cfg ScannerConfig) []ToolStatus {
+	key := scannerConfigCacheKey(cfg)
+	toolsCacheMu.Lock()
+	if toolsCacheOut != nil && toolsCacheKey == key && time.Since(toolsCacheAt) < toolsCacheTTL {
+		out := cloneToolStatuses(toolsCacheOut)
+		toolsCacheMu.Unlock()
+		return out
+	}
+	toolsCacheMu.Unlock()
+
+	// Only one goroutine probes at a time; others wait then reuse the fresh cache.
+	toolsInflight.Lock()
+	defer toolsInflight.Unlock()
+
+	toolsCacheMu.Lock()
+	if toolsCacheOut != nil && toolsCacheKey == key && time.Since(toolsCacheAt) < toolsCacheTTL {
+		out := cloneToolStatuses(toolsCacheOut)
+		toolsCacheMu.Unlock()
+		return out
+	}
+	toolsCacheMu.Unlock()
+
+	out := checkToolsUncached(cfg)
+
+	toolsCacheMu.Lock()
+	toolsCacheAt = time.Now()
+	toolsCacheKey = key
+	toolsCacheOut = cloneToolStatuses(out)
+	toolsCacheMu.Unlock()
+	return out
+}
+
+// InvalidateToolsCache clears the scanner probe cache (e.g. after config changes).
+func InvalidateToolsCache() {
+	toolsCacheMu.Lock()
+	toolsCacheOut = nil
+	toolsCacheKey = ""
+	toolsCacheAt = time.Time{}
+	toolsCacheMu.Unlock()
+}
+
+func scannerConfigCacheKey(cfg ScannerConfig) string {
+	return fmt.Sprintf("%v|%v|%v|%v|%v|%v|%v|%v|%v|%v",
+		cfg.EnableTrivy, cfg.EnableGrype, cfg.EnableGitleaks, cfg.EnableSemgrep,
+		cfg.EnableGovulncheck, cfg.EnableGosec, cfg.EnableStaticcheck, cfg.EnableHadolint,
+		cfg.EnableCheckov, cfg.EnableLinters)
+}
+
+func cloneToolStatuses(in []ToolStatus) []ToolStatus {
+	out := make([]ToolStatus, len(in))
+	copy(out, in)
+	return out
+}
+
+func checkToolsUncached(cfg ScannerConfig) []ToolStatus {
 	now := time.Now().UTC().Format(time.RFC3339)
-	out := make([]ToolStatus, 0, len(toolDefs))
-	for _, def := range toolDefs {
+	out := make([]ToolStatus, len(toolDefs))
+	var wg sync.WaitGroup
+
+	for i, def := range toolDefs {
 		enabled := def.always
 		if def.enabled != nil {
 			enabled = def.enabled(cfg)
 		}
 		installed := lookPath(def.binary)
-		version := ""
-		if installed && len(def.versionArg) > 0 {
-			version = probeVersion(def.binary, def.versionArg)
-		}
 		state, action := resolveToolState(def.name, enabled, installed, def.always)
-		out = append(out, ToolStatus{
+		out[i] = ToolStatus{
 			Name:            def.name,
 			Configured:      enabled || def.always,
 			EnabledInConfig: enabled || def.always,
@@ -89,10 +154,19 @@ func CheckTools(cfg ScannerConfig) []ToolStatus {
 			Available:       enabled && installed,
 			StatusState:     state,
 			Action:          action,
-			Version:         version,
+			Version:         "",
 			LastChecked:     now,
-		})
+		}
+		if !installed {
+			continue
+		}
+		wg.Add(1)
+		go func(idx int, binary string, args []string) {
+			defer wg.Done()
+			out[idx].Version = probeVersion(binary, args)
+		}(i, def.binary, def.versionArg)
 	}
+	wg.Wait()
 	return out
 }
 
@@ -121,15 +195,47 @@ func lookPath(name string) bool {
 }
 
 func probeVersion(binary string, args []string) string {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 12*time.Second)
 	defer cancel()
-	out, err := exec.CommandContext(ctx, binary, args...).CombinedOutput()
-	if err != nil {
-		return ""
-	}
-	line := strings.TrimSpace(strings.Split(string(out), "\n")[0])
-	if len(line) > 120 {
-		line = line[:120] + "…"
-	}
-	return line
+	cmd := exec.CommandContext(ctx, binary, args...)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	_ = cmd.Run() // some tools print a version then exit non-zero; still capture output
+	return pickVersionLine(stdout.String(), stderr.String())
 }
+
+func pickVersionLine(stdout, stderr string) string {
+	prefer := func(blob string) string {
+		lines := strings.Split(blob, "\n")
+		var firstUseful string
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if line == "" {
+				continue
+			}
+			lower := strings.ToLower(line)
+			if strings.Contains(lower, "new version of") || strings.Contains(lower, "see https://") {
+				continue
+			}
+			if strings.HasPrefix(lower, "scanner:") || strings.HasPrefix(lower, "version:") {
+				if len(line) > 120 {
+					return line[:120] + "…"
+				}
+				return line
+			}
+			if firstUseful == "" {
+				firstUseful = line
+			}
+		}
+		if len(firstUseful) > 120 {
+			return firstUseful[:120] + "…"
+		}
+		return firstUseful
+	}
+	if v := prefer(stdout); v != "" {
+		return v
+	}
+	return prefer(stderr)
+}
+

@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"git.commsnet.org/commstech/bugbot/ai"
-	"git.commsnet.org/commstech/bugbot/redact"
+	"git.commsnet.org/commstech/repository-detective/ai"
+	"git.commsnet.org/commstech/repository-detective/redact"
 )
 
 const lineBlockSize = 10

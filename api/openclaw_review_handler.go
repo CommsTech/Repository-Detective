@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"git.commsnet.org/commstech/bugbot/openclaw"
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/openclaw"
+	"git.commsnet.org/commstech/repository-detective/store"
 	"github.com/gin-gonic/gin"
 )
 

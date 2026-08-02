@@ -4,7 +4,7 @@
 **Live URL tested:** `/ui/findings/37361`  
 **Revision:** `rc-e3e19ec`
 
-## Finding 37361 (commstech/Bugbot)
+## Finding 37361 (commstech/repository-detective)
 
 | Section | Renders |
 |---------|---------|

@@ -13,7 +13,7 @@ Status key: **implemented** · **partial** · **documented only** · **planned**
 | Metric | Count |
 |--------|------:|
 | Implemented (beta-ready) | ~85% of claimed Community private-beta scope |
-| Partial | GitHub scanning, Qdrant, runner delegation, notifications, remediation PRs |
+| Partial | GitHub scanning, runner delegation, notifications, remediation PRs |
 | Planned only | Auth/RBAC, license enforcement, billing, tenant isolation, community intelligence feed |
 | Private beta go/no-go | **GO** |
 
@@ -126,7 +126,7 @@ Status key: **implemented** · **partial** · **documented only** · **planned**
 | GitLab | **planned** |
 | Notifications | **partial** — implemented; **off by default** |
 | Runner delegation | **partial** — implemented; **off by default** |
-| Qdrant | **partial** — local/redacted path; **off by default** |
+| Qdrant | **removed** — fingerprint dedup only |
 | AI provider status | **implemented** |
 
 ### UI
@@ -166,7 +166,7 @@ Status key: **implemented** · **partial** · **documented only** · **planned**
 |-------|---------|------------|
 | Automatically fixes issues | **true with caveat** | Planner + optional PRs; **not** auto-merge; PRs **off** by default |
 | Supports GitHub/GitLab | **true with caveat** | GitHub **partial** (manual/bulk); GitLab **planned**; Gitea **full** |
-| Uses Qdrant | **true with caveat** | Optional; **off by default**; not production-ready |
+| Uses Qdrant | **false** | Removed |
 | Multi-user | **stale/incorrect** | API-key only; Auth/RBAC **planned** |
 | Evidence-based closure | **true** | Verify + optional comments; no auto-close default |
 | Pre-install audit | **true** | On-demand; **disabled** in beta defaults |
@@ -188,7 +188,6 @@ Full keys in `config/config.yaml.example` and `.env.example`. See [CONFIGURATION
 | `api_key` | `REPOSITORY_DETECTIVE_API_KEY` | (set in `.env`) | required | CONFIGURATION |
 | `scan_profile` | `REPOSITORY_DETECTIVE_SCAN_PROFILE` | `beta_standard` | ✅ | SCAN_PROFILES |
 | `enable_llm_auditors` | `REPOSITORY_DETECTIVE_ENABLE_LLM_AUDITORS` | `false` | ✅ | POLICY |
-| `qdrant_enabled` | `REPOSITORY_DETECTIVE_QDRANT_ENABLED` | `false` | ✅ | QDRANT |
 | `remediation_pr_enabled` | `REPOSITORY_DETECTIVE_REMEDIATION_PR_ENABLED` | `false` | ✅ | REMEDIATION_PRS |
 | `evidence_closure_close_issues` | `REPOSITORY_DETECTIVE_EVIDENCE_CLOSURE_CLOSE_ISSUES` | `false` | ✅ | EVIDENCE_CLOSURE |
 | `preinstall_audit_enabled` | `REPOSITORY_DETECTIVE_PREINSTALL_AUDIT_ENABLED` | `false` | ✅ | PREINSTALL_AUDIT |
@@ -198,7 +197,7 @@ Full keys in `config/config.yaml.example` and `.env.example`. See [CONFIGURATION
 | `enable_trivy` … `enable_checkov` | `REPOSITORY_DETECTIVE_ENABLE_*` | mostly `true` in example | ✅ | SCANNERS |
 | `label_compat_mode` | `REPOSITORY_DETECTIVE_LABEL_COMPAT_MODE` | `new_only` | ✅ | NAMING |
 
-Legacy `BUGBOT_*` documented in [BRANDING_MIGRATION.md](BRANDING_MIGRATION.md).
+Legacy `REPOSITORY_DETECTIVE_*` documented in [BRANDING_MIGRATION.md](BRANDING_MIGRATION.md).
 
 **Config gaps:** Some advanced keys (runner HMAC, notification webhooks) only in `.env.example` — acceptable; listed in CONFIGURATION pointer.
 
@@ -239,7 +238,6 @@ See [API_ROUTES.md](API_ROUTES.md) — created this audit.
 ### Nice-to-have
 
 - `/health` latency ~4s
-- Qdrant production enablement
 - Community intelligence feed
 - checkov timeout hardening
 - Edition license gates in code

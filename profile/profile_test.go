@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/ai"
-	"git.commsnet.org/commstech/bugbot/profile"
-	"git.commsnet.org/commstech/bugbot/scanners"
+	"git.commsnet.org/commstech/repository-detective/ai"
+	"git.commsnet.org/commstech/repository-detective/profile"
+	"git.commsnet.org/commstech/repository-detective/scanners"
 )
 
 func loadFixturePaths(t *testing.T, name string) []string {
@@ -204,18 +204,22 @@ func TestIssueTemplateDetection(t *testing.T) {
 }
 
 func TestBetaNoiseRulesReportOnlyForStandardProfile(t *testing.T) {
-	cfg := profile.ReportingForScanProfile(profile.DefaultReportingConfig(), "beta_standard")
-	action, _ := profile.DecideAction("medium", "maintainability", profile.SourceTypeSource, "GRAPH-ORPHAN-FILE", 0.9, cfg, profile.DefaultFalsePositiveReductionConfig())
-	if action != profile.ActionReportOnly {
-		t.Fatalf("expected report_only for graph orphan, got %s", action)
+	for _, name := range []string{"standard", "beta_standard", "light"} {
+		cfg := profile.ReportingForScanProfile(profile.DefaultReportingConfig(), name)
+		action, _ := profile.DecideAction("medium", "maintainability", profile.SourceTypeSource, "GRAPH-ORPHAN-FILE", 0.9, cfg, profile.DefaultFalsePositiveReductionConfig())
+		if action != profile.ActionReportOnly {
+			t.Fatalf("%s: expected report_only for graph orphan, got %s", name, action)
+		}
 	}
 }
 
-func TestBetaNoiseRulesNotAppliedForMaintainerDeep(t *testing.T) {
-	cfg := profile.ReportingForScanProfile(profile.DefaultReportingConfig(), "maintainer_deep")
-	action, _ := profile.DecideAction("medium", "maintainability", profile.SourceTypeSource, "GRAPH-ORPHAN-FILE", 0.9, cfg, profile.DefaultFalsePositiveReductionConfig())
-	if action != profile.ActionManualReview {
-		t.Fatalf("maintainer_deep should not force report_only for graph findings, got %s", action)
+func TestBetaNoiseRulesNotAppliedForDeep(t *testing.T) {
+	for _, name := range []string{"deep", "maintainer_deep"} {
+		cfg := profile.ReportingForScanProfile(profile.DefaultReportingConfig(), name)
+		action, _ := profile.DecideAction("medium", "maintainability", profile.SourceTypeSource, "GRAPH-ORPHAN-FILE", 0.9, cfg, profile.DefaultFalsePositiveReductionConfig())
+		if action != profile.ActionManualReview {
+			t.Fatalf("%s should not force report_only for graph findings, got %s", name, action)
+		}
 	}
 }
 

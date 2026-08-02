@@ -3,7 +3,7 @@ package scanners
 import (
 	"context"
 
-	"git.commsnet.org/commstech/bugbot/models"
+	"git.commsnet.org/commstech/repository-detective/models"
 	"github.com/sirupsen/logrus"
 )
 

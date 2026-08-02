@@ -3,7 +3,7 @@ package preinstall
 import (
 	"strings"
 
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/store"
 )
 
 func filterPreinstallFindings(in []store.AuditFinding) []store.AuditFinding {

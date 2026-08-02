@@ -8,7 +8,7 @@
 | Method | Header |
 |--------|--------|
 | **Preferred** | `X-Repository-Detective-API-Key: <key>` |
-| Legacy | `X-Bugbot-API-Key: <key>` |
+| Legacy | `X-Repository-Detective-API-Key: <key>` |
 | Alternative | `Authorization: Bearer <key>` |
 
 Public routes: `GET /health`, `GET /onboard`, `GET /ui/static/*` (assets only).

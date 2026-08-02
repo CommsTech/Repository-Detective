@@ -5,10 +5,10 @@ import (
 	"net/url"
 	"strings"
 
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/store"
 )
 
-const defaultProductIssueBase = "https://git.commsnet.org/commstech/Bugbot"
+const defaultProductIssueBase = "https://git.commsnet.org/commstech/repository-detective"
 
 // IssueTemplateLinks surfaces Gitea issue template URLs and copy guidance for beta feedback.
 type IssueTemplateLinks struct {

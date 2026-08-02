@@ -46,7 +46,7 @@ Recorded: 2026-06-09
 
 1. Enable delegation in **test config/env only** (one worker, max 1 concurrent job).
 2. Allowed job types initially: `graph`, `sbom`, `remediation_verify` (no preinstall_audit).
-3. Enqueue **one** delegated graph job on product repo (`commstech/Bugbot`) via operator API.
+3. Enqueue **one** delegated graph job on product repo (`commstech/repository-detective`) via operator API.
 4. Failure/rollback: stop worker, verify timeout messaging, disable delegation, confirm local path.
 5. Remediation PR dry-run: verify gate only — **no PR created**.
 

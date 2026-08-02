@@ -22,9 +22,9 @@ End-to-end operator flow: [BETA_SMOKE_TEST.md](BETA_SMOKE_TEST.md)
 | Startup — container exits cleanly on bad config | 🤖 | ✅ | Missing forge token fails fast |
 | Startup — healthy after components init | 🤖 | ✅ | `/health` → `healthy` |
 | Config loading — YAML + env merge | 🤖 | ✅ | `config/config.yaml` + `.env` |
-| Env alias — `REPOSITORY_DETECTIVE_*` wins over `BUGBOT_*` | 🤖 | ✅ | `internal/config/envcompat` tests |
+| Env alias — `REPOSITORY_DETECTIVE_*` wins over `REPOSITORY_DETECTIVE_*` | 🤖 | ✅ | `internal/config/envcompat` tests |
 | API auth — preferred header | 🤖 | ✅ | `TestRequireAPIKeyAuthAcceptsPreferredAndLegacyHeaders` |
-| API auth — legacy `X-Bugbot-API-Key` | 🤖 | ✅ | Same test |
+| API auth — legacy `X-Repository-Detective-API-Key` | 🤖 | ✅ | Same test |
 | API auth — missing key → 401 | 🤖 | ✅ | `api/security_test.go` |
 | DB migrations — fresh install | 🤖 | ✅ | `store` migration tests; schema v16 |
 | DB migrations — existing install upgrade | 🔲 | ⚠️ | Operator: backup → pull → start; see [UPGRADE.md](UPGRADE.md) |
@@ -126,9 +126,9 @@ docker exec repository-detective sh -c 'for t in trivy grype gitleaks semgrep go
 |------|------|--------|-------|
 | No secrets in logs (subprocess env) | 🤖 | ✅ | `scanners/exec_security_test.go` |
 | No tokens in API JSON responses | 🤖 | ⚠️ | Spot-check `/api/v1/status`; smoke script greps |
-| Qdrant disabled by default | 🤖 | ✅ | `qdrant_enabled: false` in example |
+| Qdrant removed | 🤖 | ✅ | no qdrant package/config |
 | AI startup test disabled by default | 🤖 | ✅ | `ai_startup_test_enabled: false` |
-| Redaction in reports | 🤖 | ✅ | `redact/`, Qdrant redaction tests |
+| Redaction in reports | 🤖 | ✅ | `redact/` package |
 | Third-party reports sanitized | 🔲 | ✅ | Dogfood RuView package committed sanitized |
 
 ---

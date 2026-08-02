@@ -10,8 +10,8 @@
 
 <label>Branch / ref<input name="ref" id="rd-repos-scan-ref" value="{{$form.DefaultRef}}" placeholder="main" required></label>
 <label>Scan profile (optional)<select name="scan_profile" id="rd-repos-scan-profile">
-  <option value="">inherit{{if $form.ProfileMeta.ScanProfile}} ({{$form.ProfileMeta.ScanProfile}}){{end}}</option>
-  {{range $form.Profiles}}<option value="{{.}}">{{.}}</option>{{end}}
+  <option value="">inherit{{if $form.ProfileMeta.ScanProfile}} ({{profileLabel $form.ProfileMeta.ScanProfile}}){{end}}</option>
+  {{range $form.Profiles}}<option value="{{.ID}}">{{.Label}} — {{.Summary}}</option>{{end}}
 </select></label>
 
 <label class="rd-checkbox-row">

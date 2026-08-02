@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Create Gitea labels, milestones, and optional backlog issues for commstech/Bugbot.
+# Create Gitea labels, milestones, and optional backlog issues for commstech/repository-detective.
 # Does nothing without GITEA_TOKEN (or REPOSITORY_DETECTIVE_GITEA_TOKEN) in environment or .env.
 set -euo pipefail
 cd "$(dirname "$0")/.."

@@ -3,7 +3,7 @@ package ui
 import (
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/store"
 )
 
 func TestBuildScanFindingsBreakdownGroupsGraphNoise(t *testing.T) {

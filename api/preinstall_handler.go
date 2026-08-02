@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/preinstall"
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/preinstall"
+	"git.commsnet.org/commstech/repository-detective/store"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )

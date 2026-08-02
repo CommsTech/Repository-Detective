@@ -8,18 +8,18 @@ import (
 	"strings"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/ai"
-	"git.commsnet.org/commstech/bugbot/forge"
-	"git.commsnet.org/commstech/bugbot/gitea"
-	"git.commsnet.org/commstech/bugbot/store"
-	"git.commsnet.org/commstech/bugbot/graph"
-	"git.commsnet.org/commstech/bugbot/health"
-	"git.commsnet.org/commstech/bugbot/internal/scanid"
-	"git.commsnet.org/commstech/bugbot/issues"
-	"git.commsnet.org/commstech/bugbot/models"
-	"git.commsnet.org/commstech/bugbot/profile"
-	"git.commsnet.org/commstech/bugbot/sbom"
-	"git.commsnet.org/commstech/bugbot/scanners"
+	"git.commsnet.org/commstech/repository-detective/ai"
+	"git.commsnet.org/commstech/repository-detective/forge"
+	"git.commsnet.org/commstech/repository-detective/gitea"
+	"git.commsnet.org/commstech/repository-detective/store"
+	"git.commsnet.org/commstech/repository-detective/graph"
+	"git.commsnet.org/commstech/repository-detective/health"
+	"git.commsnet.org/commstech/repository-detective/internal/scanid"
+	"git.commsnet.org/commstech/repository-detective/issues"
+	"git.commsnet.org/commstech/repository-detective/models"
+	"git.commsnet.org/commstech/repository-detective/profile"
+	"git.commsnet.org/commstech/repository-detective/sbom"
+	"git.commsnet.org/commstech/repository-detective/scanners"
 	"github.com/sirupsen/logrus"
 )
 
@@ -95,7 +95,7 @@ type DedupedFinding = models.DedupedFinding
 type ProvenFinding = models.ProvenFinding
 type ProofOfConcept = models.ProofOfConcept
 
-// FinalReport is the complete Bugbot report
+// FinalReport is the complete Repository Detective report
 type FinalReport struct {
 	ScanID      string
 	Repository  string

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/github"
+	"git.commsnet.org/commstech/repository-detective/github"
 	"github.com/sirupsen/logrus"
 )
 

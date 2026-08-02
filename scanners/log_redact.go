@@ -1,7 +1,7 @@
 package scanners
 
 import (
-	"git.commsnet.org/commstech/bugbot/internal/security"
+	"git.commsnet.org/commstech/repository-detective/internal/security"
 	"github.com/sirupsen/logrus"
 )
 

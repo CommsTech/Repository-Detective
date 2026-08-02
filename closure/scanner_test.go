@@ -3,7 +3,7 @@ package closure_test
 import (
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/closure"
+	"git.commsnet.org/commstech/repository-detective/closure"
 )
 
 func TestScannerForSourceHealthFamily(t *testing.T) {

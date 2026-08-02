@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/learning"
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/learning"
+	"git.commsnet.org/commstech/repository-detective/store"
 	"github.com/gin-gonic/gin"
 )
 

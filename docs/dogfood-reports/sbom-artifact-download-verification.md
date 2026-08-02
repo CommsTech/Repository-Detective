@@ -18,7 +18,7 @@
 | Field | Value |
 |-------|-------|
 | Scan ID | `926a5f56a26f03c9` |
-| Repository | commstech/Bugbot (id=1) |
+| Repository | commstech/repository-detective (id=1) |
 | Format | CycloneDX JSON |
 | Generator | Syft (anchore/syft container, controlled proof) |
 | Components | 895 |

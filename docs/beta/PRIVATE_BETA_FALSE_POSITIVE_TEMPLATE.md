@@ -2,7 +2,7 @@
 
 Use when a finding appears incorrect. Helps calibration without global suppression.
 
-**Preferred:** open Gitea template [`scanner_false_positive`](https://git.commsnet.org/commstech/Bugbot/issues/new?template=scanner_false_positive) on the product repo, or use **Report false positive** on the finding detail page in UI.
+**Preferred:** open Gitea template [`scanner_false_positive`](https://git.commsnet.org/commstech/repository-detective/issues/new?template=scanner_false_positive) on the product repo, or use **Report false positive** on the finding detail page in UI.
 
 ---
 

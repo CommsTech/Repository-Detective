@@ -37,7 +37,7 @@ func RunGitleaks(ctx context.Context, logger *logrus.Logger, dir string, cfg Con
 func runGitleaksWithCommand(ctx context.Context, logger *logrus.Logger, dir string, cfg Config, commandName string) RunResult {
 	result := RunResult{Scanner: "gitleaks"}
 	if !commandAvailable(commandName) {
-		logger.Warn("[SCANNER:gitleaks] binary not found — install gitleaks or use the official Bugbot Docker image")
+		logger.Warn("[SCANNER:gitleaks] binary not found — install gitleaks or use the official Repository Detective Docker image")
 		result.Status = StatusBinaryMissing
 		return result
 	}

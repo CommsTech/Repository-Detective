@@ -3,7 +3,7 @@ package runner
 import (
 	"strings"
 
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/store"
 )
 
 // DelegationDecision indicates whether a scan should run on core or delegate.

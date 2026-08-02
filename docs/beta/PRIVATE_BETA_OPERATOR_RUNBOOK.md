@@ -5,7 +5,7 @@ For operators distributing and supporting the Repository Detective private beta.
 ## Release build steps
 
 ```bash
-cd /path/to/Bugbot
+cd /path/to/repository-detective
 git checkout main && git pull
 make clean-beta-release
 make beta-release
@@ -45,7 +45,7 @@ Beta bundle ships `docker-compose.beta.yml` with bridge networking and localhost
 
 ## Environment variables
 
-Prefer `REPOSITORY_DETECTIVE_*` prefix. Legacy `BUGBOT_*` still supported.
+Prefer `REPOSITORY_DETECTIVE_*` prefix. Legacy `REPOSITORY_DETECTIVE_*` still supported.
 
 | Variable | Required | Notes |
 |----------|----------|-------|

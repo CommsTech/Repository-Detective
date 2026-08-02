@@ -3,7 +3,7 @@ package scanners_test
 import (
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/internal/security"
+	"git.commsnet.org/commstech/repository-detective/internal/security"
 )
 
 func TestSubprocessEnvExcludesSecrets(t *testing.T) {

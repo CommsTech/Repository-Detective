@@ -14,7 +14,7 @@ Preferred env prefix:      REPOSITORY_DETECTIVE_*
 Preferred API header:      X-Repository-Detective-API-Key
 Preferred labels:        repository-detective/*
 
-Legacy compatibility:      BUGBOT_* env, X-Bugbot-API-Key, bugbot/* labels, bugbot-<hex> fingerprints
+Legacy compatibility:      BUGBOT_* env, X-Repository-Detective-API-Key, bugbot/* labels, bugbot-<hex> fingerprints
 ```
 
 Do **not** remove legacy compatibility. Do **not** rename DB path, fingerprints, or internal module paths in this pass.
@@ -51,18 +51,18 @@ Do **not** remove legacy compatibility. Do **not** rename DB path, fingerprints,
 
 | Category | Examples | Reason |
 |----------|----------|--------|
-| **Env aliases** | `BUGBOT_*` in `docker-compose*.yml`, `.gitea/workflows/ci.yml`, scripts | Legacy installs; envcompat layer |
-| **API middleware** | `main.go` accepts `X-Bugbot-API-Key` after preferred header | Backward compatible API clients |
+| **Env aliases** | `REPOSITORY_DETECTIVE_*` in `docker-compose*.yml`, `.gitea/workflows/ci.yml`, scripts | Legacy installs; envcompat layer |
+| **API middleware** | `main.go` accepts `X-Repository-Detective-API-Key` after preferred header | Backward compatible API clients |
 | **DB path** | `data/bugbot.db`, `REPOSITORY_DETECTIVE_DATABASE_PATH` default | No migration in this phase |
 | **Fingerprints** | `bugbot-<hex>` values, `Bugbot fingerprint:` body marker parsing | Dedup / lifecycle compatibility |
 | **Labels** | `bugbot/*` read in `dual`/`legacy_only` modes | Existing Gitea issues |
 | **Gitea status context** | Default `bugbot/security-scan` | External forge integration string |
-| **Go module path** | `git.commsnet.org/commstech/bugbot` | Not user-facing; rename is separate |
-| **Git remote / repo name** | `commstech/Bugbot` in clone URLs and dogfood reports | Actual forge repository name |
+| **Go module path** | `git.commsnet.org/commstech/repository-detective` | Not user-facing; rename is separate |
+| **Git remote / repo name** | `commstech/repository-detective` in clone URLs and dogfood reports | Actual forge repository name |
 | **Container legacy names** | `gitea-bugbot` in some troubleshooting examples | May exist on old hosts |
 | **Binary build output** | `go build -o gitea-bugbot` in TESTING.md | Dev convenience; image uses `repository-detective` |
 | **CSRF salt string** | `bugbot-csrf-v1:` in `internal/security/csrf.go` | Changing breaks existing tokens |
-| **Test fixtures** | `BUGBOT_*` in envcompat/security tests | Tests legacy path |
+| **Test fixtures** | `REPOSITORY_DETECTIVE_*` in envcompat/security tests | Tests legacy path |
 
 ---
 
@@ -70,8 +70,8 @@ Do **not** remove legacy compatibility. Do **not** rename DB path, fingerprints,
 
 | Surface | Preferred | Legacy still works |
 |---------|-----------|-------------------|
-| API header | `X-Repository-Detective-API-Key` | `X-Bugbot-API-Key` |
-| Env vars | `REPOSITORY_DETECTIVE_*` | `BUGBOT_*` (wins: `REPOSITORY_DETECTIVE_*` if both set) |
+| API header | `X-Repository-Detective-API-Key` | `X-Repository-Detective-API-Key` |
+| Env vars | `REPOSITORY_DETECTIVE_*` | `REPOSITORY_DETECTIVE_*` (wins: `REPOSITORY_DETECTIVE_*` if both set) |
 | Issue labels (write) | `repository-detective/*` in `new_only` default | `bugbot/*` via `legacy_only` / read in `dual` |
 | Issue body marker | `Repository Detective fingerprint:` | `Bugbot fingerprint:` parsed |
 | Fingerprint value | — | `bugbot-<hex>` unchanged |
@@ -86,7 +86,7 @@ See [BRANDING_MIGRATION.md](BRANDING_MIGRATION.md).
 |------|------|---------|
 | `TestRequireAPIKeyAuthAcceptsPreferredAndLegacyHeaders` | `main_test.go` | Preferred and legacy headers both authenticate |
 | `TestControlPlaneRoutesRequireAPIKey` | `api/security_test.go` | Unauthenticated requests rejected (simplified router) |
-| Env compat | `internal/config/envcompat/envcompat_test.go` | `BUGBOT_*` still maps to config |
+| Env compat | `internal/config/envcompat/envcompat_test.go` | `REPOSITORY_DETECTIVE_*` still maps to config |
 
 Run:
 
@@ -100,7 +100,7 @@ staticcheck ./...
 
 ## Not changed (by design)
 
-- Dogfood reports under `docs/dogfood-reports/` referencing repo `commstech/Bugbot`
+- Dogfood reports under `docs/dogfood-reports/` referencing repo `commstech/repository-detective`
 - `config/config.yaml` local operator file (gitignored)
 - Internal variable names (`bugbotStore`, etc.)
 - License enforcement / edition gates (separate track — see [EDITIONS.md](EDITIONS.md))

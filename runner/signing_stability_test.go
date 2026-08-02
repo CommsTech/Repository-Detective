@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/graph"
-	"git.commsnet.org/commstech/bugbot/runner"
+	"git.commsnet.org/commstech/repository-detective/graph"
+	"git.commsnet.org/commstech/repository-detective/runner"
 )
 
 func TestDoubleMarshalStableForHMAC(t *testing.T) {

@@ -1,7 +1,7 @@
 # Homelab minimal — smallest useful connected-repo deployment
 # Copy relevant keys into config.yaml. No secrets included.
 
-scan_profile: fast
+scan_profile: light
 enable_trivy: true
 enable_grype: false
 enable_gitleaks: false
@@ -26,4 +26,3 @@ notifications_enabled: false
 preinstall_audit_enabled: false
 runner_delegation_enabled: false
 
-qdrant_enabled: false

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"sort"
 )
 
 func (s *SQLiteStore) enrichOperatorDashboard(ctx context.Context, summary *DashboardSummary) error {
@@ -91,25 +92,82 @@ func (s *SQLiteStore) loadScannerPlatformRollups(ctx context.Context, summary *D
 	`).Scan(&summary.ScannerFailuresCount); err != nil {
 		return fmt.Errorf("unique failed scanners: %w", err)
 	}
+	// Parse failures in the recent window (lifetime noise from old outages is not actionable).
+	if err := s.db.QueryRowContext(ctx, `
+		SELECT COUNT(1)
+		FROM scanner_results sr
+		JOIN scans s ON s.id = sr.scan_id
+		WHERE sr.status = 'parse_failed'
+		  AND s.started_at >= datetime('now', '-14 days')
+	`).Scan(&summary.ScannerParseFailedCount); err != nil {
+		return fmt.Errorf("parse failed scanner events: %w", err)
+	}
+	summary.ScanHealth.ParseFailedEvents = summary.ScannerParseFailedCount
+	_ = s.db.QueryRowContext(ctx, `
+		SELECT COUNT(DISTINCT sr.scanner_name)
+		FROM scanner_results sr
+		JOIN scans s ON s.id = sr.scan_id
+		WHERE sr.status = 'parse_failed'
+		  AND s.started_at >= datetime('now', '-14 days')
+	`).Scan(&summary.ScanHealth.ParseFailedScanners)
 	return rows.Err()
 }
 
 func (s *SQLiteStore) loadScanHealth(ctx context.Context, summary *DashboardSummary) error {
 	h := &summary.ScanHealth
 	h.FailedScans = summary.FailedScansCount
+	h.ActionableFailedScans = summary.ActionableFailedScansCount
+	h.StaleReapedScans = summary.StaleReapedScansCount
+	h.UnhealthyRepos = summary.UnhealthyReposCount
+	h.FailureWindowDays = 14
 
 	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(1) FROM scans WHERE status = 'completed'`).Scan(&h.CompletedScans); err != nil {
 		return fmt.Errorf("completed scans: %w", err)
 	}
 
 	buckets := map[string]int{}
+	bucketRows, err := s.db.QueryContext(ctx, `
+		SELECT error FROM scans s
+		WHERE s.status = 'failed'
+		  AND s.started_at >= datetime('now', '-14 days')
+		  AND NOT EXISTS (
+			SELECT 1 FROM scans later
+			WHERE later.repository_id = s.repository_id
+			  AND later.status = 'completed'
+			  AND later.started_at > s.started_at
+		  )
+	`)
+	if err != nil {
+		return fmt.Errorf("failed scan errors: %w", err)
+	}
+	for bucketRows.Next() {
+		var errMsg string
+		if err := bucketRows.Scan(&errMsg); err != nil {
+			bucketRows.Close()
+			return err
+		}
+		buckets[ClassifyScanFailure(errMsg)]++
+	}
+	if err := bucketRows.Err(); err != nil {
+		bucketRows.Close()
+		return err
+	}
+	bucketRows.Close()
+
 	failRows, err := s.db.QueryContext(ctx, `
 		SELECT s.id, s.repository_id, s.error, s.started_at, r.full_name
 		FROM scans s
 		JOIN repositories r ON r.id = s.repository_id
 		WHERE s.status = 'failed'
+		  AND s.started_at >= datetime('now', '-14 days')
+		  AND NOT EXISTS (
+			SELECT 1 FROM scans later
+			WHERE later.repository_id = s.repository_id
+			  AND later.status = 'completed'
+			  AND later.started_at > s.started_at
+		  )
 		ORDER BY s.started_at DESC
-		LIMIT 15
+		LIMIT 80
 	`)
 	if err != nil {
 		return fmt.Errorf("failed scans: %w", err)
@@ -123,8 +181,18 @@ func (s *SQLiteStore) loadScanHealth(ctx context.Context, summary *DashboardSumm
 		}
 		brief.StartedAt = parseTime(started)
 		brief.Bucket = ClassifyScanFailure(brief.Error)
-		buckets[brief.Bucket]++
-		h.RecentFailedScans = append(h.RecentFailedScans, brief)
+		if IsNoiseScanFailure(brief.Error) {
+			if len(h.RecentStaleScans) < 10 {
+				h.RecentStaleScans = append(h.RecentStaleScans, brief)
+			}
+			continue
+		}
+		if len(h.RecentFailedScans) < 15 {
+			h.RecentFailedScans = append(h.RecentFailedScans, brief)
+		}
+	}
+	if err := failRows.Err(); err != nil {
+		return err
 	}
 	for bucket, count := range buckets {
 		h.FailureBuckets = append(h.FailureBuckets, ScanFailureBucket{
@@ -132,6 +200,47 @@ func (s *SQLiteStore) loadScanHealth(ctx context.Context, summary *DashboardSumm
 			Label:  scanFailureBucketLabel(bucket),
 			Count:  count,
 		})
+	}
+	sort.Slice(h.FailureBuckets, func(i, j int) bool {
+		return h.FailureBuckets[i].Count > h.FailureBuckets[j].Count
+	})
+
+	unhealthyRows, err := s.db.QueryContext(ctx, `
+		SELECT r.id, r.full_name, latest.error, latest.started_at
+		FROM repositories r
+		JOIN (
+			SELECT s1.repository_id, s1.error, s1.started_at, s1.status
+			FROM scans s1
+			JOIN (
+				SELECT repository_id, MAX(started_at) AS max_started
+				FROM scans
+				GROUP BY repository_id
+			) latest_ids ON latest_ids.repository_id = s1.repository_id
+			               AND latest_ids.max_started = s1.started_at
+		) latest ON latest.repository_id = r.id
+		WHERE latest.status = 'failed'
+		  AND NOT (COALESCE(latest.error, '') LIKE '%stale%reaped%')
+		  AND NOT (COALESCE(latest.error, '') LIKE '%interrupted by process restart%')
+		ORDER BY latest.started_at DESC
+		LIMIT 10
+	`)
+	if err != nil {
+		return fmt.Errorf("unhealthy repos: %w", err)
+	}
+	defer unhealthyRows.Close()
+	for unhealthyRows.Next() {
+		var brief RepoAttentionBrief
+		var errMsg, started string
+		if err := unhealthyRows.Scan(&brief.RepositoryID, &brief.FullName, &errMsg, &started); err != nil {
+			return err
+		}
+		t := parseTime(started)
+		brief.LastScanAt = &t
+		brief.Reason = "Latest scan failed: " + truncate(errMsg, 100)
+		h.ReposNeedingAttention = append(h.ReposNeedingAttention, brief)
+	}
+	if err := unhealthyRows.Err(); err != nil {
+		return err
 	}
 
 	neverRows, err := s.db.QueryContext(ctx, `
@@ -152,6 +261,9 @@ func (s *SQLiteStore) loadScanHealth(ctx context.Context, summary *DashboardSumm
 		}
 		brief.Reason = "No successful scan recorded"
 		h.ReposNeedingAttention = append(h.ReposNeedingAttention, brief)
+	}
+	if err := neverRows.Err(); err != nil {
+		return err
 	}
 
 	staleRows, err := s.db.QueryContext(ctx, `
@@ -177,5 +289,5 @@ func (s *SQLiteStore) loadScanHealth(ctx context.Context, summary *DashboardSumm
 		brief.Reason = "Last successful scan over 30 days ago"
 		h.ReposNeedingAttention = append(h.ReposNeedingAttention, brief)
 	}
-	return nil
+	return staleRows.Err()
 }

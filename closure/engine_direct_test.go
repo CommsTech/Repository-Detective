@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/closure"
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/closure"
+	"git.commsnet.org/commstech/repository-detective/store"
 )
 
 func TestRecordDirectRemediationPersistsMergeSHA(t *testing.T) {

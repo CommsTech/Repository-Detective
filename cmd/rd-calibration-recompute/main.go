@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/store"
 )
 
 func main() {

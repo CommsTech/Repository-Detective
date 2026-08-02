@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/notify"
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/notify"
+	"git.commsnet.org/commstech/repository-detective/store"
 )
 
 const settingsNotice = "Per-repo settings are enforced on scans (Phase 8). Runner policy is enforced for scheduled and manual full scans when runner delegation is enabled (Phase 12)."
@@ -214,9 +214,13 @@ type lifecycleEventResponse struct {
 }
 
 type dashboardSummaryResponse struct {
-	TotalRepositories      int                      `json:"total_repositories"`
+	TotalRepositories        int                      `json:"total_repositories"`
 	FailedScansCount         int                      `json:"failed_scans_count"`
+	ActionableFailedScansCount int                    `json:"actionable_failed_scans_count"`
+	StaleReapedScansCount    int                      `json:"stale_reaped_scans_count"`
+	UnhealthyReposCount     int                      `json:"unhealthy_repos_count"`
 	ScannerFailuresCount     int                      `json:"scanner_failures_count"`
+	ScannerParseFailedCount  int                      `json:"scanner_parse_failed_count"`
 	ScannerToolsMissingCount int                      `json:"scanner_tools_missing_count"`
 	OpenFindingsCount        int                      `json:"open_findings_count"`
 	SuppressedFindingsCount  int                      `json:"suppressed_findings_count"`
@@ -501,7 +505,10 @@ func toLifecycleEventResponse(ev store.LifecycleEvent) lifecycleEventResponse {
 func toDashboardSummaryResponse(s store.DashboardSummary) dashboardSummaryResponse {
 	resp := dashboardSummaryResponse{
 		TotalRepositories: s.TotalRepositories, FailedScansCount: s.FailedScansCount,
-		ScannerFailuresCount: s.ScannerFailuresCount, ScannerToolsMissingCount: s.ScannerToolsMissingCount,
+		ActionableFailedScansCount: s.ActionableFailedScansCount, StaleReapedScansCount: s.StaleReapedScansCount,
+		UnhealthyReposCount: s.UnhealthyReposCount,
+		ScannerFailuresCount: s.ScannerFailuresCount, ScannerParseFailedCount: s.ScannerParseFailedCount,
+		ScannerToolsMissingCount: s.ScannerToolsMissingCount,
 		OpenFindingsCount: s.OpenFindingsCount, SuppressedFindingsCount: s.SuppressedFindingsCount,
 		IssuesDetectedInScans: s.IssuesDetectedInScans,
 		OpenFindingsBySeverity: s.OpenFindingsBySeverity,

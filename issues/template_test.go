@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/ai"
+	"git.commsnet.org/commstech/repository-detective/ai"
 )
 
 func TestRenderIssueBodyIncludesSections(t *testing.T) {
@@ -154,27 +154,6 @@ func TestRenderIssueBodyReportOnlyPolicy(t *testing.T) {
 	})
 	if !strings.Contains(body, "Report-only: yes") {
 		t.Fatal("expected report-only yes in filing policy")
-	}
-}
-
-func TestDuplicateCommentPreservesFingerprint(t *testing.T) {
-	body := DuplicateCommentBody(&ai.CodeIssue{
-		Title:       "Finding",
-		Severity:    "medium",
-		Category:    "security",
-		Confidence:  0.8,
-		Source:      "semgrep",
-		Fingerprint: "bugbot-dup-test",
-		File:        "a.go",
-		LineNumber:  1,
-		Description: "desc",
-		CodeSnippet: "unsafe()",
-	}, 0.95)
-	if !strings.Contains(body, "bugbot-dup-test") {
-		t.Fatal("duplicate comment must preserve fingerprint")
-	}
-	if strings.Contains(body, "AKIA") {
-		t.Fatal("duplicate comment must redact secrets")
 	}
 }
 

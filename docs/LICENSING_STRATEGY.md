@@ -123,7 +123,7 @@ Future plan: see [COMMERCIAL_ENTERPRISE.md](COMMERCIAL_ENTERPRISE.md) § Impleme
 
 ## Branding compatibility
 
-All editions support legacy `BUGBOT_*` env vars and `X-Bugbot-API-Key` alongside preferred Repository Detective names. See [BRANDING_COMPATIBILITY_AUDIT.md](BRANDING_COMPATIBILITY_AUDIT.md).
+All editions support legacy `REPOSITORY_DETECTIVE_*` env vars and `X-Repository-Detective-API-Key` alongside preferred Repository Detective names. See [BRANDING_COMPATIBILITY_AUDIT.md](BRANDING_COMPATIBILITY_AUDIT.md).
 
 ---
 

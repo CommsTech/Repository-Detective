@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/handlers"
+	"git.commsnet.org/commstech/repository-detective/handlers"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )

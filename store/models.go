@@ -259,6 +259,19 @@ type ScannerResultRecord struct {
 	Error         string
 }
 
+// ScannerFailureEvent is a recent scanner_results failure for operator drill-down.
+type ScannerFailureEvent struct {
+	ScannerName  string
+	Status       string
+	Error        string
+	Detail       string
+	ScanID       string
+	RepositoryID int64
+	RepoFullName string
+	StartedAt    time.Time
+	DurationMS   int64
+}
+
 // Finding is a deduplicated finding indexed by fingerprint.
 type Finding struct {
 	ID              int64

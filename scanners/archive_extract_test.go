@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/scanners"
+	"git.commsnet.org/commstech/repository-detective/scanners"
 )
 
 func writeTestZip(t *testing.T, entries map[string]string) string {

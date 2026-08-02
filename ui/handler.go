@@ -12,14 +12,14 @@ import (
 	"strings"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/closure"
-	"git.commsnet.org/commstech/bugbot/internal/security"
-	"git.commsnet.org/commstech/bugbot/notify"
-	"git.commsnet.org/commstech/bugbot/operator"
-	"git.commsnet.org/commstech/bugbot/patcher"
-	"git.commsnet.org/commstech/bugbot/preinstall"
-	"git.commsnet.org/commstech/bugbot/remediation"
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/closure"
+	"git.commsnet.org/commstech/repository-detective/internal/security"
+	"git.commsnet.org/commstech/repository-detective/notify"
+	"git.commsnet.org/commstech/repository-detective/operator"
+	"git.commsnet.org/commstech/repository-detective/patcher"
+	"git.commsnet.org/commstech/repository-detective/preinstall"
+	"git.commsnet.org/commstech/repository-detective/remediation"
+	"git.commsnet.org/commstech/repository-detective/store"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )
@@ -171,6 +171,13 @@ func (h *Handler) SetPlatformContext(ctx PlatformContext) {
 	}
 }
 
+// SetPreinstallEnabled toggles the pre-install audit UI/workflow without restart.
+func (h *Handler) SetPreinstallEnabled(enabled bool) {
+	if h != nil {
+		h.preinstallEnabled = enabled
+	}
+}
+
 func normalizeBasePath(path string) string {
 	path = strings.TrimSpace(path)
 	if path == "" {
@@ -270,7 +277,7 @@ func clientAPIKeyFromRequest(c *gin.Context) string {
 	if key := c.GetHeader("X-Repository-Detective-API-Key"); key != "" {
 		return key
 	}
-	if key := c.GetHeader("X-Bugbot-API-Key"); key != "" {
+	if key := c.GetHeader("X-Bugbot-API-Key"); key != "" { // legacy alias
 		return key
 	}
 	if key := apiKeyFromCookie(c); key != "" {
@@ -419,7 +426,7 @@ func (h *Handler) Dashboard(c *gin.Context) {
 	actions := store.BuildDashboardActions(
 		summary.Backlog.CriticalOpen,
 		summary.Backlog.HighOpen,
-		summary.FailedScansCount,
+		summary.UnhealthyReposCount+summary.ActionableFailedScansCount,
 		summary.ScanHealth.RecentFailedScans,
 		missingScanners,
 		summary.ScanHealth.ReposNeedingAttention,
@@ -587,16 +594,16 @@ func (h *Handler) SystemHealth(c *gin.Context) {
 		c.String(http.StatusInternalServerError, "failed to load health data")
 		return
 	}
-	data := map[string]any{"Summary": summary}
+	var readiness *operator.Readiness
 	if h.readinessFn != nil {
-		data["Readiness"] = h.readinessFn()
+		r := h.readinessFn()
+		readiness = &r
 	}
 	active, _ := h.store.CountActiveScans(c.Request.Context())
-	data["ActiveScans"] = active
 	runnerJobs := summary.RunnerJobsByStatus
 	delegationEnabled := false
-	if r, ok := data["Readiness"].(operator.Readiness); ok {
-		delegationEnabled = r.Features.RunnerDelegationEnabled
+	if readiness != nil {
+		delegationEnabled = readiness.Features.RunnerDelegationEnabled
 	}
 	var lastJob *time.Time
 	var lastErr string
@@ -608,11 +615,23 @@ func (h *Handler) SystemHealth(c *gin.Context) {
 			lastErr = rsum.LastError
 		}
 	}
-	data["RunnerTelemetry"] = operator.BuildRunnerTelemetry(delegationEnabled, runnerJobs, lastJob, lastErr)
-	if r, ok := data["Readiness"].(operator.Readiness); ok {
-		data["Capabilities"] = buildCapabilityStatuses(r, h.notifyGlobal, h.platform, h.basePath)
+	runner := operator.BuildRunnerTelemetry(delegationEnabled, runnerJobs, lastJob, lastErr)
+
+	var capabilities []CapabilityStatus
+	if readiness != nil {
+		capabilities = buildCapabilityStatuses(*readiness, h.notifyGlobal, h.platform, h.basePath)
 	}
-	h.renderNav(c, "health.html", "System Health", "health", data)
+
+	failures, err := h.store.ListRecentScannerFailures(c.Request.Context(), 40)
+	if err != nil {
+		h.logger.WithError(err).Warn("list recent scanner failures failed")
+		failures = nil
+	}
+
+	page := buildHealthPageModel(summary, readiness, active, runner, capabilities, failures, h.basePath, h.platform.PublicURL)
+	h.renderNav(c, "health.html", "System Health", "health", map[string]any{
+		"Page": page,
+	})
 }
 
 func (h *Handler) fleetHealthSummary(ctx context.Context) store.FleetHealthSummary {
@@ -620,10 +639,7 @@ func (h *Handler) fleetHealthSummary(ctx context.Context) store.FleetHealthSumma
 	if !ok || sqlite == nil {
 		return store.FleetHealthSummary{}
 	}
-	schedulerOn := true
-	if h.readinessFn != nil {
-		schedulerOn = h.readinessFn().Features.SchedulerEnabled
-	}
+	schedulerOn := h.platform.SchedulerEnabled
 	audit, err := store.FleetHealthAudit(ctx, sqlite, h.global, schedulerOn, 24*time.Hour)
 	if err != nil {
 		h.logger.WithError(err).Warn("fleet health audit failed")
@@ -747,7 +763,7 @@ func (h *Handler) RepoSettings(c *gin.Context) {
 	}
 	selectedProfile := meta.ScanProfile
 	if settings.ScanProfile != nil && *settings.ScanProfile != "" {
-		selectedProfile = *settings.ScanProfile
+		selectedProfile = store.NormalizeScanProfile(*settings.ScanProfile)
 	}
 	notifyEff := notify.ResolveEffective(h.notifyGlobal, settings)
 	suppressions, _ := h.store.ListFindingSuppressions(c.Request.Context(), store.SuppressionFilter{
@@ -759,7 +775,7 @@ func (h *Handler) RepoSettings(c *gin.Context) {
 	h.renderNav(c, "repo_settings.html", "Settings — "+repo.FullName, "policies", map[string]any{
 		"Repo": repo, "Settings": settings, "Effective": effective, "ProfileMeta": meta,
 		"SelectedProfile": selectedProfile,
-		"Profiles":        store.AllowedScanProfiles, "ProfileDescriptions": store.ProfileDescriptions,
+		"Profiles":        store.PrimaryScanProfileOptions, "ProfileDescriptions": store.ProfileDescriptions,
 		"Allowed": allowedSettingsDoc(), "CronInfo": cronInfo,
 		"NotificationGlobal": h.notifyGlobal, "EffectiveNotifications": notifyEff,
 		"NotificationEvents": store.AllowedNotificationEvents,
@@ -865,7 +881,7 @@ func (h *Handler) SaveRepoSettings(c *gin.Context) {
 		effective, meta := store.ResolveEffectiveSettingsFull(h.global, settings)
 		h.render(c, "repo_settings.html", "Settings error", map[string]any{
 			"Error": err.Error(), "Repo": repo, "Settings": settings, "Effective": effective,
-			"ProfileMeta": meta, "Profiles": store.AllowedScanProfiles,
+			"ProfileMeta": meta, "Profiles": store.PrimaryScanProfileOptions,
 			"ProfileDescriptions": store.ProfileDescriptions,
 			"Allowed":             allowedSettingsDoc(),
 		})
@@ -1404,7 +1420,7 @@ func (h *Handler) StartPreinstallAudit(c *gin.Context) {
 		return
 	}
 	q := url.Values{}
-	if key := c.GetHeader("X-Bugbot-API-Key"); key != "" {
+	if key := c.GetHeader("X-Repository-Detective-API-Key"); key != "" {
 		q.Set("api_key", key)
 	} else if key := c.Query("api_key"); key != "" {
 		q.Set("api_key", key)
@@ -1453,7 +1469,7 @@ func (h *Handler) MarkPreinstallReportReviewed(c *gin.Context) {
 		return
 	}
 	q := url.Values{}
-	if key := c.GetHeader("X-Bugbot-API-Key"); key != "" {
+	if key := c.GetHeader("X-Repository-Detective-API-Key"); key != "" {
 		q.Set("api_key", key)
 	} else if key := c.Query("api_key"); key != "" {
 		q.Set("api_key", key)
@@ -1477,14 +1493,18 @@ func (h *Handler) Learning(c *gin.Context) {
 	health, _ := h.store.LearningHealthSummary(ctx)
 	recs, _ := h.store.ListCalibrationRecommendations(ctx, "proposed", 50)
 	aiRecs, _ := h.store.ListPendingAIAdvisoryRecommendations(ctx, 50)
+	byType, _ := h.store.CountLearningEventsByType(ctx)
+	noisy, _ := h.store.ListCalibrationRuleStats(ctx, 12)
 	h.renderNav(c, "learning.html", "Learning & Calibration", "learning", map[string]any{
-		"Health":                health,
-		"Recommendations":       recs,
-		"AIRecommendations":     aiRecs,
+		"Health":                      health,
+		"Recommendations":             recs,
+		"AIRecommendations":           aiRecs,
 		"AIRecommendationsEnabled":    h.platform.OpenClawAIReviewEnabled,
 		"AIRecommendationsConfigured": h.platform.OpenClawEndpointConfigured,
 		"OpenClawEnabled":             h.platform.OpenClawAIReviewEnabled,
 		"OpenClawConfigured":          h.platform.OpenClawEndpointConfigured,
+		"ChartJSON":                   buildLearningChartJSON(health, byType, noisy),
+		"NoisyRules":                  noisy,
 	})
 }
 

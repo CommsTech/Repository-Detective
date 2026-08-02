@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/ai"
+	"git.commsnet.org/commstech/repository-detective/ai"
 )
 
 type fakeTransport struct{}

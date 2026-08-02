@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/issues"
+	"git.commsnet.org/commstech/repository-detective/issues"
 )
 
 // IssueActions applies Gitea issue updates for closure workflow.

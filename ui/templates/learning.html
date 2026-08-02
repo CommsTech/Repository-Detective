@@ -4,64 +4,165 @@
 <head>{{template "head" .}}</head>
 <body class="rd-app">
 {{template "nav" .}}
-<div class="rd-card">
-  <div class="rd-card-head"><h2>Learning health</h2><span class="rd-chip">Evidence-backed</span></div>
-  <p class="rd-muted">Continuous improvement from lifecycle outcomes — deterministic first, optional LLM gate disabled by default.</p>
-  <table class="rd-table rd-table-compact">
-    <tr><td>Learning events recorded</td><td><strong>{{.Data.Health.EventsTotal}}</strong></td></tr>
-    <tr><td>Pending recommendations</td><td><strong>{{.Data.Health.PendingRecommendations}}</strong></td></tr>
-    <tr><td>Active repo calibration rules</td><td><strong>{{.Data.Health.ActiveRepoRules}}</strong></td></tr>
-    <tr><td>Structurally grouped findings</td><td><strong>{{.Data.Health.GroupedFindings}}</strong></td></tr>
-    <tr><td>Avg false-positive rate (rules)</td><td><strong>{{printf "%.0f" (mul .Data.Health.AvgFalsePositiveRate 100)}}%</strong></td></tr>
-    <tr><td>Scanner failure rate (history)</td><td><strong>{{printf "%.0f" (mul .Data.Health.ScannerFailureRate 100)}}%</strong></td></tr>
-    <tr><td>Rule reliability stats tracked</td><td><strong>yes</strong> <span class="rd-muted">(per source/rule)</span></td></tr>
-  </table>
-  <p class="rd-muted">Findings stay visible after calibration. High/critical never auto-downgraded. Product-repo evidence alone cannot create global suppressions.</p>
-  <p><a class="rd-link" href="{{.BasePath}}/configure{{apiKeyQS .APIKey}}">Configure features</a> · <a class="rd-link" href="{{.BasePath}}/health{{apiKeyQS .APIKey}}">System Health</a></p>
-  <p class="rd-muted">False positives: use Gitea template <code>scanner_false_positive</code> on the product repo — <a class="rd-link" href="https://git.commsnet.org/commstech/Bugbot/issues/new?template=scanner_false_positive" target="_blank" rel="noopener">open template</a>. Include scan ID and fingerprint; never paste secrets.</p>
-</div>
 
-<div class="rd-card">
-  <div class="rd-card-head"><h2>AI recommendations</h2><span class="rd-chip">Advisory only</span></div>
-  <p class="rd-muted">Second-opinion suggestions from your configured AI provider — accept/reject creates calibration drafts only; findings are never auto-changed.</p>
-  {{if .Data.AIRecommendationsConfigured}}
-  <table class="rd-table">
-    <tr><th>Review</th><th>Fingerprint</th><th>Classification</th><th>Action</th><th>Reason</th></tr>
-    {{range .Data.AIRecommendations}}
-    <tr>
-      <td><code>{{shortID .ReviewID 12}}</code></td>
-      <td><code>{{shortID .FindingFingerprint 16}}</code></td>
-      <td>{{.Classification}}</td>
-      <td>{{.SuggestedAction}}</td>
-      <td class="rd-muted">{{.Reason}}</td>
-    </tr>
-    {{else}}
-    <tr><td colspan="5" class="rd-muted">No pending AI recommendations.</td></tr>
+<section class="rd-card rd-learn-hero" aria-labelledby="learn-health-title">
+  <div class="rd-card-head">
+    <h2 id="learn-health-title">Learning health</h2>
+    <span class="rd-chip">Evidence-backed</span>
+  </div>
+  <p class="rd-muted">Continuous improvement from lifecycle outcomes — deterministic first, optional LLM gate off by default.</p>
+
+  {{with .Data.Health}}
+  <div class="rd-grid rd-grid-stats">
+    <div class="rd-stat info">
+      <div class="rd-stat-value">{{.EventsTotal}}</div>
+      <div class="rd-stat-label">Learning events</div>
+    </div>
+    <div class="rd-stat {{if gt .PendingRecommendations 0}}warn{{else}}success{{end}}">
+      <div class="rd-stat-value">{{.PendingRecommendations}}</div>
+      <div class="rd-stat-label">Pending recommendations</div>
+    </div>
+    <div class="rd-stat info">
+      <div class="rd-stat-value">{{.ActiveRepoRules}}</div>
+      <div class="rd-stat-label">Active repo rules</div>
+    </div>
+    <div class="rd-stat info">
+      <div class="rd-stat-value">{{.GroupedFindings}}</div>
+      <div class="rd-stat-label">Structurally grouped</div>
+    </div>
+    {{if gt .ExpiredRepoRules 0}}
+    <div class="rd-stat neutral">
+      <div class="rd-stat-value">{{.ExpiredRepoRules}}</div>
+      <div class="rd-stat-label">Expired rules</div>
+    </div>
     {{end}}
-  </table>
-  {{else}}
-  <p class="rd-muted">AI provider endpoint not configured — set <code>ai_recommendations_endpoint</code> or <code>ai_base_url</code> and enable recommendations in Configure.</p>
+  </div>
+
+  <div class="rd-meter-grid">
+    <div class="rd-meter">
+      <div class="rd-meter-head">
+        <span>Avg false-positive rate</span>
+        <strong>{{pct .AvgFalsePositiveRate}}%</strong>
+      </div>
+      <div class="rd-meter-track" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{pct .AvgFalsePositiveRate}}" aria-label="Average false-positive rate">
+        <div class="rd-meter-fill {{rateClass .AvgFalsePositiveRate}}" style="width:{{rateWidth .AvgFalsePositiveRate}}"></div>
+      </div>
+      <p class="rd-muted" style="margin:.45rem 0 0">From rules with enough evidence (≥3 findings).</p>
+    </div>
+    <div class="rd-meter">
+      <div class="rd-meter-head">
+        <span>Scanner failure rate</span>
+        <strong>{{pct .ScannerFailureRate}}%</strong>
+      </div>
+      <div class="rd-meter-track" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{pct .ScannerFailureRate}}" aria-label="Scanner failure rate">
+        <div class="rd-meter-fill {{rateClass .ScannerFailureRate}}" style="width:{{rateWidth .ScannerFailureRate}}"></div>
+      </div>
+      <p class="rd-muted" style="margin:.45rem 0 0">Historical scanner health (failed / error / timeout).</p>
+    </div>
+  </div>
   {{end}}
-</div>
 
-<div class="rd-card">
-  <div class="rd-card-head"><h2>Calibration recommendations</h2></div>
-  <p class="rd-muted">Repo-scoped by default. Approve via API <code>POST /api/v1/calibration/recommendations/:id/accept</code> or recompute job.</p>
-  <table class="rd-table">
-    <tr><th>Scope</th><th>Rule</th><th>Action</th><th>Reason</th><th>Confidence</th></tr>
-    {{range .Data.Recommendations}}
-    <tr>
-      <td>{{.Scope}}{{if .RepositoryID}} #{{.RepositoryID}}{{end}}</td>
-      <td><code>{{.Source}}/{{.RuleID}}</code></td>
-      <td>{{.RecommendedAction}}</td>
-      <td class="rd-muted">{{.Reason}}</td>
-      <td>{{printf "%.0f" (mul .Confidence 100)}}%</td>
-    </tr>
-    {{else}}
-    <tr><td colspan="5" class="rd-muted">No pending recommendations — run recompute or complete more dry-runs.</td></tr>
+  <div class="rd-learn-callout">
+    <p class="rd-muted" style="margin:0">Findings stay visible after calibration. High/critical never auto-downgraded. Product-repo evidence alone cannot create global suppressions.</p>
+    <p class="rd-muted" style="margin:.5rem 0 0">
+      <a class="rd-link" href="{{.BasePath}}/configure{{apiKeyQS .APIKey}}">Configure</a>
+      · <a class="rd-link" href="{{.BasePath}}/health{{apiKeyQS .APIKey}}">System Health</a>
+      · <a class="rd-link" href="https://git.commsnet.org/commstech/repository-detective/issues/new?template=scanner_false_positive" target="_blank" rel="noopener">Report false positive</a>
+    </p>
+  </div>
+</section>
+
+<section class="rd-learn-charts" aria-label="Learning charts">
+  <div class="rd-card">
+    <div class="rd-card-head"><h2>Learning events by type</h2><span class="rd-chip">Fleet</span></div>
+    <div class="rd-learn-chart-wrap">
+      <canvas id="rd-learn-events-chart" aria-label="Learning events by type chart"></canvas>
+    </div>
+  </div>
+  <div class="rd-card">
+    <div class="rd-card-head"><h2>Noisiest rules</h2><span class="rd-chip">FP rate</span></div>
+    <div class="rd-learn-chart-wrap tall">
+      <canvas id="rd-learn-noisy-chart" aria-label="Noisiest calibration rules chart"></canvas>
+    </div>
+    {{if .Data.NoisyRules}}
+    <div class="rd-noisy-list" aria-label="Top noisy rules list">
+      {{range $i, $r := .Data.NoisyRules}}{{if lt $i 6}}
+      <div class="rd-noisy-row">
+        <div>
+          <div class="rd-noisy-meta">
+            <code>{{$r.Source}}/{{$r.RuleID}}</code>
+            <span class="rd-muted">{{$r.TotalFindings}} findings</span>
+          </div>
+          <div class="rd-meter-track">
+            <div class="rd-meter-fill {{rateClass $r.FalsePositiveRate}}" style="width:{{rateWidth $r.FalsePositiveRate}}"></div>
+          </div>
+        </div>
+        <strong>{{pct $r.FalsePositiveRate}}%</strong>
+      </div>
+      {{end}}{{end}}
+    </div>
     {{end}}
-  </table>
-</div>
+  </div>
+</section>
+
+<section class="rd-card" aria-labelledby="ai-recs-title">
+  <div class="rd-card-head">
+    <h2 id="ai-recs-title">AI recommendations</h2>
+    <span class="rd-chip">Advisory only</span>
+  </div>
+  <p class="rd-muted">Second-opinion suggestions — accept/reject creates calibration drafts only; findings are never auto-changed.</p>
+  {{if .Data.AIRecommendationsConfigured}}
+    {{if .Data.AIRecommendations}}
+    <div class="rd-rec-grid">
+      {{range .Data.AIRecommendations}}
+      <article class="rd-rec-card">
+        <div class="rd-rec-card-top">
+          <span class="rd-badge medium">{{.Classification}}</span>
+          <span class="rd-chip">{{.SuggestedAction}}</span>
+        </div>
+        <code>{{shortID .FindingFingerprint 18}}</code>
+        <p class="rd-muted">{{.Reason}}</p>
+        <p class="rd-muted">Review <code>{{shortID .ReviewID 10}}</code></p>
+      </article>
+      {{end}}
+    </div>
+    {{else}}
+    <p class="rd-muted">No pending AI recommendations.</p>
+    {{end}}
+  {{else}}
+  <p class="rd-muted">AI endpoint not configured — set recommendations endpoint in Configure / <code>.env</code>.</p>
+  {{end}}
+</section>
+
+<section class="rd-card" aria-labelledby="cal-recs-title">
+  <div class="rd-card-head">
+    <h2 id="cal-recs-title">Calibration recommendations</h2>
+    <span class="rd-chip">Repo-scoped default</span>
+  </div>
+  <p class="rd-muted">Approve via API <code>POST /api/v1/calibration/recommendations/:id/accept</code> or the recompute job.</p>
+  {{if .Data.Recommendations}}
+  <div class="rd-rec-grid">
+    {{range .Data.Recommendations}}
+    <article class="rd-rec-card">
+      <div class="rd-rec-card-top">
+        <span class="rd-badge {{if eq .Scope "global"}}warn{{else}}info{{end}}">{{.Scope}}</span>
+        <span class="rd-chip">{{.RecommendedAction}}</span>
+        <span class="rd-muted">{{printf "%.0f" (mul .Confidence 100)}}% conf.</span>
+      </div>
+      <code>{{.Source}}/{{.RuleID}}</code>
+      <p class="rd-muted">{{.Reason}}</p>
+      {{if .RepositoryID}}<p class="rd-muted">Repo #{{.RepositoryID}}</p>{{end}}
+    </article>
+    {{end}}
+  </div>
+  {{else}}
+  <p class="rd-muted">No pending recommendations — run recompute or complete more dry-runs.</p>
+  {{end}}
+</section>
+
+<script type="application/json" id="rd-learning-data">{{jsonScript .Data.ChartJSON}}</script>
+<script src="{{.BasePath}}/static/chart.umd.min.js" defer></script>
+<script src="{{.BasePath}}/static/learning-charts.js" defer></script>
 {{template "foot" .}}
 </body></html>
 {{end}}

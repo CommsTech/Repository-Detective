@@ -1,7 +1,7 @@
 # Core application remediation sprint
 
 **Date:** 2026-06-05  
-**Scope:** Repository Detective product repo (`commstech/Bugbot`) only  
+**Scope:** Repository Detective product repo (`commstech/repository-detective`) only  
 **Operating model:** Cursor improves RD core → RD fixes/validates connected repos → humans approve sensitive actions  
 **Paused:** Manual fleet repo cleanup, RuView, Qdrant global enablement, new scanners, GitHub/GitLab connected support, Auth/RBAC Slice 2
 
@@ -128,7 +128,7 @@ Repository Detective created remediation PR → human merged → main rescanned 
 | Finding | 9971 (`bugbot-2e9bfe809e79bcf0`, Dockerfile:100) |
 | Plan | `rp-59815d80d8d32abb` |
 | Patch attempt | `pa-6cbc72da69690560` |
-| PR | [#274](https://git.commsnet.org/commstech/Bugbot/pulls/274) |
+| PR | [#274](https://git.commsnet.org/commstech/repository-detective/pulls/274) |
 | Merge commit | `6f42552233ed15521085b51dca26fb82dfb86d6f` |
 | Rescan | `09a44ba983243aab` |
 | Report | [rd-self-remediation-dl3018-test.md](rd-self-remediation-dl3018-test.md) |
@@ -144,7 +144,7 @@ Repository Detective created remediation PR → human merged → main rescanned 
 | Finding | 11658 (`bugbot-c68376af29742113`, `internal/dogfood/staticcheck_e2e_marker.go:8`) |
 | Plan | `rp-08270977049e02e8` |
 | Patch attempt | `pa-12474c8d554fbbf5` |
-| PR | [#288](https://git.commsnet.org/commstech/Bugbot/pulls/288) |
+| PR | [#288](https://git.commsnet.org/commstech/repository-detective/pulls/288) |
 | Merge commit | `a0d32599ff21ab94bbbef905791ebf920d542d84` |
 | Rescan | `6bdad6c92f1c8a0c` |
 | Report | [rd-self-remediation-staticcheck-e2e-test.md](rd-self-remediation-staticcheck-e2e-test.md) |

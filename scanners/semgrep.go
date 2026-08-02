@@ -56,7 +56,7 @@ func RunSemgrep(ctx context.Context, logger *logrus.Logger, dir string, cfg Conf
 func runSemgrepWithCommand(ctx context.Context, logger *logrus.Logger, dir string, cfg Config, commandName string) RunResult {
 	result := RunResult{Scanner: "semgrep"}
 	if !commandAvailable(commandName) {
-		logger.Warn("[SCANNER:semgrep] binary not found — install semgrep or use the official Bugbot Docker image")
+		logger.Warn("[SCANNER:semgrep] binary not found — install semgrep or use the official Repository Detective Docker image")
 		result.Status = StatusBinaryMissing
 		return result
 	}

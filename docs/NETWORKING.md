@@ -16,7 +16,7 @@ Set `BUGBOT_PUBLIC_URL` to that URL. Webhooks go to `{BUGBOT_PUBLIC_URL}/webhook
 
 ## A. Port publish + firewall NAT
 
-### 1. Start Bugbot on port 8081
+### 1. Start Repository Detective on port 8081
 
 ```bash
 cp .env.example .env
@@ -38,16 +38,16 @@ On your router/firewall, add a port forward:
 
 ### 3. DNS and TLS
 
-Point `bugbot.example.com` at your public IP. Terminate TLS on the router (HAProxy/ACME) or on a reverse proxy (Option C).
+Point `repository-detective.example.com` at your public IP. Terminate TLS on the router (HAProxy/ACME) or on a reverse proxy (Option C).
 
 ```bash
-BUGBOT_PUBLIC_URL=https://bugbot.example.com
+BUGBOT_PUBLIC_URL=https://repository-detective.example.com
 ```
 
 ### 4. Test externally
 
 ```bash
-curl https://bugbot.example.com/health
+curl https://repository-detective.example.com/health
 ```
 
 Test webhook delivery in Gitea.
@@ -79,7 +79,7 @@ upstream bugbot {
 
 server {
     listen 443 ssl;
-    server_name bugbot.example.com;
+    server_name repository-detective.example.com;
     location / {
         proxy_pass http://bugbot;
         proxy_set_header Host $host;
@@ -91,7 +91,7 @@ server {
 Caddy:
 
 ```
-bugbot.example.com {
+repository-detective.example.com {
     reverse_proxy 10.0.0.50:8081
 }
 ```

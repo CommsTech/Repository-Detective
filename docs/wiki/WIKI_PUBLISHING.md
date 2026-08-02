@@ -9,10 +9,10 @@ Markdown prepared for wiki import is under **`docs/wiki/`** (mirrors key operato
 ## Verify remote (do not force-push)
 
 ```bash
-cd /path/to/Bugbot
+cd /path/to/repository-detective
 git remote -v
 # Look for a wiki remote, e.g.:
-# wiki  https://git.commsnet.org/commstech/Bugbot.wiki.git (fetch)
+# wiki  https://git.commsnet.org/commstech/repository-detective.wiki.git (fetch)
 ```
 
 If no wiki remote exists, the wiki has not been linked from this clone.
@@ -23,8 +23,8 @@ From a machine with credentials to `git.commsnet.org`:
 
 ```bash
 # One-time clone of the empty wiki repo
-git clone https://git.commsnet.org/commstech/Bugbot.wiki.git /tmp/Bugbot-wiki
-cd /tmp/Bugbot-wiki
+git clone https://git.commsnet.org/commstech/repository-detective.wiki.git /tmp/repository-detective-wiki
+cd /tmp/repository-detective-wiki
 
 # Copy prepared pages (adjust paths to your checkout)
 cp /path/to/Bugbot/docs/wiki/*.md .

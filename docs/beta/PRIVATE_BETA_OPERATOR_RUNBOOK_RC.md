@@ -94,7 +94,7 @@ Preferred path (structured, fixable issues):
 
 1. Run **report-only** scan and capture **scan ID**
 2. Review findings in UI (detail pages include fingerprint + template links)
-3. For each item, open the matching Gitea template on `commstech/Bugbot`:
+3. For each item, open the matching Gitea template on `commstech/repository-detective`:
    - General feedback → `beta_feedback`
    - False positive → `scanner_false_positive`
    - Missed detection → `missed_detection`

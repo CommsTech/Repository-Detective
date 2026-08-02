@@ -44,4 +44,4 @@ Always report-only. Generates promotional-quality report and optional disclosure
 
 `store.ResolveScanFilingPolicy()` is the single effective policy resolver for UI preflight and manual scan handlers.
 
-Legacy `BUGBOT_*` env vars remain supported; preferred prefix is `REPOSITORY_DETECTIVE_*`.
+Legacy `REPOSITORY_DETECTIVE_*` env vars remain supported; preferred prefix is `REPOSITORY_DETECTIVE_*`.

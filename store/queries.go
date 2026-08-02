@@ -57,7 +57,11 @@ type DashboardSummary struct {
 	TotalRepositories        int
 	RecentScans              []ScanWithRepo
 	FailedScansCount         int
+	ActionableFailedScansCount int
+	StaleReapedScansCount    int
+	UnhealthyReposCount     int
 	ScannerFailuresCount     int
+	ScannerParseFailedCount  int
 	ScannerToolsMissingCount int
 	OpenFindingsCount        int
 	SuppressedFindingsCount  int
@@ -110,6 +114,7 @@ type QueryStore interface {
 	ListRepositoryControlRows(ctx context.Context, opts ListOptions) ([]RepositoryControlRow, error)
 	ListScansByRepository(ctx context.Context, repositoryID int64, opts ListOptions) ([]Scan, error)
 	ListScannerResultsByScan(ctx context.Context, scanID string) ([]ScannerResultRecord, error)
+	ListRecentScannerFailures(ctx context.Context, limit int) ([]ScannerFailureEvent, error)
 
 	ListFindings(ctx context.Context, filter FindingFilter) ([]FindingListItem, error)
 	CountFindings(ctx context.Context, filter FindingFilter) (int, error)
@@ -122,6 +127,7 @@ type QueryStore interface {
 
 	DashboardSummary(ctx context.Context, recentLimit int) (DashboardSummary, error)
 	ListRecentScans(ctx context.Context, opts ListOptions) ([]ScanWithRepo, error)
+	CountCompletedScansByDay(ctx context.Context, since time.Time) (map[string]int, error)
 	CountActiveScans(ctx context.Context) (int, error)
 	ListExternalIssuesByRepository(ctx context.Context, repositoryID int64, opts ListOptions) ([]ExternalIssue, error)
 	ListExternalIssuesByFinding(ctx context.Context, findingID int64) ([]ExternalIssue, error)
@@ -208,6 +214,7 @@ type QueryStore interface {
 
 	RecordLearningEvent(ctx context.Context, ev LearningEvent) (LearningEvent, error)
 	ListLearningEvents(ctx context.Context, repositoryID int64, limit int) ([]LearningEvent, error)
+	CountLearningEventsByType(ctx context.Context) (map[string]int, error)
 	RecordScannerHealth(ctx context.Context, rec ScannerHealthRecord) error
 	CreateRepoCalibrationRule(ctx context.Context, rule RepoCalibrationRule) (RepoCalibrationRule, error)
 	ListRepoCalibrationRules(ctx context.Context, repositoryID int64, activeOnly bool) ([]RepoCalibrationRule, error)

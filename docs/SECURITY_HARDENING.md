@@ -55,7 +55,7 @@ This document records the Phase 9.5 security hardening pass using [OWASP Go-SCP]
 | UI POST CSRF (`api_key_only`) | HMAC CSRF token derived from API key on all UI POST forms |
 | UI POST CSRF (`auth_mode=local`) | Session-bound HMAC CSRF; API JSON clients exempt |
 | Local admin sessions | Signed HttpOnly cookie, SameSite=Lax, Secure when HTTPS; bcrypt passwords; migration 17 tables |
-| API key in query string | Documented as **homelab-only** risk; prefer `X-Repository-Detective-API-Key` header (legacy `X-Bugbot-API-Key` still accepted) |
+| API key in query string | Documented as **homelab-only** risk; prefer `X-Repository-Detective-API-Key` header (legacy `X-Repository-Detective-API-Key` still accepted) |
 | Runner callback auth | Separate HMAC (`X-Runner-*` headers) on `/api/v1/runner/*`; no operator API key; nonce replay table |
 
 ### Archive / workspace
@@ -132,7 +132,7 @@ Dockerfile default build arg: `GOPROXY=https://proxy.golang.org,direct`.
 | API key in UI query string | Convenience for browser UI; documented; use header auth in production |
 | DNS rebinding during long git clone | Re-check at clone start; full TOCTOU elimination needs connect-time pinning (backlog) |
 | Git HTTP redirects | Git may follow redirects; mitigated by re-validation + HTTPS-only clone URL normalization |
-| No CSRF for API JSON clients | API writes require `X-Repository-Detective-API-Key` (preferred), legacy `X-Bugbot-API-Key`, or Bearer token; session CSRF applies to browser forms only |
+| No CSRF for API JSON clients | API writes require `X-Repository-Detective-API-Key` (preferred), legacy `X-Repository-Detective-API-Key`, or Bearer token; session CSRF applies to browser forms only |
 | Scanner binaries are trusted | External tools (trivy, semgrep, etc.) run with minimal env but full PATH |
 | SQLite file permissions | Operator must protect `database_path` at OS level |
 | Rate limiting on pre-install audits | Global webhook rate limit exists; dedicated audit rate limit is backlog |

@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/ai"
-	"git.commsnet.org/commstech/bugbot/analyzers"
-	"git.commsnet.org/commstech/bugbot/graph"
-	"git.commsnet.org/commstech/bugbot/models"
-	"git.commsnet.org/commstech/bugbot/scanners"
+	"git.commsnet.org/commstech/repository-detective/ai"
+	"git.commsnet.org/commstech/repository-detective/analyzers"
+	"git.commsnet.org/commstech/repository-detective/graph"
+	"git.commsnet.org/commstech/repository-detective/models"
+	"git.commsnet.org/commstech/repository-detective/scanners"
 )
 
 // FindingResult is a deterministic finding from a runner scan.

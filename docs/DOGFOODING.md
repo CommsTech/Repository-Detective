@@ -94,7 +94,7 @@ REPOSITORY_DETECTIVE_API_KEY
 REPOSITORY_DETECTIVE_PUBLIC_URL
 ```
 
-Legacy `BUGBOT_*` env vars remain supported.
+Legacy `REPOSITORY_DETECTIVE_*` env vars remain supported.
 
 ---
 

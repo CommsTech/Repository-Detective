@@ -7,8 +7,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/api"
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/api"
+	"git.commsnet.org/commstech/repository-detective/store"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )
@@ -30,7 +30,7 @@ func TestGetRepoSettingsIncludesProfile(t *testing.T) {
 	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
 		t.Fatal(err)
 	}
-	if resp["scan_profile"] != store.ScanProfileStandardDeterministic {
+	if resp["scan_profile"] != store.ScanProfileStandard {
 		t.Fatalf("expected scan_profile in response, got %v", resp["scan_profile"])
 	}
 	if _, ok := resp["effective_profile_summary"]; !ok {
@@ -68,8 +68,8 @@ func TestUpdateRepoSettingsProfile(t *testing.T) {
 	}
 	var resp map[string]any
 	_ = json.Unmarshal(w.Body.Bytes(), &resp)
-	if resp["scan_profile"] != "fast" {
-		t.Fatalf("expected fast profile, got %v", resp["scan_profile"])
+	if resp["scan_profile"] != store.ScanProfileLight {
+		t.Fatalf("expected light profile (canonical for fast), got %v", resp["scan_profile"])
 	}
 }
 

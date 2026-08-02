@@ -211,22 +211,17 @@
           });
         })
         .then(function (data) {
+          var dest = data.redirect || data.scan_url;
+          if (dest) {
+            window.location.assign(dest);
+            return;
+          }
           if (!resultEl) return;
           resultEl.hidden = false;
           resultEl.className = "rd-scan-result success";
-          var scanLink = data.scan_url
-            ? '<a class="rd-link" href="' + data.scan_url + '">View scan status →</a>'
-            : "";
           resultEl.innerHTML =
             "<strong>Scan started</strong><br>" +
-            "Scan ID: <code>" + (data.scan_id || "—") + "</code><br>" +
-            "Trigger: <code>" + (data.trigger_type || "manual") + "</code><br>" +
-            "Report-only: <strong>" + (data.report_only_dry_run ? "yes" : "no") + "</strong><br>" +
-            "Issue filing: <strong>" + (data.issue_filing ? "yes" : "no") + "</strong><br>" +
-            (data.scan_policy_mode
-              ? "Policy mode: <code>" + data.scan_policy_mode + "</code><br>"
-              : "") +
-            scanLink;
+            "Scan ID: <code>" + (data.scan_id || "—") + "</code>";
         })
         .catch(function (err) {
           if (!resultEl) return;
@@ -308,11 +303,65 @@
     });
   }
 
+  function initScanAutoRefresh() {
+    var banner = document.querySelector("[data-scan-auto-refresh]");
+    if (!banner) return;
+    var secs = parseInt(banner.getAttribute("data-scan-auto-refresh"), 10);
+    if (!secs || secs < 1) secs = 5;
+    var label = document.querySelector("[data-scan-refresh-label]");
+    var left = secs;
+    if (label) {
+      label.textContent = "Refreshing in " + left + "s…";
+    }
+    var timer = setInterval(function () {
+      left -= 1;
+      if (left <= 0) {
+        clearInterval(timer);
+        window.location.reload();
+        return;
+      }
+      if (label) {
+        label.textContent = "Refreshing in " + left + "s…";
+      }
+    }, 1000);
+  }
+
+  function initCopyButtons() {
+    document.querySelectorAll("[data-copy-target]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var id = btn.getAttribute("data-copy-target");
+        var src = id ? document.getElementById(id) : null;
+        if (!src) return;
+        var text = src.value || src.textContent || "";
+        var done = function () {
+          var prev = btn.textContent;
+          btn.textContent = "Copied";
+          setTimeout(function () { btn.textContent = prev; }, 1400);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(done).catch(function () {
+            src.hidden = false;
+            src.select();
+            try { document.execCommand("copy"); done(); } catch (e) {}
+            src.hidden = true;
+          });
+          return;
+        }
+        src.hidden = false;
+        src.select();
+        try { document.execCommand("copy"); done(); } catch (e) {}
+        src.hidden = true;
+      });
+    });
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     initTableSearch();
     initConfirmForms();
     initRiskWarnings();
     initActionMenus();
     initScanNowModal();
+    initScanAutoRefresh();
+    initCopyButtons();
   });
 })();

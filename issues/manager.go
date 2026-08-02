@@ -6,10 +6,10 @@ import (
 	"strings"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/ai"
-	"git.commsnet.org/commstech/bugbot/gitea"
-	"git.commsnet.org/commstech/bugbot/github"
-	"git.commsnet.org/commstech/bugbot/profile"
+	"git.commsnet.org/commstech/repository-detective/ai"
+	"git.commsnet.org/commstech/repository-detective/gitea"
+	"git.commsnet.org/commstech/repository-detective/github"
+	"git.commsnet.org/commstech/repository-detective/profile"
 	"github.com/sirupsen/logrus"
 )
 
@@ -37,7 +37,6 @@ type Manager struct {
 	githubForge    IssueForge
 	logger         *logrus.Logger
 	config         *Config
-	semanticStore  *SemanticStore
 	mappingLookup  IssueMappingLookup
 	backfillRunner BackfillRunner
 }
@@ -70,8 +69,7 @@ type IssueCreationRequest struct {
 	Context            string
 	Commit             string
 	PullRequest        int
-	ScanID             string
-	UseSemanticDedup     bool
+	ScanID               string
 	MinIssueConfidence   float64
 	ForceIssueCreation   bool
 }
@@ -99,14 +97,13 @@ type IssueCreationResult struct {
 }
 
 // NewManager creates a new issue manager.
-func NewManager(giteaClient *gitea.Client, githubClient *github.Client, config *Config, logger *logrus.Logger, semanticStore *SemanticStore) *Manager {
+func NewManager(giteaClient *gitea.Client, githubClient *github.Client, config *Config, logger *logrus.Logger) *Manager {
 	if config != nil && config.GitHubBaseURL == "" {
 		config.GitHubBaseURL = "https://github.com"
 	}
 	m := &Manager{
-		logger:        logger,
-		config:        config,
-		semanticStore: semanticStore,
+		logger: logger,
+		config: config,
 	}
 	if giteaClient != nil {
 		m.giteaForge = &GiteaForge{Client: giteaClient}
@@ -214,7 +211,7 @@ func (m *Manager) CreateIssuesFromAnalysis(ctx context.Context, req *IssueCreati
 			EnrichIssue(repository, issue, req.ScanID)
 			seenFingerprints[issue.Fingerprint] = struct{}{}
 
-			action, err := m.createOrUpdateIssue(ctx, req, repository, issue, result)
+			action, err := m.createOrUpdateIssue(ctx, req, issue, result)
 			if err != nil {
 				errorMsg := fmt.Sprintf("Failed to process issue for %s: %v", issue.Title, err)
 				result.Errors = append(result.Errors, errorMsg)
@@ -258,7 +255,7 @@ func shouldCreateSummaryIssue(issues []ai.CodeIssue) bool {
 	return len(issues) >= 5
 }
 
-func (m *Manager) createOrUpdateIssue(ctx context.Context, req *IssueCreationRequest, repository string, issue *ai.CodeIssue, result *IssueCreationResult) (string, error) {
+func (m *Manager) createOrUpdateIssue(ctx context.Context, req *IssueCreationRequest, issue *ai.CodeIssue, result *IssueCreationResult) (string, error) {
 	forge := m.forgeFor(req.ForgeType)
 	if forge == nil {
 		return "", fmt.Errorf("no issue forge configured for %s", m.normalizeForgeType(req.ForgeType))
@@ -285,23 +282,6 @@ func (m *Manager) createOrUpdateIssue(ctx context.Context, req *IssueCreationReq
 			return "", err
 		}
 		return "updated", nil
-	}
-
-	if req.UseSemanticDedup && m.semanticStore != nil && m.semanticStore.Enabled() {
-		dup, err := m.semanticStore.FindDuplicate(ctx, repository, issue)
-		if err != nil {
-			m.logger.Warnf("Semantic dedup lookup failed: %v", err)
-		} else if dup != nil && dup.IssueNumber > 0 {
-			comment := DuplicateCommentBody(issue, dup.Score)
-			if err := forge.CreateIssueComment(ctx, req.Owner, req.Repository, dup.IssueNumber, comment); err != nil {
-				m.logger.Warnf("Failed to comment on duplicate issue #%d: %v", dup.IssueNumber, err)
-			} else {
-				m.logger.Infof("Updated existing issue #%d via semantic dedup (score %.2f)", dup.IssueNumber, dup.Score)
-				result.IssuesSkipped++
-				result.IssueURLs = append(result.IssueURLs, dup.IssueURL)
-				return "updated", nil
-			}
-		}
 	}
 
 	if err := m.createIssueForProblem(ctx, forge, req, issue, result); err != nil {
@@ -355,8 +335,6 @@ func (m *Manager) createIssueForProblem(ctx context.Context, forge IssueForge, r
 		}
 	}
 
-	repository := fmt.Sprintf("%s/%s", req.Owner, req.Repository)
-
 	title := m.createIssueTitle(issue, req)
 	body := m.createIssueBody(issue, req)
 	labelNames := BuildLabels(m.config.IssueLabels, issue)
@@ -364,12 +342,6 @@ func (m *Manager) createIssueForProblem(ctx context.Context, forge IssueForge, r
 	createdIssue, err := forge.CreateIssue(ctx, req.Owner, req.Repository, title, body, labelNames)
 	if err != nil {
 		return fmt.Errorf("failed to create issue: %w", err)
-	}
-
-	if m.semanticStore != nil && m.semanticStore.Enabled() {
-		if err := m.semanticStore.Remember(ctx, repository, issue, createdIssue.HTMLURL, createdIssue.Number, issue.ClusterID); err != nil {
-			m.logger.Warnf("Failed to store finding in Qdrant: %v", err)
-		}
 	}
 
 	result.IssuesCreated++

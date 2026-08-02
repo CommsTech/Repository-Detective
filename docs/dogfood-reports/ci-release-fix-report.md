@@ -1,7 +1,7 @@
 # CI and release workflow fix report
 
 **Date:** 2026-06-06  
-**Repository:** commstech/Bugbot
+**Repository:** commstech/repository-detective
 
 ## Failing workflows (before fix)
 

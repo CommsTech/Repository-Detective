@@ -7,11 +7,11 @@ import (
 	"strings"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/graph"
-	"git.commsnet.org/commstech/bugbot/health"
-	"git.commsnet.org/commstech/bugbot/issues"
-	"git.commsnet.org/commstech/bugbot/scanners"
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/graph"
+	"git.commsnet.org/commstech/repository-detective/health"
+	"git.commsnet.org/commstech/repository-detective/issues"
+	"git.commsnet.org/commstech/repository-detective/scanners"
+	"git.commsnet.org/commstech/repository-detective/store"
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 )

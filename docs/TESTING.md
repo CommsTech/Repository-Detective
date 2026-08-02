@@ -42,7 +42,7 @@ Matches Gitea Actions CI (`.gitea/workflows/ci.yml`):
 gofmt -s -l .                    # should print nothing
 go vet ./...
 staticcheck ./...
-go build -ldflags "-s -w" -o bin/gitea-bugbot .
+go build -ldflags "-s -w" -o bin/repository-detective .
 ```
 
 ## Docker smoke test
@@ -50,17 +50,17 @@ go build -ldflags "-s -w" -o bin/gitea-bugbot .
 Build and confirm the container starts and `/health` responds:
 
 ```bash
-docker build -t gitea-bugbot:test .
-docker run -d --rm --name bugbot-test -p 18080:8080 \
+docker build -t repository-detective:test .
+docker run -d --rm --name repository-detective-test -p 18080:8080 \
   -e BUGBOT_SKIP_STARTUP_CHECKS=true \
   -e BUGBOT_GITEA_URL=http://example.com \
   -e BUGBOT_GITEA_TOKEN=test \
   -e BUGBOT_AI_PROVIDER=ollama \
   -e BUGBOT_AI_BASE_URL=http://127.0.0.1:11434/v1 \
-  gitea-bugbot:test
+  repository-detective:test
 sleep 5
 curl -sf http://127.0.0.1:18080/health
-docker stop bugbot-test
+docker stop repository-detective-test
 ```
 
 ## Verify scanner binaries in the image
@@ -68,7 +68,7 @@ docker stop bugbot-test
 After building the Docker image:
 
 ```bash
-docker run --rm gitea-bugbot:test sh -c \
+docker run --rm repository-detective:test sh -c \
   'trivy --version && grype version && golangci-lint version && ruff --version && shellcheck --version'
 ```
 
@@ -76,7 +76,7 @@ All five commands should print version info.
 
 ## End-to-end scan test
 
-1. Start Bugbot with real Gitea and AI credentials (or `BUGBOT_ENABLE_LLM_AUDITORS=false` for deterministic-only).
+1. Start Repository Detective with real Gitea and AI credentials (or `BUGBOT_ENABLE_LLM_AUDITORS=false` for deterministic-only).
 2. Trigger a manual scan:
 
 ```bash
@@ -89,7 +89,7 @@ curl -X POST http://127.0.0.1:8081/api/v1/analyze \
 3. Watch logs for scanner output:
 
 ```bash
-docker logs gitea-bugbot --tail 100 | grep -E 'SCANNER|CAH:SCAN'
+docker logs repository-detective --tail 100 | grep -E 'SCANNER|CAH:SCAN'
 ```
 
 Expected log lines when scanners run:

@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/store"
 )
 
 func TestLifecycleSummaryCounts(t *testing.T) {

@@ -31,7 +31,7 @@ RD_BASE_URL=http://192.168.255.10:8081 ./scripts/operator-smoke-test.sh
 | `GET /api/v1/about` | PASS — product name, compatibility |
 | `GET /api/v1/status` | PASS — no secret leakage |
 | `GET /api/v1/dashboard/summary` | PASS |
-| Legacy `X-Bugbot-API-Key` header | accepted |
+| Legacy `X-Repository-Detective-API-Key` header | accepted |
 
 ## Feature flags (from `/health` + `/api/v1/status`)
 
@@ -63,7 +63,7 @@ docker compose up -d --build
 
 ## Report-only scan (prior validation)
 
-Scan `1c4db8a1a7ed8d1e` on `commstech/Bugbot`:
+Scan `1c4db8a1a7ed8d1e` on `commstech/repository-detective`:
 
 | Field | Value |
 |-------|-------|

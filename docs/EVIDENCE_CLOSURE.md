@@ -17,7 +17,7 @@ evidence_closure_comment: true
 evidence_closure_require_scanner_success: true
 ```
 
-Environment variables (prefer `REPOSITORY_DETECTIVE_*`; legacy `BUGBOT_*` via envcompat):
+Environment variables (prefer `REPOSITORY_DETECTIVE_*`; legacy `REPOSITORY_DETECTIVE_*` via envcompat):
 
 ```text
 REPOSITORY_DETECTIVE_EVIDENCE_CLOSURE_ENABLED

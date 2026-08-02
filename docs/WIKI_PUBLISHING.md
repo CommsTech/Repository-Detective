@@ -3,7 +3,7 @@
 Repository Detective keeps **source** wiki pages under `docs/wiki/`. The live Gitea wiki is a **separate git repository**:
 
 ```text
-https://git.commsnet.org/commstech/Bugbot.wiki.git
+https://git.commsnet.org/commstech/repository-detective.wiki.git
 ```
 
 ## Source of truth
@@ -20,7 +20,7 @@ Edit pages in `docs/wiki/`, then publish with the script below.
 ```bash
 export REPOSITORY_DETECTIVE_GITEA_URL=https://git.commsnet.org
 export REPOSITORY_DETECTIVE_GITEA_OWNER=commstech
-export REPOSITORY_DETECTIVE_GITEA_REPO=Bugbot
+export REPOSITORY_DETECTIVE_GITEA_REPO=repository-detective
 export REPOSITORY_DETECTIVE_GITEA_TOKEN=your-token-with-wiki-write
 
 ./scripts/publish-gitea-wiki.sh

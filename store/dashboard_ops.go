@@ -4,7 +4,7 @@ import (
 	"strings"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/operator"
+	"git.commsnet.org/commstech/repository-detective/operator"
 )
 
 // FindingBacklogSummary separates deduplicated backlog from raw detector noise.
@@ -82,9 +82,16 @@ type RepoAttentionBrief struct {
 type ScanHealthSummary struct {
 	CompletedScans        int
 	FailedScans           int
+	ActionableFailedScans int
+	StaleReapedScans      int
+	UnhealthyRepos       int
 	ActiveScans           int
+	ParseFailedEvents     int
+	ParseFailedScanners   int
+	FailureWindowDays     int
 	FailureBuckets        []ScanFailureBucket
 	RecentFailedScans     []FailedScanBrief
+	RecentStaleScans      []FailedScanBrief
 	ReposNeedingAttention []RepoAttentionBrief
 }
 
@@ -112,8 +119,17 @@ func ClassifyScanFailure(errMsg string) string {
 	switch {
 	case msg == "":
 		return "unknown"
+	case strings.Contains(msg, "stale") && strings.Contains(msg, "reaped"):
+		return "stale_reaped"
+	case strings.Contains(msg, "interrupted by process restart"):
+		return "stale_reaped"
+	case strings.Contains(msg, "unable to verify refs"), strings.Contains(msg, "forge unavailable"):
+		return "forge_unavailable"
+	case strings.Contains(msg, "no valid ref"), strings.Contains(msg, "ref not found"),
+		strings.Contains(msg, "default branch"):
+		return "invalid_ref"
 	case strings.Contains(msg, "clone"), strings.Contains(msg, "auth"), strings.Contains(msg, "401"), strings.Contains(msg, "403"),
-		strings.Contains(msg, "repository not found"), strings.Contains(msg, "ref not found"), strings.Contains(msg, "permission"):
+		strings.Contains(msg, "repository not found"), strings.Contains(msg, "permission"):
 		return "clone_auth"
 	case strings.Contains(msg, "timeout"), strings.Contains(msg, "deadline"), strings.Contains(msg, "context canceled"), strings.Contains(msg, "timed out"):
 		return "timeout"
@@ -130,6 +146,12 @@ func ClassifyScanFailure(errMsg string) string {
 
 func scanFailureBucketLabel(bucket string) string {
 	switch bucket {
+	case "stale_reaped":
+		return "Stale (reaped after restart)"
+	case "forge_unavailable":
+		return "Forge unreachable (ref probe failed)"
+	case "invalid_ref":
+		return "Invalid / missing git ref"
 	case "clone_auth":
 		return "Clone / auth"
 	case "timeout":
@@ -145,6 +167,11 @@ func scanFailureBucketLabel(bucket string) string {
 	default:
 		return "Other"
 	}
+}
+
+// IsNoiseScanFailure reports failures that are cleanup artifacts, not actionable scan defects.
+func IsNoiseScanFailure(errMsg string) bool {
+	return ClassifyScanFailure(errMsg) == "stale_reaped"
 }
 
 // BuildRemediationInsight explains why remediation candidates may be zero.

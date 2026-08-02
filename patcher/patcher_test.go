@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/remediation"
+	"git.commsnet.org/commstech/repository-detective/remediation"
 )
 
 func enabledPRConfig() Config {

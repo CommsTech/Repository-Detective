@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/store"
 )
 
 func TestValidateCronExpression(t *testing.T) {

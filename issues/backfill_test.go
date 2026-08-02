@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/issues"
+	"git.commsnet.org/commstech/repository-detective/issues"
 )
 
 func TestLegacyBugbotFingerprintMarker(t *testing.T) {

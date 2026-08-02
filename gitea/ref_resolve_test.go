@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/gitea"
+	"git.commsnet.org/commstech/repository-detective/gitea"
 	"github.com/sirupsen/logrus"
 )
 
@@ -68,5 +68,29 @@ func TestResolveRefEmptyRepository(t *testing.T) {
 	}
 	if got != "main" {
 		t.Fatalf("ref = %q, want main", got)
+	}
+}
+
+func TestResolveRefForgeUnavailableNotInvalidRef(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/api/v1/repos/o/r":
+			_ = json.NewEncoder(w).Encode(map[string]any{"default_branch": "main", "empty": false})
+		default:
+			http.Error(w, "gateway timeout", http.StatusGatewayTimeout)
+		}
+	}))
+	defer server.Close()
+
+	client := gitea.NewClient(server.URL, "token", logrus.New())
+	_, err := client.ResolveRef(context.Background(), "o", "r", "main")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), "unable to verify refs") {
+		t.Fatalf("want forge-unavailable style error, got %v", err)
+	}
+	if strings.Contains(err.Error(), "no valid ref found") {
+		t.Fatalf("must not misclassify outage as missing ref: %v", err)
 	}
 }

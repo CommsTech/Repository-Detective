@@ -148,7 +148,7 @@
       data: {
         labels: data.scanTrendLabels,
         datasets: [{
-          label: "Raw findings per scan day",
+          label: "Completed scans",
           data: data.scanTrendValues,
           borderColor: palette.teal,
           backgroundColor: "rgba(14, 165, 164, 0.15)",

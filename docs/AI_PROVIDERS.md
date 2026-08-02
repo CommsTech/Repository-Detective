@@ -34,7 +34,7 @@ REPOSITORY_DETECTIVE_AI_API_KEY=sk-ant-...
 REPOSITORY_DETECTIVE_AI_MODEL=claude-3-5-sonnet-latest
 ```
 
-Legacy `BUGBOT_AI_*` env vars remain supported.
+Legacy `REPOSITORY_DETECTIVE_AI_*` env vars remain supported.
 
 ### Legacy OpenWebUI
 
@@ -129,7 +129,7 @@ Check runtime status:
 curl -H "X-Repository-Detective-API-Key: $REPOSITORY_DETECTIVE_API_KEY" http://localhost:8080/api/v1/status
 ```
 
-(Legacy header `X-Bugbot-API-Key` and env `BUGBOT_API_KEY` still work.)
+(Legacy header `X-Repository-Detective-API-Key` and env `BUGBOT_API_KEY` still work.)
 
 Response includes `ai_provider` and `ai_model`.
 

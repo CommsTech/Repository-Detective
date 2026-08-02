@@ -3,7 +3,7 @@ package ui
 import (
 	"fmt"
 
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/store"
 )
 
 // RepoSettingField is one policy row with human-readable help.
@@ -38,7 +38,7 @@ func buildRepoSettingsSections(effective store.EffectiveSettings, meta store.Eff
 			Summary: "High-level scan posture for this repository.",
 			Fields: []RepoSettingField{
 				field("enabled", "Repository enabled", fmt.Sprintf("%v", effective.Enabled), sourceForOverride(meta.ProfileModified), "When false, scans are skipped.", "Keep enabled for active repos.", "Safe beta default", "monitor", false, false, false, false),
-				field("scan_profile", "Scan profile", meta.ScanProfile, meta.ProfileSource, store.ProfileDescriptions[meta.ScanProfile], "beta_standard recommended for private beta.", "Safe beta default", "monitor", false, false, true, false),
+				field("scan_profile", "Scan profile", store.ScanProfileLabel(meta.ScanProfile), meta.ProfileSource, store.ScanProfileDescription(meta.ScanProfile), "Standard recommended for day-to-day scans with issue filing.", "Safe default", "monitor", false, false, true, false),
 				field("policy_level", "Policy level", effective.PolicyLevel, sourceForOverride(meta.ProfileModified), "monitor_only = report/findings only; issue_only+ may file forge issues.", "Use monitor_only for report-only beta.", badgeForIssueFiling(issueFiling), badgeClassForIssueFiling(issueFiling), issueFiling, false, true, issueFiling),
 			},
 		},

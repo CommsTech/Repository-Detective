@@ -6,7 +6,7 @@
 #   ./deploy.sh --stop       # stop container
 #   ./deploy.sh --restart    # restart container
 #   ./deploy.sh --status     # health + container status
-#   ./deploy.sh --scan       # trigger self-scan on commstech/Bugbot
+#   ./deploy.sh --scan       # trigger self-scan on commstech/repository-detective
 #   ./deploy.sh --scan-all        # full scans on every Gitea + GitHub repo (global profile)
 #   ./deploy.sh --scan-all-quick  # fast profile scans on every repo
 #   FORGE=github ./deploy.sh --scan-all   # GitHub repos only
@@ -80,9 +80,9 @@ migrate_legacy_config() {
 }
 
 stop_legacy_process() {
-  if pgrep -f '/home/commstech/bugbot/(gitea-bugbot|repository-detective)' >/dev/null 2>&1; then
+  if pgrep -f '/home/commstech/repository-detective/(gitea-bugbot|repository-detective)' >/dev/null 2>&1; then
     log "stopping legacy non-Docker Repository Detective process"
-    pkill -f '/home/commstech/bugbot/(gitea-bugbot|repository-detective)' || true
+    pkill -f '/home/commstech/repository-detective/(gitea-bugbot|repository-detective)' || true
     sleep 2
   fi
 }
@@ -162,7 +162,7 @@ trigger_scan() {
 
   log "triggering scan on $owner/$repo@main"
   curl -sf -X POST "${public_url%/}/api/v1/analyze" \
-    -H "X-Bugbot-API-Key: $api_key" \
+    -H "X-Repository-Detective-API-Key: $api_key" \
     -H "Content-Type: application/json" \
     -d "{\"owner\":\"$owner\",\"repository\":\"$repo\",\"ref\":\"main\"}"
   echo
@@ -202,7 +202,7 @@ trigger_scan_all() {
     fi
   fi
   curl -sf -X POST "${public_url%/}/api/v1/analyze/all" \
-    -H "X-Bugbot-API-Key: $api_key" \
+    -H "X-Repository-Detective-API-Key: $api_key" \
     -H "Content-Type: application/json" \
     -d "$body"
   echo

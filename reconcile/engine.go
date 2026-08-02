@@ -6,11 +6,11 @@ import (
 	"strings"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/calibration"
-	"git.commsnet.org/commstech/bugbot/closure"
-	"git.commsnet.org/commstech/bugbot/issues"
-	"git.commsnet.org/commstech/bugbot/profile"
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/calibration"
+	"git.commsnet.org/commstech/repository-detective/closure"
+	"git.commsnet.org/commstech/repository-detective/issues"
+	"git.commsnet.org/commstech/repository-detective/profile"
+	"git.commsnet.org/commstech/repository-detective/store"
 )
 
 // ForgeActions applies comments, labels, and optional close on a forge issue.

@@ -1,7 +1,7 @@
 # Public repository safety audit
 
 Generated: 2026-06-07  
-Scope: prepare `/home/commstech/Bugbot` for external review without leaking homelab secrets.
+Scope: prepare `/home/commstech/repository-detective` for external review without leaking homelab secrets.
 
 ## Scan commands run
 

@@ -22,7 +22,6 @@ Issue creation in connected Gitea repos
 Remediation planner
 Evidence closure tracking
 Docker all-in-one image
-Local-only Qdrant path (optional, off by default)
 ```
 
 ---
@@ -62,7 +61,7 @@ Local dashboard access
 
 **After Auth/RBAC ships:** Community stays single-operator or optional single local admin; multi-user RBAC moves to Commercial.
 
-Preferred API header: `X-Repository-Detective-API-Key`. Legacy `X-Bugbot-API-Key` accepted.
+Preferred API header: `X-Repository-Detective-API-Key`. Legacy `X-Repository-Detective-API-Key` accepted.
 
 ---
 

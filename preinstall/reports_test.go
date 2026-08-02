@@ -5,13 +5,13 @@ import (
 	"testing"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/preinstall"
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/preinstall"
+	"git.commsnet.org/commstech/repository-detective/store"
 )
 
 func testReportConfig() preinstall.Config {
 	cfg := preinstall.DefaultConfig()
-	cfg.RepositoryDetectiveProjectURL = "https://git.example.com/commstech/bugbot"
+	cfg.RepositoryDetectiveProjectURL = "https://git.example.com/commstech/repository-detective"
 	return cfg
 }
 

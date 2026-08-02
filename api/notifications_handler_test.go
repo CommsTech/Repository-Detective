@@ -7,9 +7,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/api"
-	"git.commsnet.org/commstech/bugbot/notify"
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/api"
+	"git.commsnet.org/commstech/repository-detective/notify"
+	"git.commsnet.org/commstech/repository-detective/store"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )

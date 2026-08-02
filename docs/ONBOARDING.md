@@ -15,7 +15,7 @@ API calls from the wizard require the operator API key (`REPOSITORY_DETECTIVE_AP
 X-Repository-Detective-API-Key: your-api-key
 ```
 
-Legacy header `X-Bugbot-API-Key` is still accepted.
+Legacy header `X-Repository-Detective-API-Key` is still accepted.
 
 ## Wizard steps
 

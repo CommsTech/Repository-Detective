@@ -10,7 +10,6 @@ Repository Detective does **not** enforce automatic data retention policies. Adm
 | Workspace clones | Configured work directory | Until scan cleanup / disk policy |
 | Gitea issues | Gitea (external) | Forge policy |
 | Logs | Container/host logs | Log aggregator policy |
-| Qdrant vectors | Optional external service | Qdrant policy |
 
 ## Recommended practices
 
@@ -36,7 +35,7 @@ Do not scan PHI systems without legal review. If scanning occurred by mistake, s
 
 ## Configuration hooks
 
-- Disable features that increase retention surface: Qdrant, notifications to third parties, LLM
+- Disable features that increase retention surface: notifications to third parties, LLM
 - `evidence_closure_*` — controls issue lifecycle, not DB purge
 
 Future work: configurable retention job (see prepared issue backlog).

@@ -1,8 +1,8 @@
 # Deployment Issues and Workarounds
 
-Track A deployment notes for Bugbot / Repository Detective. Each item lists what we hit, the workaround applied on this host, and the upstream fix status.
+Track A deployment notes for Repository Detective. Each item lists what we hit, the workaround applied on this host, and the upstream fix status.
 
-Repository: https://git.commsnet.org/commstech/Bugbot
+Repository: https://git.commsnet.org/commstech/repository-detective
 
 ---
 
@@ -75,7 +75,7 @@ Repository: https://git.commsnet.org/commstech/Bugbot
 
 **Cause:** Bind mount `./data` owned by host UID 1000; container runs as `bugbot` UID 1001.
 
-**Fix (in repo):** `scripts/docker-entrypoint.sh` runs `chown bugbot:bugbot /app/data` on start.
+**Fix (in repo):** `scripts/docker-entrypoint.sh` runs `chown rd:rd /app/data` on start.
 
 ---
 
@@ -120,6 +120,6 @@ Repository: https://git.commsnet.org/commstech/Bugbot
 | `http://192.168.255.10:8081/health` | Health check (no auth) |
 | `http://192.168.255.10:8081/onboard/` | Setup wizard |
 | `http://192.168.255.10:8081/ui?api_key=…` | Operator dashboard |
-| `http://192.168.255.10:8081/api/v1/status` | API (header `X-Repository-Detective-API-Key`; legacy `X-Bugbot-API-Key` accepted) |
+| `http://192.168.255.10:8081/api/v1/status` | API (header `X-Repository-Detective-API-Key`; legacy `X-Repository-Detective-API-Key` accepted) |
 
-**Note:** Bugbot listens on port **8081**, not 80. Include `:8081` unless a reverse proxy maps 443/80 → 8081.
+**Note:** Repository Detective listens on port **8081**, not 80. Include `:8081` unless a reverse proxy maps 443/80 → 8081.

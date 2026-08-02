@@ -6,7 +6,7 @@ Recorded: 2026-06-08 after issue filing policy restore (`ddb79d6`).
 
 | Metric | Value |
 |--------|-------|
-| Product repo | `commstech/Bugbot` (ID 1) |
+| Product repo | `commstech/repository-detective` (ID 1) |
 | Latest scan ID | `8579510667b7de08` |
 | Live container revision | `ddb79d6` |
 | Gitea open issues | **6** (#347–351, #48) |

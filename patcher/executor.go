@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/gitea"
-	"git.commsnet.org/commstech/bugbot/remediation"
+	"git.commsnet.org/commstech/repository-detective/gitea"
+	"git.commsnet.org/commstech/repository-detective/remediation"
 )
 
 // GiteaAPI abstracts Gitea operations used by the executor.

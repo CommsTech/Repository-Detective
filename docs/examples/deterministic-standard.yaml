@@ -1,7 +1,7 @@
 # Deterministic standard — recommended first connected-repo profile
 # Balanced scanners without heavy SAST/IaC by default.
 
-scan_profile: standard_deterministic
+scan_profile: standard
 enable_trivy: true
 enable_grype: true
 enable_gitleaks: false

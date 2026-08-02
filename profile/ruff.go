@@ -3,7 +3,7 @@ package profile
 import (
 	"strings"
 
-	"git.commsnet.org/commstech/bugbot/scanners"
+	"git.commsnet.org/commstech/repository-detective/scanners"
 )
 
 // CalibrateRuffResults downgrades style-only Ruff findings for homelab/infra repos.

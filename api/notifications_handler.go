@@ -3,7 +3,7 @@ package api
 import (
 	"net/http"
 
-	"git.commsnet.org/commstech/bugbot/notify"
+	"git.commsnet.org/commstech/repository-detective/notify"
 	"github.com/gin-gonic/gin"
 )
 

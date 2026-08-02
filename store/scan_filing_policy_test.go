@@ -3,7 +3,7 @@ package store_test
 import (
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/store"
 )
 
 func productionEffective() store.EffectiveSettings {

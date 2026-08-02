@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/scanners"
+	"git.commsnet.org/commstech/repository-detective/scanners"
 )
 
 type stubArchiveDownloader struct {

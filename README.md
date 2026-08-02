@@ -21,11 +21,11 @@
 | **Not yet** | SaaS, multi-tenant, billing, auto-merge, third-party auto-submit |
 | **Editions docs** | [Community](docs/COMMUNITY_EDITION.md) · [Commercial](docs/COMMERCIAL_ENTERPRISE.md) · [Editions overview](docs/EDITIONS.md) |
 
-> **Naming:** [Repository Detective](docs/NAMING.md) is the product name. Legacy **Bugbot** env vars (`BUGBOT_*`), labels, and fingerprints remain supported. Prefer `REPOSITORY_DETECTIVE_*` — see [docs/BRANDING_MIGRATION.md](docs/BRANDING_MIGRATION.md).
+> **Naming:** The product is **Repository Detective**. Prefer `REPOSITORY_DETECTIVE_*` env vars and `X-Repository-Detective-API-Key`. Silent legacy aliases remain for existing deployments — see [docs/NAMING.md](docs/NAMING.md).
 
-Repo: https://git.commsnet.org/commstech/Bugbot.git
+Repo: https://git.commsnet.org/commstech/repository-detective.git
 
-**Beta feedback:** use [Gitea issue templates](https://git.commsnet.org/commstech/Bugbot/issues/new) (`.gitea/ISSUE_TEMPLATE/`) — include scan ID and finding fingerprint; never paste secrets.
+**Beta feedback:** use [Gitea issue templates](https://git.commsnet.org/commstech/repository-detective/issues/new) (`.gitea/ISSUE_TEMPLATE/`) — include scan ID and finding fingerprint; never paste secrets.
 
 ## Setup
 
@@ -36,7 +36,7 @@ Repo: https://git.commsnet.org/commstech/Bugbot.git
 Quick local trial:
 
 ```bash
-git clone https://git.commsnet.org/commstech/Bugbot.git && cd Bugbot
+git clone https://git.commsnet.org/commstech/repository-detective.git && cd repository-detective
 docker compose -f docker-compose.minimal.yml up -d --build
 curl http://localhost:8080/health
 ```
@@ -50,7 +50,7 @@ Then open http://localhost:8080/onboard
 - Uses LLM analysis only on flagged files (or disable entirely with `REPOSITORY_DETECTIVE_ENABLE_LLM_AUDITORS=false`)
 - Creates Gitea issues with severity, file, line, code snippet, and PoC when available
 - Optional LLM backends — **off by default** in beta (`enable_llm_auditors: false`)
-- Remediation planner yes; **remediation PRs off by default**. Qdrant semantic dedup **off by default**
+- Remediation planner yes; **remediation PRs off by default**. Issue dedup is fingerprint + forge mapping (SQLite)
 - **No auto-merge** and **no automatic third-party issue submission**
 - **AI recommendations** (optional, off by default) — provider-neutral advisory layer with CAH gating; see [docs/AI_RECOMMENDATIONS.md](docs/AI_RECOMMENDATIONS.md)
 - **Issue providers:** Gitea supported; GitHub code path exists but RC-unproven; GitLab not implemented — [docs/ISSUE_PROVIDERS.md](docs/ISSUE_PROVIDERS.md)
@@ -69,7 +69,7 @@ Enterprise: use your internal artifact proxy. Offline: `go mod vendor` then `GOP
 
 ## Configuration
 
-Environment variables prefer the `REPOSITORY_DETECTIVE_` prefix. Legacy `BUGBOT_*` variables remain supported.
+Environment variables prefer the `REPOSITORY_DETECTIVE_` prefix. Legacy `REPOSITORY_DETECTIVE_*` variables remain supported.
 
 | Setting | Preferred variable | Legacy alias |
 |---------|-------------------|--------------|
@@ -78,7 +78,7 @@ Environment variables prefer the `REPOSITORY_DETECTIVE_` prefix. Legacy `BUGBOT_
 | Public URL for webhooks | `REPOSITORY_DETECTIVE_PUBLIC_URL` | `BUGBOT_PUBLIC_URL` |
 | Gitea | `REPOSITORY_DETECTIVE_GITEA_URL`, `REPOSITORY_DETECTIVE_GITEA_TOKEN` | `BUGBOT_GITEA_*` |
 | Webhook secret | `REPOSITORY_DETECTIVE_WEBHOOK_SECRET` | `BUGBOT_WEBHOOK_SECRET` |
-| Local auth | `REPOSITORY_DETECTIVE_AUTH_MODE`, `REPOSITORY_DETECTIVE_SESSION_SECRET` | `BUGBOT_*` |
+| Local auth | `REPOSITORY_DETECTIVE_AUTH_MODE`, `REPOSITORY_DETECTIVE_SESSION_SECRET` | `REPOSITORY_DETECTIVE_*` |
 
 Full reference: [docs/CONFIGURATION.md](docs/CONFIGURATION.md)
 
@@ -98,7 +98,7 @@ Full reference: [docs/CONFIGURATION.md](docs/CONFIGURATION.md)
 X-Repository-Detective-API-Key: your-key
 ```
 
-Legacy `X-Bugbot-API-Key` still accepted. See [docs/API_ROUTES.md](docs/API_ROUTES.md).
+Legacy `X-Repository-Detective-API-Key` still accepted. See [docs/API_ROUTES.md](docs/API_ROUTES.md).
 
 ## Documentation
 

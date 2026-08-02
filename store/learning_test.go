@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/findinglearn"
-	"git.commsnet.org/commstech/bugbot/learning"
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/findinglearn"
+	"git.commsnet.org/commstech/repository-detective/learning"
+	"git.commsnet.org/commstech/repository-detective/store"
 )
 
 func TestLearningEventIdempotent(t *testing.T) {

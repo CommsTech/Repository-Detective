@@ -1170,7 +1170,7 @@ Community Intelligence Feed comes **after** disclosure workflow, remediation PRs
 ## Appendix A — Package layout (target)
 
 ```
-git.commsnet.org/commstech/bugbot/
+git.commsnet.org/commstech/repository-detective/
 ├── api/              # REST handlers (new)
 ├── audit/            # pre-install audit (new)
 ├── forge/            # forge abstraction (new)

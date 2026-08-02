@@ -28,7 +28,7 @@ Environment:
   WIKI_SOURCE_DIR                                        Default: docs/wiki
   KEEP_WIKI_WORKDIR=true                                 Keep temp clone for inspection
 
-Target wiki: https://git.commsnet.org/commstech/Bugbot.wiki.git
+Target wiki: https://git.commsnet.org/commstech/repository-detective.wiki.git
 EOF
 }
 

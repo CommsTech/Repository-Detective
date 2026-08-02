@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/internal/security"
-	"git.commsnet.org/commstech/bugbot/scanners"
+	"git.commsnet.org/commstech/repository-detective/internal/security"
+	"git.commsnet.org/commstech/repository-detective/scanners"
 )
 
 var forbiddenSubstrings = []string{

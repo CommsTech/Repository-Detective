@@ -70,7 +70,7 @@ curl -s -H "X-Repository-Detective-API-Key: $KEY" \
 | Log redaction | Backlog: access-log sanitization |
 | `rate_limit_per_minute` unused | Backlog: wire or document |
 
-**commstech/Bugbot repo:** 0 critical open; 2 high static (SEC-CMD-EXEC, SEC-SQL-CONCAT) — likely rule-definition false positives in `analyzers/static.go`.
+**commstech/repository-detective repo:** 0 critical open; 2 high static (SEC-CMD-EXEC, SEC-SQL-CONCAT) — likely rule-definition false positives in `analyzers/static.go`.
 
 **Tests:** `go test ./handlers/... ./main_auth_test.go ./redact/...`  
 **Risk:** Low  
@@ -115,7 +115,7 @@ curl -s -H "X-Repository-Detective-API-Key: $KEY" \
 
 ## Batch 3 — Simple staticcheck/hadolint fixes
 
-**Scope:** Low-risk lint in **commstech/Bugbot** only first
+**Scope:** Low-risk lint in **commstech/repository-detective** only first
 
 | Target | Action |
 |--------|--------|

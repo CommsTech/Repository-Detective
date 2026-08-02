@@ -3,7 +3,7 @@ package gitea
 import (
 	"context"
 
-	"git.commsnet.org/commstech/bugbot/forge"
+	"git.commsnet.org/commstech/repository-detective/forge"
 )
 
 // ForgeClient adapts the Gitea client to forge.RepoClient.

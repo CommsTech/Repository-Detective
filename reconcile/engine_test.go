@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/calibration"
-	"git.commsnet.org/commstech/bugbot/reconcile"
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/calibration"
+	"git.commsnet.org/commstech/repository-detective/reconcile"
+	"git.commsnet.org/commstech/repository-detective/store"
 )
 
 type fakeForge struct {

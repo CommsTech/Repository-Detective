@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Trigger a safe self-scan of commstech/Bugbot (dogfood). Does not create issues unless configured.
+# Trigger a safe self-scan of commstech/repository-detective (dogfood). Does not create issues unless configured.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 

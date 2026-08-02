@@ -13,11 +13,11 @@
 
 | Item | Notes |
 |------|-------|
-| `BUGBOT_*` environment variables | Aliased by `REPOSITORY_DETECTIVE_*` via envcompat |
-| `X-Bugbot-API-Key` header | Accepted alongside `X-Repository-Detective-API-Key` |
+| `REPOSITORY_DETECTIVE_*` environment variables | Aliased by `REPOSITORY_DETECTIVE_*` via envcompat |
+| `X-Repository-Detective-API-Key` header | Accepted alongside `X-Repository-Detective-API-Key` |
 | `data/bugbot.db` default path | SQLite filename; document as legacy |
-| Gitea repo path `commstech/Bugbot` | Git remote path unchanged |
-| Go module `git.commsnet.org/commstech/bugbot` | Internal import path |
+| Gitea repo path `commstech/repository-detective` | Git remote path unchanged |
+| Go module `git.commsnet.org/commstech/repository-detective` | Internal import path |
 
 ## Historical / comparison docs (keep Bugbot name)
 

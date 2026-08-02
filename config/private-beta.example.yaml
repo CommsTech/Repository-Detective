@@ -26,8 +26,8 @@ ai_api_key: ""
 ai_model: ""
 ai_insecure_skip_tls_verify: false
 
-# beta_standard: deterministic scan, low issue noise, graph on dashboard.
-scan_profile: beta_standard
+# standard: full deterministic scan + issue filing (legacy beta_standard maps here).
+scan_profile: standard
 analysis_depth: 2
 max_file_size: 1048576
 enable_security: true
@@ -49,7 +49,6 @@ scanner_timeout_seconds: 120
 staticcheck_timeout_seconds: 300
 min_issue_confidence: 0.7
 
-qdrant_enabled: false
 
 database_enabled: true
 database_driver: sqlite
@@ -125,7 +124,7 @@ dogfood_backlog_update_existing_only: true
 
 preinstall_audit_enabled: true
 preinstall_report_include_project_link: true
-repository_detective_project_url: "https://git.commsnet.org/commstech/bugbot"
+repository_detective_project_url: "https://git.commsnet.org/commstech/repository-detective"
 
 notifications_enabled: false
 runner_delegation_enabled: false

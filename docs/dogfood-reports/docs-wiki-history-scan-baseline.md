@@ -19,7 +19,7 @@
 |------|--------|
 | `docs/wiki/` folder present | yes (8 pages) |
 | Gitea wiki populated | **no** (API 404 — wiki repo not initialized or empty) |
-| Target wiki remote | `https://git.commsnet.org/commstech/Bugbot.wiki.git` |
+| Target wiki remote | `https://git.commsnet.org/commstech/repository-detective.wiki.git` |
 | Publish script | `scripts/publish-gitea-wiki.sh` |
 
 ## Product repo state (before sprint)

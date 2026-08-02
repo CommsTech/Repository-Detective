@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 
-	"git.commsnet.org/commstech/bugbot/learning"
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/learning"
+	"git.commsnet.org/commstech/repository-detective/store"
 )
 
 func learningStore() learning.EventRecorder {

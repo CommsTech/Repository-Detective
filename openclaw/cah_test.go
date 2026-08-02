@@ -3,8 +3,8 @@ package openclaw_test
 import (
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/openclaw"
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/openclaw"
+	"git.commsnet.org/commstech/repository-detective/store"
 )
 
 func TestCAHSkipsHighConfidenceCritical(t *testing.T) {

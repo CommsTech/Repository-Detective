@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"git.commsnet.org/commstech/bugbot/remediation"
+	"git.commsnet.org/commstech/repository-detective/remediation"
 )
 
 // PatchResult describes an applied patch.

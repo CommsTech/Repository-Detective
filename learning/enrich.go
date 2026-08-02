@@ -1,6 +1,6 @@
 package learning
 
-import "git.commsnet.org/commstech/bugbot/findinglearn"
+import "git.commsnet.org/commstech/repository-detective/findinglearn"
 
 // StructuralHash computes a deterministic shape hash for grouping repeated patterns.
 func StructuralHash(ruleID, category, codeSnippet string) string {

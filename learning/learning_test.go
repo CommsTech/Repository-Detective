@@ -3,7 +3,7 @@ package learning_test
 import (
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/learning"
+	"git.commsnet.org/commstech/repository-detective/learning"
 )
 
 func TestStructuralHashSamePattern(t *testing.T) {

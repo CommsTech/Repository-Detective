@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/preinstall"
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/preinstall"
+	"git.commsnet.org/commstech/repository-detective/store"
 )
 
 func templateFuncs() template.FuncMap {
@@ -21,10 +21,16 @@ func templateFuncs() template.FuncMap {
 		"categoryBadge":  categoryBadgeClass,
 		"statusBadge":    findingStatusBadgeClass,
 		"formatTime":     formatTimePtr,
+		"formatTimeValue": formatTimeValue,
 		"formatDuration": formatDurationBetween,
 		"jsonPretty":     jsonPretty,
 		"shortID":        shortID,
 		"mul":            func(a, b float64) float64 { return a * b },
+		"profileLabel":   store.ScanProfileLabel,
+		"profileDesc":    store.ScanProfileDescription,
+		"pct":            func(f float64) int { return int(f*100 + 0.5) },
+		"rateClass":      rateMeterClass,
+		"rateWidth":      rateMeterWidth,
 		"radarBarWidth":  radarBarWidth,
 		"navActive":      navActiveClass,
 		"apiKeyQS":       apiKeyQueryString,
@@ -179,6 +185,13 @@ func findingStatusBadgeClass(status string) string {
 
 func formatTimePtr(t *time.Time) string {
 	if t == nil {
+		return "—"
+	}
+	return t.UTC().Format("2006-01-02 15:04:05 UTC")
+}
+
+func formatTimeValue(t time.Time) string {
+	if t.IsZero() {
 		return "—"
 	}
 	return t.UTC().Format("2006-01-02 15:04:05 UTC")

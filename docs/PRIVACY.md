@@ -13,11 +13,7 @@
 - Full issue titles/bodies or raw scanner evidence
 - Private repository metadata
 
-## Qdrant (`cah_findings`)
-
-When semantic dedup is enabled, Repository Detective stores **redacted** finding summaries in Qdrant for similarity search. Payloads include normalized metadata (severity, rule, path class, redacted description) — never raw secrets, code snippets, tokens, or exploit payloads. See [QDRANT.md](QDRANT.md).
-
-All calibration in this phase runs **on your SQLite database only**.
+All calibration runs **on your SQLite database only**. Issue dedup uses fingerprints and forge mappings stored locally — not an external vector database.
 
 A future community intelligence feed may share **sanitized rule-level statistics** only — not implemented here.
 
@@ -25,14 +21,13 @@ See [CALIBRATION.md](CALIBRATION.md) and [SECURITY_HARDENING.md](SECURITY_HARDEN
 
 ## Operator-specific credentials
 
-Repository Detective may be tested with a local operator’s Gitea, Qdrant, and API credentials during dogfooding. These credentials are never required by the product and must not be committed.
+Repository Detective may be tested with a local operator’s Gitea and API credentials during dogfooding. These credentials are never required by the product and must not be committed.
 
 Use environment variables, Docker secrets, or local untracked config for:
 
 - `REPOSITORY_DETECTIVE_API_KEY`
 - `REPOSITORY_DETECTIVE_GITEA_TOKEN`
 - `REPOSITORY_DETECTIVE_WEBHOOK_SECRET`
-- `REPOSITORY_DETECTIVE_QDRANT_URL`
 - runner shared secrets
 - notification tokens/webhooks
 

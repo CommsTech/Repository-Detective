@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 
-	"git.commsnet.org/commstech/bugbot/reconcile"
+	"git.commsnet.org/commstech/repository-detective/reconcile"
 )
 
 type uiReconcileBridge struct{}

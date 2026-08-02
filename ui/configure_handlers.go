@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	"git.commsnet.org/commstech/bugbot/operator"
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/operator"
+	"git.commsnet.org/commstech/repository-detective/store"
 	"github.com/gin-gonic/gin"
 )
 
@@ -77,6 +77,7 @@ func (h *Handler) SaveConfigure(c *gin.Context) {
 	}
 
 	settings := platformSettingsFromForm(c)
+	settings.ScanProfile = store.NormalizeScanProfile(settings.ScanProfile)
 	settings.UpdatedBy = "ui"
 	if err := store.ValidatePlatformSettings(settings); err != nil {
 		h.renderConfigurePage(c, err.Error(), settings)
@@ -103,34 +104,91 @@ func (h *Handler) SaveConfigure(c *gin.Context) {
 }
 
 func (h *Handler) renderConfigurePage(c *gin.Context, errMsg string, draft store.PlatformSettings) {
-	var readiness operator.Readiness
-	if h.readinessFn != nil {
-		readiness = h.readinessFn()
-	}
-	caps := buildCapabilityStatuses(readiness, h.notifyGlobal, h.platform, h.basePath)
-	sections := buildConfigureSections(readiness, h.platform, h.notifyGlobal, h.global, h.basePath)
 	saved, _ := h.store.GetPlatformSettings(c.Request.Context())
+	// Never call readinessFn here — it probes every scanner binary and makes Configure
+	// time out in the browser so Save never reaches the server.
+	readiness := h.configureReadiness(saved)
 	form := buildConfigureForm(h.global, h.platform, readiness, saved, draft)
+	// Keep status sections aligned with the editable form (live DB overrides).
+	readiness.Features.SchedulerEnabled = form.SchedulerEnabled
+	readiness.Features.NotificationsEnabled = form.NotificationsEnabled
+	readiness.Features.PreinstallAuditEnabled = form.PreinstallAuditEnabled
+	readiness.Features.RemediationPlannerEnabled = form.RemediationPlannerEnabled
+	readiness.Features.RemediationPREnabled = form.RemediationPREnabled
+	readiness.Features.EvidenceClosureEnabled = form.EvidenceClosureEnabled
+	readiness.Features.ScanProfile = form.ScanProfile
+	platform := h.platform
+	platform.NotificationsEnabled = form.NotificationsEnabled
+	platform.OpenClawAIReviewEnabled = form.AIRecommendationsEnabled
 
-	notice := "Edit settings below and save. Values are stored in the database and apply immediately to new scans. Secrets stay in .env only."
-	if c.Query("saved") == "1" && errMsg == "" {
-		notice = "Settings saved and applied to the running service."
+	caps := buildCapabilityStatuses(readiness, h.notifyGlobal, platform, h.basePath)
+	sections := buildConfigureSections(readiness, platform, h.notifyGlobal, h.global, h.basePath)
+
+	notice := "Change options below, then click Save settings at the top or bottom. Changes apply immediately to new scans. Secrets stay in .env only."
+	savedOK := c.Query("saved") == "1" && errMsg == ""
+	if savedOK {
+		notice = "Settings saved and applied live. Checkboxes and section badges below now match what you saved. Features that need secrets (notifications channels, forge token, AI endpoint) stay degraded until those are set in .env."
 	}
 
 	h.renderNav(c, "configure.html", "Configure", "settings", map[string]any{
 		"Readiness":           readiness,
 		"Capabilities":        caps,
-		"Platform":            h.platform,
+		"Platform":            platform,
 		"Sections":            sections,
 		"SetupComplete":       h.isSetupComplete(c.Request.Context()),
 		"Form":                form,
-		"Profiles":            store.AllowedScanProfiles,
+		"Profiles":            store.PrimaryScanProfileOptions,
 		"ProfileDescriptions": store.ProfileDescriptions,
 		"Error":               errMsg,
 		"SavedAt":             saved.UpdatedAt,
 		"Editable":            true,
 		"NoticeText":          notice,
+		"SavedOK":             savedOK,
 	})
+}
+
+// configureReadiness builds feature flags from live handler state without tool probes.
+func (h *Handler) configureReadiness(saved store.PlatformSettings) operator.Readiness {
+	features := operator.FeatureFlags{
+		DatabaseEnabled:           true,
+		DatabaseHealthy:           h.store != nil,
+		SchedulerEnabled:          false,
+		NotificationsEnabled:      h.platform.NotificationsEnabled,
+		PreinstallAuditEnabled:    h.preinstallEnabled,
+		RemediationPlannerEnabled: h.remediationEnabled,
+		RemediationPREnabled:      h.remediationPREnabled,
+		EvidenceClosureEnabled:    h.closureEnabled,
+		RunnerDelegationEnabled:   h.platform.RunnerDelegationEnabled,
+		UIEnabled:                 true,
+		ScanProfile:               h.global.ScanProfile,
+		PublicURLConfigured:       strings.TrimSpace(h.platform.PublicURL) != "",
+	}
+	if saved.SchedulerEnabled != nil {
+		features.SchedulerEnabled = *saved.SchedulerEnabled
+	}
+	if saved.NotificationsEnabled != nil {
+		features.NotificationsEnabled = *saved.NotificationsEnabled
+	}
+	if saved.PreinstallAuditEnabled != nil {
+		features.PreinstallAuditEnabled = *saved.PreinstallAuditEnabled
+	}
+	if saved.RemediationPlannerEnabled != nil {
+		features.RemediationPlannerEnabled = *saved.RemediationPlannerEnabled
+	}
+	if saved.RemediationPREnabled != nil {
+		features.RemediationPREnabled = *saved.RemediationPREnabled
+	}
+	if saved.EvidenceClosureEnabled != nil {
+		features.EvidenceClosureEnabled = *saved.EvidenceClosureEnabled
+	}
+	if p := strings.TrimSpace(saved.ScanProfile); p != "" {
+		features.ScanProfile = p
+	}
+	return operator.Readiness{
+		ProductName: "Repository Detective",
+		Status:      "healthy",
+		Features:    features,
+	}
 }
 
 func buildConfigureForm(
@@ -142,7 +200,7 @@ func buildConfigureForm(
 ) ConfigureFormValues {
 	// Start from live effective values.
 	f := ConfigureFormValues{
-		ScanProfile:               firstNonEmpty(saved.ScanProfile, global.ScanProfile, readiness.Features.ScanProfile),
+		ScanProfile:               store.NormalizeScanProfile(firstNonEmpty(saved.ScanProfile, global.ScanProfile, readiness.Features.ScanProfile)),
 		SchedulerEnabled:          readiness.Features.SchedulerEnabled,
 		NotificationsEnabled:      readiness.Features.NotificationsEnabled,
 		PreinstallAuditEnabled:    readiness.Features.PreinstallAuditEnabled,

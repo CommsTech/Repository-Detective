@@ -28,7 +28,7 @@ webhook_notification_url: ""
 webhook_notification_secret: ""
 ```
 
-Environment variables (prefer `REPOSITORY_DETECTIVE_*`; legacy `BUGBOT_*` works via envcompat):
+Environment variables (prefer `REPOSITORY_DETECTIVE_*`; legacy `REPOSITORY_DETECTIVE_*` works via envcompat):
 
 ```text
 REPOSITORY_DETECTIVE_NOTIFICATIONS_ENABLED

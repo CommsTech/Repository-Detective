@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/preinstall"
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/preinstall"
+	"git.commsnet.org/commstech/repository-detective/store"
 )
 
 func TestPreinstallAuditStoreCRUD(t *testing.T) {

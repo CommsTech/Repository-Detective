@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"git.commsnet.org/commstech/bugbot/ai"
+	"git.commsnet.org/commstech/repository-detective/ai"
 	"github.com/gin-gonic/gin"
 )
 

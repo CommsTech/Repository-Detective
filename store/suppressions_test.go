@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/ai"
-	"git.commsnet.org/commstech/bugbot/calibration"
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/ai"
+	"git.commsnet.org/commstech/repository-detective/calibration"
+	"git.commsnet.org/commstech/repository-detective/store"
 )
 
 func seedRepoAndFinding(t *testing.T, s store.QueryStore) (store.Repository, store.Finding) {

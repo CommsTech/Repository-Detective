@@ -54,7 +54,7 @@ Prove Repository Detective creates and updates Gitea issues in the **correct own
 1. Close/delete scratch Gitea issue
 2. Disable filing on scratch repo
 3. Remove scratch repo connection from RD
-4. Confirm product repo `commstech/Bugbot` still report-only / 0 forge issues
+4. Confirm product repo `commstech/repository-detective` still report-only / 0 forge issues
 
 ## Default
 

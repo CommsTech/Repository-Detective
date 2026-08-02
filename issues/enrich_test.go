@@ -3,8 +3,8 @@ package issues_test
 import (
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/ai"
-	"git.commsnet.org/commstech/bugbot/issues"
+	"git.commsnet.org/commstech/repository-detective/ai"
+	"git.commsnet.org/commstech/repository-detective/issues"
 )
 
 func TestEnrichIssuesSetsFingerprint(t *testing.T) {

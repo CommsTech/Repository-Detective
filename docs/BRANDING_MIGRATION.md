@@ -32,7 +32,7 @@ REPOSITORY_DETECTIVE_*
 | Rule | Behavior |
 |------|----------|
 | Precedence | `REPOSITORY_DETECTIVE_*` wins when both are set for the same key |
-| Legacy only | `BUGBOT_*` still works; one-time deprecation notice at startup |
+| Legacy only | `REPOSITORY_DETECTIVE_*` still works; one-time deprecation notice at startup |
 | YAML keys | Unchanged (`enable_trivy`, `api_key`, etc.) |
 
 Examples:
@@ -51,7 +51,7 @@ Both headers are accepted (**preferred first**):
 
 ```text
 X-Repository-Detective-API-Key    ← preferred
-X-Bugbot-API-Key                  ← legacy, still accepted
+X-Repository-Detective-API-Key                  ← legacy, still accepted
 ```
 
 Query parameter `api_key` still works for UI links.
@@ -97,7 +97,7 @@ No table renames in Phase 12B. Internal SQLite path default remains `./data/bugb
 ## Rollback
 
 1. Set `label_compat_mode: legacy_only`
-2. Continue using `BUGBOT_*` env vars
+2. Continue using `REPOSITORY_DETECTIVE_*` env vars
 3. Existing Gitea issues remain readable (fingerprints and legacy labels unchanged)
 4. No DB schema rollback required
 

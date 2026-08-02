@@ -1,7 +1,7 @@
-# Gitea Bugbot Plugin - Deployment Script
+# Repository Detective - Deployment Script
 # Run this script to deploy the bugbot
 
-Write-Host "🚀 Deploying Gitea Bugbot Plugin..." -ForegroundColor Green
+Write-Host "🚀 Deploying Repository Detective..." -ForegroundColor Green
 
 # Check if Docker is running
 try {
@@ -45,15 +45,15 @@ Write-Host "🔧 Building and starting the bugbot..." -ForegroundColor Yellow
 docker-compose up -d --build
 
 if ($LASTEXITCODE -eq 0) {
-    Write-Host "✅ Bugbot deployed successfully!" -ForegroundColor Green
+    Write-Host "✅ Repository Detective deployed successfully!" -ForegroundColor Green
     Write-Host ""
     Write-Host "📋 Next steps:" -ForegroundColor Cyan
-    Write-Host "1. Check the logs: docker-compose logs -f gitea-bugbot" -ForegroundColor White
+    Write-Host "1. Check the logs: docker-compose logs -f repository-detective" -ForegroundColor White
     Write-Host "2. Test the health endpoint: http://127.0.0.1:8080/health" -ForegroundColor White
     Write-Host "3. Configure webhooks in your Gitea repositories to point to:" -ForegroundColor White
     Write-Host "   http://your-server-ip:8080/webhook" -ForegroundColor White
     Write-Host ""
-    Write-Host "🔗 Bugbot is now running on port 8080" -ForegroundColor Green
+    Write-Host "🔗 Repository Detective is now running on port 8080" -ForegroundColor Green
 } else {
     Write-Host "❌ Deployment failed. Check the error messages above." -ForegroundColor Red
     exit 1

@@ -61,7 +61,7 @@
         <div class="rd-fleet-kv" title="Repo allowed for webhook/manual scans"><span class="rd-fleet-k">Webhook/manual</span>{{if .ScanEnabled}}<span class="rd-badge enforce rd-badge-xs">enabled</span>{{else}}<span class="rd-badge skipped rd-badge-xs">disabled</span>{{end}}</div>
         <div class="rd-fleet-kv" title="In-process nightly scheduler"><span class="rd-fleet-k">Nightly sched</span>{{if .ScheduleEnabled}}<span class="rd-badge info rd-badge-xs">on</span>{{else}}<span class="rd-muted" title="Nightly schedule off — no cron fleet scan">off</span>{{end}}</div>
         <div class="rd-fleet-kv" title="Forge issue filing policy"><span class="rd-fleet-k">Filing</span><span class="rd-badge {{if .IssueFilingOn}}warn{{else}}monitor{{end}} rd-badge-xs">{{if .IssueFilingOn}}on{{else}}off{{end}}</span></div>
-        <div class="rd-fleet-kv"><span class="rd-fleet-k">Profile</span><code class="rd-fleet-code">{{.ScanProfile}}</code></div>
+        <div class="rd-fleet-kv"><span class="rd-fleet-k">Profile</span><code class="rd-fleet-code">{{profileLabel .ScanProfile}}</code></div>
         <div class="rd-fleet-kv"><span class="rd-fleet-k">Report-only</span><span class="rd-muted rd-badge-xs">{{.ReportOnlyLabel}}</span></div>
       </div>
 

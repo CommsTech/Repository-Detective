@@ -16,7 +16,7 @@ PORT="${RD_PORT:-8081}"
 BASE="${RD_BASE_URL:-http://127.0.0.1:${PORT}}"
 API_KEY="${REPOSITORY_DETECTIVE_API_KEY:-${BUGBOT_API_KEY:-}}"
 HEADER="X-Repository-Detective-API-Key"
-LEGACY_HEADER="X-Bugbot-API-Key"
+LEGACY_HEADER="X-Repository-Detective-API-Key"
 
 log() { printf '==> %s\n' "$*"; }
 warn() { printf 'WARN: %s\n' "$*" >&2; }

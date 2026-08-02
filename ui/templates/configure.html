@@ -14,13 +14,38 @@
 .rd-config-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(14rem,1fr)); gap:.75rem 1.25rem; margin:1rem 0; }
 .rd-config-grid label { font-weight:500; display:flex; align-items:center; gap:.45rem; margin:0; }
 .rd-config-actions { display:flex; flex-wrap:wrap; gap:.75rem; align-items:center; margin-top:1.25rem; }
-@media print { .rd-sidebar, .rd-topbar, .rd-config-nav, .rd-config-actions { display:none !important; } }
+.rd-config-sticky {
+  position: sticky; top: 0; z-index: 40;
+  display:flex; flex-wrap:wrap; gap:.75rem; align-items:center;
+  padding:.65rem .85rem; margin:0 0 1rem;
+  background: var(--rd-surface, #fff);
+  border: 1px solid var(--rd-border, #d8dde6);
+  border-radius: 8px;
+  box-shadow: 0 1px 0 rgba(0,0,0,.04);
+}
+.rd-config-sticky .rd-btn { font-size: 1rem; padding: .5rem 1rem; }
+.rd-config-saved {
+  border-color: #2f9e44;
+  background: #ebfbee;
+  color: #0b3d1a;
+  font-weight: 600;
+}
+.rd-config-ref details { margin: 0; }
+.rd-config-ref summary {
+  cursor: pointer; list-style: none; display:flex; align-items:center; gap:.75rem;
+  font-weight: 600;
+}
+.rd-config-ref summary::-webkit-details-marker { display:none; }
+.rd-config-ref summary::before { content: "▸"; color: var(--rd-muted, #667); }
+.rd-config-ref[open] summary::before { content: "▾"; }
+@media print { .rd-sidebar, .rd-topbar, .rd-config-nav, .rd-config-actions, .rd-config-sticky { display:none !important; } }
 </style>
 </head>
 <body class="rd-app">
 {{template "nav" .}}
 {{if .Data.Error}}<div class="rd-alert" role="alert">{{.Data.Error}}</div>{{end}}
-{{if .Data.NoticeText}}<div class="rd-alert info" role="status">{{.Data.NoticeText}}</div>{{end}}
+{{if .Data.SavedOK}}<div class="rd-alert info rd-config-saved" role="status">{{.Data.NoticeText}}</div>
+{{else if .Data.NoticeText}}<div class="rd-alert info" role="status">{{.Data.NoticeText}}</div>{{end}}
 {{if .Notice}}<div class="rd-alert info" role="status">{{.Notice}}</div>{{end}}
 
 <div class="rd-card">
@@ -29,7 +54,7 @@
   {{if .Data.SavedAt}}<p class="rd-muted">Last saved: {{.Data.SavedAt}}</p>{{end}}
   <ul class="rd-config-nav" aria-label="Jump to feature">
     <li><a href="#edit-settings">Edit settings</a></li>
-    {{range .Data.Sections}}<li><a href="#{{.ID}}">{{.Title}}</a></li>{{end}}
+    <li><a href="#status-reference">Status reference</a></li>
   </ul>
   <ul class="rd-quicklink-list">
     <li><a href="{{.BasePath}}/health{{apiKeyQS .APIKey}}">System Health</a></li>
@@ -44,14 +69,25 @@
   <form class="rd-config-form" method="post" action="{{$.BasePath}}/configure{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}">
     <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
 
-    <h3>Scan profile &amp; gates</h3>
+    <div class="rd-config-sticky">
+      <button type="submit" class="rd-btn">Save settings</button>
+      <span class="rd-muted">Applies immediately. Unchecked boxes save as disabled.</span>
+    </div>
+
+    <h3 id="scan_profile">Scan profile &amp; gates</h3>
+    <div class="rd-alert info" role="note">
+      <strong>AI cross-checks are opt-in.</strong>
+      Light and Standard stay deterministic-only (privacy-first).
+      Choose <strong>Deep</strong> to enable LLM auditors on flagged files, or leave Standard and turn AI on later per-repo.
+      AI provider must be configured in <code>.env</code> (<code>REPOSITORY_DETECTIVE_AI_*</code>).
+    </div>
     <label for="scan_profile">Scan profile</label>
     <select id="scan_profile" name="scan_profile">
       {{range $.Data.Profiles}}
-      <option value="{{.}}" {{if eq $.Data.Form.ScanProfile .}}selected{{end}}>{{.}}</option>
+      <option value="{{.ID}}" {{if eq $.Data.Form.ScanProfile .ID}}selected{{end}}>{{.Label}} — {{.Summary}}</option>
       {{end}}
     </select>
-    <p class="rd-muted">{{index $.Data.ProfileDescriptions .ScanProfile}}</p>
+    <p class="rd-muted">{{profileDesc .ScanProfile}}</p>
 
     <label for="severity_gate">Severity gate</label>
     <select id="severity_gate" name="severity_gate">
@@ -145,27 +181,34 @@
 </section>
 {{end}}
 
+<section id="status-reference" class="rd-card rd-config-section">
+  <div class="rd-card-head"><h2>Status reference</h2><span class="rd-chip">read-only</span></div>
+  <p class="rd-muted">These tables show effective status after save. Enabling a feature still needs any required secrets in <code>.env</code> (webhooks, forge token, AI endpoint) before it is fully healthy.</p>
+</section>
+
 {{range .Data.Sections}}
-<section id="{{.ID}}" class="rd-card rd-config-section" aria-labelledby="cfg-{{.ID}}">
-  <div class="rd-card-head">
-    <h2 id="cfg-{{.ID}}">{{.Title}}</h2>
-    <span class="rd-badge {{.StatusClass}}">{{.Status}}</span>
-  </div>
-  <p>{{.Summary}}</p>
-  {{if .BetaDefault}}<p class="rd-muted"><strong>Beta default:</strong> {{.BetaDefault}}</p>{{end}}
-  {{if .SafetyNote}}<p class="rd-muted"><strong>Safety:</strong> {{.SafetyNote}}</p>{{end}}
-  <table class="rd-table">
-    <tr><th scope="col">Config key</th><th scope="col">Effective value</th><th scope="col">Source</th></tr>
-    {{range .Settings}}
-    <tr>
-      <td><code>{{.Key}}</code></td>
-      <td>{{if .Secret}}{{if .Present}}present (redacted){{else}}<strong>missing</strong>{{end}}{{else}}{{.DisplayValue}}{{end}}</td>
-      <td class="rd-muted">{{.Source}}{{if .Hint}} — {{.Hint}}{{end}}</td>
-    </tr>
-    {{end}}
-  </table>
-  {{if .WorkflowURL}}<p><a class="rd-link" href="{{.WorkflowURL}}{{apiKeyQS $.APIKey}}">{{.WorkflowLabel}}</a></p>{{end}}
-  {{if .DocPath}}<p class="rd-muted">Docs: <code>{{.DocPath}}</code></p>{{end}}
+<section id="{{.ID}}" class="rd-card rd-config-section rd-config-ref" aria-labelledby="cfg-{{.ID}}">
+  <details {{if $.Data.SavedOK}}open{{end}}>
+    <summary>
+      <span id="cfg-{{.ID}}">{{.Title}}</span>
+      <span class="rd-badge {{.StatusClass}}">{{.Status}}</span>
+    </summary>
+    <p>{{.Summary}}</p>
+    {{if .BetaDefault}}<p class="rd-muted"><strong>Beta default:</strong> {{.BetaDefault}}</p>{{end}}
+    {{if .SafetyNote}}<p class="rd-muted"><strong>Safety:</strong> {{.SafetyNote}}</p>{{end}}
+    <table class="rd-table">
+      <tr><th scope="col">Config key</th><th scope="col">Effective value</th><th scope="col">Source</th></tr>
+      {{range .Settings}}
+      <tr>
+        <td><code>{{.Key}}</code></td>
+        <td>{{if .Secret}}{{if .Present}}present (redacted){{else}}<strong>missing</strong>{{end}}{{else}}{{.DisplayValue}}{{end}}</td>
+        <td class="rd-muted">{{.Source}}{{if .Hint}} — {{.Hint}}{{end}}</td>
+      </tr>
+      {{end}}
+    </table>
+    {{if .WorkflowURL}}<p><a class="rd-link" href="{{.WorkflowURL}}{{apiKeyQS $.APIKey}}">{{.WorkflowLabel}}</a></p>{{end}}
+    {{if .DocPath}}<p class="rd-muted">Docs: <code>{{.DocPath}}</code></p>{{end}}
+  </details>
 </section>
 {{end}}
 

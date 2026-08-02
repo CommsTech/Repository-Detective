@@ -3,7 +3,7 @@ package main
 import (
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/operator"
+	"git.commsnet.org/commstech/repository-detective/operator"
 	"github.com/gin-gonic/gin"
 )
 

@@ -3,8 +3,8 @@ package ui
 import (
 	"net/http"
 
-	"git.commsnet.org/commstech/bugbot/reconcile"
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/reconcile"
+	"git.commsnet.org/commstech/repository-detective/store"
 	"github.com/gin-gonic/gin"
 )
 

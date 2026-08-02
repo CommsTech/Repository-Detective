@@ -6,8 +6,42 @@ import (
 	"testing"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/store"
 )
+
+func TestCountCompletedScansByDay(t *testing.T) {
+	ctx := context.Background()
+	s := openTestStore(t)
+	repo, _ := s.UpsertRepository(ctx, store.Repository{Owner: "o", Name: "r", FullName: "o/r"})
+	now := time.Now().UTC()
+	_, _ = s.CreateScan(ctx, store.Scan{
+		ID: "day-a", RepositoryID: repo.ID, TriggerType: store.TriggerManual,
+		Status: store.ScanStatusCompleted, StartedAt: now.AddDate(0, 0, -4),
+	})
+	_, _ = s.CreateScan(ctx, store.Scan{
+		ID: "day-b1", RepositoryID: repo.ID, TriggerType: store.TriggerManual,
+		Status: store.ScanStatusCompleted, StartedAt: now.AddDate(0, 0, -1),
+	})
+	_, _ = s.CreateScan(ctx, store.Scan{
+		ID: "day-b2", RepositoryID: repo.ID, TriggerType: store.TriggerManual,
+		Status: store.ScanStatusCompleted, StartedAt: now.AddDate(0, 0, -1),
+	})
+	_, _ = s.CreateScan(ctx, store.Scan{
+		ID: "day-fail", RepositoryID: repo.ID, TriggerType: store.TriggerManual,
+		Status: store.ScanStatusFailed, StartedAt: now.AddDate(0, 0, -1),
+	})
+
+	byDay, err := s.CountCompletedScansByDay(ctx, now.AddDate(0, 0, -13))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if byDay[now.AddDate(0, 0, -4).Format("2006-01-02")] != 1 {
+		t.Fatalf("day-4=%v", byDay)
+	}
+	if byDay[now.AddDate(0, 0, -1).Format("2006-01-02")] != 2 {
+		t.Fatalf("day-1=%v", byDay)
+	}
+}
 
 func TestDashboardSummaryQuery(t *testing.T) {
 	ctx := context.Background()

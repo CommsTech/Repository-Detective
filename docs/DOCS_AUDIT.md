@@ -66,7 +66,7 @@ Legend: **Present** · **Current** (accurate for beta) · **Examples** · **Safe
 
 | Item | Action |
 |------|--------|
-| `SETUP.md` still shows `BUGBOT_*` first in places | Update to preferred env prefix |
+| `SETUP.md` still shows `REPOSITORY_DETECTIVE_*` first in places | Update to preferred env prefix |
 | Single `PRIVACY.md` vs `PRIVACY_AND_DATA_PROTECTION.md` | Cross-link; merge later |
 | VPAT / full accessibility | [ACCESSIBILITY.md](ACCESSIBILITY.md) checklist only |
 | GitHub scanning doc | [GITHUB_SCANNING.md](GITHUB_SCANNING.md) — not beta-critical |

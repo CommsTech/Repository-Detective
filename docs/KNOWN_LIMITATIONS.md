@@ -6,7 +6,7 @@ Honest constraints as of the closeout sprint. Update when shipping fixes.
 
 - Single-tenant operator model — no built-in multi-user RBAC in UI
 - SQLite default — not HA clustered DB
-- Semantic dedup (Qdrant) optional and external
+- Issue dedup is fingerprint-based (monitor SQLite mappings + forge issues)
 - Remediation PRs off by default
 
 ## Scanners

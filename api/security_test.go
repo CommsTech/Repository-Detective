@@ -5,9 +5,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/api"
-	"git.commsnet.org/commstech/bugbot/internal/security"
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/api"
+	"git.commsnet.org/commstech/repository-detective/internal/security"
+	"git.commsnet.org/commstech/repository-detective/store"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )
@@ -24,7 +24,7 @@ func TestControlPlaneRoutesRequireAPIKey(t *testing.T) {
 	r.Use(security.MiddlewareHeaders())
 	g := r.Group("/api/v1")
 	g.Use(func(c *gin.Context) {
-		if c.GetHeader("X-Bugbot-API-Key") == "" {
+		if c.GetHeader("X-Repository-Detective-API-Key") == "" {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "API key required"})
 			return
 		}

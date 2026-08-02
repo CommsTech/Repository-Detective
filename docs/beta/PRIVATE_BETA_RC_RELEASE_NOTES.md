@@ -100,7 +100,7 @@ Install optional tools (trivy, grype, gitleaks, semgrep, syft) or use the full s
 1. Copy [PRIVATE_BETA_FEEDBACK_TEMPLATE.md](PRIVATE_BETA_FEEDBACK_TEMPLATE.md) or the specialized bug/false-positive templates
 2. Include scan ID, repo slug, commit SHA (`6d011cf` or newer)
 3. Redact tokens, `.env`, and proprietary source
-4. Send via operator-designated channel (Gitea issue on Bugbot, email, or chat — operator decides)
+4. Send via operator-designated channel (Gitea issue on repository-detective, email, or chat — operator decides)
 
 Categories: installation friction, UI confusion, finding quality, false positive, missed issue, scanner unavailable, SBOM/graph/pre-install quality, performance, docs gap, trust/safety concern.
 

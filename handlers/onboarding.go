@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/ai"
-	"git.commsnet.org/commstech/bugbot/gitea"
-	"git.commsnet.org/commstech/bugbot/web"
+	"git.commsnet.org/commstech/repository-detective/ai"
+	"git.commsnet.org/commstech/repository-detective/gitea"
+	"git.commsnet.org/commstech/repository-detective/web"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )
@@ -193,7 +193,7 @@ func (h *OnboardingHandler) handleRegisterWebhooks(c *gin.Context) {
 		return
 	}
 	if publicURL == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Bugbot public URL is required for webhooks"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Repository Detective public URL is required for webhooks"})
 		return
 	}
 	if len(req.Repositories) == 0 {

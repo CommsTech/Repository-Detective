@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/analyzers"
-	"git.commsnet.org/commstech/bugbot/containers"
-	"git.commsnet.org/commstech/bugbot/runner"
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/analyzers"
+	"git.commsnet.org/commstech/repository-detective/containers"
+	"git.commsnet.org/commstech/repository-detective/runner"
+	"git.commsnet.org/commstech/repository-detective/store"
 	"github.com/gin-gonic/gin"
 )
 

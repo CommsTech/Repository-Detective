@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"git.commsnet.org/commstech/bugbot/notify"
-	"git.commsnet.org/commstech/bugbot/operator"
+	"git.commsnet.org/commstech/repository-detective/notify"
+	"git.commsnet.org/commstech/repository-detective/operator"
 )
 
 // CapabilityStatus describes one platform capability for the health page.
@@ -36,6 +36,7 @@ type PlatformContext struct {
 	MaxIssuesPerScan             int
 	ScanPolicyMode               string
 	NotificationsEnabled         bool
+	SchedulerEnabled             bool
 	RunnerDelegationEnabled      bool
 	RunnerRequireHMAC            bool
 	RunnerMode                   string

@@ -116,6 +116,30 @@ func (s *SQLiteStore) ListLearningEvents(ctx context.Context, repositoryID int64
 	return scanLearningEvents(rows)
 }
 
+// CountLearningEventsByType returns fleet-wide learning event counts keyed by event_type.
+func (s *SQLiteStore) CountLearningEventsByType(ctx context.Context) (map[string]int, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT COALESCE(NULLIF(TRIM(event_type), ''), 'unknown') AS event_type, COUNT(1)
+		FROM learning_events
+		GROUP BY 1
+		ORDER BY COUNT(1) DESC
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("count learning events by type: %w", err)
+	}
+	defer rows.Close()
+	out := map[string]int{}
+	for rows.Next() {
+		var typ string
+		var n int
+		if err := rows.Scan(&typ, &n); err != nil {
+			return nil, fmt.Errorf("scan learning event type row: %w", err)
+		}
+		out[typ] = n
+	}
+	return out, rows.Err()
+}
+
 func scanLearningEvents(rows *sql.Rows) ([]LearningEvent, error) {
 	var out []LearningEvent
 	for rows.Next() {

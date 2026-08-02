@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/internal/security"
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/internal/security"
+	"git.commsnet.org/commstech/repository-detective/store"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
 )
@@ -101,7 +101,7 @@ func TestCSRFNotRequiredForAPIKeyJSON(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/example", strings.NewReader(`{"x":1}`))
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Bugbot-API-Key", "test-secret-key")
+	req.Header.Set("X-Repository-Detective-API-Key", "test-secret-key")
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 	if w.Code != http.StatusOK {

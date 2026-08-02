@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/gitea"
+	"git.commsnet.org/commstech/repository-detective/gitea"
 )
 
 type stubPR struct {

@@ -4,9 +4,9 @@ import (
 	"strings"
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/ai"
-	"git.commsnet.org/commstech/bugbot/profile"
-	"git.commsnet.org/commstech/bugbot/scanners"
+	"git.commsnet.org/commstech/repository-detective/ai"
+	"git.commsnet.org/commstech/repository-detective/profile"
+	"git.commsnet.org/commstech/repository-detective/scanners"
 )
 
 func TestComputeScoreResultEmpty(t *testing.T) {

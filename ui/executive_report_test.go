@@ -4,9 +4,9 @@ import (
 	"strings"
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/notify"
-	"git.commsnet.org/commstech/bugbot/operator"
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/notify"
+	"git.commsnet.org/commstech/repository-detective/operator"
+	"git.commsnet.org/commstech/repository-detective/store"
 )
 
 func TestBuildFleetExecutiveSummaryRecommendation(t *testing.T) {

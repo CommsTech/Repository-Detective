@@ -1,7 +1,7 @@
 # Remediation PR safe — full safe loop with conservative PR gates
 # Enable only after planner works on a test repo.
 
-scan_profile: standard_deterministic
+scan_profile: standard
 enable_staticcheck: true
 enable_hadolint: true
 

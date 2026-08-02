@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	"git.commsnet.org/commstech/bugbot/remediation"
+	"git.commsnet.org/commstech/repository-detective/remediation"
 )
 
 var apkAddLinePattern = regexp.MustCompile(`(?i)(apk\s+add(?:\s+--[^\s\\&]+)*\s+)([^\\&]+)`)

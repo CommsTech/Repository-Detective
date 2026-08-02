@@ -2,7 +2,7 @@
 
 **Repository Detective** — Inspect. Analyze. Improve.
 
-Operator-focused fixes for private beta deployments. Prefer `REPOSITORY_DETECTIVE_*` env vars; legacy `BUGBOT_*` still works.
+Operator-focused fixes for private beta deployments. Prefer `REPOSITORY_DETECTIVE_*` env vars; legacy `REPOSITORY_DETECTIVE_*` still works.
 
 ---
 
@@ -20,7 +20,7 @@ Operator-focused fixes for private beta deployments. Prefer `REPOSITORY_DETECTIV
      http://127.0.0.1:8081/api/v1/status
    ```
 
-3. Legacy header `X-Bugbot-API-Key` still accepted.
+3. Legacy header `X-Repository-Detective-API-Key` still accepted.
 4. Prefer the `X-Repository-Detective-API-Key` header for API calls. Legacy query `?api_key=` is **deprecated** (leaks into logs/history); the UI stores it in an HttpOnly cookie and redirects to a clean URL when used once.
 5. Restart container after changing `.env`.
 
@@ -91,7 +91,7 @@ docker logs repository-detective --tail 50
 | `gitea_url is required` | `REPOSITORY_DETECTIVE_GITEA_URL` in `.env` |
 | `gitea_token is required` | `REPOSITORY_DETECTIVE_GITEA_TOKEN` |
 | `configure gitea_token and/or github_token` | At least one forge token |
-| `configure ai_provider` | Only if LLM/Qdrant enabled |
+| `configure ai_provider` | Only if LLM auditors enabled |
 | Connection timeout at startup | `REPOSITORY_DETECTIVE_SKIP_STARTUP_CHECKS=true` |
 
 Run in foreground:
@@ -190,20 +190,6 @@ See [SCANNERS.md](SCANNERS.md), [DOCKER.md](DOCKER.md).
 
 ---
 
-## Qdrant disabled / mismatch
-
-**Symptoms:** Semantic dedup inactive; logs mention Qdrant unavailable.
-
-**Expected for beta:** `qdrant_enabled: false`.
-
-If enabling locally:
-
-- Embedding dimension must match collection (1024 vs 768 issues documented)
-- Point IDs must be UUID-compatible
-- See [QDRANT.md](QDRANT.md) — **not beta-ready**
-
----
-
 ## Database locked / SQLite errors
 
 **Symptoms:** `database is locked`, dashboard empty.
@@ -271,10 +257,10 @@ docker compose start repository-detective
 
 | You see | Meaning |
 |---------|---------|
-| `BUGBOT_*` in old docs | Use `REPOSITORY_DETECTIVE_*` — both work |
-| `X-Bugbot-API-Key` | Legacy — prefer `X-Repository-Detective-API-Key` |
+| `REPOSITORY_DETECTIVE_*` in old docs | Use `REPOSITORY_DETECTIVE_*` — both work |
+| `X-Repository-Detective-API-Key` | Legacy — prefer `X-Repository-Detective-API-Key` |
 | `bugbot.db` | Database filename — intentional |
-| `commstech/Bugbot` git repo | Forge repo name — not product name |
+| `commstech/repository-detective` git repo | Forge repo name — not product name |
 | Container `gitea-bugbot` | Old name — current is `repository-detective` |
 
 See [BRANDING_MIGRATION.md](BRANDING_MIGRATION.md), [BRANDING_COMPATIBILITY_AUDIT.md](BRANDING_COMPATIBILITY_AUDIT.md).

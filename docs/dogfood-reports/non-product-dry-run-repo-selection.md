@@ -33,7 +33,7 @@ Selection: exactly **2** non-Bugbot repos (not fleet-wide)
 
 | Repo | Reason |
 |------|--------|
-| `commstech/Bugbot` | Product repo — already closed out |
+| `commstech/repository-detective` | Product repo — already closed out |
 | `commstech/paperless_thunder` | 17 open issues — risk of noise/confusion |
 | `Infrastructure_as_Code`, `netmon`, `nettech` | Fleet-scale / high blast radius |
 

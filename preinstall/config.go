@@ -3,8 +3,8 @@ package preinstall
 import (
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/health"
-	"git.commsnet.org/commstech/bugbot/graph"
+	"git.commsnet.org/commstech/repository-detective/health"
+	"git.commsnet.org/commstech/repository-detective/graph"
 )
 
 // Config controls third-party pre-install audit behavior.
@@ -39,7 +39,7 @@ func DefaultConfig() Config {
 		MaxFindings:                   200,
 		AllowGitClone:                 true,
 		ReportIncludeProjectLink:      true,
-		RepositoryDetectiveProjectURL: "https://git.commsnet.org/commstech/bugbot",
+		RepositoryDetectiveProjectURL: "https://git.commsnet.org/commstech/repository-detective",
 		SandboxEnabled:                true,
 		SandboxRetainOnFailure:        false,
 		SandboxMaxFileSizeMB:          25,

@@ -3,7 +3,7 @@ package issues
 import (
 	"strings"
 
-	"git.commsnet.org/commstech/bugbot/ai"
+	"git.commsnet.org/commstech/repository-detective/ai"
 )
 
 const BacklogControlNote = "New issue filing paused by backlog-control mode."

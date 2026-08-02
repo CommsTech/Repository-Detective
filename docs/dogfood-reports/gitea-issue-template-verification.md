@@ -1,7 +1,7 @@
 # Gitea issue template verification
 
 **Date:** 2026-06-12  
-**Repo:** `commstech/Bugbot`  
+**Repo:** `commstech/repository-detective`  
 **Commit:** `311e97c`  
 **Gitea version:** 1.26.2
 
@@ -11,7 +11,7 @@
 |-------|--------|
 | Templates in repository | **yes** — 15 form templates + `config.yml` |
 | `config.yml` present | **yes** — `blank_issues_enabled: false` |
-| Templates visible (authenticated API) | **yes** — `GET /api/v1/repos/commstech/Bugbot/issue_templates` returns 15 templates |
+| Templates visible (authenticated API) | **yes** — `GET /api/v1/repos/commstech/repository-detective/issue_templates` returns 15 templates |
 | Logged-in web UI picker | **not captured** — API token does not establish web session (redirect to login); server-side template API confirms picker data |
 | Blank issues allowed | **no** (per `config.yml`; Gitea 1.26 supports this key) |
 | Sensitive default text | **none observed** — security markdown in FP/beta templates only |
@@ -22,7 +22,7 @@
 ## Authenticated API verification (2026-06-12)
 
 ```http
-GET /api/v1/repos/commstech/Bugbot/issue_templates
+GET /api/v1/repos/commstech/repository-detective/issue_templates
 Authorization: token <redacted>
 → 200, 15 templates
 ```
@@ -67,7 +67,7 @@ Security note present in both templates (markdown block).
 
 ## Web UI limitation
 
-Unauthenticated and API-token requests to `/commstech/Bugbot/issues/new` redirect to login. The Gitea **issue_templates** API is the authoritative server-side representation of the logged-in template picker on Gitea 1.26.x.
+Unauthenticated and API-token requests to `/commstech/repository-detective/issues/new` redirect to login. The Gitea **issue_templates** API is the authoritative server-side representation of the logged-in template picker on Gitea 1.26.x.
 
 **Operator follow-up:** capture one browser screenshot of the template picker when logged in (optional polish).
 

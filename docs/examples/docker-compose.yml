@@ -4,7 +4,6 @@
 #   cp ../../.env.example ../../.env   # edit secrets on host, never bake into images
 #   docker compose -f docs/examples/docker-compose.yml --profile all-in-one up -d --build
 #   docker compose -f docs/examples/docker-compose.yml --profile core up -d --build
-#   docker compose -f docs/examples/docker-compose.yml --profile qdrant --profile all-in-one up -d
 #
 # See docs/DOCKER.md for image targets, volumes, and rollback.
 
@@ -87,16 +86,6 @@ services:
     security_opt:
       - no-new-privileges:true
 
-  qdrant:
-    profiles: ["qdrant"]
-    image: qdrant/qdrant:v1.12.5
-    container_name: repository-detective-qdrant
-    ports:
-      - "6333:6333"
-    volumes:
-      - qdrant_data:/qdrant/storage
-    restart: unless-stopped
-
   # Example: run a one-shot runner job (normally invoked from Gitea Actions).
   repository-detective-runner:
     profiles: ["runner-example"]
@@ -118,5 +107,4 @@ services:
     command: ["--help"]
 
 volumes:
-  qdrant_data:
   runner_workspace:

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/internal/config/envcompat"
+	"git.commsnet.org/commstech/repository-detective/internal/config/envcompat"
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/spf13/viper"

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/findinglearn"
+	"git.commsnet.org/commstech/repository-detective/findinglearn"
 )
 
 func TestBenchmarkFixtureExpectations(t *testing.T) {

@@ -435,7 +435,7 @@ class NightlySkillLoop:
                 "Authorization": f"Bearer {api_key}",
                 "X-API-Key": api_key,
                 "X-Repository-Detective-API-Key": api_key,
-                "X-Bugbot-API-Key": api_key,
+                "X-Repository-Detective-API-Key": api_key,
                 "Content-Type": "application/json",
             },
             method=method,

@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"strconv"
 
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/store"
 )
 
 // EventRecorder persists learning events.

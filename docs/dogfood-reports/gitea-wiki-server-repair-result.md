@@ -7,7 +7,7 @@
 |------|--------|
 | Wiki enabled (API) | true |
 | Manual wiki page created | not attempted this pass |
-| Clone `Bugbot.wiki.git` | **HTTP 500** |
+| Clone `repository-detective.wiki.git` | **HTTP 500** |
 | One-page push | not attempted (clone blocked) |
 | Gitea server logs reviewed | not available from app host |
 | Repair applied | none |

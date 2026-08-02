@@ -60,7 +60,7 @@ Scripts: `./scripts/release-test.sh` · `./scripts/operator-smoke-test.sh`
 |----------|-------------|
 | [NAMING.md](NAMING.md) | Product name, legacy Bugbot compatibility |
 | [POLICY.md](POLICY.md) | Severity gates, issue policy, remediation policy |
-| [SCAN_PROFILES.md](SCAN_PROFILES.md) | Scan profile presets (`fast`, `standard_deterministic`, etc.) |
+| [SCAN_PROFILES.md](SCAN_PROFILES.md) | Scan profiles: Light, Standard, Deep, Custom |
 | [SECURITY_HARDENING.md](SECURITY_HARDENING.md) | OWASP baseline + post-remediation safety checklist |
 
 ## Scanning and analysis

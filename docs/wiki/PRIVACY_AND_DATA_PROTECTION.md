@@ -14,9 +14,8 @@ Repository Detective is designed for **privacy-aware** operation in homelab and 
 
 ## Data stored
 
-- **SQLite database** (`database_path`): findings, instances, scans, scanner results, remediation plans, lifecycle events, settings.
+- **SQLite database** (`database_path`): findings, instances, scans, scanner results, remediation plans, lifecycle events, settings, forge issue mappings.
 - **Workspace directories**: cloned repository trees during scans (ephemeral; retention depends on deployment).
-- **Optional Qdrant** (when enabled): embedding vectors for semantic deduplication — not full source copies by default; see [QDRANT.md](QDRANT.md).
 
 ## Data displayed
 

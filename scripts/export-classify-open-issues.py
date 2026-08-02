@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Export and classify open Gitea issues for commstech/Bugbot."""
+"""Export and classify open Gitea issues for commstech/repository-detective."""
 from __future__ import annotations
 
 import json
@@ -42,7 +42,7 @@ def fetch_open_issues(base: str, token: str) -> list[dict]:
     issues: list[dict] = []
     page = 1
     while True:
-        url = f"{base}/api/v1/repos/commstech/Bugbot/issues?state=open&type=issues&limit=50&page={page}"
+        url = f"{base}/api/v1/repos/commstech/repository-detective/issues?state=open&type=issues&limit=50&page={page}"
         batch = gitea_get(url, token)
         if not batch:
             break
@@ -236,7 +236,7 @@ def main() -> int:
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     EXPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
     EXPORT_PATH.write_text(
-        f"# Open issues export — commstech/Bugbot\n\nGenerated: {now}\n\nTotal open: {len(issues)}\n\n"
+        f"# Open issues export — commstech/repository-detective\n\nGenerated: {now}\n\nTotal open: {len(issues)}\n\n"
         + "| # | Title | Fingerprint | Labels |\n|---|-------|-------------|--------|\n"
         + "\n".join(
             f"| #{i['number']} | {i.get('title','').replace('|','/')[:80]} | {extract_fingerprint(i.get('body') or '')[:20]} | "
@@ -247,7 +247,7 @@ def main() -> int:
     )
 
     recon_lines = [
-        f"# Current open issues reconciliation — commstech/Bugbot\n",
+        f"# Current open issues reconciliation — commstech/repository-detective\n",
         f"Generated: {now}\n",
         f"Reconciled against scan **`{scan_id or 'none'}`** ({inst_count} finding instances).\n",
         "## Summary\n",
@@ -272,7 +272,7 @@ def main() -> int:
     active = [c for c in classified if c["classification"] == "active_present_in_latest_scan"]
     health_ignored = [c for c in active if c.get("rule_id") == "HEALTH-IGNORED-ERROR"]
     backlog_lines = [
-        f"# Real active backlog — commstech/Bugbot\n",
+        f"# Real active backlog — commstech/repository-detective\n",
         f"Generated: {now}\n",
         f"Scan: **`{scan_id or 'none'}`**\n",
         "## Summary\n",

@@ -1,6 +1,6 @@
 package scanners
 
-import "git.commsnet.org/commstech/bugbot/models"
+import "git.commsnet.org/commstech/repository-detective/models"
 
 // Config controls external deterministic scanners.
 type Config struct {

@@ -9,11 +9,11 @@ import (
 	"strings"
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/internal/security"
-	"git.commsnet.org/commstech/bugbot/notify"
-	"git.commsnet.org/commstech/bugbot/operator"
-	"git.commsnet.org/commstech/bugbot/store"
-	"git.commsnet.org/commstech/bugbot/ui"
+	"git.commsnet.org/commstech/repository-detective/internal/security"
+	"git.commsnet.org/commstech/repository-detective/notify"
+	"git.commsnet.org/commstech/repository-detective/operator"
+	"git.commsnet.org/commstech/repository-detective/store"
+	"git.commsnet.org/commstech/repository-detective/ui"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )
@@ -74,7 +74,7 @@ func TestConfigureSavePersistsSettings(t *testing.T) {
 	csrf := security.CSRFToken("test-secret", "configure-test-key")
 	form := url.Values{}
 	form.Set("csrf_token", csrf)
-	form.Set("scan_profile", store.ScanProfileBetaStandard)
+	form.Set("scan_profile", store.ScanProfileStandard)
 	form.Set("severity_gate", "high")
 	form.Set("confidence_gate", "0.85")
 	form.Set("analysis_depth", "2")
@@ -97,7 +97,7 @@ func TestConfigureSavePersistsSettings(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if saved.ScanProfile != store.ScanProfileBetaStandard {
+	if saved.ScanProfile != store.ScanProfileStandard {
 		t.Fatalf("saved profile=%q", saved.ScanProfile)
 	}
 	if saved.SchedulerEnabled == nil || !*saved.SchedulerEnabled {

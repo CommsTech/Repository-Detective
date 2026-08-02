@@ -28,6 +28,6 @@ Pre-install mode stays report-only for all deployments — promotional trust bui
 
 - Remediation PRs remain off by default
 - LLM sanity gate remains off by default
-- Qdrant remains optional (local `cah_findings` for learning tests only)
+- Qdrant removed — issue dedup is fingerprint + SQLite forge mappings only
 
 See also [SCAN_POLICY.md](../SCAN_POLICY.md).

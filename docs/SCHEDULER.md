@@ -2,7 +2,7 @@
 
 Repository Detective can periodically scan connected repositories even when no webhook fires. Scheduling uses per-repo settings from the Phase 5 database (Phase 6 UI/API).
 
-> **Naming:** See [NAMING.md](NAMING.md). Internal config still uses `BUGBOT_*` env vars.
+> **Naming:** See [NAMING.md](NAMING.md). Internal config still uses `REPOSITORY_DETECTIVE_*` env vars.
 
 ## Enable globally
 

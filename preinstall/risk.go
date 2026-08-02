@@ -3,8 +3,8 @@ package preinstall
 import (
 	"strings"
 
-	"git.commsnet.org/commstech/bugbot/scanners"
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/scanners"
+	"git.commsnet.org/commstech/repository-detective/store"
 )
 
 // RiskOutcome is the computed risk score and recommendation.

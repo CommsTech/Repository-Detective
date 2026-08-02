@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Seed repo-scoped calibration rules for product repo (commstech/Bugbot, id=1)."""
+"""Seed repo-scoped calibration rules for product repo (commstech/repository-detective, id=1)."""
 
 from __future__ import annotations
 

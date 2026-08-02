@@ -101,7 +101,7 @@ Passwords: bcrypt cost 12, minimum 12 characters with letters and numbers.
 |---------|----------------|
 | UI form POST in `local` mode | Yes (when `csrf_enabled: true`) |
 | UI form POST in `api_key_only` mode | Yes (API-key-derived token) |
-| API JSON with `X-Repository-Detective-API-Key` or `X-Bugbot-API-Key` | **No** |
+| API JSON with `X-Repository-Detective-API-Key` or `X-Repository-Detective-API-Key` | **No** |
 
 Protected UI POSTs include settings, suppressions, remediation, patch PR, notifications test, reconciliation, pre-install actions.
 
@@ -112,7 +112,7 @@ Protected UI POSTs include settings, suppressions, remediation, patch PR, notifi
 Automation and scripts **do not change**:
 
 - **Preferred:** `X-Repository-Detective-API-Key`
-- **Legacy:** `X-Bugbot-API-Key`, `Authorization: Bearer`, `?api_key=`
+- **Legacy:** `X-Repository-Detective-API-Key`, `Authorization: Bearer`, `?api_key=`
 
 Local auth affects **browser UI routes only**.
 

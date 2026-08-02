@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/store"
 )
 
 func TestProjectGroupCRUD(t *testing.T) {

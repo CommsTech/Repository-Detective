@@ -1,9 +1,9 @@
-# Gitea Bugbot Plugin Makefile
+# Repository Detective Makefile
 
 # Variables
-BINARY_NAME=gitea-bugbot
+BINARY_NAME=repository-detective
 BUILD_DIR=build
-DOCKER_IMAGE=gitea-bugbot
+DOCKER_IMAGE=repository-detective
 DOCKER_TAG=latest
 
 # Go parameters

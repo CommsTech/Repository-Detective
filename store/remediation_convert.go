@@ -3,7 +3,7 @@ package store
 import (
 	"encoding/json"
 
-	"git.commsnet.org/commstech/bugbot/remediation"
+	"git.commsnet.org/commstech/repository-detective/remediation"
 )
 
 // RemediationPlanFromDomain converts a domain plan to a store record.

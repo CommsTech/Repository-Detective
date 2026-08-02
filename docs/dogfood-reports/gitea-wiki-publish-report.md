@@ -9,7 +9,7 @@
 
 ## Wiki remote
 
-`https://git.commsnet.org/commstech/Bugbot.wiki.git`
+`https://git.commsnet.org/commstech/repository-detective.wiki.git`
 
 ## Latest attempt (2026-06-09)
 
@@ -24,8 +24,8 @@
 
 ```text
 Command: ./scripts/publish-gitea-wiki.sh
-Remote:  https://git.commsnet.org/commstech/Bugbot.wiki.git/
-Error:   fatal: unable to access '…Bugbot.wiki.git/': The requested URL returned error: 500
+Remote:  https://git.commsnet.org/commstech/repository-detective.wiki.git/
+Error:   fatal: unable to access '…repository-detective.wiki.git/': The requested URL returned error: 500
 ```
 
 Workdir preserved with `KEEP_WIKI_WORKDIR=true` for operator inspection.
@@ -37,7 +37,7 @@ Server-side Gitea wiki git backend issue (not client auth — push reaches serve
 ## Operator next steps
 
 1. Check Gitea server logs at push time for wiki repository creation/storage errors.
-2. Confirm wiki enabled on `commstech/Bugbot` (`has_wiki: true` via API).
+2. Confirm wiki enabled on `commstech/repository-detective` (`has_wiki: true` via API).
 3. Token must include **wiki write** scope.
 4. Retry from UI: create one manual wiki page, then re-run `./scripts/publish-gitea-wiki.sh`.
 5. If repo wiki git storage is corrupt, repair or recreate `Bugbot.wiki` on server.
@@ -47,10 +47,10 @@ Server-side Gitea wiki git backend issue (not client auth — push reaches serve
 | Check | Command / location |
 |-------|-------------------|
 | Gitea app log at push time | `journalctl -u gitea --since '5 min ago'` or `/var/log/gitea/gitea.log` |
-| Wiki repo exists | `GET /api/v1/repos/commstech/Bugbot/wiki/page` |
-| Wiki git bare repo on disk | `{GITEA_DATA}/gitea-repositories/commstech/bugbot.wiki.git` |
+| Wiki repo exists | `GET /api/v1/repos/commstech/repository-detective/wiki/page` |
+| Wiki git bare repo on disk | `{GITEA_DATA}/gitea-repositories/commstech/repository-detective.wiki.git` |
 | Permissions | token has `write:repository` + wiki enabled on repo |
-| Remote URL | `https://git.commsnet.org/commstech/Bugbot.wiki.git` |
+| Remote URL | `https://git.commsnet.org/commstech/repository-detective.wiki.git` |
 | Bad init | empty wiki → first push may require UI "Initialize Wiki" |
 | Size/content | 23 md pages; unlikely size limit on homelab |
 | TLS/proxy | 500 after auth suggests server handler error, not client |
@@ -63,4 +63,4 @@ Server-side Gitea wiki git backend issue (not client auth — push reaches serve
 | Push | **not attempted** (prior HTTP 500; server fix required first) |
 | HTTP code captured | **500** (from prior attempt) |
 
-**Wiki is not populated until `git push` to `Bugbot.wiki.git` succeeds.**
+**Wiki is not populated until `git push` to `repository-detective.wiki.git` succeeds.**

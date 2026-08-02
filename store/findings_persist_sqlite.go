@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"time"
 
-	"git.commsnet.org/commstech/bugbot/ai"
-	"git.commsnet.org/commstech/bugbot/findinglearn"
-	"git.commsnet.org/commstech/bugbot/issues"
+	"git.commsnet.org/commstech/repository-detective/ai"
+	"git.commsnet.org/commstech/repository-detective/findinglearn"
+	"git.commsnet.org/commstech/repository-detective/issues"
 )
 
 // FindingPersistRow is one finding + instance row for batch persistence.

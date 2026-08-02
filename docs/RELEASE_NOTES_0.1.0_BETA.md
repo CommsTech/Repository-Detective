@@ -22,7 +22,7 @@ Private beta release for **single-operator Gitea** deployments. Not SaaS-ready.
 - **Theme persistence** — system / light / dark
 - **Backup/restore** — SQLite file + documented drill
 - **Docker all-in-one** — non-root, healthcheck, persistent volume
-- **Legacy compatibility** — `BUGBOT_*` env, `X-Bugbot-API-Key`, `bugbot-*` fingerprints
+- **Legacy compatibility** — `REPOSITORY_DETECTIVE_*` env, `X-Repository-Detective-API-Key`, `bugbot-*` fingerprints
 
 ---
 
@@ -48,7 +48,7 @@ Recommended profile: **`beta_standard`** — see [BETA_READINESS.md](BETA_READIN
 - **Single API-key auth** — no multi-user RBAC ([AUTH_RBAC_PLAN.md](AUTH_RBAC_PLAN.md))
 - **SQLite** — not HA; single tenant
 - **`/health` latency** — ~4s when probing all scanners
-- **Qdrant** — local/redacted path only; 1024-dim + UUID fixes pending
+- **Issue dedup** — fingerprint + SQLite forge mappings (Qdrant removed)
 - **GitHub/GitLab** — not first-class connected-repo parity
 - **checkov / grype** — occasional timeouts on large repos
 - **No billing / license enforcement** — [EDITIONS.md](EDITIONS.md) is planning only
@@ -107,8 +107,8 @@ Use [BETA_SMOKE_TEST.md](BETA_SMOKE_TEST.md) for structured validation.
 
 Repository Detective is the product name. Bugbot remains supported:
 
-- `BUGBOT_*` environment variables
-- `X-Bugbot-API-Key` header
+- `REPOSITORY_DETECTIVE_*` environment variables
+- `X-Repository-Detective-API-Key` header
 - `bugbot/*` labels (read); `repository-detective/*` (write default)
 - `bugbot-<hex>` fingerprint values
 - `data/bugbot.db` database filename

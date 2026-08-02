@@ -98,13 +98,11 @@ Example file: [examples/docker-compose.yml](examples/docker-compose.yml)
 |---------|----------|
 | `all-in-one` (default) | `repository-detective` |
 | `core` | `repository-detective-core` |
-| `qdrant` | Optional Qdrant for semantic dedup |
 | `runner-example` | One-shot runner image smoke (not production workflow) |
 
 ```bash
 docker compose -f docs/examples/docker-compose.yml --profile all-in-one up -d --build
 docker compose -f docs/examples/docker-compose.yml --profile core up -d --build
-docker compose -f docs/examples/docker-compose.yml --profile qdrant --profile all-in-one up -d --build
 ```
 
 Root [docker-compose.yml](../docker-compose.yml) builds **all-in-one** for homelab host networking (port 8081).
@@ -122,7 +120,7 @@ Root [docker-compose.yml](../docker-compose.yml) builds **all-in-one** for homel
 ## Secrets and environment
 
 - **Never** copy `.env` into the image (`.dockerignore` excludes it).
-- Prefer `REPOSITORY_DETECTIVE_*` variables; legacy `BUGBOT_*` still works ([envcompat](../internal/config/envcompat)).
+- Prefer `REPOSITORY_DETECTIVE_*` variables; legacy `REPOSITORY_DETECTIVE_*` still works ([envcompat](../internal/config/envcompat)).
 - Provide secrets via `env_file`, Docker secrets, or orchestrator — not baked into layers.
 
 ## Health checks

@@ -1,4 +1,4 @@
-# Bugbot Security Fixes (2026-05-30)
+# Repository Detective Security Fixes (2026-05-30)
 
 **Applied by:** Biz (Entrepreneur Agent)  
 **Status:** Fixes applied, build pending network access  
@@ -26,7 +26,7 @@
 
 ### 5. HIGH: No API Authentication (main.go)
 **Before:** `/api/v1/*` endpoints had no authentication — anyone could trigger analysis  
-**After:** Added `requireAPIKeyAuth()` middleware for all `/api/v1/*` routes. Requires `X-Repository-Detective-API-Key` (preferred) or legacy `X-Bugbot-API-Key` header, or `api_key` query param. Uses `hmac.Equal()` constant-time comparison.
+**After:** Added `requireAPIKeyAuth()` middleware for all `/api/v1/*` routes. Requires `X-Repository-Detective-API-Key` (preferred) or legacy `X-Repository-Detective-API-Key` header, or `api_key` query param. Uses `hmac.Equal()` constant-time comparison.
 
 ### 6. MEDIUM: Unused Imports (main.go)
 **Before:** `crypto/sha256`, `encoding/hex` imported but unused  

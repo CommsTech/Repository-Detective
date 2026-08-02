@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/store"
 )
 
 func TestPlatformSettingsRoundTrip(t *testing.T) {
@@ -18,7 +18,7 @@ func TestPlatformSettingsRoundTrip(t *testing.T) {
 
 	ctx := context.Background()
 	in := store.PlatformSettings{
-		ScanProfile:      store.ScanProfileBetaStandard,
+		ScanProfile:      store.ScanProfileStandard,
 		SchedulerEnabled: store.BoolPtr(true),
 		EnableGitleaks:   store.BoolPtr(false),
 		SeverityGate:     "medium",
@@ -32,7 +32,7 @@ func TestPlatformSettingsRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if out.ScanProfile != store.ScanProfileBetaStandard {
+	if out.ScanProfile != store.ScanProfileStandard {
 		t.Fatalf("scan_profile=%q", out.ScanProfile)
 	}
 	if out.SchedulerEnabled == nil || !*out.SchedulerEnabled {

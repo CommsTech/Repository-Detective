@@ -7,8 +7,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/api"
-	"git.commsnet.org/commstech/bugbot/runner"
+	"git.commsnet.org/commstech/repository-detective/api"
+	"git.commsnet.org/commstech/repository-detective/runner"
 	"github.com/gin-gonic/gin"
 )
 

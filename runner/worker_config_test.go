@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/runner"
+	"git.commsnet.org/commstech/repository-detective/runner"
 )
 
 func TestWorkerConfigValidateRequiresSecret(t *testing.T) {

@@ -3,7 +3,7 @@ package store
 import (
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/operator"
+	"git.commsnet.org/commstech/repository-detective/operator"
 )
 
 func TestMergeScannerRollupsLabels(t *testing.T) {

@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/ai"
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/ai"
+	"git.commsnet.org/commstech/repository-detective/store"
 	"github.com/sirupsen/logrus"
 )
 

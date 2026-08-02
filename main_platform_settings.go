@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"strings"
 
-	"git.commsnet.org/commstech/bugbot/api"
-	"git.commsnet.org/commstech/bugbot/store"
-	"git.commsnet.org/commstech/bugbot/ui"
+	"git.commsnet.org/commstech/repository-detective/api"
+	"git.commsnet.org/commstech/repository-detective/operator"
+	"git.commsnet.org/commstech/repository-detective/store"
+	"git.commsnet.org/commstech/repository-detective/ui"
 )
 
 func applyPlatformSettingsToRuntime(settings store.PlatformSettings) {
@@ -19,6 +20,9 @@ func applyPlatformSettingsToRuntime(settings store.PlatformSettings) {
 	}
 	if settings.NotificationsEnabled != nil {
 		config.NotificationsEnabled = *settings.NotificationsEnabled
+		if notifyManager != nil {
+			notifyManager.SetEnabled(*settings.NotificationsEnabled)
+		}
 	}
 	if settings.PreinstallAuditEnabled != nil {
 		config.PreinstallAuditEnabled = *settings.PreinstallAuditEnabled
@@ -73,21 +77,35 @@ func applyPlatformSettingsToRuntime(settings store.PlatformSettings) {
 	snap := apiGlobalSnapshotFromConfig()
 	snap = store.ApplyPlatformSettingsToGlobal(snap, settings)
 	appGlobalSnapshot = snap
+	operator.InvalidateToolsCache()
 
 	if controlPlaneHandler != nil {
 		controlPlaneHandler.SetGlobal(snap)
+		if notifyManager != nil {
+			controlPlaneHandler.SetNotificationGlobal(notifyManager.Config())
+		}
 	}
 	if operatorUI != nil {
 		operatorUI.SetGlobal(snap)
 		operatorUI.SetPlatformContext(uhPlatformContextFromConfig())
+		if notifyManager != nil {
+			operatorUI.SetNotificationGlobal(notifyManager.Config())
+		}
+		operatorUI.SetPreinstallEnabled(config.PreinstallAuditEnabled)
 		if config.RemediationPlannerEnabled {
 			operatorUI.SetRemediationBackend(true, remediationUIBridge{})
+		} else {
+			operatorUI.SetRemediationBackend(false, nil)
 		}
 		if config.RemediationPREnabled {
 			operatorUI.SetRemediationPRBackend(true, remediationPRUIBridge{})
+		} else {
+			operatorUI.SetRemediationPRBackend(false, nil)
 		}
 		if config.EvidenceClosureEnabled {
 			operatorUI.SetClosureBackend(true, closureUIBridge{})
+		} else {
+			operatorUI.SetClosureBackend(false, nil)
 		}
 	}
 }
@@ -162,6 +180,7 @@ func uhPlatformContextFromConfig() ui.PlatformContext {
 		MaxIssuesPerScan:                   config.Reporting.MaxIssuesPerScan,
 		ScanPolicyMode:                     store.DeploymentScanMode(appGlobalSnapshot),
 		NotificationsEnabled:               config.NotificationsEnabled,
+		SchedulerEnabled:                   config.SchedulerEnabled,
 		RunnerDelegationEnabled:            config.RunnerDelegationEnabled,
 		RunnerRequireHMAC:                  config.RunnerRequireHMAC,
 		RunnerMode:                         config.RunnerMode,

@@ -24,7 +24,7 @@ remediation_use_ai: false
 remediation_comment_on_issue: false
 ```
 
-Environment variables (prefer `REPOSITORY_DETECTIVE_*`; legacy `BUGBOT_*` via envcompat):
+Environment variables (prefer `REPOSITORY_DETECTIVE_*`; legacy `REPOSITORY_DETECTIVE_*` via envcompat):
 
 ```text
 REPOSITORY_DETECTIVE_REMEDIATION_PLANNER_ENABLED

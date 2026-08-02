@@ -88,8 +88,8 @@ func ResolveConfig(cfg Config, legacy LegacyConfig) (Config, error) {
 
 	if cfg.Provider == ProviderOpenRouter && cfg.ExtraHeaders == nil {
 		cfg.ExtraHeaders = map[string]string{
-			"HTTP-Referer": "https://git.commsnet.org/commstech/Bugbot",
-			"X-Title":      "Gitea Bugbot",
+			"HTTP-Referer": "https://git.commsnet.org/commstech/repository-detective",
+			"X-Title":      "Repository Detective",
 		}
 	}
 

@@ -3,7 +3,7 @@ package runner_test
 import (
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/runner"
+	"git.commsnet.org/commstech/repository-detective/runner"
 )
 
 func TestSelectRunnerModeNativeDefault(t *testing.T) {

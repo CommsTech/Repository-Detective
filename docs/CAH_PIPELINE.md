@@ -1,4 +1,4 @@
-# Bugbot CAH Pipeline
+# Repository Detective CAH Pipeline
 
 **Spec and implementation notes.** For day-to-day setup, see [SETUP.md](SETUP.md).
 
@@ -11,7 +11,7 @@
 | PREPARE | Partial | File tree + LLM attack surface mapping. No call graph or git history yet. |
 | SCAN | Done | Static regex, **Trivy, Grype, linters**, then LLM auditors on flagged files only. |
 | VALIDATE | Done | Advocate/counsel debate. Deterministic findings skip debate. |
-| DEDUP | Partial | Line-block clustering with `cluster-000` IDs; optional **Qdrant** semantic dedup at issue creation |
+| DEDUP | Partial | Line-block clustering with `cluster-000` IDs; forge issue dedup via fingerprints + SQLite mappings |
 | PROVE | Partial | LLM-generated PoC (curl/scripts). No ASan/UBSan execution. |
 
 Auditors running today: SQL, XSS, auth, injection, crypto, config (+ static rules; **Trivy, Grype, golangci-lint, ruff, shellcheck**).

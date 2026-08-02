@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/store"
 )
 
 // ValidateEventCSV returns an error if any token is unknown.

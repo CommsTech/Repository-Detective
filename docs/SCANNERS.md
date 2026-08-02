@@ -41,7 +41,7 @@ High-confidence deterministic findings **skip LLM debate and PoC generation**. H
 | golangci-lint | Go static analysis (includes many linters) | Included in **all-in-one** image |
 | ruff | Python lint | Included in **all-in-one** image |
 | shellcheck | Shell script analysis | Included in **all-in-one** image |
-| OpenSCAP | Self-hosted runner/server hardening evidence | Run outside Bugbot on the runner host |
+| OpenSCAP | Self-hosted runner/server hardening evidence | Run outside Repository Detective on the runner host |
 
 If a binary is missing (e.g. **core** image without tools), Repository Detective logs a warning and continues with other scanners.
 
@@ -110,7 +110,7 @@ Gitleaks runs in **`dir` mode** (filesystem snapshot only — no git history sca
 gitleaks dir <workspace> --report-format json --report-path=- --no-banner --redact
 ```
 
-When `gitleaks_config` is set, Bugbot passes `--config <path>` (operator-controlled). If unset, gitleaks may still load `(workspace)/.gitleaks.toml` per [gitleaks config precedence](https://github.com/gitleaks/gitleaks#configuration) — there is no safe flag to disable repo config in this phase.
+When `gitleaks_config` is set, Repository Detective passes `--config <path>` (operator-controlled). If unset, gitleaks may still load `(workspace)/.gitleaks.toml` per [gitleaks config precedence](https://github.com/gitleaks/gitleaks#configuration) — there is no safe flag to disable repo config in this phase.
 
 Findings use category `secret`, severity `high`, and skip LLM debate when `enable_llm_auditors` is false.
 

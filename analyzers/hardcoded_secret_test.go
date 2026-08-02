@@ -3,7 +3,7 @@ package analyzers
 import (
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/profile"
+	"git.commsnet.org/commstech/repository-detective/profile"
 )
 
 func TestAssessHardcodedSecretPlaceholderSkipped(t *testing.T) {

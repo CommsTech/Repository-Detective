@@ -3,8 +3,8 @@ package profile_test
 import (
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/profile"
-	"git.commsnet.org/commstech/bugbot/scanners"
+	"git.commsnet.org/commstech/repository-detective/profile"
+	"git.commsnet.org/commstech/repository-detective/scanners"
 )
 
 func TestRuffStyleDowngradedHomelab(t *testing.T) {

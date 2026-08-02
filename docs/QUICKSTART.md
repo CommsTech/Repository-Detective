@@ -30,7 +30,7 @@ REPOSITORY_DETECTIVE_WEBHOOK_SECRET=another-random-string
 REPOSITORY_DETECTIVE_SKIP_STARTUP_CHECKS=true
 ```
 
-Legacy `BUGBOT_*` variables work if you prefer.
+Legacy `REPOSITORY_DETECTIVE_*` variables work if you prefer.
 
 ## 3. Start (all-in-one Docker)
 
@@ -98,7 +98,7 @@ curl -s -X POST http://127.0.0.1:8081/api/v1/analyze \
 
 ## Beta-safe defaults
 
-See [BETA_READINESS.md](BETA_READINESS.md). Recommended: `scan_profile: beta_standard`, remediation PRs off, Qdrant off.
+See [BETA_READINESS.md](BETA_READINESS.md). Recommended: `scan_profile: standard`, remediation PRs off.
 
 ---
 

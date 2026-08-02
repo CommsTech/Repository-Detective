@@ -3,7 +3,7 @@ package analyzers
 import (
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/scanners"
+	"git.commsnet.org/commstech/repository-detective/scanners"
 )
 
 func TestIsDeterministicAuditor(t *testing.T) {

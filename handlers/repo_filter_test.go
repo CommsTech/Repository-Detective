@@ -6,8 +6,8 @@ func TestRepoAllowedIncludeExclude(t *testing.T) {
 	include := []string{"commstech/*"}
 	exclude := []string{"commstech/archived-*"}
 
-	if !RepoAllowed("commstech/Bugbot", include, exclude) {
-		t.Fatal("expected commstech/Bugbot to be allowed")
+	if !RepoAllowed("commstech/repository-detective", include, exclude) {
+		t.Fatal("expected commstech/repository-detective to be allowed")
 	}
 	if RepoAllowed("commstech/archived-old", include, exclude) {
 		t.Fatal("expected archived repo to be excluded")

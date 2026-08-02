@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"git.commsnet.org/commstech/bugbot/internal/scanid"
+	"git.commsnet.org/commstech/repository-detective/internal/scanid"
 )
 
 func TestScanIDRoundTrip(t *testing.T) {

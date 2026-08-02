@@ -25,14 +25,15 @@
       <span class="rd-hero-metric-value">{{$.Data.ActiveScans}}</span>
       <span class="rd-hero-metric-label">Active scans</span>
     </div>
-    <div class="rd-hero-metric {{if gt .FailedScansCount 0}}rd-hero-metric-warn{{end}}">
-      <span class="rd-hero-metric-value">{{.FailedScansCount}}</span>
-      <span class="rd-hero-metric-label">Failed scans</span>
+    <div class="rd-hero-metric {{if gt .UnhealthyReposCount 0}}rd-hero-metric-warn{{else if gt .ActionableFailedScansCount 0}}rd-hero-metric-warn{{end}}">
+      <span class="rd-hero-metric-value">{{.UnhealthyReposCount}}</span>
+      <span class="rd-hero-metric-label">Unhealthy repos</span>
     </div>
   </div>
   <div class="rd-hero-actions">
     <a class="rd-btn rd-btn-light" href="{{$.BasePath}}/findings?severity=critical&amp;status=open{{if $.APIKey}}&amp;api_key={{$.APIKey}}{{end}}">Triage critical/high</a>
-    <a class="rd-btn rd-btn-ghost" href="{{$.BasePath}}/reports{{apiKeyQS $.APIKey}}">Executive report</a>
+    <a class="rd-btn rd-btn-ghost" href="{{$.BasePath}}/preinstall{{apiKeyQS $.APIKey}}">Pre-install audit</a>
+    <a class="rd-btn rd-btn-ghost" href="{{$.BasePath}}/configure{{apiKeyQS $.APIKey}}#scan_profile">AI / Deep scan</a>
     <a class="rd-btn rd-btn-ghost" href="{{$.BasePath}}/health{{apiKeyQS $.APIKey}}">Platform health</a>
   </div>
 </section>
@@ -266,13 +267,36 @@
 
 <div class="rd-split">
   <div class="rd-card">
-    <div class="rd-card-head"><h2>Scan health</h2><a class="rd-link" href="{{$.BasePath}}/scans{{apiKeyQS $.APIKey}}">History →</a></div>
+    <div class="rd-card-head"><h2>Scan health</h2><a class="rd-link" href="{{$.BasePath}}/health{{apiKeyQS $.APIKey}}#failed-scans">Details →</a></div>
     <div class="rd-kpi-row">
       <div class="rd-kpi"><strong>{{.ScanHealth.CompletedScans}}</strong><span>Completed</span></div>
-      <div class="rd-kpi"><strong>{{.ScanHealth.FailedScans}}</strong><span>Failed</span></div>
+      <div class="rd-kpi"><strong>{{.ScanHealth.UnhealthyRepos}}</strong><span>Unhealthy repos</span></div>
+      <div class="rd-kpi"><strong>{{.ScanHealth.ActionableFailedScans}}</strong><span>Failed ({{.ScanHealth.FailureWindowDays}}d)</span></div>
+      <div class="rd-kpi"><strong>{{.ScanHealth.StaleReapedScans}}</strong><span>Stale (lifetime)</span></div>
       <div class="rd-kpi"><strong>{{$.Data.ActiveScans}}</strong><span>Active</span></div>
     </div>
+    <p class="rd-muted">Lifetime total failed scans: {{.FailedScansCount}} (includes recovered historical outages).</p>
+    {{if gt .ScannerParseFailedCount 0}}
+    <div class="rd-alert warn" role="status">
+      <strong>{{.ScannerParseFailedCount}}</strong> scanner parse failures in the last {{.ScanHealth.FailureWindowDays}} days
+      ({{.ScanHealth.ParseFailedScanners}} scanner{{if gt .ScanHealth.ParseFailedScanners 1}}s{{end}}).
+      <a class="rd-link" href="{{$.BasePath}}/health{{apiKeyQS $.APIKey}}#scanner-failures">Review parse/run failures →</a>
+    </div>
+    {{end}}
+    {{if .ScanHealth.FailureBuckets}}
+    <p class="rd-muted">Failure reasons (last {{.ScanHealth.FailureWindowDays}} days):</p>
+    <table class="rd-table rd-table-compact">
+      <tr><th scope="col">Failure reason</th><th scope="col">Count</th></tr>
+      {{range .ScanHealth.FailureBuckets}}
+      <tr>
+        <td>{{.Label}}</td>
+        <td><strong>{{.Count}}</strong></td>
+      </tr>
+      {{end}}
+    </table>
+    {{end}}
     {{if .ScanHealth.RecentFailedScans}}
+    <h3 class="rd-section-title">Recent actionable failures</h3>
     <table class="rd-table rd-table-compact">
       {{range .ScanHealth.RecentFailedScans}}
       <tr>
@@ -281,7 +305,13 @@
       </tr>
       {{end}}
     </table>
-    {{else}}<p class="rd-muted">No failed scans.</p>{{end}}
+    {{else}}<p class="rd-muted">No actionable failed scans in the last {{.ScanHealth.FailureWindowDays}} days.</p>{{end}}
+    {{if .ScanHealth.RecentStaleScans}}
+    <details class="rd-muted">
+      <summary>{{len .ScanHealth.RecentStaleScans}} stale reaped scans hidden from the main list</summary>
+      <p>These were interrupted by restarts and auto-closed. They do not indicate a scanner defect.</p>
+    </details>
+    {{end}}
   </div>
   <div class="rd-card">
     <div class="rd-card-head"><h2>Remediation lifecycle</h2></div>

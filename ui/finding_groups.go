@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/store"
 )
 
 // FindingGroup summarizes repeated low-value informational findings.

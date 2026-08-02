@@ -54,6 +54,13 @@ func (m *Manager) Enabled() bool {
 	return false
 }
 
+// SetEnabled toggles the global notifications master switch without rebuild.
+func (m *Manager) SetEnabled(enabled bool) {
+	if m != nil {
+		m.cfg.Enabled = enabled
+	}
+}
+
 // Config returns a redacted copy safe for API display.
 func (m *Manager) Config() Config {
 	if m == nil {

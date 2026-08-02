@@ -1,4 +1,4 @@
-# Exposing Bugbot to External Gitea
+# Exposing Repository Detective to External Gitea
 
 Optional — use when you cannot or will not open inbound firewall ports.
 
@@ -18,7 +18,7 @@ Use the printed `https://*.trycloudflare.com` URL as `BUGBOT_PUBLIC_URL`.
 
 ```bash
 cloudflared tunnel login
-cloudflared tunnel create bugbot
+cloudflared tunnel create repository-detective
 ```
 
 `/etc/cloudflared/config.yml`:
@@ -28,24 +28,24 @@ tunnel: <TUNNEL-UUID>
 credentials-file: /root/.cloudflared/<TUNNEL-UUID>.json
 
 ingress:
-  - hostname: bugbot.example.com
+  - hostname: repository-detective.example.com
     service: http://127.0.0.1:8081
   - service: http_status:404
 ```
 
-DNS: CNAME `bugbot.example.com` → `<TUNNEL-UUID>.cfargotunnel.com`
+DNS: CNAME `repository-detective.example.com` → `<TUNNEL-UUID>.cfargotunnel.com`
 
 ```bash
 sudo cloudflared service install
 sudo systemctl enable --now cloudflared
 ```
 
-Set `BUGBOT_PUBLIC_URL=https://bugbot.example.com`.
+Set `BUGBOT_PUBLIC_URL=https://repository-detective.example.com`.
 
 ## Verify
 
 ```bash
-curl https://bugbot.example.com/health
+curl https://repository-detective.example.com/health
 ```
 
 Test webhook delivery in Gitea.

@@ -14,8 +14,8 @@ See **[docs/SETUP.md](docs/SETUP.md)** for the full walkthrough.
 ## Quick deploy
 
 ```bash
-git clone https://git.commsnet.org/commstech/Bugbot.git
-cd Bugbot
+git clone https://git.commsnet.org/commstech/repository-detective.git
+cd repository-detective
 cp .env.example .env   # or copy from a legacy install at ~/bugbot/.env
 # edit .env
 docker compose up -d --build
@@ -26,7 +26,7 @@ Or use the helper script:
 
 ```bash
 ./deploy.sh
-./deploy.sh --scan     # optional: dogfood scan on commstech/Bugbot
+./deploy.sh --scan     # optional: dogfood scan on commstech/repository-detective
 ```
 
 ### DNS-filtered networks

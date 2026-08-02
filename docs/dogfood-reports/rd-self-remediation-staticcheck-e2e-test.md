@@ -1,7 +1,7 @@
 # Repository Detective Staticcheck S1039 Self-Remediation Test
 
 **Date:** 2026-06-06  
-**Repository:** commstech/Bugbot  
+**Repository:** commstech/repository-detective  
 **Rule:** staticcheck S1039 (unnecessary `fmt.Sprintf` on string literal)  
 **Outcome:** **PASS** — full loop completed with verified closure
 
@@ -36,7 +36,7 @@ Controlled marker commit on `main`: `d679d0b` (`test(dogfood): add controlled st
 | Remediation plan (approved) | **rp-08270977049e02e8** |
 | Patch attempt (PR opened) | **pa-12474c8d554fbbf5** |
 | Failed attempts (debugging) | `pa-a9d9285d616b3296`, `pa-4451966602b0033c`, `pa-1821e7f6a02501c6` |
-| Pull request | [#288](https://git.commsnet.org/commstech/Bugbot/pulls/288) |
+| Pull request | [#288](https://git.commsnet.org/commstech/repository-detective/pulls/288) |
 | PR branch | `repository-detective/fix/bugbot-c6837` |
 | PR commit | `1ee87dcbfb0e415acdde014ef1c312a0394a4886` |
 | Merge commit (manual) | **a0d32599ff21ab94bbbef905791ebf920d542d84** |

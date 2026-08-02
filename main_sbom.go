@@ -3,8 +3,8 @@ package main
 import (
 	"context"
 
-	"git.commsnet.org/commstech/bugbot/analyzers"
-	"git.commsnet.org/commstech/bugbot/store"
+	"git.commsnet.org/commstech/repository-detective/analyzers"
+	"git.commsnet.org/commstech/repository-detective/store"
 )
 
 func persistScanSBOM(ctx context.Context, scanID string, repositoryID int64, result *analyzers.AnalysisResult) {

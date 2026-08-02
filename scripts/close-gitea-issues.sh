@@ -5,7 +5,7 @@ cd "$(dirname "$0")/.."
 
 if [[ -f .env ]]; then set -a; source .env; set +a; fi
 TOKEN="${GITEA_TOKEN:-${BUGBOT_GITEA_TOKEN:-}}"
-API="https://git.commsnet.org/api/v1/repos/commstech/Bugbot"
+API="https://git.commsnet.org/api/v1/repos/commstech/repository-detective"
 SHA="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
 
 if [[ -z "${TOKEN}" ]]; then

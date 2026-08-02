@@ -38,7 +38,7 @@ Never break old scans, issues, or integrations.
 
 | Artifact | Read (legacy) | Read (new) | Write (default after 12B) | Notes |
 |----------|---------------|------------|---------------------------|-------|
-| Env vars | `BUGBOT_*` | `REPOSITORY_DETECTIVE_*` | `REPOSITORY_DETECTIVE_*` in docs; both work at runtime | New wins if both set |
+| Env vars | `REPOSITORY_DETECTIVE_*` | `REPOSITORY_DETECTIVE_*` | `REPOSITORY_DETECTIVE_*` in docs; both work at runtime | New wins if both set |
 | Config YAML keys | `enable_trivy`, etc. | Same keys | Same keys | YAML keys are not product branding |
 | Viper env prefix | `BUGBOT` | Also bind `REPOSITORY_DETECTIVE` | Dual bind | One deprecation log per key per process |
 | Gitea labels (base) | `bugbot` | `repository-detective` | Both during transition, then new only | Lookup must accept both |
@@ -48,7 +48,7 @@ Never break old scans, issues, or integrations.
 | Fingerprint value | `bugbot-<hex>` | Same algorithm | Same `bugbot-` prefix | **Do not change** — breaks dedup |
 | Issue search | Labels `bugbot` | Labels `repository-detective` | Search both label sets | `FindIssueByFingerprint` |
 | Status context | `bugbot/security-scan` | Configurable; default new name | New default, old accepted | |
-| API header | **Preferred:** `X-Repository-Detective-API-Key` | **Legacy accepted:** `X-Bugbot-API-Key` | Accept both | Document preferred first |
+| API header | **Preferred:** `X-Repository-Detective-API-Key` | **Legacy accepted:** `X-Repository-Detective-API-Key` | Accept both | Document preferred first |
 | API routes | `/api/v1/*` | Same | Same | No breaking rename |
 | DB tables | `findings`, `repo_settings`, … | Same | Same | Display name only in UI |
 | Docker image / binary | `bugbot` | Optional tag alias | Gradual | Out of scope for 12B code |
@@ -71,7 +71,7 @@ Never break old scans, issues, or integrations.
    Both BUGBOT_ENABLE_TRIVY and REPOSITORY_DETECTIVE_ENABLE_TRIVY set; using REPOSITORY_DETECTIVE_ENABLE_TRIVY
    ```
 
-3. Deprecation: if only `BUGBOT_*` is set, log once at startup (not per-request):
+3. Deprecation: if only `REPOSITORY_DETECTIVE_*` is set, log once at startup (not per-request):
 
    ```text
    BUGBOT_* env vars are supported but deprecated; prefer REPOSITORY_DETECTIVE_* (see docs/NAMING.md)
@@ -186,7 +186,7 @@ label_compat_mode: dual   # dual | new_only | legacy_only
 
 **Optional (12B or later):**
 
-- Accept both `X-Repository-Detective-API-Key` (preferred) and legacy `X-Bugbot-API-Key`
+- Accept both `X-Repository-Detective-API-Key` (preferred) and legacy `X-Repository-Detective-API-Key`
 - Future branded path group `/api/v1/repository-detective/*` as thin alias — **not required for 12B**
 
 **Tests required:**
@@ -240,7 +240,7 @@ Optional display-only fields (low priority):
 ## Rollback plan
 
 1. Set `label_compat_mode: legacy_only`
-2. Continue using `BUGBOT_*` env vars only
+2. Continue using `REPOSITORY_DETECTIVE_*` env vars only
 3. No DB rollback needed (no schema change required)
 4. Revert UI/doc wording via git if needed
 

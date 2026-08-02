@@ -92,7 +92,7 @@ curl -sf http://127.0.0.1:8081/health
 
 ## Package test coverage
 
-All application packages under `git.commsnet.org/commstech/bugbot/...` include tests except:
+All application packages under `git.commsnet.org/commstech/repository-detective/...` include tests except:
 
 - `cmd/repository-detective-runner` (thin CLI)
 - `models/`, `web/` (shared types / static assets)
