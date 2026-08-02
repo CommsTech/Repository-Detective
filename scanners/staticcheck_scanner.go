@@ -65,9 +65,10 @@ func runStaticcheckWithCommand(ctx context.Context, logger *logrus.Logger, dir s
 }
 
 func parseStaticcheckOutput(output []byte, dir string, cfg Config) (cappedFindings, error) {
+	clean := string(stripANSI(output))
 	var findings []Finding
 	parsedAny := false
-	for _, line := range strings.Split(string(output), "\n") {
+	for _, line := range strings.Split(clean, "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" || !strings.HasPrefix(line, "{") {
 			continue
@@ -82,7 +83,7 @@ func parseStaticcheckOutput(output []byte, dir string, cfg Config) (cappedFindin
 		parsedAny = true
 		findings = append(findings, staticcheckFinding(msg, dir))
 	}
-	if !parsedAny && len(output) > 0 && strings.TrimSpace(string(output)) != "" && strings.TrimSpace(string(output)) != "[]" {
+	if !parsedAny && len(strings.TrimSpace(clean)) > 0 && strings.TrimSpace(clean) != "[]" {
 		return cappedFindings{}, fmt.Errorf("no staticcheck findings parsed from output")
 	}
 	capped := capFindings(findings, goScannerMaxFindings(cfg))

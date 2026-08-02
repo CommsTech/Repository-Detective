@@ -237,6 +237,7 @@ func (h *Handler) RegisterRoutes(g *gin.RouterGroup) {
 	g.GET("/scans/:scan_id/graph", h.ScanGraph)
 	h.registerGraphRoutes(g)
 	g.GET("/findings", h.Findings)
+	g.GET("/findings/export", h.ExportFindings)
 	g.GET("/findings/:id", h.FindingDetail)
 	g.POST("/findings/:id/remediation/generate", h.GenerateFindingRemediation)
 	g.POST("/findings/:id/remediation/approve", h.ApproveFindingRemediation)
@@ -447,6 +448,7 @@ func (h *Handler) Dashboard(c *gin.Context) {
 		summary.ScanHealth.RecentFailedScans,
 		missingScanners,
 		summary.ScanHealth.ReposNeedingAttention,
+		summary.ScannerParseFailedCount,
 	)
 
 	repos, _ := h.store.ListRepositoriesWithSummary(c.Request.Context(), store.ListOptions{Limit: 200})
@@ -1113,6 +1115,7 @@ func (h *Handler) Findings(c *gin.Context) {
 	if !h.requireStore(c) {
 		return
 	}
+	focus := c.Query("focus") == "1" || c.Query("focus") == "true"
 	filter := store.FindingFilter{
 		Severity:          c.Query("severity"),
 		Category:          c.Query("category"),
@@ -1122,6 +1125,16 @@ func (h *Handler) Findings(c *gin.Context) {
 		OnlySuppressed:    c.Query("only_suppressed") == "1",
 		Limit:             100,
 	}
+	if focus {
+		if filter.Status == "" {
+			filter.Status = "open"
+		}
+		filter.IncludeSuppressed = false
+		filter.OnlySuppressed = false
+		if filter.Severity == "" {
+			filter.Limit = 200
+		}
+	}
 	if v := c.Query("repo_id"); v != "" {
 		filter.RepositoryID, _ = strconv.ParseInt(v, 10, 64)
 	}
@@ -1130,10 +1143,97 @@ func (h *Handler) Findings(c *gin.Context) {
 		c.String(http.StatusInternalServerError, "failed to list findings")
 		return
 	}
+	if focus && filter.Severity == "" {
+		findings = prioritizeFocusFindings(findings, 50)
+	} else {
+		sortFindingsBySeverity(findings)
+	}
 	repos, _ := h.store.ListRepositoriesWithSummary(c.Request.Context(), store.ListOptions{Limit: 200})
+	exportQS := c.Request.URL.RawQuery
 	h.renderNav(c, "findings.html", "Findings", "findings", map[string]any{
 		"Findings": findings, "Filter": filter, "Repositories": repos,
+		"FocusMode": focus, "ExportQuery": exportQS,
 	})
+}
+
+func prioritizeFocusFindings(findings []store.FindingListItem, limit int) []store.FindingListItem {
+	var out []store.FindingListItem
+	for _, f := range findings {
+		sev := strings.ToLower(f.Severity)
+		if sev == "critical" || sev == "high" {
+			out = append(out, f)
+		}
+	}
+	sortFindingsBySeverity(out)
+	if limit > 0 && len(out) > limit {
+		out = out[:limit]
+	}
+	return out
+}
+
+func (h *Handler) ExportFindings(c *gin.Context) {
+	if !h.requireStore(c) {
+		return
+	}
+	focus := c.Query("focus") == "1" || c.Query("focus") == "true"
+	filter := store.FindingFilter{
+		Severity:          c.Query("severity"),
+		Category:          c.Query("category"),
+		Status:            c.Query("status"),
+		Source:            c.Query("source"),
+		IncludeSuppressed: c.Query("show_suppressed") == "1",
+		OnlySuppressed:    c.Query("only_suppressed") == "1",
+		Limit:             5000,
+	}
+	if focus && filter.Status == "" {
+		filter.Status = "open"
+	}
+	if v := c.Query("repo_id"); v != "" {
+		filter.RepositoryID, _ = strconv.ParseInt(v, 10, 64)
+	}
+	findings, err := h.store.ListFindings(c.Request.Context(), filter)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "failed to list findings")
+		return
+	}
+	if focus && filter.Severity == "" {
+		findings = prioritizeFocusFindings(findings, 0)
+	} else {
+		sortFindingsBySeverity(findings)
+	}
+	format := strings.ToLower(strings.TrimSpace(c.Query("format")))
+	if format == "" {
+		format = "csv"
+	}
+	stamp := time.Now().UTC().Format("20060102T150405Z")
+	switch format {
+	case "json":
+		c.Header("Content-Disposition", fmt.Sprintf(`attachment; filename="findings-%s.json"`, stamp))
+		c.JSON(http.StatusOK, gin.H{"generated_at": time.Now().UTC().Format(time.RFC3339), "count": len(findings), "findings": findings})
+	default:
+		c.Header("Content-Type", "text/csv; charset=utf-8")
+		c.Header("Content-Disposition", fmt.Sprintf(`attachment; filename="findings-%s.csv"`, stamp))
+		var b strings.Builder
+		b.WriteString("id,repository_id,repo,severity,category,status,source,rule_id,fingerprint,title,file_path,line\n")
+		for _, f := range findings {
+			b.WriteString(fmt.Sprintf("%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%d\n",
+				f.ID, f.RepositoryID,
+				csvEscape(f.RepoFullName),
+				csvEscape(f.Severity), csvEscape(f.Category), csvEscape(f.Status),
+				csvEscape(f.Source), csvEscape(f.RuleID), csvEscape(f.Fingerprint),
+				csvEscape(f.Title), csvEscape(f.FilePath), f.Line,
+			))
+		}
+		c.String(http.StatusOK, b.String())
+	}
+}
+
+func csvEscape(v string) string {
+	v = strings.ReplaceAll(v, `"`, `""`)
+	if strings.ContainsAny(v, ",\"\n\r") {
+		return `"` + v + `"`
+	}
+	return v
 }
 
 func (h *Handler) FindingDetail(c *gin.Context) {

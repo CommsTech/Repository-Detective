@@ -59,6 +59,8 @@ var toolDefs = []struct {
 	{name: "git", binary: "git", versionArg: []string{"--version"}, always: true},
 	{name: "trivy", binary: "trivy", versionArg: []string{"--version"}, enabled: func(c ScannerConfig) bool { return c.EnableTrivy }},
 	{name: "grype", binary: "grype", versionArg: []string{"version"}, enabled: func(c ScannerConfig) bool { return c.EnableGrype }},
+	{name: "syft", binary: "syft", versionArg: []string{"version"}, always: true},
+	{name: "cyclonedx-gomod", binary: "cyclonedx-gomod", versionArg: []string{"version"}, always: true},
 	{name: "gitleaks", binary: "gitleaks", versionArg: []string{"version"}, enabled: func(c ScannerConfig) bool { return c.EnableGitleaks }},
 	{name: "semgrep", binary: "semgrep", versionArg: []string{"--version"}, enabled: func(c ScannerConfig) bool { return c.EnableSemgrep }},
 	{name: "govulncheck", binary: "govulncheck", versionArg: []string{"-version"}, enabled: func(c ScannerConfig) bool { return c.EnableGovulncheck }},

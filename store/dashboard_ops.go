@@ -312,6 +312,7 @@ func BuildDashboardActions(
 	recentFailed []FailedScanBrief,
 	missingConfigured []ScannerPlatformRollup,
 	reposAttention []RepoAttentionBrief,
+	parseFailedCount int,
 ) []DashboardAction {
 	var actions []DashboardAction
 	if criticalOpen > 0 {
@@ -319,7 +320,7 @@ func BuildDashboardActions(
 			Priority: "critical",
 			Title:    "Triage critical findings",
 			Detail:   strings.TrimSpace(strings.Join([]string{itoa(criticalOpen) + " critical open findings need immediate review."}, " ")),
-			LinkPath: "/findings?severity=critical&status=open",
+			LinkPath: "/findings?focus=1&status=open",
 		})
 	}
 	if highOpen > 0 {
@@ -337,6 +338,14 @@ func BuildDashboardActions(
 			Title:    "Investigate failed scans",
 			Detail:   f.RepoFullName + ": " + truncate(f.Error, 120),
 			LinkPath: "/scans/" + f.ScanID,
+		})
+	}
+	if parseFailedCount > 0 {
+		actions = append(actions, DashboardAction{
+			Priority: "medium",
+			Title:    "Investigate scanner parse failures",
+			Detail:   itoa(parseFailedCount) + " parse_failed events in the recent window — check System Health.",
+			LinkPath: "/health#scanner-failures",
 		})
 	}
 	for _, s := range missingConfigured {

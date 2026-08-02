@@ -3,6 +3,15 @@
 **Last updated:** 2026-08-02  
 **Repository:** https://git.commsnet.org/commstech/Repository-Detective.git
 
+## Live deploy (2026-08-02) — Scanner reliability + SBOM + triage export
+
+| Item | Value |
+|------|-------|
+| Focus | Address external review: parse failures, timeouts, SBOM gap, finding triage volume |
+| Shipped | stdout-first command capture; parallel scanner registry; Syft/cyclonedx-gomod in image; focus list + CSV/JSON export; timeout defaults 900s/180s |
+| Requires | Image rebuild for Syft on live (`all-in-one`); hotpatch covers parser/parallel/export immediately |
+| Deferred | Config struct decomposition, main.go route extract, GitHub forge parity, full LLM prove stage |
+
 ## Live deploy (2026-08-02) — Sanitized install base + learning completeness
 
 | Item | Value |

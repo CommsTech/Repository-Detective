@@ -10,6 +10,7 @@ SEMGREP_VERSION="${SEMGREP_VERSION:-1.76.0}"
 HADOLINT_VERSION="${HADOLINT_VERSION:-2.12.0}"
 CHECKOV_VERSION="${CHECKOV_VERSION:-3.2.254}"
 GOLANGCI_VERSION="${GOLANGCI_VERSION:-1.55.2}"
+SYFT_VERSION="${SYFT_VERSION:-1.18.1}"
 
 install_trivy() {
   if [ -x /tmp/deploy-bin/trivy ]; then
@@ -27,6 +28,15 @@ install_grype() {
   fi
   curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh \
     | sh -s -- -b /usr/local/bin "v${GRYPE_VERSION}"
+}
+
+install_syft() {
+  if [ -x /tmp/deploy-bin/syft ]; then
+    install -m 0755 /tmp/deploy-bin/syft /usr/local/bin/syft
+    return
+  fi
+  curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh \
+    | sh -s -- -b /usr/local/bin "v${SYFT_VERSION}"
 }
 
 install_gitleaks() {
@@ -82,6 +92,7 @@ apk_retry curl bash tar python3 py3-pip git ca-certificates
 install_trivy
 install_grype
 refresh_grype_db
+install_syft || echo "syft install skipped"
 install_gitleaks || echo "gitleaks install skipped"
 install_hadolint || echo "hadolint install skipped"
 install_semgrep || echo "semgrep install skipped"
@@ -90,7 +101,7 @@ install_golangci || echo "golangci-lint install skipped (optional)"
 install_shellcheck || echo "shellcheck install skipped"
 install_ruff || echo "ruff install skipped"
 
-for bin in trivy grype gitleaks semgrep govulncheck gosec staticcheck hadolint checkov shellcheck ruff; do
+for bin in trivy grype syft gitleaks semgrep govulncheck gosec staticcheck hadolint checkov shellcheck ruff cyclonedx-gomod; do
   if command -v "$bin" >/dev/null 2>&1; then
     echo "installed: $bin -> $($bin --version 2>/dev/null | head -1 || echo ok)"
   fi

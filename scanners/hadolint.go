@@ -71,13 +71,17 @@ func runHadolintWithCommand(ctx context.Context, logger *logrus.Logger, dir stri
 }
 
 func parseHadolintOutput(output []byte, dir string, cfg Config) (cappedFindings, error) {
-	trimmed := strings.TrimSpace(string(output))
+	payload := output
+	if raw, err := extractJSONArray(output); err == nil {
+		payload = raw
+	}
+	trimmed := strings.TrimSpace(string(payload))
 	if trimmed == "" || trimmed == "[]" || trimmed == "null" {
 		return cappedFindings{}, nil
 	}
 
 	var issues []hadolintIssue
-	if err := json.Unmarshal(output, &issues); err != nil {
+	if err := json.Unmarshal(payload, &issues); err != nil {
 		return cappedFindings{}, fmt.Errorf("parse hadolint json: %w", err)
 	}
 	findings := make([]Finding, 0, len(issues))

@@ -195,7 +195,7 @@ func buildConfigureSections(
 			DocPath: "docs/SBOM.md",
 			Settings: []ConfigureSetting{
 				boolSetting("enable_grype", global.EnableGrype),
-				{Key: "syft / cyclonedx-gomod", DisplayValue: "see System Health scanners", Source: "runtime", Hint: "Installed in container when INSTALL_EXTERNAL_TOOLS=true"},
+				{Key: "syft / cyclonedx-gomod", DisplayValue: "see System Health scanners", Source: "runtime", Hint: "Bundled in all-in-one/runner images (INSTALL_EXTERNAL_TOOLS=true); required for non-Go SBOMs"},
 			},
 		},
 		{

@@ -45,7 +45,7 @@ enable_checkov: true
 enable_linters: true
 enable_llm_auditors: false
 enable_ai_risk_checks: false
-scanner_timeout_seconds: 120
+scanner_timeout_seconds: 180
 staticcheck_timeout_seconds: 300
 min_issue_confidence: 0.7
 

@@ -38,6 +38,7 @@ Optional offline builds: `./scripts/vendor-deps.sh` then build with `-mod=vendor
 |------|----------------|------------------|
 | Trivy | 0.57.1 | `/usr/local/bin` |
 | Grype | 0.84.0 | `/usr/local/bin` |
+| Syft | 1.18.1 | `/usr/local/bin` (filesystem SBOM) |
 | Gitleaks | 8.21.2 | `/usr/local/bin` |
 | Semgrep | 1.76.0 | pip (`semgrep==1.76.0`) |
 | golangci-lint | v1.55.2 | `/usr/local/bin` |
@@ -50,6 +51,7 @@ Optional offline builds: `./scripts/vendor-deps.sh` then build with `-mod=vendor
 | govulncheck | v1.1.3 |
 | gosec | v2.21.4 |
 | staticcheck | v0.5.1 |
+| cyclonedx-gomod | latest at build | Go module CycloneDX SBOM |
 
 ## Web UI (static assets)
 

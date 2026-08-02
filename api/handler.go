@@ -60,6 +60,7 @@ func (h *Handler) RegisterRoutes(g *gin.RouterGroup) {
 	g.GET("/scans/:scan_id/graph/export", h.ExportScanGraph)
 
 	g.GET("/findings", h.ListFindings)
+	g.GET("/findings/export", h.ExportFindings)
 	g.GET("/findings/:id", h.GetFinding)
 	g.GET("/findings/:id/lifecycle", h.GetFindingLifecycle)
 }
@@ -247,6 +248,73 @@ func (h *Handler) ListFindings(c *gin.Context) {
 		return
 	}
 	h.respondFindings(c, findingFilterFromQuery(c))
+}
+
+func (h *Handler) ExportFindings(c *gin.Context) {
+	if !h.requireStore(c) {
+		return
+	}
+	filter := findingFilterFromQuery(c)
+	if filter.Limit <= 0 || filter.Limit > 5000 {
+		filter.Limit = 5000
+	}
+	findings, err := h.store.ListFindings(c.Request.Context(), filter)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list findings"})
+		return
+	}
+	format := strings.ToLower(strings.TrimSpace(c.Query("format")))
+	stamp := time.Now().UTC().Format("20060102T150405Z")
+	if format == "csv" {
+		c.Header("Content-Type", "text/csv; charset=utf-8")
+		c.Header("Content-Disposition", `attachment; filename="findings-`+stamp+`.csv"`)
+		var b strings.Builder
+		b.WriteString("id,repository_id,severity,category,status,source,rule_id,fingerprint,title,file_path,line\n")
+		for _, f := range findings {
+			b.WriteString(strconv.FormatInt(f.ID, 10))
+			b.WriteByte(',')
+			b.WriteString(strconv.FormatInt(f.RepositoryID, 10))
+			b.WriteByte(',')
+			b.WriteString(csvCell(f.Severity))
+			b.WriteByte(',')
+			b.WriteString(csvCell(f.Category))
+			b.WriteByte(',')
+			b.WriteString(csvCell(f.Status))
+			b.WriteByte(',')
+			b.WriteString(csvCell(f.Source))
+			b.WriteByte(',')
+			b.WriteString(csvCell(f.RuleID))
+			b.WriteByte(',')
+			b.WriteString(csvCell(f.Fingerprint))
+			b.WriteByte(',')
+			b.WriteString(csvCell(f.Title))
+			b.WriteByte(',')
+			b.WriteString(csvCell(f.FilePath))
+			b.WriteByte(',')
+			b.WriteString(strconv.Itoa(f.Line))
+			b.WriteByte('\n')
+		}
+		c.String(http.StatusOK, b.String())
+		return
+	}
+	out := make([]findingListResponse, 0, len(findings))
+	for _, f := range findings {
+		out = append(out, toFindingListResponse(f))
+	}
+	c.Header("Content-Disposition", `attachment; filename="findings-`+stamp+`.json"`)
+	c.JSON(http.StatusOK, gin.H{
+		"generated_at": time.Now().UTC().Format(time.RFC3339),
+		"count":        len(out),
+		"findings":     out,
+	})
+}
+
+func csvCell(v string) string {
+	v = strings.ReplaceAll(v, `"`, `""`)
+	if strings.ContainsAny(v, ",\"\n\r") {
+		return `"` + v + `"`
+	}
+	return v
 }
 
 func findingFilterFromQuery(c *gin.Context) store.FindingFilter {

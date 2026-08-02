@@ -59,7 +59,7 @@ enable_linters: true
 enable_llm_auditors: false
 enable_ai_risk_checks: false
 enable_performance_checks: false
-scanner_timeout_seconds: 120
+scanner_timeout_seconds: 180
 min_issue_confidence: 0.75
 health_max_findings: 80
 

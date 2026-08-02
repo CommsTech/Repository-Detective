@@ -97,8 +97,12 @@ func RunTrivy(ctx context.Context, logger *logrus.Logger, dir string, cfg Config
 }
 
 func parseTrivyOutput(output []byte, dir string) ([]Finding, error) {
+	payload := output
+	if raw, err := extractJSONObject(output); err == nil {
+		payload = raw
+	}
 	var report trivyReport
-	if err := json.Unmarshal(output, &report); err != nil {
+	if err := json.Unmarshal(payload, &report); err != nil {
 		return nil, err
 	}
 

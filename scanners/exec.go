@@ -1,6 +1,7 @@
 package scanners
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -30,6 +31,14 @@ func (e *commandExitError) Unwrap() error {
 }
 
 func runCommand(ctx context.Context, timeout time.Duration, dir string, name string, args ...string) ([]byte, error) {
+	stdout, _, err := runCommandStreams(ctx, timeout, dir, name, args...)
+	return stdout, err
+}
+
+// runCommandStreams executes a subprocess and keeps stdout/stderr separate.
+// Parsers should use stdout (JSON tools write there). On failure, stdout still
+// prefers clean parseable bytes; the error wraps merged output for diagnostics.
+func runCommandStreams(ctx context.Context, timeout time.Duration, dir string, name string, args ...string) (stdoutOut, stderrOut []byte, err error) {
 	if timeout <= 0 {
 		timeout = 2 * time.Minute
 	}
@@ -40,19 +49,29 @@ func runCommand(ctx context.Context, timeout time.Duration, dir string, name str
 	cmd.Dir = dir
 	cmd.Env = security.MinimalSubprocessEnv()
 
-	stdout := &cappedBuffer{limit: maxCommandOutputBytes}
-	stderr := &cappedBuffer{limit: maxCommandOutputBytes}
-	cmd.Stdout = stdout
-	cmd.Stderr = stderr
+	stdoutBuf := &cappedBuffer{limit: maxCommandOutputBytes}
+	stderrBuf := &cappedBuffer{limit: maxCommandOutputBytes}
+	cmd.Stdout = stdoutBuf
+	cmd.Stderr = stderrBuf
 
-	err := cmd.Run()
-	output := append(stdout.Bytes(), stderr.Bytes()...)
-	if err == nil {
-		return output, nil
+	runErr := cmd.Run()
+	stdoutOut = stdoutBuf.Bytes()
+	stderrOut = stderrBuf.Bytes()
+	merged := append(append([]byte{}, stdoutOut...), stderrOut...)
+	if runErr == nil {
+		// Prefer stdout for JSON/NDJSON parsers; fall back to stderr only if empty.
+		if len(bytes.TrimSpace(stdoutOut)) > 0 {
+			return stdoutOut, stderrOut, nil
+		}
+		return stderrOut, stderrOut, nil
 	}
 
 	timedOut := errors.Is(cmdCtx.Err(), context.DeadlineExceeded)
-	return output, &commandExitError{err: err, timedOut: timedOut, output: output}
+	parseBytes := stdoutOut
+	if len(bytes.TrimSpace(parseBytes)) == 0 {
+		parseBytes = merged
+	}
+	return parseBytes, stderrOut, &commandExitError{err: runErr, timedOut: timedOut, output: merged}
 }
 
 func commandAvailable(name string) bool {

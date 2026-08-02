@@ -523,7 +523,10 @@ func (e *Engine) Scan(ctx context.Context, prepare *PrepareReport) ([]CandidateF
 			}
 			log.Infof("[CAH:SCAN] External scanners found %d candidate(s) (workspace_mode=%s)", len(summary.Candidates()), workspaceMeta.ModeUsed)
 			outDir := filepath.Join(prepared.Dir, ".rd-sbom")
-			if res, sbErr := sbom.GenerateAndCheck(ctx, prepared.Dir, outDir); sbErr == nil {
+			sbomCtx, sbomCancel := context.WithTimeout(ctx, sbom.DefaultTimeout())
+			res, sbErr := sbom.GenerateAndCheck(sbomCtx, prepared.Dir, outDir)
+			sbomCancel()
+			if sbErr == nil {
 				copy := res
 				sbomResult = &copy
 				log.Infof("[CAH:SCAN] SBOM status=%s packages=%d vulns=%d", res.Status, res.PackageCount, res.VulnCount)

@@ -30,6 +30,14 @@ Deterministic learning records lifecycle events (`learning_events`), builds per-
 - Background calibration job mirrors manual recompute (global + per-repo recommendation generation).
 - Optional LLM sanity gate remains advisory / off by default — not required for the core learning loop.
 
+## Scanner execution
+
+External scanners run **concurrently** via `scanners.Registry.RunAll` (results keep registry order). Each scanner still has its own timeout (`scanner_timeout_seconds` default 180s; analysis envelope default 900s). Command capture prefers **stdout** for JSON parsers so stderr progress logs no longer cause `parse_failed`.
+
+## SBOM
+
+Go modules prefer `cyclonedx-gomod`; other ecosystems use **Syft**. Both are installed in all-in-one/runner images when `INSTALL_EXTERNAL_TOOLS=true`.
+
 ## Install base vs operator data
 
 Published Gitea content is application + docs. Operator `.env`, `config/config.yaml`, and `data/*.db` are gitignored and must not be pushed.

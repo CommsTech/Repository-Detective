@@ -1,5 +1,18 @@
 # Development Issues Log
 
+## Fixed (2026-08-02) — External review: scanner reliability + SBOM + triage/export
+
+| Priority | Issue | Resolution |
+|----------|-------|------------|
+| HIGH | parse_failed from stderr mixed into JSON (staticcheck/hadolint/trivy) | `runCommandStreams` prefers stdout; parsers extract JSON / strip ANSI |
+| HIGH | Sequential scanners burn shared analysis timeout | `Registry.RunAll` runs scanners concurrently (ordered results) |
+| HIGH | `sbom_tool_missing` / Syft not in image | Syft + cyclonedx-gomod installed in Docker/builder; health probes added |
+| MEDIUM | 300s analysis timeout too aggressive under load | Defaults: analysis 900s, scanner 180s; operator `.env` aligned |
+| MEDIUM | 11k findings lack prioritization / export | Findings focus list + severity sort; CSV/JSON export UI + API |
+| MEDIUM | Parse failures not in dashboard actions | `BuildDashboardActions` links to health when parse_failed > 0 |
+| LOW | Flat Config + mega main.go | Deferred — safe decomposition backlog |
+| LOW | GitHub forge RC-unproven / LLM deep path | Deferred — beta keeps LLM off by default |
+
 ## Fixed (2026-08-02) — Gitea base sanitization + learning accept path
 
 | Priority | Issue | Resolution |
@@ -40,12 +53,13 @@
 | Priority | Issue | Notes |
 |----------|-------|-------|
 | HIGH | Fleet `no valid ref` failures (~332) | **Fixed 2026-08-02** — mostly historical forge outage; metrics windowed + ResolveRef hardened |
+| HIGH | Scanner parse_failed / timeouts under load | **Fixed 2026-08-02** — stdout-first parsers, parallel scanners, longer defaults; rebuild image for Syft |
 | MEDIUM | Flat Config (~180 fields) + mega `main.go` | Safe decomposition backlog |
 | MEDIUM | GitHub forge RC-unproven | Interface exists; parity unproven |
-| MEDIUM | Syft / full SBOM coverage | Partial CycloneDX gomod fallback today |
-| MEDIUM | Interactive finding explorer + MTTR charts + exports | UI expansion |
+| MEDIUM | Syft / full SBOM coverage | **Fixed in source** — rebuild all-in-one image to pick up Syft/cyclonedx-gomod |
+| MEDIUM | Interactive finding explorer + MTTR charts + exports | Focus list + CSV/JSON export shipped; MTTR charts still backlog |
 | LOW | RBAC multi-operator | Beyond single API key / local login |
-| LOW | Notifications default polish + learning calibration wiring | Ops enablement |
+| LOW | Notifications default polish + learning calibration wiring | Ops enablement; learning accept UI shipped |
 | LOW | Auto-rescan on remediation merge | evidence_closure exists; trigger polish |
 
 ## Fixed (2026-08-02) — System Health versions + failure drill-down + issue prefill

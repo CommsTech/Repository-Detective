@@ -79,6 +79,8 @@ Verify all targets:
 |------|---------|----------------|
 | trivy | 0.57.1 | Release tarball or `deploy/bin/trivy` |
 | grype | 0.84.0 | install.sh |
+| syft | 1.18.1 | install.sh (SBOM generation) |
+| cyclonedx-gomod | latest (builder) | `go install` (Go module SBOM) |
 | gitleaks | 8.21.2 | Release tarball |
 | semgrep | 1.76.0 | pip (`semgrep==…`) |
 | govulncheck | 1.1.3 | `go install` (builder stage) |

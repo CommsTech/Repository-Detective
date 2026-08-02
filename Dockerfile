@@ -42,9 +42,11 @@ RUN set -eu; \
     go install golang.org/x/vuln/cmd/govulncheck@latest; \
     go install github.com/securego/gosec/v2/cmd/gosec@latest; \
     go install honnef.co/go/tools/cmd/staticcheck@latest; \
+    go install github.com/CycloneDX/cyclonedx-gomod/cmd/cyclonedx-gomod@latest; \
     test -x /go/bin/govulncheck; \
     test -x /go/bin/gosec; \
-    test -x /go/bin/staticcheck
+    test -x /go/bin/staticcheck; \
+    test -x /go/bin/cyclonedx-gomod
 
 # Satisfy image scanners (build artifacts copied out before this stage is discarded).
 USER nobody
@@ -74,6 +76,7 @@ RUN cp /usr/local/lib/rd/apk-retry.sh /tmp/apk-retry.sh && \
 COPY --from=builder /go/bin/govulncheck /usr/local/bin/govulncheck
 COPY --from=builder /go/bin/gosec /usr/local/bin/gosec
 COPY --from=builder /go/bin/staticcheck /usr/local/bin/staticcheck
+COPY --from=builder /go/bin/cyclonedx-gomod /usr/local/bin/cyclonedx-gomod
 COPY --from=builder /usr/local/go /usr/local/go
 ENV PATH="/usr/local/go/bin:${PATH}"
 

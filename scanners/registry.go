@@ -2,6 +2,7 @@ package scanners
 
 import (
 	"context"
+	"sync"
 )
 
 type trivyScanner struct{}
@@ -198,11 +199,33 @@ func (r *Registry) Names() []string {
 	return names
 }
 
-// RunAll executes every registered scanner and aggregates results.
+// RunAll executes every registered scanner concurrently and aggregates results
+// in registry order. Each scanner inherits the parent context (and its deadline).
 func (r *Registry) RunAll(ctx context.Context, req RunRequest) RunSummary {
+	type indexed struct {
+		idx     int
+		results []RunResult
+	}
+	outCh := make(chan indexed, len(r.scanners))
+	var wg sync.WaitGroup
+	for i, scanner := range r.scanners {
+		wg.Add(1)
+		go func(idx int, s Scanner) {
+			defer wg.Done()
+			outCh <- indexed{idx: idx, results: s.Run(ctx, req)}
+		}(i, scanner)
+	}
+	go func() {
+		wg.Wait()
+		close(outCh)
+	}()
+
+	ordered := make([][]RunResult, len(r.scanners))
+	for item := range outCh {
+		ordered[item.idx] = item.results
+	}
 	var summary RunSummary
-	for _, scanner := range r.scanners {
-		results := scanner.Run(ctx, req)
+	for _, results := range ordered {
 		summary.Results = append(summary.Results, results...)
 	}
 	return summary
