@@ -52,7 +52,7 @@
 
 Sync policy: [docs/GITHUB_MIRROR.md](docs/GITHUB_MIRROR.md).
 
-**Feedback:** [GitHub issues](https://github.com/CommsTech/Repository-Detective/issues) or [Gitea issue templates](https://git.commsnet.org/commstech/Repository-Detective/issues/new) — include scan ID and finding fingerprint; never paste secrets. Security reports: [SECURITY.md](SECURITY.md).
+**Docs:** [Public beta guide](docs/PUBLIC_BETA.md) · [Quickstart](docs/QUICKSTART.md) · [Wiki source (`docs/wiki/`)](docs/wiki/Home.md) · [GitHub Wiki](https://github.com/CommsTech/Repository-Detective/wiki) (after first publish) · [Gitea wiki](https://git.commsnet.org/commstech/repository-detective/wiki)
 
 ## Setup
 
