@@ -35,7 +35,7 @@ Repo: https://git.commsnet.org/commstech/Repository-Detective.git
 
 The Gitea tree is a sanitized install base. Operator secrets (`.env`), local config (`config/config.yaml`), and the SQLite database under `data/` are gitignored and must stay private on your host.
 
-Quick local trial:
+Quick local trial (minimal compose uses port **8080**):
 
 ```bash
 git clone https://git.commsnet.org/commstech/Repository-Detective.git && cd Repository-Detective
@@ -45,6 +45,9 @@ curl http://localhost:8080/health
 
 Then open http://localhost:8080/onboard
 
+Default `docker-compose.yml` / homelab installs use port **8081** (`http://127.0.0.1:8081`).
+
+**AI agents (OpenClaw, Cursor, etc.):** [docs/AGENT_QUICKSTART.md](docs/AGENT_QUICKSTART.md) · [docs/MCP.md](docs/MCP.md) · [docs/OPENCLAW_INTEGRATION.md](docs/OPENCLAW_INTEGRATION.md) · [docs/openapi.yaml](docs/openapi.yaml)
 ## What it does
 
 - Scans changed files on push; scans PR diff files on pull requests
@@ -101,11 +104,11 @@ Full reference: [docs/CONFIGURATION.md](docs/CONFIGURATION.md)
 X-Repository-Detective-API-Key: your-key
 ```
 
-See [docs/API_ROUTES.md](docs/API_ROUTES.md).
+See [docs/API_ROUTES.md](docs/API_ROUTES.md). Machine-readable: [docs/openapi.yaml](docs/openapi.yaml) (`GET /api/v1/openapi.yaml`). MCP stdio bridge: `go build -o repository-detective-mcp ./cmd/repository-detective-mcp` — see [docs/MCP.md](docs/MCP.md).
 
 ## Documentation
 
-See [docs/README.md](docs/README.md) for the full index.
+See [docs/README.md](docs/README.md) for the full index. Agent entry points: [AGENT_QUICKSTART](docs/AGENT_QUICKSTART.md), [MCP](docs/MCP.md), [OpenClaw](docs/OPENCLAW_INTEGRATION.md).
 
 ## License
 

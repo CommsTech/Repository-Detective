@@ -13,6 +13,9 @@ detect → issue → plan → approve → patch PR → merge → rescan → veri
 | Document | Description |
 |----------|-------------|
 | [QUICKSTART.md](QUICKSTART.md) | Zero to first scan (~15 min) |
+| [AGENT_QUICKSTART.md](AGENT_QUICKSTART.md) | AI agents — REST + MCP for OpenClaw / automations |
+| [MCP.md](MCP.md) | MCP stdio bridge (`repository-detective-mcp`) |
+| [OPENCLAW_INTEGRATION.md](OPENCLAW_INTEGRATION.md) | RD↔OpenClaw both directions |
 | [BETA_READINESS.md](BETA_READINESS.md) | Go/no-go checklist and beta config |
 | [BETA_SMOKE_TEST.md](BETA_SMOKE_TEST.md) | End-to-end operator validation |
 | [TEST_MATRIX.md](TEST_MATRIX.md) | Full regression test areas |
@@ -23,8 +26,11 @@ detect → issue → plan → approve → patch PR → merge → rescan → veri
 | [DOCS_AUDIT.md](DOCS_AUDIT.md) | Documentation completeness audit |
 | [FEATURE_COMPLETENESS_AUDIT.md](FEATURE_COMPLETENESS_AUDIT.md) | Feature inventory and gap audit |
 | [API_ROUTES.md](API_ROUTES.md) | API route reference |
+| [openapi.yaml](openapi.yaml) | OpenAPI 3 (also `GET /api/v1/openapi.yaml`) |
+| [AI_RECOMMENDATIONS.md](AI_RECOMMENDATIONS.md) | Advisory AI recommendations |
+| [AI_PROVIDERS.md](AI_PROVIDERS.md) | OpenClaw / OpenAI-compatible provider setup |
 
-Scripts: `./scripts/release-test.sh` · `./scripts/operator-smoke-test.sh`
+Scripts: `./scripts/release-test.sh` · `./scripts/operator-smoke-test.sh` · `go build ./cmd/repository-detective-mcp`
 
 ## Getting started
 

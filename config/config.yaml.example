@@ -87,12 +87,8 @@ ai_startup_test_enabled: false
 ai_connection_test_mode: metadata_only
 ai_max_tokens_per_scan: 0
 
-qdrant_enabled: false
-qdrant_url: "http://127.0.0.1:6333"
-qdrant_collection: "cah_findings"
-qdrant_vector_size: 1024
-qdrant_similarity_threshold: 0.7
-embedding_model: "text-embedding-3-small"
+# Qdrant / semantic vector dedup was removed. Issue dedup is fingerprint + SQLite forge mappings.
+# See docs/AGENT_QUICKSTART.md and architecture.md.
 
 database_enabled: true
 database_driver: sqlite

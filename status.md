@@ -3,6 +3,14 @@
 **Last updated:** 2026-08-02  
 **Repository:** https://git.commsnet.org/commstech/Repository-Detective.git
 
+## Live deploy (2026-08-02) — Agent / MCP / OpenAPI docs
+
+| Item | Value |
+|------|-------|
+| Focus | Make Repository Detective usable by OpenClaw-like AI agents |
+| Shipped | `docs/AGENT_QUICKSTART.md`, `docs/MCP.md`, `docs/OPENCLAW_INTEGRATION.md`, `docs/openapi.yaml`, MCP stdio bridge `cmd/repository-detective-mcp`, `GET /api/v1/openapi.yaml`, richer `GET /api/v1/about` |
+| Agent auth | `X-Repository-Detective-API-Key` or Bearer |
+
 ## Live deploy (2026-08-02) — UI responsiveness
 
 | Item | Value |

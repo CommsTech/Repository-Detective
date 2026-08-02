@@ -19,6 +19,7 @@ import (
 	"git.commsnet.org/commstech/repository-detective/analyzers"
 	"git.commsnet.org/commstech/repository-detective/api"
 	"git.commsnet.org/commstech/repository-detective/containers"
+	"git.commsnet.org/commstech/repository-detective/docsdata"
 	"git.commsnet.org/commstech/repository-detective/openclaw"
 	"git.commsnet.org/commstech/repository-detective/forge"
 	"git.commsnet.org/commstech/repository-detective/gitea"
@@ -815,6 +816,7 @@ func setupRoutes(router *gin.Engine) {
 		api.POST("/analyze/all", handleBulkAnalysis)
 		api.GET("/status", handleStatus)
 		api.GET("/about", handleAbout)
+		api.GET("/openapi.yaml", handleOpenAPI)
 		api.POST("/config/reload", handleConfigReload)
 	}
 
@@ -2385,14 +2387,31 @@ func handleStatus(c *gin.Context) {
 }
 
 func handleAbout(c *gin.Context) {
+	projectURL := "https://git.commsnet.org/commstech/Repository-Detective"
 	c.JSON(http.StatusOK, gin.H{
 		"product_name":        "Repository Detective",
 		"tagline":             "Inspect. Analyze. Improve.",
 		"version":             version,
-		"documentation_index": "/docs/README.md",
-		"project_url":         "https://git.commsnet.org/commstech/Repository-Detective",
-		"safe_loop":           "detect → issue → plan → approve → patch PR → merge → rescan → verified closure",
+		"api_base_path":       "/api/v1",
+		"openapi_url":         "/api/v1/openapi.yaml",
+		"documentation_index": projectURL + "/src/branch/main/docs/README.md",
+		"agent_docs_url":      projectURL + "/src/branch/main/docs/AGENT_QUICKSTART.md",
+		"mcp_docs_url":        projectURL + "/src/branch/main/docs/MCP.md",
+		"openclaw_docs_url":   projectURL + "/src/branch/main/docs/OPENCLAW_INTEGRATION.md",
+		"project_url":         projectURL,
+		"auth_headers": []string{
+			"X-Repository-Detective-API-Key",
+			"Authorization: Bearer <key>",
+		},
+		"mcp_command": "go build -o repository-detective-mcp ./cmd/repository-detective-mcp",
+		"safe_loop":   "detect → issue → plan → approve → patch PR → merge → rescan → verified closure",
 	})
+}
+
+func handleOpenAPI(c *gin.Context) {
+	c.Header("Content-Type", "application/yaml; charset=utf-8")
+	c.Header("Cache-Control", "public, max-age=300")
+	c.Data(http.StatusOK, "application/yaml; charset=utf-8", docsdata.OpenAPIYAML)
 }
 
 // handleConfigReload handles configuration reload requests

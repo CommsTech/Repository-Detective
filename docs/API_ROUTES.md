@@ -8,8 +8,9 @@
 | Method | Header |
 |--------|--------|
 | **Preferred** | `X-Repository-Detective-API-Key: <key>` |
-| Legacy | `X-Repository-Detective-API-Key: <key>` |
 | Alternative | `Authorization: Bearer <key>` |
+
+**Not accepted:** `X-Bugbot-API-Key` (legacy brand header is rejected).
 
 Public routes: `GET /health`, `GET /onboard`, `GET /ui/static/*` (assets only).
 
@@ -18,6 +19,8 @@ Webhook: `POST /webhook` — Gitea HMAC (`X-Gitea-Signature`), not API key.
 Runner worker routes: `/api/v1/runner/*` — HMAC (`X-Runner-*`), not operator API key.
 
 Local UI (`auth_mode=local`): session cookie on `/ui/*`; API JSON still uses API key headers.
+
+**Agents:** [AGENT_QUICKSTART.md](AGENT_QUICKSTART.md) · [MCP.md](MCP.md) · [OPENCLAW_INTEGRATION.md](OPENCLAW_INTEGRATION.md) · [openapi.yaml](openapi.yaml) (`GET /api/v1/openapi.yaml`)
 
 ### Auth audit summary (2026-06-05)
 
@@ -43,7 +46,8 @@ See [dogfood-reports/current-security-blocker-verification.md](dogfood-reports/c
 | Method | Path | Auth | Beta | Purpose |
 |--------|------|------|------|---------|
 | GET | `/health` | none | ✅ | Liveness; scanner tools summary |
-| GET | `/api/v1/about` | API key | ✅ | Product name, compatibility flags |
+| GET | `/api/v1/about` | API key | ✅ | Product name, agent discovery (`openapi_url`, `mcp_docs_url`, …) |
+| GET | `/api/v1/openapi.yaml` | API key | ✅ | OpenAPI 3 document for agents |
 | GET | `/api/v1/status` | API key | ✅ | Runtime features, no secrets |
 | POST | `/api/v1/config/reload` | API key | ✅ | Reload config from disk |
 
@@ -92,6 +96,29 @@ See [dogfood-reports/current-security-blocker-verification.md](dogfood-reports/c
 | GET | `/api/v1/findings` | API key | ✅ | List findings |
 | GET | `/api/v1/findings/:id` | API key | ✅ | Finding detail |
 | GET | `/api/v1/findings/:id/lifecycle` | API key | ✅ | Issue lifecycle |
+| POST | `/api/v1/repos/:id/enable-scanning` | API key | ✅ | Enable scanning for repo |
+| POST | `/api/v1/repos/:id/disable-scanning` | API key | ✅ | Disable scanning for repo |
+
+---
+
+## AI recommendations (advisory)
+
+Optional; off until `ai_recommendations_enabled` and `ai_recommendations_max_tokens_per_scan > 0`. See [AI_RECOMMENDATIONS.md](AI_RECOMMENDATIONS.md) and [OPENCLAW_INTEGRATION.md](OPENCLAW_INTEGRATION.md).
+
+| Method | Path | Auth | Beta | Purpose |
+|--------|------|------|------|---------|
+| GET | `/api/v1/ai-recommendations/config` | API key | ✅ | Config (no secrets) |
+| GET | `/api/v1/openclaw/config` | API key | ✅ | Legacy alias |
+| POST | `/api/v1/scans/:scan_id/ai-recommendations` | API key | ✅ | Run advisory review |
+| GET | `/api/v1/scans/:scan_id/ai-recommendations` | API key | ✅ | Get review |
+| POST | `/api/v1/scans/:scan_id/ai-review` | API key | ✅ | Legacy alias |
+| GET | `/api/v1/scans/:scan_id/ai-review` | API key | ✅ | Legacy alias |
+| GET | `/api/v1/ai-recommendations/pending` | API key | ✅ | Pending recommendations |
+| GET | `/api/v1/ai-review/recommendations/pending` | API key | ✅ | Legacy alias |
+| POST | `/api/v1/ai-recommendations/:id/accept` | API key | ✅ | Accept (calibration draft only) |
+| POST | `/api/v1/ai-recommendations/:id/reject` | API key | ✅ | Reject |
+| POST | `/api/v1/ai-review/recommendations/:id/accept` | API key | ✅ | Legacy alias |
+| POST | `/api/v1/ai-review/recommendations/:id/reject` | API key | ✅ | Legacy alias |
 
 ---
 
@@ -257,6 +284,10 @@ See [AUTH_LOCAL.md](AUTH_LOCAL.md).
 
 ## Related
 
+- [AGENT_QUICKSTART.md](AGENT_QUICKSTART.md) — AI agent / OpenClaw consumer loop
+- [MCP.md](MCP.md) — stdio MCP bridge
+- [OPENCLAW_INTEGRATION.md](OPENCLAW_INTEGRATION.md) — RD↔OpenClaw both directions
+- [openapi.yaml](openapi.yaml) — OpenAPI 3
 - [CONFIGURATION.md](CONFIGURATION.md)
 - [ONBOARDING.md](ONBOARDING.md)
 - [FEATURE_COMPLETENESS_AUDIT.md](FEATURE_COMPLETENESS_AUDIT.md)
