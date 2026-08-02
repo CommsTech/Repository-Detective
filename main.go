@@ -1001,6 +1001,11 @@ func initializeComponents() error {
 		IACScannerMaxFindings:       config.IACScannerMaxFindings,
 	})
 	appGlobalSnapshot = globalSnapshot
+	if err := loadAndApplyPlatformSettingsOverrides(); err != nil {
+		logger.Warnf("platform settings overrides: %v", err)
+	} else {
+		globalSnapshot = appGlobalSnapshot
+	}
 	initNotifyManager()
 	controlPlaneHandler = api.NewHandler(bugbotStore, globalSnapshot, logger)
 	if notifyManager != nil {
@@ -1113,6 +1118,10 @@ func initializeComponents() error {
 			uiHandler.SetSuppressionBackend(true, suppressionUIBridge{})
 		}
 		uiHandler.SetReadinessFn(func() operator.Readiness { return buildReadiness("running") })
+		uiHandler.SetPlatformSettingsApplier(func(settings store.PlatformSettings) error {
+			applyPlatformSettingsToRuntime(settings)
+			return nil
+		})
 		operatorUI = uiHandler
 		logger.Infof("Operator UI enabled at %s", uiHandler.BasePath())
 	} else {

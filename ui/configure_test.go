@@ -1,12 +1,15 @@
 package ui_test
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"git.commsnet.org/commstech/bugbot/internal/security"
 	"git.commsnet.org/commstech/bugbot/notify"
 	"git.commsnet.org/commstech/bugbot/operator"
 	"git.commsnet.org/commstech/bugbot/store"
@@ -53,10 +56,52 @@ func TestConfigurePageRemediationPRSection(t *testing.T) {
 	body := w.Body.String()
 	for _, want := range []string{
 		"id=\"remediation-pr\"", "remediation_pr_enabled", "Beta default", "gitea_token",
+		"id=\"edit-settings\"", "Save settings", "scan_profile",
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("missing %q in configure page", want)
 		}
+	}
+}
+
+func TestConfigureSavePersistsSettings(t *testing.T) {
+	dir := t.TempDir()
+	s, _ := store.Open(store.Config{Enabled: true, Path: filepath.Join(dir, "cfg-save.db")})
+	defer s.Close()
+	r, h := testUIWithReadiness(t, s)
+	h.SetPlatformSettingsApplier(func(settings store.PlatformSettings) error { return nil })
+
+	csrf := security.CSRFToken("test-secret", "configure-test-key")
+	form := url.Values{}
+	form.Set("csrf_token", csrf)
+	form.Set("scan_profile", store.ScanProfileBetaStandard)
+	form.Set("severity_gate", "high")
+	form.Set("confidence_gate", "0.85")
+	form.Set("analysis_depth", "2")
+	form.Set("auto_create_issues", "false")
+	form.Set("issue_policy", "off")
+	form.Set("remediation_policy", "suggest")
+	form.Set("enable_gitleaks", "true")
+	form.Set("enable_trivy", "true")
+	form.Set("scheduler_enabled", "true")
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodPost, "/ui/configure", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("X-Repository-Detective-API-Key", "configure-test-key")
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusSeeOther {
+		t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
+	}
+	saved, err := s.GetPlatformSettings(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if saved.ScanProfile != store.ScanProfileBetaStandard {
+		t.Fatalf("saved profile=%q", saved.ScanProfile)
+	}
+	if saved.SchedulerEnabled == nil || !*saved.SchedulerEnabled {
+		t.Fatal("expected scheduler enabled saved")
 	}
 }
 

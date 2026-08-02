@@ -51,6 +51,7 @@ type Handler struct {
 	scanTrigger          ScanTrigger
 	readinessFn          func() operator.Readiness
 	platform             PlatformContext
+	applyPlatformSettings PlatformSettingsApplier
 }
 
 // IssueReconciler previews and applies existing issue reconciliation.
@@ -224,6 +225,7 @@ func (h *Handler) RegisterRoutes(g *gin.RouterGroup) {
 	g.POST("/findings/:id/mark-intentional", h.MarkIntentionalStandalone)
 	g.POST("/findings/:id/mark-false-positive", h.MarkFindingFalsePositive)
 	g.GET("/configure", h.Configure)
+	g.POST("/configure", h.SaveConfigure)
 	g.GET("/preinstall", h.Preinstall)
 	g.POST("/preinstall", h.StartPreinstallAudit)
 	g.GET("/preinstall/audits/:audit_id", h.PreinstallAuditDetail)
@@ -1464,22 +1466,7 @@ func (h *Handler) MarkPreinstallReportReviewed(c *gin.Context) {
 }
 
 func (h *Handler) Configure(c *gin.Context) {
-	if !h.requireStore(c) {
-		return
-	}
-	var readiness operator.Readiness
-	if h.readinessFn != nil {
-		readiness = h.readinessFn()
-	}
-	caps := buildCapabilityStatuses(readiness, h.notifyGlobal, h.platform, h.basePath)
-	sections := buildConfigureSections(readiness, h.platform, h.notifyGlobal, h.global, h.basePath)
-	h.renderNav(c, "configure.html", "Configure", "settings", map[string]any{
-		"Readiness":     readiness,
-		"Capabilities":  caps,
-		"Platform":      h.platform,
-		"Sections":      sections,
-		"SetupComplete": h.isSetupComplete(c.Request.Context()),
-	})
+	h.renderConfigurePage(c, "", store.PlatformSettings{})
 }
 
 func (h *Handler) Learning(c *gin.Context) {

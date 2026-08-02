@@ -7,17 +7,28 @@
 .rd-config-nav a { font-size:.875rem; padding:.35rem .65rem; border-radius:6px; background:var(--rd-surface-2); text-decoration:none; }
 .rd-config-section { scroll-margin-top:5rem; }
 .rd-config-section:target { outline:2px solid var(--rd-accent); outline-offset:4px; border-radius:8px; }
-@media print { .rd-sidebar, .rd-topbar, .rd-config-nav { display:none !important; } }
+.rd-config-form label { display:block; margin:.65rem 0 .25rem; font-weight:600; }
+.rd-config-form select, .rd-config-form input[type="text"], .rd-config-form input[type="number"] {
+  width:min(100%, 28rem); max-width:100%; padding:.4rem .55rem;
+}
+.rd-config-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(14rem,1fr)); gap:.75rem 1.25rem; margin:1rem 0; }
+.rd-config-grid label { font-weight:500; display:flex; align-items:center; gap:.45rem; margin:0; }
+.rd-config-actions { display:flex; flex-wrap:wrap; gap:.75rem; align-items:center; margin-top:1.25rem; }
+@media print { .rd-sidebar, .rd-topbar, .rd-config-nav, .rd-config-actions { display:none !important; } }
 </style>
 </head>
 <body class="rd-app">
 {{template "nav" .}}
+{{if .Data.Error}}<div class="rd-alert" role="alert">{{.Data.Error}}</div>{{end}}
+{{if .Data.NoticeText}}<div class="rd-alert info" role="status">{{.Data.NoticeText}}</div>{{end}}
 {{if .Notice}}<div class="rd-alert info" role="status">{{.Notice}}</div>{{end}}
 
 <div class="rd-card">
   <div class="rd-card-head"><h2>Platform configuration</h2><span class="rd-chip">Settings</span></div>
-  <p class="rd-muted">Edit <code>config/config.yaml</code> or environment variables, then restart the service. Secrets are never shown — only present/missing.</p>
+  <p class="rd-muted">Change platform defaults here. Secrets (API keys, forge tokens, webhook URLs) stay in <code>.env</code> and are never shown. Per-repo overrides still live under each repository’s settings.</p>
+  {{if .Data.SavedAt}}<p class="rd-muted">Last saved: {{.Data.SavedAt}}</p>{{end}}
   <ul class="rd-config-nav" aria-label="Jump to feature">
+    <li><a href="#edit-settings">Edit settings</a></li>
     {{range .Data.Sections}}<li><a href="#{{.ID}}">{{.Title}}</a></li>{{end}}
   </ul>
   <ul class="rd-quicklink-list">
@@ -26,6 +37,113 @@
     <li><a href="{{.BasePath}}/preinstall{{apiKeyQS .APIKey}}">Pre-install audit workflow</a></li>
   </ul>
 </div>
+
+{{with .Data.Form}}
+<section id="edit-settings" class="rd-card rd-config-section" aria-labelledby="cfg-edit">
+  <div class="rd-card-head"><h2 id="cfg-edit">Edit settings</h2><span class="rd-badge completed">writable</span></div>
+  <form class="rd-config-form" method="post" action="{{$.BasePath}}/configure{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}">
+    <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+
+    <h3>Scan profile &amp; gates</h3>
+    <label for="scan_profile">Scan profile</label>
+    <select id="scan_profile" name="scan_profile">
+      {{range $.Data.Profiles}}
+      <option value="{{.}}" {{if eq $.Data.Form.ScanProfile .}}selected{{end}}>{{.}}</option>
+      {{end}}
+    </select>
+    <p class="rd-muted">{{index $.Data.ProfileDescriptions .ScanProfile}}</p>
+
+    <label for="severity_gate">Severity gate</label>
+    <select id="severity_gate" name="severity_gate">
+      <option value="critical" {{if eq .SeverityGate "critical"}}selected{{end}}>critical</option>
+      <option value="high" {{if eq .SeverityGate "high"}}selected{{end}}>high</option>
+      <option value="medium" {{if eq .SeverityGate "medium"}}selected{{end}}>medium</option>
+      <option value="low" {{if eq .SeverityGate "low"}}selected{{end}}>low</option>
+      <option value="info" {{if eq .SeverityGate "info"}}selected{{end}}>info</option>
+    </select>
+
+    <label for="confidence_gate">Confidence gate (0–1)</label>
+    <input id="confidence_gate" name="confidence_gate" type="number" min="0" max="1" step="0.01" value="{{printf "%.2f" .ConfidenceGate}}">
+
+    <label for="analysis_depth">Analysis depth</label>
+    <select id="analysis_depth" name="analysis_depth">
+      <option value="1" {{if eq .AnalysisDepth 1}}selected{{end}}>1</option>
+      <option value="2" {{if eq .AnalysisDepth 2}}selected{{end}}>2</option>
+      <option value="3" {{if eq .AnalysisDepth 3}}selected{{end}}>3</option>
+    </select>
+
+    <h3>Issue filing &amp; remediation</h3>
+    <label for="auto_create_issues">Auto-create forge issues</label>
+    <select id="auto_create_issues" name="auto_create_issues">
+      <option value="true" {{if .AutoCreateIssues}}selected{{end}}>true</option>
+      <option value="false" {{if not .AutoCreateIssues}}selected{{end}}>false (report-only)</option>
+    </select>
+
+    <label for="issue_policy">Issue policy</label>
+    <select id="issue_policy" name="issue_policy">
+      <option value="all" {{if eq .IssuePolicy "all"}}selected{{end}}>all</option>
+      <option value="fingerprint" {{if eq .IssuePolicy "fingerprint"}}selected{{end}}>fingerprint</option>
+      <option value="off" {{if eq .IssuePolicy "off"}}selected{{end}}>off</option>
+    </select>
+
+    <label for="remediation_policy">Remediation policy</label>
+    <select id="remediation_policy" name="remediation_policy">
+      <option value="off" {{if eq .RemediationPolicy "off"}}selected{{end}}>off</option>
+      <option value="suggest" {{if eq .RemediationPolicy "suggest"}}selected{{end}}>suggest</option>
+      <option value="auto" {{if eq .RemediationPolicy "auto"}}selected{{end}}>auto</option>
+    </select>
+
+    <div class="rd-config-grid">
+      <label><input type="checkbox" name="remediation_planner_enabled" value="true" {{if .RemediationPlannerEnabled}}checked{{end}}> Remediation planner</label>
+      <label><input type="checkbox" name="remediation_pr_enabled" value="true" {{if .RemediationPREnabled}}checked{{end}}> Remediation PRs</label>
+      <label><input type="checkbox" name="evidence_closure_enabled" value="true" {{if .EvidenceClosureEnabled}}checked{{end}}> Evidence closure</label>
+    </div>
+
+    <h3>Platform features</h3>
+    <div class="rd-config-grid">
+      <label><input type="checkbox" name="scheduler_enabled" value="true" {{if .SchedulerEnabled}}checked{{end}}> Scheduler</label>
+      <label><input type="checkbox" name="schedule_enabled" value="true" {{if .ScheduleEnabled}}checked{{end}}> Default schedule on</label>
+      <label><input type="checkbox" name="notifications_enabled" value="true" {{if .NotificationsEnabled}}checked{{end}}> Notifications</label>
+      <label><input type="checkbox" name="preinstall_audit_enabled" value="true" {{if .PreinstallAuditEnabled}}checked{{end}}> Pre-install audit</label>
+    </div>
+    <label for="schedule_cron">Default schedule cron</label>
+    <input id="schedule_cron" name="schedule_cron" type="text" placeholder="0 3 * * *" value="{{.ScheduleCron}}">
+
+    <h3>Scanners</h3>
+    <div class="rd-config-grid">
+      <label><input type="checkbox" name="enable_trivy" value="true" {{if .EnableTrivy}}checked{{end}}> Trivy</label>
+      <label><input type="checkbox" name="enable_grype" value="true" {{if .EnableGrype}}checked{{end}}> Grype / SBOM</label>
+      <label><input type="checkbox" name="enable_gitleaks" value="true" {{if .EnableGitleaks}}checked{{end}}> Gitleaks</label>
+      <label><input type="checkbox" name="enable_semgrep" value="true" {{if .EnableSemgrep}}checked{{end}}> Semgrep</label>
+      <label><input type="checkbox" name="enable_govulncheck" value="true" {{if .EnableGovulncheck}}checked{{end}}> Govulncheck</label>
+      <label><input type="checkbox" name="enable_gosec" value="true" {{if .EnableGosec}}checked{{end}}> Gosec</label>
+      <label><input type="checkbox" name="enable_staticcheck" value="true" {{if .EnableStaticcheck}}checked{{end}}> Staticcheck</label>
+      <label><input type="checkbox" name="enable_hadolint" value="true" {{if .EnableHadolint}}checked{{end}}> Hadolint</label>
+      <label><input type="checkbox" name="enable_checkov" value="true" {{if .EnableCheckov}}checked{{end}}> Checkov</label>
+      <label><input type="checkbox" name="enable_linters" value="true" {{if .EnableLinters}}checked{{end}}> Linters</label>
+      <label><input type="checkbox" name="enable_code_graph" value="true" {{if .EnableCodeGraph}}checked{{end}}> Code graph</label>
+      <label><input type="checkbox" name="enable_performance_checks" value="true" {{if .EnablePerformanceChecks}}checked{{end}}> Performance checks</label>
+    </div>
+
+    <h3>AI recommendations</h3>
+    <p class="rd-muted">Off by default. When enabled, keep token budgets low. Endpoint/API keys remain in <code>.env</code>.</p>
+    <div class="rd-config-grid">
+      <label><input type="checkbox" name="ai_recommendations_enabled" value="true" {{if .AIRecommendationsEnabled}}checked{{end}}> Enable AI recommendations</label>
+    </div>
+    <label for="ai_recommendations_max_tokens_per_scan">Max tokens per scan</label>
+    <input id="ai_recommendations_max_tokens_per_scan" name="ai_recommendations_max_tokens_per_scan" type="number" min="0" step="1" value="{{.AIRecommendationsMaxTokensPerScan}}">
+    <label for="ai_recommendations_token_budget_per_scan">Token budget per scan</label>
+    <input id="ai_recommendations_token_budget_per_scan" name="ai_recommendations_token_budget_per_scan" type="number" min="0" step="1" value="{{.AIRecommendationsTokenBudgetPerScan}}">
+    <label for="ai_recommendations_max_findings_per_scan">Max findings per scan</label>
+    <input id="ai_recommendations_max_findings_per_scan" name="ai_recommendations_max_findings_per_scan" type="number" min="0" step="1" value="{{.AIRecommendationsMaxFindingsPerScan}}">
+
+    <div class="rd-config-actions">
+      <button type="submit" class="rd-btn">Save settings</button>
+      <span class="rd-muted">Unchecked boxes save as disabled.</span>
+    </div>
+  </form>
+</section>
+{{end}}
 
 {{range .Data.Sections}}
 <section id="{{.ID}}" class="rd-card rd-config-section" aria-labelledby="cfg-{{.ID}}">
@@ -36,7 +154,6 @@
   <p>{{.Summary}}</p>
   {{if .BetaDefault}}<p class="rd-muted"><strong>Beta default:</strong> {{.BetaDefault}}</p>{{end}}
   {{if .SafetyNote}}<p class="rd-muted"><strong>Safety:</strong> {{.SafetyNote}}</p>{{end}}
-  {{if .RestartRequired}}<p class="rd-muted">Restart required after changing these keys.</p>{{end}}
   <table class="rd-table">
     <tr><th scope="col">Config key</th><th scope="col">Effective value</th><th scope="col">Source</th></tr>
     {{range .Settings}}

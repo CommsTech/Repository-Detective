@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-const currentSchemaVersion = 22
+const currentSchemaVersion = 23
 
 var migrationStatements = map[int][]string{
 	1: {
@@ -712,6 +712,14 @@ var migrationStatements = map[int][]string{
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_ai_advisory_recs_review ON ai_advisory_recommendations(review_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_ai_advisory_recs_fp ON ai_advisory_recommendations(finding_fingerprint)`,
+	},
+	23: {
+		`CREATE TABLE IF NOT EXISTS platform_settings (
+			id INTEGER PRIMARY KEY CHECK (id = 1),
+			settings_json TEXT NOT NULL DEFAULT '{}',
+			updated_at TEXT NOT NULL,
+			updated_by TEXT NOT NULL DEFAULT ''
+		)`,
 	},
 }
 

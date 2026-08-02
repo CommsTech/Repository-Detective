@@ -232,4 +232,7 @@ type QueryStore interface {
 	UpdateAIAdvisoryRecommendationStatus(ctx context.Context, id int64, status string) error
 	ListFindingsForScan(ctx context.Context, scanID string, limit int) ([]Finding, error)
 	ListFindingInstancesByScan(ctx context.Context, scanID string) (map[int64]FindingInstance, error)
+
+	GetPlatformSettings(ctx context.Context) (PlatformSettings, error)
+	SavePlatformSettings(ctx context.Context, settings PlatformSettings) error
 }

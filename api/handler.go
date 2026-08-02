@@ -25,6 +25,13 @@ func NewHandler(s store.QueryStore, global store.GlobalSettingsSnapshot, logger 
 	return &Handler{store: s, global: global, logger: logger}
 }
 
+// SetGlobal replaces the in-memory global settings snapshot used by API handlers.
+func (h *Handler) SetGlobal(global store.GlobalSettingsSnapshot) {
+	if h != nil {
+		h.global = global
+	}
+}
+
 // SetNotificationGlobal attaches redacted global notification config for settings responses.
 func (h *Handler) SetNotificationGlobal(cfg notify.Config) {
 	if h != nil {
