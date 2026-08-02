@@ -59,9 +59,6 @@ func (h *Handler) extractUIAPIKey(c *gin.Context) (string, bool) {
 	if key := c.GetHeader("X-Repository-Detective-API-Key"); key != "" {
 		return key, false
 	}
-	if key := c.GetHeader("X-Bugbot-API-Key"); key != "" { // legacy alias
-		return key, false
-	}
 	if auth := c.GetHeader("Authorization"); strings.HasPrefix(auth, "Bearer ") {
 		return strings.TrimSpace(strings.TrimPrefix(auth, "Bearer ")), false
 	}

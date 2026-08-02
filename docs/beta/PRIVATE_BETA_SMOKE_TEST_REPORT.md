@@ -63,7 +63,7 @@ docker compose up -d --build
 
 ## Report-only scan (prior validation)
 
-Scan `1c4db8a1a7ed8d1e` on `commstech/repository-detective`:
+Scan `1c4db8a1a7ed8d1e` on `commstech/Repository-Detective`:
 
 | Field | Value |
 |-------|-------|

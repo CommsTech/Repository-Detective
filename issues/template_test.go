@@ -16,7 +16,7 @@ func TestRenderIssueBodyIncludesSections(t *testing.T) {
 		Category:       "security",
 		Source:         "semgrep",
 		RuleID:         "rule-x",
-		Fingerprint:    "bugbot-abc123",
+		Fingerprint:    "rd-abc123",
 		File:           "src/app.py",
 		LineNumber:     10,
 		Confidence:     0.9,
@@ -59,7 +59,7 @@ func TestRenderIssueBodyIncludesSections(t *testing.T) {
 		"## Report flow",
 		"## Acceptance criteria",
 		"## Tracking",
-		"Repository Detective fingerprint: bugbot-abc123",
+		"Repository Detective fingerprint: rd-abc123",
 		"- Scan ID: `scan-1`",
 		"- Finding ID: `99`",
 		"src/app.py",
@@ -79,7 +79,7 @@ func TestRenderIssueBodyRedactsSecrets(t *testing.T) {
 		RuleID:      "aws-key",
 		Confidence:  0.95,
 		CodeSnippet: `token="AKIAIOSFODNN7EXAMPLE"`,
-		Fingerprint: "bugbot-secret",
+		Fingerprint: "rd-secret",
 	}
 	body := RenderIssueBody(IssueRenderInput{Issue: issue, Repository: "owner/repo"})
 	if strings.Contains(body, "AKIAIOSFODNN7EXAMPLE") {
@@ -96,7 +96,7 @@ func TestRenderIssueBodyContainerFinding(t *testing.T) {
 		PackageName: "openssl",
 		File:        "alpine:3.20",
 		Evidence:    `{"image":"alpine:3.20","image_digest":"sha256:abc","version":"3.1.4","fixed_version":"3.1.5","cve":"CVE-2024-TEST"}`,
-		Fingerprint: "bugbot-container",
+		Fingerprint: "rd-container",
 		Confidence:  0.92,
 	}
 	body := RenderIssueBody(IssueRenderInput{Issue: issue, Repository: "owner/repo", ScanID: "scan-c"})
@@ -115,7 +115,7 @@ func TestRenderIssueBodySBOMFinding(t *testing.T) {
 		Source:      "sbom",
 		PackageName: "lodash",
 		Evidence:    `{"sbom_component":"pkg:npm/lodash@4.17.20","ecosystem":"npm","license":"MIT"}`,
-		Fingerprint: "bugbot-sbom",
+		Fingerprint: "rd-sbom",
 		Confidence:  0.88,
 	}
 	body := RenderIssueBody(IssueRenderInput{Issue: issue, Repository: "owner/repo"})
@@ -134,7 +134,7 @@ func TestRenderIssueBodyHistoricalSecret(t *testing.T) {
 		Source:      "gitleaks",
 		CommitSHA:   "deadbeef",
 		SourceType:  "history",
-		Fingerprint: "bugbot-hist",
+		Fingerprint: "rd-hist",
 		Confidence:  0.9,
 		CodeSnippet: "key=[REDACTED]",
 	}
@@ -158,7 +158,6 @@ func TestRenderIssueBodyReportOnlyPolicy(t *testing.T) {
 }
 
 func TestBuildLabelsIncludesCategoryAndSeverity(t *testing.T) {
-	SetLabelCompatMode(LabelCompatNewOnly)
 	issue := &ai.CodeIssue{
 		Severity:   "high",
 		Category:   "secret",

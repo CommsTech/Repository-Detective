@@ -78,7 +78,7 @@ func main() {
 }
 
 func TestRunAllReturnsCandidates(t *testing.T) {
-	dir, err := os.MkdirTemp("", "bugbot-all-*")
+	dir, err := os.MkdirTemp("", "rd-all-*")
 	if err != nil {
 		t.Fatal(err)
 	}

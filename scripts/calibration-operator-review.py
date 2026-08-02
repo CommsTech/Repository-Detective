@@ -14,7 +14,7 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-DB = ROOT / "data/bugbot.db"
+DB = ROOT / "data/repository-detective.db"
 REPORT = ROOT / "docs/dogfood-reports/calibration-operator-review-report.md"
 
 REPOS = [
@@ -31,12 +31,12 @@ GRAPH_NOISE = [
 
 
 def load_api() -> tuple[str, str]:
-    api_key = os.environ.get("BUGBOT_API_KEY") or os.environ.get("REPOSITORY_DETECTIVE_API_KEY", "")
+    api_key = os.environ.get("REPOSITORY_DETECTIVE_API_KEY") or os.environ.get("REPOSITORY_DETECTIVE_API_KEY", "")
     for line in (ROOT / ".env").read_text().splitlines() if (ROOT / ".env").exists() else []:
         if "=" not in line or line.strip().startswith("#"):
             continue
         k, _, v = line.partition("=")
-        if k.strip() in ("BUGBOT_API_KEY", "REPOSITORY_DETECTIVE_API_KEY") and not api_key:
+        if k.strip() in ("REPOSITORY_DETECTIVE_API_KEY", "REPOSITORY_DETECTIVE_API_KEY") and not api_key:
             api_key = v.strip().strip('"').strip("'")
     if not api_key:
         sys.exit("API key required")

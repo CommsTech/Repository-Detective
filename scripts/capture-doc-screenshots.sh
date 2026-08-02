@@ -5,7 +5,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OUT="${SCREENSHOT_DIR:-$ROOT/docs/assets/screenshots}"
 BASE="${RD_SCREENSHOT_BASE:-http://127.0.0.1:8081/ui}"
-API_KEY="${REPOSITORY_DETECTIVE_API_KEY:-${BUGBOT_API_KEY:-}}"
+API_KEY="${REPOSITORY_DETECTIVE_API_KEY}"
 
 mkdir -p "$OUT"
 

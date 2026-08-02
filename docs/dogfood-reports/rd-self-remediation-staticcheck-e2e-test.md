@@ -1,7 +1,7 @@
 # Repository Detective Staticcheck S1039 Self-Remediation Test
 
 **Date:** 2026-06-06  
-**Repository:** commstech/repository-detective  
+**Repository:** commstech/Repository-Detective  
 **Rule:** staticcheck S1039 (unnecessary `fmt.Sprintf` on string literal)  
 **Outcome:** **PASS** — full loop completed with verified closure
 
@@ -20,7 +20,7 @@
 | Field | Value |
 |-------|-------|
 | Finding ID | **11658** |
-| Fingerprint | `bugbot-c68376af29742113` |
+| Fingerprint | `rd-c68376af29742113` |
 | File | `internal/dogfood/staticcheck_e2e_marker.go:8` |
 | Severity | low |
 | Category | code_quality |
@@ -37,7 +37,7 @@ Controlled marker commit on `main`: `d679d0b` (`test(dogfood): add controlled st
 | Patch attempt (PR opened) | **pa-12474c8d554fbbf5** |
 | Failed attempts (debugging) | `pa-a9d9285d616b3296`, `pa-4451966602b0033c`, `pa-1821e7f6a02501c6` |
 | Pull request | [#288](https://git.commsnet.org/commstech/repository-detective/pulls/288) |
-| PR branch | `repository-detective/fix/bugbot-c6837` |
+| PR branch | `repository-detective/fix/repository-detective-c6837` |
 | PR commit | `1ee87dcbfb0e415acdde014ef1c312a0394a4886` |
 | Merge commit (manual) | **a0d32599ff21ab94bbbef905791ebf920d542d84** |
 | Post-merge rescan | **6bdad6c92f1c8a0c** |

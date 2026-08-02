@@ -27,8 +27,8 @@ func initNotifyManager() {
 	)
 	resolve := func(repositoryID int64) notify.EffectiveSettings {
 		repoSettings := store.RepoSettings{}
-		if bugbotStore != nil && repositoryID > 0 {
-			if s, err := bugbotStore.GetRepoSettings(context.Background(), repositoryID); err == nil {
+		if rdStore != nil && repositoryID > 0 {
+			if s, err := rdStore.GetRepoSettings(context.Background(), repositoryID); err == nil {
 				repoSettings = s
 			}
 		}

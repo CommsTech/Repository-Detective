@@ -11,7 +11,7 @@ func TestEvaluateCommitStatusSuccess(t *testing.T) {
 	if eval.State != CommitStateSuccess {
 		t.Fatalf("expected success, got %q", eval.State)
 	}
-	if eval.Description != "Bugbot scan passed with no findings" {
+	if eval.Description != "Repository-Detective scan passed with no findings" {
 		t.Fatalf("unexpected description %q", eval.Description)
 	}
 }
@@ -24,7 +24,7 @@ func TestEvaluateCommitStatusFailureOnHighFinding(t *testing.T) {
 	if eval.State != CommitStateFailure {
 		t.Fatalf("expected failure, got %q", eval.State)
 	}
-	if eval.Description != "Bugbot found 1 high, 1 medium findings" {
+	if eval.Description != "Repository-Detective found 1 high, 1 medium findings" {
 		t.Fatalf("unexpected description %q", eval.Description)
 	}
 }
@@ -84,7 +84,7 @@ func TestEvaluateCommitStatusCriticalCountsAsFailure(t *testing.T) {
 	if eval.State != CommitStateFailure {
 		t.Fatalf("expected failure for critical finding, got %q", eval.State)
 	}
-	if eval.Description != "Bugbot found 1 critical findings" {
+	if eval.Description != "Repository-Detective found 1 critical findings" {
 		t.Fatalf("unexpected description %q", eval.Description)
 	}
 }
@@ -100,7 +100,7 @@ func TestIsCommitSHA(t *testing.T) {
 
 func TestPendingCommitStatusEvaluation(t *testing.T) {
 	eval := PendingCommitStatusEvaluation()
-	if eval.State != CommitStatePending || eval.Description != "Bugbot scan started" {
+	if eval.State != CommitStatePending || eval.Description != "Repository-Detective scan started" {
 		t.Fatalf("unexpected pending eval: %+v", eval)
 	}
 }

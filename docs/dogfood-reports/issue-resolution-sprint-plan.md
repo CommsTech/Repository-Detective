@@ -89,7 +89,7 @@ Graph architecture rules dominate volume (82 rows). Security `fix_now` concentra
 | SEC-HARDCODED-SECRET | Move literals to env/test builders; redact examples; split real secrets vs test tokens | `*_test.go`, `config/*.example`, docs with curl samples |
 | TRIVY-MIS-DS002 | Add non-root `USER` in Dockerfiles after install steps | `Dockerfile`, `Dockerfile.offline`, runner images |
 
-**Tests:** `go test ./...`, `./scripts/operator-smoke-test.sh`, targeted rescan of `commstech/repository-detective`.
+**Tests:** `go test ./...`, `./scripts/operator-smoke-test.sh`, targeted rescan of `commstech/Repository-Detective`.
 
 **Risk:** Medium — secret/rule changes need careful review to avoid breaking tests or docs.
 
@@ -220,7 +220,7 @@ staticcheck ./...          # when available
 
 After each batch:
 
-1. Run full scan on `commstech/repository-detective` (manual or scheduled).
+1. Run full scan on `commstech/Repository-Detective` (manual or scheduled).
 2. `GET /api/v1/repos/1/reconcile-issues/preview` — confirm fingerprints gone.
 3. Evidence-close only (`evidence_closure_close_issues: false` default — use verify + manual Gitea close or enable close when ready).
 

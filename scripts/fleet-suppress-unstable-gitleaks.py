@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Suppress historical unstable gitleaks RuleIDs that embedded /tmp/bugbot-* paths.
+"""Suppress historical unstable gitleaks RuleIDs that embedded /tmp/rd-* paths.
 
 After scanners/gitleaks.go stable-ID fix, old fingerprints never reappear; clear the
 open queue so operators see only actionable current findings.
@@ -15,9 +15,9 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-DB = ROOT / "data/bugbot.db"
+DB = ROOT / "data/repository-detective.db"
 API = os.environ.get("RD_API", "http://127.0.0.1:8081/api/v1").rstrip("/")
-KEY = os.environ.get("REPOSITORY_DETECTIVE_API_KEY") or os.environ.get("BUGBOT_API_KEY") or ""
+KEY = os.environ.get("REPOSITORY_DETECTIVE_API_KEY") or os.environ.get("REPOSITORY_DETECTIVE_API_KEY") or ""
 
 
 def api(method: str, path: str, body: dict | None = None):
@@ -46,7 +46,7 @@ def main() -> int:
           ON s.fingerprint = f.fingerprint AND s.repository_id = f.repository_id AND s.active = 1
         WHERE f.status = 'open' AND s.id IS NULL
           AND (
-            f.rule_id LIKE 'GITLEAKS-/tmp/bugbot-%'
+            f.rule_id LIKE 'GITLEAKS-/tmp/rd-%'
             OR f.rule_id LIKE '`%'
             OR f.file_path LIKE 'archive/%'
             OR f.file_path LIKE 'wiki/%'

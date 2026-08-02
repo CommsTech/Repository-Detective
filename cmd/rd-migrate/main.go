@@ -13,10 +13,7 @@ import (
 func main() {
 	path := os.Getenv("REPOSITORY_DETECTIVE_DATABASE_PATH")
 	if path == "" {
-		path = os.Getenv("BUGBOT_DATABASE_PATH")
-	}
-	if path == "" {
-		path = filepath.Join("data", "bugbot.db")
+		path = filepath.Join("data", "repository-detective.db")
 	}
 	s, err := store.Open(store.Config{Enabled: true, Path: path})
 	if err != nil {

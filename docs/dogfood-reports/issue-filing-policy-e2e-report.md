@@ -39,4 +39,4 @@ Not run on non-product repos per safety rules. Product repo fixture issues close
 - `forge_open_issues` vs `mapped_open_issues` / `unmapped_open_issues`
 - `issue_filing_enabled` and `dry_run_report_only` per scan
 
-Example: fingerprint `bugbot-a7fb8b9ed08e7f8f` maps to Gitea #205 (historical); open findings without issues remain visible in queue.
+Example: fingerprint `rd-a7fb8b9ed08e7f8f` maps to Gitea #205 (historical); open findings without issues remain visible in queue.

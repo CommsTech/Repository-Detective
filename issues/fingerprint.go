@@ -30,7 +30,7 @@ type FingerprintInput struct {
 	EvidenceHash string
 }
 
-// ComputeFingerprint returns a stable Bugbot fingerprint for cross-scan tracking.
+// ComputeFingerprint returns a stable Repository Detective fingerprint for cross-scan tracking.
 func ComputeFingerprint(in FingerprintInput) string {
 	lineBlock := (in.Line / lineBlockSize) * lineBlockSize
 	if in.Line > 0 && lineBlock == 0 {
@@ -49,7 +49,7 @@ func ComputeFingerprint(in FingerprintInput) string {
 	}
 
 	sum := sha256.Sum256([]byte(strings.Join(parts, "|")))
-	return "bugbot-" + hex.EncodeToString(sum[:8])
+	return "rd-" + hex.EncodeToString(sum[:8])
 }
 
 // FingerprintFromIssue builds fingerprint input from a CodeIssue.
@@ -87,8 +87,6 @@ func ExtractFingerprintFromBody(body string) string {
 		for _, marker := range []string{
 			"- " + FingerprintBodyMarker,
 			FingerprintBodyMarker,
-			"- Bugbot fingerprint:",
-			"Bugbot fingerprint:",
 		} {
 			if strings.HasPrefix(line, marker) {
 				return strings.TrimSpace(strings.TrimPrefix(line, marker))

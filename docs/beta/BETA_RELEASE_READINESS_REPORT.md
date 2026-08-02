@@ -38,13 +38,13 @@ Generated: 2026-06-02 (Post-learning beta gate sprint)
 ## Remaining blockers
 
 1. Rebuild live `repository-detective` container for learning API on deployed instance
-2. Optional: mirror benchmark fixture to GitHub for Cursor Bugbot side-by-side run
+2. Optional: mirror benchmark fixture to GitHub for Cursor Repository-Detective side-by-side run
 3. `data/` directory owned by container user — document Docker-based operator DB updates
 
 ## Recommendation
 
 **Private beta ready** — packaging fixed, staticcheck validated, benchmark fixture complete, calibration reviewed safely.
 
-**Public beta:** pending live container rebuild + optional Cursor Bugbot mirror benchmark.
+**Public beta:** pending live container rebuild + optional Cursor Repository-Detective mirror benchmark.
 
 Not ready for: unlimited issue filing, all-repo scan, global auto-calibration.

@@ -4,7 +4,7 @@ Recorded: 2026-06-02
 Latest commit: `14ddb7c`  
 Latest scan: `27fbd37be97ef5f7`
 
-## Product repo (commstech/repository-detective)
+## Product repo (commstech/Repository-Detective)
 
 | Metric | Value |
 |---|---:|

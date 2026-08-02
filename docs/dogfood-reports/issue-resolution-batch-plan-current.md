@@ -70,7 +70,7 @@ curl -s -H "X-Repository-Detective-API-Key: $KEY" \
 | Log redaction | Backlog: access-log sanitization |
 | `rate_limit_per_minute` unused | Backlog: wire or document |
 
-**commstech/repository-detective repo:** 0 critical open; 2 high static (SEC-CMD-EXEC, SEC-SQL-CONCAT) — likely rule-definition false positives in `analyzers/static.go`.
+**commstech/Repository-Detective repo:** 0 critical open; 2 high static (SEC-CMD-EXEC, SEC-SQL-CONCAT) — likely rule-definition false positives in `analyzers/static.go`.
 
 **Tests:** `go test ./handlers/... ./main_auth_test.go ./redact/...`  
 **Risk:** Low  
@@ -85,10 +85,10 @@ curl -s -H "X-Repository-Detective-API-Key: $KEY" \
 | Rule | Count | Repos | Proposed action |
 |------|------:|-------|-----------------|
 | SEC-HARDCODED-SECRET | 12 | House_Grocery_AI, netmon, ansible_playbooks, AMMBER | Fix in **each downstream repo** — not this product repo |
-| TRIVY-MIS-DS002 | 4 | optouter, Bugbot | Dockerfile USER — **partially fixed** in Bugbot (`ab97c40`) |
-| SEC-EVAL | 1 | eagle (PyTorch `model.eval()`) | Scanner FP fix in Bugbot — **done** (`model.eval()` skip) |
+| TRIVY-MIS-DS002 | 4 | optouter, Repository-Detective | Dockerfile USER — **partially fixed** in Repository-Detective (`ab97c40`) |
+| SEC-EVAL | 1 | eagle (PyTorch `model.eval()`) | Scanner FP fix in Repository-Detective — **done** (`model.eval()` skip) |
 
-**Product repo (Bugbot) only:**
+**Product repo only:**
 
 - Rescan after deploy; evidence-close TRIVY-MIS-DS002 if absent
 - Review SEC-CMD-EXEC / SEC-SQL-CONCAT in `analyzers/static.go` (self-scan FP)
@@ -106,7 +106,7 @@ curl -s -H "X-Repository-Detective-API-Key: $KEY" \
 | `failed_scans_count: 13` | Replay failed scan IDs from dashboard |
 | `scanner_failures_count: 11` | Fix parser/timeouts |
 | `scanner_tools_missing_count: 12` | Document optional tools or disable flags |
-| Hadolint DL3018 (Bugbot) | Pin base image packages in Dockerfile |
+| Hadolint DL3018 | Pin base image packages in Dockerfile |
 
 **Tests:** `go test ./scanners/...`, operator smoke test  
 **Risk:** Low–medium
@@ -115,7 +115,7 @@ curl -s -H "X-Repository-Detective-API-Key: $KEY" \
 
 ## Batch 3 — Simple staticcheck/hadolint fixes
 
-**Scope:** Low-risk lint in **commstech/repository-detective** only first
+**Scope:** Low-risk lint in **commstech/Repository-Detective** only first
 
 | Target | Action |
 |--------|--------|
@@ -130,11 +130,11 @@ curl -s -H "X-Repository-Detective-API-Key: $KEY" \
 
 ## Batch 4 — Reliability findings
 
-**Scope:** 58 `HEALTH-IGNORED-ERROR` in Bugbot repo + fleet reliability source
+**Scope:** 58 `HEALTH-IGNORED-ERROR` in Repository-Detective repo + fleet reliability source
 
 | Action | Where |
 |--------|-------|
-| Fix clear err handling | Per-file in Bugbot first |
+| Fix clear err handling | Per-file in Repository-Detective first |
 | `already_fixed_verify` (44 triage) | Rescan + evidence close |
 
 **Tests:** Package tests + reconciliation preview  
@@ -194,10 +194,10 @@ fix → go test ./... → operator smoke → full scan → fingerprint absent �
 
 ```text
 0. ✅ P0 verification doc
-1. Bugbot Batch 1 product fixes (SEC-EVAL FP, Dockerfile USER) — shipped
-2. Rescan Bugbot → evidence-close TRIVY/EVAL FPs
+1. Repository-Detective Batch 1 product fixes (SEC-EVAL FP, Dockerfile USER) — shipped
+2. Rescan Repository-Detective → evidence-close TRIVY/EVAL FPs
 3. Batch 7 graph noise suppressions (SQL + calibration)
-4. Batch 4 reliability in Bugbot
+4. Batch 4 reliability in Repository-Detective
 5. Batch 2 scanner failures
 6. Fleet Batch 1 (one repo at a time)
 7. AI 5-issue evaluation set (not before queue is small)

@@ -33,7 +33,7 @@ Honest constraints as of the closeout sprint. Update when shipping fixes.
 
 - Wiki not auto-synced to Gitea wiki remote
 - Prefer [QUICKSTART.md](QUICKSTART.md) for new operators; [SETUP.md](SETUP.md) for full walkthrough
-- Legacy docs may mention “Bugbot” — see [BRANDING_MIGRATION.md](BRANDING_MIGRATION.md)
+- Legacy docs may mention “Repository-Detective” — see [BRANDING_MIGRATION.md](BRANDING_MIGRATION.md)
 
 ## Beta validation
 

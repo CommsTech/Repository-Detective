@@ -1,8 +1,8 @@
-# Exposing Bugbot on the Network
+# Exposing Repository-Detective on the Network
 
-If Gitea is on the public internet and Bugbot runs on a private LAN, Gitea needs a URL it can reach for webhooks. Pick one approach below.
+If Gitea is on the public internet and Repository-Detective runs on a private LAN, Gitea needs a URL it can reach for webhooks. Pick one approach below.
 
-Set `BUGBOT_PUBLIC_URL` to that URL. Webhooks go to `{BUGBOT_PUBLIC_URL}/webhook`.
+Set `REPOSITORY_DETECTIVE_PUBLIC_URL` to that URL. Webhooks go to `{REPOSITORY_DETECTIVE_PUBLIC_URL}/webhook`.
 
 | Option | Best for |
 |--------|----------|
@@ -24,16 +24,16 @@ docker compose up -d --build
 curl http://127.0.0.1:8081/health
 ```
 
-From another machine on the LAN: `curl http://<bugbot-host-ip>:8081/health`
+From another machine on the LAN: `curl http://<repository-detective-host-ip>:8081/health`
 
-### 2. Forward WAN → Bugbot host
+### 2. Forward WAN → Repository-Detective host
 
 On your router/firewall, add a port forward:
 
 | Field | Example |
 |-------|---------|
 | WAN port | 8081 or 443 |
-| Internal IP | Bugbot host (e.g. 10.0.0.50) |
+| Internal IP | Repository-Detective host (e.g. 10.0.0.50) |
 | Internal port | 8081 |
 
 ### 3. DNS and TLS
@@ -41,7 +41,7 @@ On your router/firewall, add a port forward:
 Point `repository-detective.example.com` at your public IP. Terminate TLS on the router (HAProxy/ACME) or on a reverse proxy (Option C).
 
 ```bash
-BUGBOT_PUBLIC_URL=https://repository-detective.example.com
+REPOSITORY_DETECTIVE_PUBLIC_URL=https://repository-detective.example.com
 ```
 
 ### 4. Test externally
@@ -62,7 +62,7 @@ The default `docker-compose.yml` already uses `network_mode: host` and listens o
 docker compose up -d --build
 ```
 
-Set `REPOSITORY_DETECTIVE_PORT=8081` (or legacy `BUGBOT_PORT=8081`) in `.env`.
+Set `REPOSITORY_DETECTIVE_PORT=8081` (or legacy `REPOSITORY_DETECTIVE_PORT=8081`) in `.env`.
 
 Not supported the same way on Docker Desktop for Windows/Mac.
 
@@ -70,10 +70,10 @@ Not supported the same way on Docker Desktop for Windows/Mac.
 
 ## C. Reverse proxy
 
-Example nginx upstream (see `deploy/nginx-bugbot.conf.example`):
+Example nginx upstream (see `deploy/nginx-repository-detective.conf.example`):
 
 ```nginx
-upstream bugbot {
+upstream repository_detective {
     server 10.0.0.50:8081;
 }
 
@@ -81,7 +81,7 @@ server {
     listen 443 ssl;
     server_name repository-detective.example.com;
     location / {
-        proxy_pass http://bugbot;
+        proxy_pass http://repository_detective;
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
@@ -128,8 +128,8 @@ See [TUNNEL.md](TUNNEL.md). No inbound firewall rules required.
 
 ## Security
 
-- Set `BUGBOT_WEBHOOK_SECRET` and use the same value in Gitea webhook config
-- Set `BUGBOT_API_KEY` for API and onboarding endpoints
+- Set `REPOSITORY_DETECTIVE_WEBHOOK_SECRET` and use the same value in Gitea webhook config
+- Set `REPOSITORY_DETECTIVE_API_KEY` for API and onboarding endpoints
 - Prefer HTTPS for public webhook URLs
 
 See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) if webhooks fail.

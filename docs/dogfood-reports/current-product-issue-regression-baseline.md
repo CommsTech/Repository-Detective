@@ -6,7 +6,7 @@ Recorded: 2026-06-08 after issue filing policy restore (`ddb79d6`).
 
 | Metric | Value |
 |--------|-------|
-| Product repo | `commstech/repository-detective` (ID 1) |
+| Product repo | `commstech/Repository-Detective` (ID 1) |
 | Latest scan ID | `8579510667b7de08` |
 | Live container revision | `ddb79d6` |
 | Gitea open issues | **6** (#347–351, #48) |
@@ -25,14 +25,14 @@ Recorded: 2026-06-08 after issue filing policy restore (`ddb79d6`).
 
 | # | Title | Fingerprint | Path |
 |---|-------|-------------|------|
-| 351 | Possible command execution with dynamic input | bugbot-2f535117ad969767 | `sbom/sbom.go:118` |
-| 350 | Possible hardcoded secret | bugbot-d6945f56a53d18dd | `benchmark/fixture/secret_hardcoded.go.src` |
-| 349 | Possible hardcoded secret | bugbot-0be6c994528c6e24 | `benchmark/fixture/mock_secret_test.go.src` |
-| 348 | Dynamic code execution | bugbot-68f285ebd87f8377 | `benchmark/fixture/dup_pattern_b.go.src` |
-| 347 | Dynamic code execution | bugbot-47c97d7a4ecd8dd7 | `benchmark/fixture/dup_pattern_a.go.src` |
+| 351 | Possible command execution with dynamic input | rd-2f535117ad969767 | `sbom/sbom.go:118` |
+| 350 | Possible hardcoded secret | rd-d6945f56a53d18dd | `benchmark/fixture/secret_hardcoded.go.src` |
+| 349 | Possible hardcoded secret | rd-0be6c994528c6e24 | `benchmark/fixture/mock_secret_test.go.src` |
+| 348 | Dynamic code execution | rd-68f285ebd87f8377 | `benchmark/fixture/dup_pattern_b.go.src` |
+| 347 | Dynamic code execution | rd-47c97d7a4ecd8dd7 | `benchmark/fixture/dup_pattern_a.go.src` |
 | 48 | Ops: homelab AI/Qdrant connectivity | (operator) | — |
 
-Note: #205 (Base64 entropy / config template) is **closed** — mapped fingerprint `bugbot-a7fb8b9ed08e7f8f` remains a reconciliation example of finding↔issue linkage.
+Note: #205 (Base64 entropy / config template) is **closed** — mapped fingerprint `rd-a7fb8b9ed08e7f8f` remains a reconciliation example of finding↔issue linkage.
 
 ## Pre-install audit
 

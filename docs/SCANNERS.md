@@ -56,7 +56,7 @@ enable_gitleaks: false
 gitleaks_config: ""              # optional path to operator-controlled gitleaks.toml
 gitleaks_timeout_seconds: 0       # 0 = use scanner_timeout_seconds
 enable_semgrep: false
-semgrep_config: p/ci              # registry ruleset or operator path (p/security-audit, /etc/bugbot/rules)
+semgrep_config: p/ci              # registry ruleset or operator path (p/security-audit, /etc/repository-detective/rules)
 semgrep_timeout_seconds: 0        # 0 = use scanner_timeout_seconds
 semgrep_max_findings: 100
 semgrep_severity_threshold: INFO    # minimum Semgrep severity: INFO, WARNING, ERROR
@@ -80,15 +80,15 @@ scanner_timeout_seconds: 120
 Environment equivalents:
 
 ```bash
-BUGBOT_ENABLE_TRIVY=true
-BUGBOT_ENABLE_GRYPE=true
-BUGBOT_ENABLE_GITLEAKS=false
-BUGBOT_GITLEAKS_CONFIG=
-BUGBOT_GITLEAKS_TIMEOUT_SECONDS=0
-BUGBOT_ENABLE_SEMGREP=false
-BUGBOT_SEMGREP_CONFIG=p/ci
-BUGBOT_SEMGREP_TIMEOUT_SECONDS=0
-BUGBOT_SEMGREP_MAX_FINDINGS=100
+REPOSITORY_DETECTIVE_ENABLE_TRIVY=true
+REPOSITORY_DETECTIVE_ENABLE_GRYPE=true
+REPOSITORY_DETECTIVE_ENABLE_GITLEAKS=false
+REPOSITORY_DETECTIVE_GITLEAKS_CONFIG=
+REPOSITORY_DETECTIVE_GITLEAKS_TIMEOUT_SECONDS=0
+REPOSITORY_DETECTIVE_ENABLE_SEMGREP=false
+REPOSITORY_DETECTIVE_SEMGREP_CONFIG=p/ci
+REPOSITORY_DETECTIVE_SEMGREP_TIMEOUT_SECONDS=0
+REPOSITORY_DETECTIVE_SEMGREP_MAX_FINDINGS=100
 REPOSITORY_DETECTIVE_SEMGREP_SEVERITY_THRESHOLD=INFO
 REPOSITORY_DETECTIVE_ENABLE_GOVULNCHECK=false
 REPOSITORY_DETECTIVE_ENABLE_GOSEC=false
@@ -98,8 +98,8 @@ REPOSITORY_DETECTIVE_GOSEC_TIMEOUT_SECONDS=0
 REPOSITORY_DETECTIVE_STATICCHECK_TIMEOUT_SECONDS=0
 REPOSITORY_DETECTIVE_GO_SCANNER_MAX_FINDINGS=100
 REPOSITORY_DETECTIVE_ENABLE_LINTERS=true
-BUGBOT_ENABLE_LLM_AUDITORS=true
-BUGBOT_SCANNER_TIMEOUT_SECONDS=120
+REPOSITORY_DETECTIVE_ENABLE_LLM_AUDITORS=true
+REPOSITORY_DETECTIVE_SCANNER_TIMEOUT_SECONDS=120
 ```
 
 ### Gitleaks
@@ -122,11 +122,11 @@ Semgrep runs against the prepared workspace directory (filesystem snapshot only 
 semgrep scan --json --quiet --metrics=off --config <semgrep_config> <workspace>
 ```
 
-**Config precedence:** Bugbot always passes an operator-controlled `--config` value (default `p/ci`). Repo-local Semgrep rule files are **not** loaded unless the operator config points at them. Semgrep does not auto-load repo rules when `--config` is explicit. Avoid `--config auto` with `--metrics=off` (Semgrep may refuse auto-config without metrics).
+**Config precedence:** Repository-Detective always passes an operator-controlled `--config` value (default `p/ci`). Repo-local Semgrep rule files are **not** loaded unless the operator config points at them. Semgrep does not auto-load repo rules when `--config` is explicit. Avoid `--config auto` with `--metrics=off` (Semgrep may refuse auto-config without metrics).
 
 **Severity threshold:** `semgrep_severity_threshold` is the minimum Semgrep severity included in results (`INFO` < `WARNING` < `ERROR`). Default `INFO` includes all findings.
 
-**Max findings:** When results exceed `semgrep_max_findings` (default 100), Bugbot keeps the first N and sets scanner detail to `truncated to N findings (M total)`.
+**Max findings:** When results exceed `semgrep_max_findings` (default 100), Repository-Detective keeps the first N and sets scanner detail to `truncated to N findings (M total)`.
 
 **Severity mapping:** `ERROR` → `high`, `WARNING` → `medium`, `INFO` → `low`.
 
@@ -215,7 +215,7 @@ enable_health_checks: true
 To disable all LLM scanning (no AI token usage for audits):
 
 ```bash
-BUGBOT_ENABLE_LLM_AUDITORS=false
+REPOSITORY_DETECTIVE_ENABLE_LLM_AUDITORS=false
 ```
 
 Static rules, Trivy, Grype, Gitleaks (when enabled), Semgrep (when enabled), linters, and health checks still run and create issues.
@@ -248,7 +248,7 @@ health_max_function_params: 7
 
 ## Dependency manifests
 
-On push/PR scans, Bugbot automatically fetches common manifest files from the repo (even if unchanged) so Trivy and Grype can detect CVEs:
+On push/PR scans, Repository-Detective automatically fetches common manifest files from the repo (even if unchanged) so Trivy and Grype can detect CVEs:
 
 - `go.mod`, `package.json`, `requirements.txt`, `Cargo.toml`, `Dockerfile`, etc.
 
@@ -256,9 +256,9 @@ See `scanners/workspace.go` for the full list.
 
 ## Docker image
 
-The official Bugbot Dockerfile installs Trivy, Grype, golangci-lint, ruff, and shellcheck. Use that image for full scanner coverage.
+The official Repository-Detective Dockerfile installs Trivy, Grype, golangci-lint, ruff, and shellcheck. Use that image for full scanner coverage.
 
-Bare-metal / custom installs: install the binaries above and ensure they are on `PATH` for the Bugbot process.
+Bare-metal / custom installs: install the binaries above and ensure they are on `PATH` for the Repository-Detective process.
 
 ## Not integrated
 

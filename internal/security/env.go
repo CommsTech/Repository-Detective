@@ -7,9 +7,6 @@ import (
 
 // SensitiveEnvKeys must not be passed to subprocesses scanning untrusted code.
 var SensitiveEnvKeys = []string{
-	"BUGBOT_API_KEY", "BUGBOT_GITEA_TOKEN", "BUGBOT_AI_API_KEY",
-	"BUGBOT_OPENWEBUI_TOKEN",
-	"BUGBOT_DATABASE_DSN", "BUGBOT_WEBHOOK_SECRET",
 	"REPOSITORY_DETECTIVE_API_KEY", "REPOSITORY_DETECTIVE_GITEA_TOKEN", "REPOSITORY_DETECTIVE_AI_API_KEY",
 	"REPOSITORY_DETECTIVE_OPENWEBUI_TOKEN",
 	"REPOSITORY_DETECTIVE_DATABASE_DSN", "REPOSITORY_DETECTIVE_WEBHOOK_SECRET",
@@ -19,7 +16,7 @@ var SensitiveEnvKeys = []string{
 
 var sensitiveEnvPrefixes = []string{
 	"AWS_", "AZURE_", "GCP_", "GOOGLE_", "GITHUB_", "GITLAB_", "NPM_", "PYPI_",
-	"DOCKER_", "KUBE_", "K8S_", "BUGBOT_", "REPOSITORY_DETECTIVE_",
+	"DOCKER_", "KUBE_", "K8S_", "REPOSITORY_DETECTIVE_",
 }
 
 // MinimalSubprocessEnv returns a whitelist-only environment for scanner/git subprocesses.

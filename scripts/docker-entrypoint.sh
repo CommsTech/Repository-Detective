@@ -12,8 +12,8 @@ if [ -d /app/data ] && [ "$(id -u)" -eq 0 ]; then
   # scratch (that breaks host tooling walking the repo tree).
   chown repositorydetective:repositorydetective /app/data 2>/dev/null || true
   chown -R repositorydetective:repositorydetective /app/data/cache 2>/dev/null || true
-  if [ -e /app/data/bugbot.db ]; then
-    chown repositorydetective:repositorydetective /app/data/bugbot.db 2>/dev/null || true
+  if [ -e /app/data/repository-detective.db ]; then
+    chown repositorydetective:repositorydetective /app/data/repository-detective.db 2>/dev/null || true
   fi
 fi
 
@@ -33,7 +33,7 @@ if [ -d /app/certs ]; then
     [ -f "$cert" ] || continue
     cp "$cert" "/usr/local/share/ca-certificates/$(basename "$cert")"
   done
-  if ls /usr/local/share/ca-certificates/*.crt >/dev/null 2>&1; then
+  if ls /usr/local/share/ca-certificates/*.crt >/dev/null 2>/dev/null; then
     update-ca-certificates >/dev/null 2>&1 || true
   fi
 fi

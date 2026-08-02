@@ -65,7 +65,7 @@ var (
 	webhookHandler      *handlers.WebhookHandler
 	onboardingHandler   *handlers.OnboardingHandler
 	analysisLimiter     *limiter.ConcurrencyLimiter
-	bugbotStore         store.QueryStore
+	rdStore         store.QueryStore
 	scanRecorder        *store.Recorder
 	controlPlaneHandler *api.Handler
 	preinstallHandler   *api.PreinstallHandler
@@ -220,7 +220,6 @@ type Config struct {
 	GiteaActionsTriggerMode                 string                               `mapstructure:"gitea_actions_trigger_mode"`
 	GiteaActionsTimeoutSeconds              int                                  `mapstructure:"gitea_actions_timeout_seconds"`
 	GiteaActionsRequireOperatorApproval     bool                                 `mapstructure:"gitea_actions_require_operator_approval"`
-	LabelCompatMode                         string                               `mapstructure:"label_compat_mode"`
 	NotificationsEnabled                    bool                                 `mapstructure:"notifications_enabled"`
 	NotificationMinSeverity                 string                               `mapstructure:"notification_min_severity"`
 	NotificationCooldownSeconds             int                                  `mapstructure:"notification_cooldown_seconds"`
@@ -474,7 +473,7 @@ func loadConfig() error {
 	viper.SetDefault("gitea_status_include_scanner_failures", true)
 	viper.SetDefault("database_enabled", true)
 	viper.SetDefault("database_driver", "sqlite")
-	viper.SetDefault("database_path", "./data/bugbot.db")
+	viper.SetDefault("database_path", "./data/repository-detective.db")
 	viper.SetDefault("database_dsn", "")
 	viper.SetDefault("ui_enabled", true)
 	viper.SetDefault("ui_base_path", "/ui")
@@ -495,7 +494,7 @@ func loadConfig() error {
 	viper.SetDefault("preinstall_sandbox_allow_submodules", false)
 	viper.SetDefault("preinstall_sandbox_network_mode", "restricted")
 	viper.SetDefault("preinstall_sandbox_readonly_workspace", true)
-	viper.SetDefault("repository_detective_project_url", "https://git.commsnet.org/commstech/repository-detective")
+	viper.SetDefault("repository_detective_project_url", "https://git.commsnet.org/commstech/Repository-Detective")
 	viper.SetDefault("enable_health_checks", true)
 	viper.SetDefault("enable_tech_debt_checks", true)
 	viper.SetDefault("enable_reliability_checks", true)
@@ -540,7 +539,6 @@ func loadConfig() error {
 	viper.SetDefault("gitea_actions_trigger_mode", "workflow_dispatch")
 	viper.SetDefault("gitea_actions_timeout_seconds", 1800)
 	viper.SetDefault("gitea_actions_require_operator_approval", true)
-	viper.SetDefault("label_compat_mode", "new_only")
 	viper.SetDefault("notifications_enabled", false)
 	viper.SetDefault("notification_min_severity", "high")
 	viper.SetDefault("notification_cooldown_seconds", 300)
@@ -659,8 +657,8 @@ func loadConfig() error {
 	viper.SetDefault("false_positive_reduction.require_file_exists", fpDefaults.RequireFileExists)
 	viper.SetDefault("false_positive_reduction.require_line_match", fpDefaults.RequireLineMatch)
 
-	// Environment variables — legacy BUGBOT_* plus REPOSITORY_DETECTIVE_* aliases.
-	viper.SetEnvPrefix("BUGBOT")
+	// Environment variables — REPOSITORY_DETECTIVE_* only.
+	viper.SetEnvPrefix("REPOSITORY_DETECTIVE")
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.AutomaticEnv()
 
@@ -681,6 +679,12 @@ func loadConfig() error {
 	applyReportingDefaults(config)
 	applyContainerScanDefaults(config)
 	applyOpenClawDefaults(config)
+
+	if config.DatabaseEnabled && config.DatabaseDriver == "sqlite" && config.DatabasePath != "" {
+		if err := os.MkdirAll(filepath.Dir(config.DatabasePath), 0o755); err != nil && !os.IsExist(err) {
+			logger.Warnf("Cannot ensure database directory %s: %v", filepath.Dir(config.DatabasePath), err)
+		}
+	}
 
 	if err := viper.UnmarshalKey("skip_patterns", &config.SkipPatterns); err != nil {
 		return fmt.Errorf("failed to unmarshal skip_patterns: %w", err)
@@ -736,8 +740,6 @@ func loadConfig() error {
 	if config.SchedulerMaxConcurrentScans <= 0 {
 		config.SchedulerMaxConcurrentScans = 1
 	}
-
-	issues.SetLabelCompatMode(config.LabelCompatMode)
 
 	if err := config.validateAuth(); err != nil {
 		return err
@@ -857,9 +859,6 @@ func requireAPIKeyAuth() gin.HandlerFunc {
 
 		apiKey := c.GetHeader("X-Repository-Detective-API-Key")
 		if apiKey == "" {
-			apiKey = c.GetHeader("X-Bugbot-API-Key") // legacy alias
-		}
-		if apiKey == "" {
 			if auth := c.GetHeader("Authorization"); strings.HasPrefix(auth, "Bearer ") {
 				apiKey = strings.TrimSpace(strings.TrimPrefix(auth, "Bearer "))
 			}
@@ -901,11 +900,11 @@ func requireAPIKeyAuth() gin.HandlerFunc {
 func initializeComponents() error {
 	logger.Info("Initializing components...")
 
-	if bugbotStore != nil {
-		if err := bugbotStore.Close(); err != nil {
+	if rdStore != nil {
+		if err := rdStore.Close(); err != nil {
 			logger.Warnf("Failed to close existing database: %v", err)
 		}
-		bugbotStore = nil
+		rdStore = nil
 		scanRecorder = nil
 		controlPlaneHandler = nil
 		preinstallHandler = nil
@@ -931,7 +930,7 @@ func initializeComponents() error {
 		if err != nil {
 			return fmt.Errorf("failed to open database: %w", err)
 		}
-		bugbotStore = s
+		rdStore = s
 		scanRecorder = store.NewRecorder(s, logger)
 		initSuppressionMatcher()
 		logger.Infof("Local database enabled (driver=%s path=%s)", config.DatabaseDriver, config.DatabasePath)
@@ -991,7 +990,7 @@ func initializeComponents() error {
 		globalSnapshot = appGlobalSnapshot
 	}
 	initNotifyManager()
-	controlPlaneHandler = api.NewHandler(bugbotStore, globalSnapshot, logger)
+	controlPlaneHandler = api.NewHandler(rdStore, globalSnapshot, logger)
 	if notifyManager != nil {
 		controlPlaneHandler.SetNotificationGlobal(notifyManager.Config())
 	}
@@ -1015,23 +1014,23 @@ func initializeComponents() error {
 		Health:                        mainHealthConfig(),
 		Graph:                         mainGraphConfig(),
 	}
-	if bugbotStore != nil && config.PreinstallAuditEnabled {
-		preinstallRunner = preinstall.NewRunner(bugbotStore, preinstallCfg, mainScannerConfig(), logger)
+	if rdStore != nil && config.PreinstallAuditEnabled {
+		preinstallRunner = preinstall.NewRunner(rdStore, preinstallCfg, mainScannerConfig(), logger)
 		preinstallRunner.SetAuditNotifier(preinstallNotifyBridge{})
-		preinstallHandler = api.NewPreinstallHandler(bugbotStore, preinstallRunner, logger)
+		preinstallHandler = api.NewPreinstallHandler(rdStore, preinstallRunner, logger)
 		logger.Info("Pre-install audit mode enabled")
 	}
 
 	runnerRegistry = runner.NewRegistry()
-	runnerBackend := bugbotStore != nil && runnerCfg.SharedSecret != "" &&
+	runnerBackend := rdStore != nil && runnerCfg.SharedSecret != "" &&
 		((runnerCfg.DelegationEnabled && runnerCfg.Mode != runner.ModeCore) || config.ContainerScan.Normalized().Enabled)
 	if runnerBackend {
-		runnerDispatcher = runner.NewDispatcher(bugbotStore, runnerCfg, logger)
-		runnerReceiver = runner.NewReceiver(bugbotStore, runnerCfg, logger, ingestRunnerResult)
+		runnerDispatcher = runner.NewDispatcher(rdStore, runnerCfg, logger)
+		runnerReceiver = runner.NewReceiver(rdStore, runnerCfg, logger, ingestRunnerResult)
 		runnerReceiver.SetJobsExpiredHandler(func(ctx context.Context, count int64) {
 			notifyRunnerJobsExpired(ctx, count)
 		})
-		runnerHandler = api.NewRunnerHandler(bugbotStore, runnerCfg, runnerReceiver, runnerDispatcher, runnerRegistry, logger)
+		runnerHandler = api.NewRunnerHandler(rdStore, runnerCfg, runnerReceiver, runnerDispatcher, runnerRegistry, logger)
 		if runnerCfg.DelegationEnabled && runnerCfg.Mode != runner.ModeCore {
 			logger.Infof("Runner delegation enabled (mode=%s)", runnerCfg.Mode)
 		} else if config.ContainerScan.Normalized().Enabled {
@@ -1040,7 +1039,7 @@ func initializeComponents() error {
 	}
 
 	if config.UIEnabled {
-		uiHandler, err := ui.NewHandler(bugbotStore, globalSnapshot, config.UIBasePath, logger, preinstallRunner, config.PreinstallAuditEnabled, config.APIKey)
+		uiHandler, err := ui.NewHandler(rdStore, globalSnapshot, config.UIBasePath, logger, preinstallRunner, config.PreinstallAuditEnabled, config.APIKey)
 		if err == nil {
 			uiHandler.SetAuthConfig(ui.AuthConfig{
 				Mode:                       config.AuthMode,
@@ -1099,7 +1098,7 @@ func initializeComponents() error {
 		if config.EvidenceClosureEnabled {
 			uiHandler.SetClosureBackend(true, closureUIBridge{})
 		}
-		if bugbotStore != nil {
+		if rdStore != nil {
 			uiHandler.SetSuppressionBackend(true, suppressionUIBridge{})
 		}
 		uiHandler.SetReadinessFn(func() operator.Readiness { return buildReadiness("running") })
@@ -1284,10 +1283,10 @@ func initializeComponents() error {
 	scanners.CleanupStaleScannerScratch("/tmp", 0, logger)
 	go scanners.WarmGrypeDB(context.Background(), logger)
 
-	if config.SchedulerEnabled && bugbotStore != nil {
+	if config.SchedulerEnabled && rdStore != nil {
 		schedulerCtx, schedulerCancel = context.WithCancel(context.Background())
 		scanScheduler = orch.NewScheduler(
-			bugbotStore,
+			rdStore,
 			runScheduledRepositoryScan,
 			analysisLimiter,
 			orch.Config{
@@ -1302,16 +1301,16 @@ func initializeComponents() error {
 		logger.Info("Scheduled scans disabled (scheduler_enabled=false or database disabled)")
 	}
 
-	if bugbotStore != nil {
+	if rdStore != nil {
 		// In-memory scan workers do not survive process restart. Reap any "started"
 		// rows older than a short grace window so concurrent slots are not stuck.
 		staleAge := 2 * time.Minute
-		if n, err := bugbotStore.ReapStaleScans(context.Background(), staleAge); err != nil {
+		if n, err := rdStore.ReapStaleScans(context.Background(), staleAge); err != nil {
 			logger.Warnf("Failed to reap stale scans: %v", err)
 		} else if n > 0 {
 			logger.Infof("Reaped %d stale started scan(s)", n)
 		}
-		if n, err := bugbotStore.ExpireStaleRunnerJobs(context.Background(), time.Now().UTC()); err != nil {
+		if n, err := rdStore.ExpireStaleRunnerJobs(context.Background(), time.Now().UTC()); err != nil {
 			logger.Warnf("Failed to expire stale runner jobs: %v", err)
 		} else if n > 0 {
 			logger.Infof("Expired %d stale runner job(s)", n)
@@ -1509,8 +1508,8 @@ func runScheduledRepositoryScan(ctx context.Context, repo store.ScheduledReposit
 			return
 		}
 
-		if bugbotStore != nil && repositoryID > 0 {
-			if _, uerr := bugbotStore.UpsertRepository(scanCtxInner, store.Repository{
+		if rdStore != nil && repositoryID > 0 {
+			if _, uerr := rdStore.UpsertRepository(scanCtxInner, store.Repository{
 				ForgeType:     forgeType,
 				Owner:         repo.Owner,
 				Name:          repo.Name,
@@ -1521,7 +1520,7 @@ func runScheduledRepositoryScan(ctx context.Context, repo store.ScheduledReposit
 			}); uerr != nil {
 				logger.WithError(uerr).Debugf("Scheduled scan: could not refresh default_branch for %s", repo.FullName)
 			}
-			if dbRepo, rerr := bugbotStore.GetRepository(scanCtxInner, repositoryID); rerr == nil {
+			if dbRepo, rerr := rdStore.GetRepository(scanCtxInner, repositoryID); rerr == nil {
 				if delegated, derr := tryDelegateScan(scanCtxInner, &scanCtx, dbRepo, effective); delegated {
 					logger.WithFields(logrus.Fields{
 						"scan_id": scanCtx.ScanID, "repo": repo.FullName,
@@ -1637,11 +1636,11 @@ func resolveEffectiveSettingsForRepo(ctx context.Context, forgeType, owner, repo
 	forgeType = normalizeForgeType(forgeType)
 	repoSettings := store.RepoSettings{}
 	effective, meta := store.ResolveEffectiveSettingsFull(appGlobalSnapshot, repoSettings)
-	if bugbotStore != nil {
+	if rdStore != nil {
 		fullName := owner + "/" + repo
-		dbRepo, err := bugbotStore.GetRepositoryByFullName(ctx, forgeType, fullName)
+		dbRepo, err := rdStore.GetRepositoryByFullName(ctx, forgeType, fullName)
 		if err == nil {
-			settings, serr := bugbotStore.GetRepoSettings(ctx, dbRepo.ID)
+			settings, serr := rdStore.GetRepoSettings(ctx, dbRepo.ID)
 			if serr == nil {
 				repoSettings = settings
 				effective, meta = store.ResolveEffectiveSettingsFull(appGlobalSnapshot, settings)
@@ -1821,7 +1820,7 @@ func finishPersistedScan(ctx context.Context, scanCtx *store.ScanContext, reposi
 		recordScannerHealthFromScan(ctx, repositoryID, scanID, data.ScannerResults)
 	}
 	if reportOnlyDryRunFromContext(ctx) && scanRecorder.Enabled() && analysisErr == nil {
-		if bs, ok := bugbotStore.(interface {
+		if bs, ok := rdStore.(interface {
 			UpdateScanPipelineState(context.Context, string, string, map[string]any) error
 		}); ok {
 			_ = bs.UpdateScanPipelineState(ctx, scanID, store.ScanStatusCompleted, map[string]any{
@@ -2005,8 +2004,8 @@ func tryDelegateScan(ctx context.Context, scanCtx *store.ScanContext, repo store
 		return false, nil
 	}
 	policy := analyzers.SnapshotFromPolicy(scanPolicyFromEffective(effective))
-	if bugbotStore != nil {
-		settings, serr := bugbotStore.GetRepoSettings(ctx, repo.ID)
+	if rdStore != nil {
+		settings, serr := rdStore.GetRepoSettings(ctx, repo.ID)
 		if serr == nil {
 			_, meta := store.ResolveEffectiveSettingsFull(appGlobalSnapshot, settings)
 			sp := scanPolicyFromEffective(effective)
@@ -2141,8 +2140,8 @@ func enqueueManualAnalysis(parentCtx context.Context, req manualAnalysisRequest)
 			}
 
 			if req.Type != "pull_request" || req.PRNumber <= 0 {
-				if bugbotStore != nil && repositoryID > 0 {
-					if dbRepo, rerr := bugbotStore.GetRepository(ctx, repositoryID); rerr == nil {
+				if rdStore != nil && repositoryID > 0 {
+					if dbRepo, rerr := rdStore.GetRepository(ctx, repositoryID); rerr == nil {
 						if delegated, derr := tryDelegateScan(ctx, &scanCtx, dbRepo, effective); delegated {
 							logger.WithFields(logrus.Fields{
 								"scan_id": scanCtx.ScanID, "repo": dbRepo.FullName,
@@ -2389,13 +2388,8 @@ func handleAbout(c *gin.Context) {
 		"tagline":             "Inspect. Analyze. Improve.",
 		"version":             version,
 		"documentation_index": "/docs/README.md",
-		"compatibility": gin.H{
-			"legacy_env_aliases":       true,
-			"legacy_label_lookup":      true,
-			"legacy_fingerprint_prefix": true,
-			"label_compat_mode":        issues.LabelCompatMode(),
-		},
-		"safe_loop": "detect → issue → plan → approve → patch PR → merge → rescan → verified closure",
+		"project_url":         "https://git.commsnet.org/commstech/Repository-Detective",
+		"safe_loop":           "detect → issue → plan → approve → patch PR → merge → rescan → verified closure",
 	})
 }
 
@@ -2527,25 +2521,25 @@ func registerControlPlaneRoutes(router *gin.Engine) {
 		api.NewNotificationHandler(notifyManager).RegisterRoutes(cp)
 	}
 	if config.RemediationPlannerEnabled {
-		api.NewRemediationHandler(bugbotStore, remediationBridge{}, config.RemediationPREnabled).RegisterRoutes(cp)
+		api.NewRemediationHandler(rdStore, remediationBridge{}, config.RemediationPREnabled).RegisterRoutes(cp)
 	}
 	if config.EvidenceClosureEnabled {
-		api.NewClosureHandler(bugbotStore, closureBridge{}).RegisterRoutes(cp)
+		api.NewClosureHandler(rdStore, closureBridge{}).RegisterRoutes(cp)
 	}
-	if bugbotStore != nil {
-		api.NewSuppressionsHandler(bugbotStore, suppressionBridge{}).RegisterRoutes(cp)
+	if rdStore != nil {
+		api.NewSuppressionsHandler(rdStore, suppressionBridge{}).RegisterRoutes(cp)
 	}
-	if config.IssueReconciliationEnabled && bugbotStore != nil {
-		api.NewReconcileHandler(bugbotStore, reconcileBridge{}).RegisterRoutes(cp)
+	if config.IssueReconciliationEnabled && rdStore != nil {
+		api.NewReconcileHandler(rdStore, reconcileBridge{}).RegisterRoutes(cp)
 	}
-	if config.CalibrationEnabled && bugbotStore != nil {
-		api.NewCalibrationHandler(bugbotStore, calibrationBridge{}).RegisterRoutes(cp)
+	if config.CalibrationEnabled && rdStore != nil {
+		api.NewCalibrationHandler(rdStore, calibrationBridge{}).RegisterRoutes(cp)
 	}
-	if bugbotStore != nil {
-		api.NewContainerHandler(bugbotStore, containerScanBridge{}).RegisterRoutes(cp)
+	if rdStore != nil {
+		api.NewContainerHandler(rdStore, containerScanBridge{}).RegisterRoutes(cp)
 	}
 	api.NewAIHandler(aiStatusBridge{}).RegisterRoutes(cp)
-	if bugbotStore != nil {
+	if rdStore != nil {
 		api.NewOpenClawReviewHandler(openclawReviewBridge{}).RegisterRoutes(cp)
 	}
 

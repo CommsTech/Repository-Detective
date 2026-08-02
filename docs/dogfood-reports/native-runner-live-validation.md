@@ -26,7 +26,7 @@ Recorded: 2026-06-09
 |-------|-------|
 | Job ID | `rj-e15f6cbd25c6c1e6` |
 | Job type | `graph` |
-| Repository | `commstech/repository-detective` (id=1) |
+| Repository | `commstech/Repository-Detective` (id=1) |
 | Scan ID | `89644a43a8e001a9` |
 | Started | ~2026-06-09T03:10:11Z |
 | Finished | ~2026-06-09T03:10:13Z |

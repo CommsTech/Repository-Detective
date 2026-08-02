@@ -27,7 +27,7 @@ git clone https://git.commsnet.org/commstech/repository-detective.wiki.git /tmp/
 cd /tmp/repository-detective-wiki
 
 # Copy prepared pages (adjust paths to your checkout)
-cp /path/to/Bugbot/docs/wiki/*.md .
+cp /path/to/Repository-Detective/docs/wiki/*.md .
 
 git add -A
 git status
@@ -59,7 +59,7 @@ Gitea wiki links use page names without `.md`.
 WIKI_DRY_RUN=true ./scripts/publish-gitea-wiki.sh
 
 # Publish (token via env — not stored in git config)
-export BUGBOT_GITEA_TOKEN='…'   # wiki-write scope
+export REPOSITORY_DETECTIVE_GITEA_TOKEN='…'   # wiki-write scope
 ./scripts/publish-gitea-wiki.sh
 ```
 

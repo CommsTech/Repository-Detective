@@ -1,31 +1,5 @@
-# Branding and legacy compatibility
+# Branding
 
-**Product name:** Repository Detective — Inspect. Analyze. Improve.
+Repository Detective is the only product name. See [NAMING.md](NAMING.md).
 
-## Product-facing (use Repository Detective)
-
-- Browser titles (`ui/templates/layout.html`)
-- Dashboard, fleet control, scan modals, reports
-- Beta tester guides (except legacy notes below)
-- Release package display name
-
-## Legacy compatibility (keep)
-
-| Item | Notes |
-|------|-------|
-| `REPOSITORY_DETECTIVE_*` environment variables | Aliased by `REPOSITORY_DETECTIVE_*` via envcompat |
-| `X-Repository-Detective-API-Key` header | Accepted alongside `X-Repository-Detective-API-Key` |
-| `data/bugbot.db` default path | SQLite filename; document as legacy |
-| Gitea repo path `commstech/repository-detective` | Git remote path unchanged |
-| Go module `git.commsnet.org/commstech/repository-detective` | Internal import path |
-
-## Historical / comparison docs (keep Bugbot name)
-
-- `docs/beta/CURSOR_BUGBOT_COMPARISON.md` — external product comparison
-- `docs/beta/CURSOR_BUGBOT_BENCHMARK_RESULTS.md` — benchmark context
-
-## Preferred new identifiers
-
-- `REPOSITORY_DETECTIVE_*` env prefix
-- `X-Repository-Detective-API-Key` header
-- `repository-detective` binary / container name
+Legacy dual-name compatibility has been removed for public release.

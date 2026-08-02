@@ -12,7 +12,7 @@ Validate Repository Detective against 1–2 non-product repos in **report-only**
 | Criterion | Requirement |
 |-----------|-------------|
 | Size | 1 small (<50 files), 1 medium (50–500 files) |
-| Ownership | Same Gitea org (`commstech`), non-Bugbot |
+| Ownership | Same Gitea org (`commstech`), non-Repository-Detective |
 | Risk | No production secrets; no customer data |
 | Familiarity | Operator knows expected layout (Go, shell, or docs-only) |
 | Exclusions | No fleet repos, no archived/mirror repos |
@@ -54,7 +54,7 @@ Record `scanner_results` per scan. Treat timeouts (gosec, staticcheck, hadolint)
 - [ ] `issue_sync` reaches `complete` or `skipped` (not stuck `pending`)
 - [ ] **0** Gitea issues created
 - [ ] **0** duplicate issue burst
-- [ ] DB size delta acceptable (`du -h data/bugbot.db`)
+- [ ] DB size delta acceptable (`du -h data/repository-detective.db`)
 - [ ] Findings match repo structure (no false mass criticals)
 - [ ] Export report for operator review
 

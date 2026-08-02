@@ -37,7 +37,7 @@ Legend: **Present** · **Current** (accurate for beta) · **Examples** · **Safe
 | [SETUP.md](SETUP.md) | ✅ | ⚠️ | ✅ | ✅ | Prefer REPOSITORY_DETECTIVE_* in examples |
 | [../DEPLOYMENT.md](../DEPLOYMENT.md) | ✅ | ✅ | ✅ | ✅ | Root quick deploy |
 | [UI.md](UI.md) | ✅ | ✅ | ⚠️ | ⚠️ | API key in URL homelab risk |
-| [DATABASE.md](DATABASE.md) | ✅ | ✅ | ⚠️ | ✅ | bugbot.db name documented |
+| [DATABASE.md](DATABASE.md) | ✅ | ✅ | ⚠️ | ✅ | repository-detective.db name documented |
 | [RUNNERS.md](RUNNERS.md) | ✅ | ✅ | ✅ | ✅ | Off by default beta |
 | [NOTIFICATIONS.md](NOTIFICATIONS.md) | ✅ | ✅ | ✅ | ✅ | Preferred header updated |
 | [REMEDIATION_PRS.md](REMEDIATION_PRS.md) | ✅ | ✅ | ✅ | ✅ | Off by default |

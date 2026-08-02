@@ -5,10 +5,10 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-GITEA_URL="${REPOSITORY_DETECTIVE_GITEA_URL:-${BUGBOT_GITEA_URL:-https://git.commsnet.org}}"
+GITEA_URL="${REPOSITORY_DETECTIVE_GITEA_URL:-${REPOSITORY_DETECTIVE_GITEA_URL:-https://git.commsnet.org}}"
 OWNER="${REPOSITORY_DETECTIVE_GITEA_OWNER:-commstech}"
-REPO="${REPOSITORY_DETECTIVE_GITEA_REPO:-Bugbot}"
-TOKEN="${REPOSITORY_DETECTIVE_GITEA_TOKEN:-${BUGBOT_GITEA_TOKEN:-}}"
+REPO="${REPOSITORY_DETECTIVE_GITEA_REPO:-Repository-Detective}"
+TOKEN="${REPOSITORY_DETECTIVE_GITEA_TOKEN:-${REPOSITORY_DETECTIVE_GITEA_TOKEN:-}}"
 SOURCE_DIR="${WIKI_SOURCE_DIR:-$ROOT/docs/wiki}"
 WORK_DIR="${WIKI_WORK_DIR:-$(mktemp -d)}"
 DRY_RUN="${WIKI_DRY_RUN:-false}"
@@ -22,7 +22,7 @@ usage() {
 Usage: publish-gitea-wiki.sh
 
 Environment:
-  REPOSITORY_DETECTIVE_GITEA_TOKEN / BUGBOT_GITEA_TOKEN  Wiki write token (required unless DRY_RUN=true)
+  REPOSITORY_DETECTIVE_GITEA_TOKEN / REPOSITORY_DETECTIVE_GITEA_TOKEN  Wiki write token (required unless DRY_RUN=true)
   WIKI_DRY_RUN=true                                      Prepare only; no clone/push
   WIKI_REMOTE_URL                                        Override wiki git URL
   WIKI_SOURCE_DIR                                        Default: docs/wiki
@@ -47,7 +47,7 @@ if [ -z "$WIKI_REMOTE" ]; then
 fi
 
 if [ "$DRY_RUN" != "true" ] && [ -z "$TOKEN" ]; then
-  echo "REPOSITORY_DETECTIVE_GITEA_TOKEN (or BUGBOT_GITEA_TOKEN) is required (or set WIKI_DRY_RUN=true)" >&2
+  echo "REPOSITORY_DETECTIVE_GITEA_TOKEN (or REPOSITORY_DETECTIVE_GITEA_TOKEN) is required (or set WIKI_DRY_RUN=true)" >&2
   exit 1
 fi
 

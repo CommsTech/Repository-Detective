@@ -49,7 +49,7 @@ func TestDashboardSummaryQuery(t *testing.T) {
 	repo, _ := s.UpsertRepository(ctx, store.Repository{Owner: "o", Name: "r", FullName: "o/r"})
 	_, _ = s.CreateScan(ctx, store.Scan{ID: "dashscan01", RepositoryID: repo.ID, TriggerType: store.TriggerManual, Status: store.ScanStatusFailed})
 	now := time.Now().UTC()
-	_, _ = s.UpsertFinding(ctx, store.Finding{RepositoryID: repo.ID, Fingerprint: "bugbot-dash", Severity: "high", Status: store.FindingStatusOpen, FirstSeenAt: now, LastSeenAt: now})
+	_, _ = s.UpsertFinding(ctx, store.Finding{RepositoryID: repo.ID, Fingerprint: "rd-dash", Severity: "high", Status: store.FindingStatusOpen, FirstSeenAt: now, LastSeenAt: now})
 
 	summary, err := s.DashboardSummary(ctx, 5)
 	if err != nil {

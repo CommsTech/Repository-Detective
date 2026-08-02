@@ -12,7 +12,7 @@ func TestBuildFindingIssueTemplateLinks(t *testing.T) {
 		FindingListItem: store.FindingListItem{
 			Finding: store.Finding{
 				ID:          42,
-				Fingerprint: "bugbot-abc",
+				Fingerprint: "rd-abc",
 				RuleID:      "rule-x",
 				Source:      "semgrep",
 				Severity:    "medium",
@@ -27,7 +27,7 @@ func TestBuildFindingIssueTemplateLinks(t *testing.T) {
 	if !strings.Contains(links.FalsePositiveURL, "template=scanner_false_positive") {
 		t.Fatalf("expected false positive template URL, got %q", links.FalsePositiveURL)
 	}
-	if !strings.Contains(links.TemplateGuidance, "bugbot-abc") {
+	if !strings.Contains(links.TemplateGuidance, "rd-abc") {
 		t.Fatal("guidance must include fingerprint")
 	}
 	if strings.Contains(links.TemplateGuidance, "AKIA") {

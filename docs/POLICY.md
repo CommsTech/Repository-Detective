@@ -204,7 +204,7 @@ Pre-install audit mode (Phase 9) uses separate tables and does **not** use per-r
 - `remediation_policy` is stored but not enforced on scan paths.
 - `runner_policy` is **enforced** for scheduled and manual full scans when global runner delegation is enabled (Phase 12). See [RUNNERS.md](RUNNERS.md).
 - Manual analyze of unknown repos uses global config only.
-- No `.bugbot.yaml` in-repo config yet.
+- No `.repository-detective.yaml` in-repo config yet.
 
 ## Private beta defaults (issue closeout calibration)
 

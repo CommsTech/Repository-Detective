@@ -24,7 +24,7 @@ Latest commit: `9055547` (fix(runner): satisfy staticcheck on execute input conv
 | Gitea Actions backend | disabled |
 | All-repo scanning | off |
 
-## Product repo (Bugbot)
+## Product repo (Repository-Detective)
 
 | Metric | Value |
 |--------|-------|

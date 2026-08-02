@@ -7,23 +7,20 @@
 
 ## Release branding
 
-Public release surfaces must say **Repository Detective** only. Do not document or display the old internal project name.
+Public release surfaces say **Repository Detective** only.
 
-| Surface | Public release |
-|---------|----------------|
-| Env vars (docs/examples) | `REPOSITORY_DETECTIVE_*` only |
-| API key header (docs/UI) | `X-Repository-Detective-API-Key` |
-| Issue labels (new writes) | `repository-detective/*` (`label_compat_mode: new_only`) |
+| Surface | Value |
+|---------|--------|
+| Env vars | `REPOSITORY_DETECTIVE_*` |
+| API key header | `X-Repository-Detective-API-Key` |
+| Issue labels | `repository-detective/*` |
 | Fingerprint body marker | `Repository Detective fingerprint:` |
-| Go module / Gitea repo | `repository-detective` |
+| Fingerprint values | `rd-<hex>` |
+| Go module | `git.commsnet.org/commstech/repository-detective` |
+| Gitea repo | `https://git.commsnet.org/commstech/Repository-Detective.git` |
 | Binary / container / image | `repository-detective` |
-
-## Silent compatibility (not advertised)
-
-Existing deployments may still send legacy env prefixes or headers. Runtime continues to accept them via `internal/config/envcompat` and dual API-key header parsing. Fingerprint **values** keep their historical prefix so dedup is not broken. Label **lookup** still finds older issues. These are compatibility shims — not product branding.
-
-See [BRANDING_MIGRATION.md](BRANDING_MIGRATION.md) for operator migration details.
+| SQLite path | `./data/repository-detective.db` |
 
 ## Cursor product comparisons
 
-Docs that compare against **Cursor Bugbot** keep that external product name on purpose (`docs/beta/CURSOR_BUGBOT_*`).
+Docs that compare against **Cursor Repository-Detective** keep that external product name on purpose (`docs/beta/CURSOR_BUGBOT_*`).

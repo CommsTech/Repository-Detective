@@ -8,7 +8,7 @@ import (
 )
 
 var logSecretPatterns = []*regexp.Regexp{
-	regexp.MustCompile(`(?i)(BUGBOT_|REPOSITORY_DETECTIVE_|GITEA_)[A-Z0-9_]*TOKEN=[^\s]+`),
+	regexp.MustCompile(`(?i)(REPOSITORY_DETECTIVE_|GITEA_)[A-Z0-9_]*TOKEN=[^\s]+`),
 	regexp.MustCompile(`(?i)(api[_-]?key|token|secret|password)\s*[:=]\s*\S+`),
 }
 

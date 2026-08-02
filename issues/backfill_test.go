@@ -7,9 +7,9 @@ import (
 	"git.commsnet.org/commstech/repository-detective/issues"
 )
 
-func TestLegacyBugbotFingerprintMarker(t *testing.T) {
-	body := "## Tracking\n\n- Bugbot fingerprint: bugbot-legacy99\n"
-	if got := issues.ExtractFingerprintFromBody(body); got != "bugbot-legacy99" {
+func TestExtractFingerprintFromRepositoryDetectiveMarker(t *testing.T) {
+	body := "## Tracking\n\n- Repository Detective fingerprint: rd-legacy99\n"
+	if got := issues.ExtractFingerprintFromBody(body); got != "rd-legacy99" {
 		t.Fatalf("got %q", got)
 	}
 }
@@ -17,7 +17,7 @@ func TestLegacyBugbotFingerprintMarker(t *testing.T) {
 func TestFindIssueByFingerprintPaginatesBeyondFirstPage(t *testing.T) {
 	var pages int
 	forge := &paginatingForge{pages: &pages}
-	match, err := issues.FindIssueByFingerprint(context.Background(), forge, "o", "r", "bugbot-page2")
+	match, err := issues.FindIssueByFingerprint(context.Background(), forge, "o", "r", "rd-page2")
 	if err != nil {
 		t.Fatalf("find: %v", err)
 	}
@@ -38,14 +38,14 @@ func (p *paginatingForge) ListOpenLabeledIssues(_ context.Context, _, _ string, 
 	if page == 1 {
 		out := make([]issues.ForgeIssue, limit)
 		for i := range out {
-			out[i] = issues.ForgeIssue{Number: i + 1, Body: "- Bugbot fingerprint: bugbot-other\n"}
+			out[i] = issues.ForgeIssue{Number: i + 1, Body: "- Repository Detective fingerprint: rd-other\n"}
 		}
 		return out, nil
 	}
 	if page == 2 {
 		return []issues.ForgeIssue{{
 			Number: 200, HTMLURL: "http://x/200",
-			Body: "- Bugbot fingerprint: bugbot-page2\n",
+			Body: "- Repository Detective fingerprint: rd-page2\n",
 		}}, nil
 	}
 	return nil, nil

@@ -22,7 +22,7 @@ func TestListIssuesUsesLabelsFilter(t *testing.T) {
 	client := NewClient(server.URL, "token", logrus.New())
 	issues, err := client.ListIssues(context.Background(), "owner", "repo", ListIssuesOptions{
 		State:  "open",
-		Labels: []string{"bugbot"},
+		Labels: []string{"repository-detective"},
 		Limit:  10,
 	})
 	if err != nil {
@@ -31,7 +31,7 @@ func TestListIssuesUsesLabelsFilter(t *testing.T) {
 	if len(issues) != 1 {
 		t.Fatalf("expected 1 issue, got %d", len(issues))
 	}
-	if gotQuery == "" || !strings.Contains(gotQuery, "labels=bugbot") || !strings.Contains(gotQuery, "state=open") {
+	if gotQuery == "" || !strings.Contains(gotQuery, "labels=repository-detective") || !strings.Contains(gotQuery, "state=open") {
 		t.Fatalf("unexpected query %q", gotQuery)
 	}
 }

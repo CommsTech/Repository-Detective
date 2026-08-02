@@ -8,7 +8,7 @@ import (
 	"git.commsnet.org/commstech/repository-detective/ai"
 )
 
-// Lifecycle label constants (Repository Detective namespace; legacy bugbot/* recognized in lookup).
+// Lifecycle label constants (Repository Detective namespace).
 const (
 	LifecycleOpen                 = "repository-detective/open"
 	LifecycleStillPresent         = "repository-detective/still-present"

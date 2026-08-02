@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to Repository Detective (formerly Bugbot) are documented here.
+All notable changes to Repository Detective (formerly an internal prototype) are documented here.
 
 ## [Unreleased] — Closeout sprint
 

@@ -66,7 +66,7 @@ func TestValidateRepoURLWithGitSuffixDoesNotDoubleDotGit(t *testing.T) {
 }
 
 func TestCloneEnvDoesNotExposeSecrets(t *testing.T) {
-	t.Setenv("BUGBOT_GITEA_TOKEN", "secret-token-value")
+	t.Setenv("REPOSITORY_DETECTIVE_GITEA_TOKEN", "secret-token-value")
 	if preinstall.CloneEnvExposesSecrets() {
 		t.Fatal("minimal git env must not include operator secrets")
 	}

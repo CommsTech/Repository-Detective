@@ -8,7 +8,7 @@ Repository Detective combines **static heuristics**, **external scanners**, **re
 
 | Pattern | Example | Why it is usually safe |
 |---------|---------|------------------------|
-| Hardcoded secret in `deploy.sh` | `local api_key="${BUGBOT_API_KEY:-}"` | Reads from environment, not a literal secret |
+| Hardcoded secret in `deploy.sh` | `local api_key="${REPOSITORY_DETECTIVE_API_KEY:-}"` | Reads from environment, not a literal secret |
 | `data-api-key` in HTML templates | `data-api-key="{{.APIKey}}"` | UI passes the operator API key to JS — not embedded credentials |
 | SQL concat in Go store layer | `query := base + \` WHERE status = ?\`` | Appends a **constant** fragment with `?` placeholders |
 | Orphan file warnings | `ui/templates/*.html`, `scripts/*.sh` | Not part of the Go import graph by design |

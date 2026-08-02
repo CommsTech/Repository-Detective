@@ -9,7 +9,7 @@ Generated: 2026-06-02 (Sprint 3 closeout)
 | Latest commit | `600d0a7` — docs(dogfood): verify batch 4a active fixes |
 | Branch | `main` |
 | `.env` staged | no |
-| `bugbot` ELF staged | no |
+| `repository-detective` ELF staged | no |
 | Backlog-control | active (`dogfood_backlog_control_enabled: true`) |
 | Latest scan | `db2d7061eaac8eb0` (1093 instances) |
 
@@ -49,7 +49,7 @@ Generated: 2026-06-02 (Sprint 3 closeout)
 | #66 | REL-INTERNAL-INFRA-REF | deploy.ps1:52 |
 | #143–#145 | REL-INTERNAL-INFRA-REF | preinstall/url.go |
 | #280 | REL-INTERNAL-INFRA-REF | patcher/git.go:137 |
-| #296 | REL-INTERNAL-INFRA-REF | deploy/nginx-bugbot.conf.example |
+| #296 | REL-INTERNAL-INFRA-REF | deploy/nginx-repository-detective.conf.example |
 | #321 | G201 | store/findings_batch_sqlite.go |
 | #324 | G203 | ui/ui_helpers.go |
 | #332 | G304 | scanners/archive_extract.go |

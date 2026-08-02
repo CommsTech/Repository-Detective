@@ -26,18 +26,18 @@ Recorded at sprint start (parent commit `e7ecd2f`).
 - Scan metadata: `dry_run_report_only: true`, `issue_sync_status: skipped`
 - UI tests used `betaTestGlobal()` with `IssuePolicyOff` — masked production filing path
 
-## Bugbot references (product-facing audit)
+## Repository-Detective references (product-facing audit)
 
 | Location | Classification |
 |----------|----------------|
 | `ui/templates/*.html` | Clean — uses Repository Detective |
 | `ui/layout.html` title | Repository Detective — Inspect. Analyze. Improve. |
 | `ui/templates/health.html` | GitHub link → fixed to Gitea |
-| `ui/static/graph.js` | `__bugbotGraph` → `__rdGraph` |
-| `ui/configure_model.go` | bugbot.db display → legacy note |
+| `ui/static/graph.js` | `__rdGraph` → `__rdGraph` |
+| `ui/configure_model.go` | repository-detective.db display → legacy note |
 | `docs/beta/CURSOR_BUGBOT_COMPARISON.md` | Keep — external product comparison |
 | `REPOSITORY_DETECTIVE_*` env / `X-Repository-Detective-API-Key` | Keep — legacy compatibility |
-| `data/bugbot.db` path | Keep — migration risk |
+| `data/repository-detective.db` path | Keep — migration risk |
 
 ## Qdrant
 
@@ -47,7 +47,7 @@ Removed from the product. Historical note: prior builds had optional semantic de
 |---------|-------|
 | `main.go` default | `qdrant_enabled: false`, `qdrant_collection: cah_findings` |
 | `config/config.yaml` | `cah_findings`, disabled |
-| `.env.example` (before) | `bugbot-findings` — corrected to `cah_findings` |
+| `.env.example` (before) | `cah_findings` — corrected to `cah_findings` |
 | Required for scans | **No** — optional local learning |
 
 ## Manual scan UX gaps (before)
@@ -66,6 +66,6 @@ Removed from the product. Historical note: prior builds had optional semantic de
 
 ## Safety gates confirmed
 
-- No `.env`, `bugbot` ELF, or `dist/` staged
+- No `.env`, `repository-detective` ELF, or `dist/` staged
 - All-repo scan not started
 - Remediation PRs / LLM sanity gate off by default

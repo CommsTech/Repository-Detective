@@ -201,7 +201,7 @@ Remove webhooks from test repos.
 
 - Keep secrets in `.env` only (gitignored)
 - Use `config.example.yaml` as template — empty token fields
-- Never commit `data/bugbot.db`, `.env`, or the `repository-detective` binary
+- Never commit `data/repository-detective.db`, `.env`, or the `repository-detective` binary
 - Rotate tokens if accidentally exposed
 
 ## Troubleshooting

@@ -12,7 +12,7 @@
 | Repository | `commstech/rd-filing-scratch` (private) |
 | RD repo ID | 221 |
 | Filing enabled | per-repo only (`policy_level=issue_only`, `issue_policy=all`, `severity_gate=low`) |
-| Product repo `commstech/repository-detective` | unchanged — 0 forge issues |
+| Product repo `commstech/Repository-Detective` | unchanged — 0 forge issues |
 | Beta repo `commstech/PCAP_Analyser` | unchanged — 0 forge issues |
 
 ## Fixture
@@ -41,9 +41,9 @@ const api_key = "rd-filing-proof-001"
 |-------|-------|
 | Issue number | **#1** |
 | URL | https://git.commsnet.org/commstech/rd-filing-scratch/issues/1 |
-| Owner/repo | `commstech/rd-filing-scratch` ✓ (not Bugbot, not PCAP_Analyser) |
+| Owner/repo | `commstech/rd-filing-scratch` ✓ (not Repository-Detective, not PCAP_Analyser) |
 | Title | `[HIGH] Possible hardcoded secret` |
-| Fingerprint | `bugbot-b5f47d413661a577` |
+| Fingerprint | `rd-b5f47d413661a577` |
 | Rule | `SEC-HARDCODED-SECRET` |
 
 Issue body includes fingerprint marker and structured sections (live deploy uses pre-`311e97c` body headings such as `## Finding Type`; filing mechanics verified).
@@ -52,7 +52,7 @@ Issue body includes fingerprint marker and structured sections (live deploy uses
 
 Second non-dry-run scan (`e4d39913be7b1d55`):
 
-- Docker log: `Updated existing issue #1 for fingerprint bugbot-b5f47d413661a577`
+- Docker log: `Updated existing issue #1 for fingerprint rd-b5f47d413661a577`
 - Open issues count remained **1**
 - Comment added on existing issue (semantic update path)
 

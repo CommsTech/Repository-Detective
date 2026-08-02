@@ -33,7 +33,7 @@ if [[ -f "$PKG/.env" ]]; then
   echo "FAIL: live .env must not be packaged"
   fail=1
 fi
-if [[ -f "$PKG/bugbot.db" ]]; then
+if [[ -f "$PKG/repository-detective.db" ]]; then
   echo "FAIL: database must not be packaged"
   fail=1
 fi

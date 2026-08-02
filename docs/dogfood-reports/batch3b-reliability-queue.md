@@ -20,6 +20,6 @@
 ## Verification plan
 
 - `go test ./...`
-- Rescan `commstech/Bugbot` on `main`
+- Rescan `commstech/Repository-Detective` on `main`
 - Confirm fingerprints absent from scan `2b335070099f8936` baseline
 - `POST /api/v1/findings/{id}/verify-closure` where applicable (policy: keep open)

@@ -50,7 +50,7 @@ func (reconcileForgeBridge) AnnotateCalibration(ctx context.Context, forgeType, 
 }
 
 func initReconcileEngine() {
-	if bugbotStore == nil || !config.IssueReconciliationEnabled {
+	if rdStore == nil || !config.IssueReconciliationEnabled {
 		reconcileEngine = nil
 		return
 	}
@@ -58,7 +58,7 @@ func initReconcileEngine() {
 	if config.UIEnabled {
 		basePath = config.PublicURL + "/ui"
 	}
-	reconcileEngine = reconcile.NewEngine(bugbotStore, suppressionMatcher, reconcileForgeBridge{}, reconcile.Config{
+	reconcileEngine = reconcile.NewEngine(rdStore, suppressionMatcher, reconcileForgeBridge{}, reconcile.Config{
 		Enabled:             true,
 		Comment:             config.IssueReconciliationComment,
 		CloseVerified:       config.IssueReconciliationCloseVerified,
@@ -99,8 +99,8 @@ func recordReconcileLearning(ctx context.Context, repositoryID int64, result rec
 }
 
 func (reconcileBridge) GetRun(c *gin.Context, runID string) (store.ReconciliationRun, []store.ReconciliationItemRecord, error) {
-	if bugbotStore == nil {
+	if rdStore == nil {
 		return store.ReconciliationRun{}, nil, fmt.Errorf("database disabled")
 	}
-	return bugbotStore.GetReconciliationRun(c.Request.Context(), runID)
+	return rdStore.GetReconciliationRun(c.Request.Context(), runID)
 }

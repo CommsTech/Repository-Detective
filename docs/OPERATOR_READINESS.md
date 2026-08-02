@@ -85,11 +85,11 @@ See [RUNNERS.md](RUNNERS.md).
 
 ## SQLite backup guidance
 
-1. **Location:** `database_path` (default `./data/bugbot.db` — legacy path name; data is Repository Detective state).
+1. **Location:** `database_path` (default `./data/repository-detective.db` — legacy path name; data is Repository Detective state).
 2. **When to backup:** Before upgrades, before enabling remediation PRs on production repos, and on a regular schedule (daily for active homelabs).
 3. **How:** Stop the process or use SQLite online backup:
    ```bash
-   sqlite3 /path/to/bugbot.db ".backup '/path/to/backup-$(date +%F).db'"
+   sqlite3 /path/to/repository-detective.db ".backup '/path/to/backup-$(date +%F).db'"
    ```
 4. **Restore:** Stop Repository Detective, replace the DB file, restart. Migrations run automatically on startup.
 5. **Permissions:** Restrict file mode to the service user (`chmod 600`).

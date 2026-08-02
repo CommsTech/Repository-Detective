@@ -36,7 +36,7 @@ Status key: **implemented** · **partial** · **documented only** · **planned**
 | Scanner registry | **implemented** | 10+ tools |
 | Status / health endpoints | **implemented** | `/health`, `/api/v1/status` |
 | Dashboard | **implemented** | UI + API summary |
-| SQLite persistence | **implemented** | `data/bugbot.db` |
+| SQLite persistence | **implemented** | `data/repository-detective.db` |
 | Backup / restore | **implemented** | [BACKUP_RESTORE.md](BACKUP_RESTORE.md) |
 | Docker packaging | **implemented** | core / runner / all-in-one |
 
@@ -80,7 +80,7 @@ Status key: **implemented** · **partial** · **documented only** · **planned**
 | GitHub issue creation | **partial** — manual scan repos only |
 | Duplicate prevention | **implemented** — fingerprints |
 | Labels | **implemented** — `repository-detective/*` default |
-| Fingerprinting | **implemented** — `bugbot-<hex>` values |
+| Fingerprinting | **implemented** — `rd-<hex>` values |
 | Suppression | **implemented** |
 | False positive marking | **implemented** |
 | Reconciliation preview/apply | **implemented** |

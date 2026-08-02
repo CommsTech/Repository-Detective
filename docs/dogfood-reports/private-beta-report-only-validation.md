@@ -7,7 +7,7 @@ Mode: `report_only_dry_run: true` via `scripts/run-non-product-dry-run.py`
 
 | Repo | Scan ID | Findings | issue_sync | Issues Δ | PRs |
 |------|---------|----------|------------|----------|-----|
-| commstech/Bugbot | `1c4db8a1a7ed8d1e` | 1146 | skipped | 0 | 0 |
+| commstech/Repository-Detective | `1c4db8a1a7ed8d1e` | 1146 | skipped | 0 | 0 |
 | commstech/netmapper | `c10f8f9829e940f4` | 257 | skipped | 0 | 0 |
 | commstech/commsnet_optimizer | `d1cf22c5890a75d1` | 5 | skipped | 0 | 0 |
 
@@ -16,7 +16,7 @@ Mode: `report_only_dry_run: true` via `scripts/run-non-product-dry-run.py`
 
 ## Per-repo notes
 
-### commstech/Bugbot (product)
+### commstech/Repository-Detective (product)
 
 - `dry_run_report_only: true` confirmed in scan pipeline
 - Open Gitea issues: 1 before/after (#48 operator task)

@@ -21,8 +21,8 @@ func TestComputeFingerprintStable(t *testing.T) {
 	if fp1 != fp2 {
 		t.Fatalf("expected stable fingerprint, got %q vs %q", fp1, fp2)
 	}
-	if !strings.HasPrefix(fp1, "bugbot-") {
-		t.Fatalf("expected bugbot prefix, got %q", fp1)
+	if !strings.HasPrefix(fp1, "rd-") {
+		t.Fatalf("expected rd- prefix, got %q", fp1)
 	}
 }
 
@@ -53,13 +53,12 @@ func TestSanitizeSecretEvidence(t *testing.T) {
 }
 
 func TestExtractFingerprintFromBody(t *testing.T) {
-	legacy := "## Tracking\n\n- Bugbot fingerprint: bugbot-deadbeef\n"
-	if got := ExtractFingerprintFromBody(legacy); got != "bugbot-deadbeef" {
-		t.Fatalf("legacy marker: got %q", got)
+	body := "## Tracking\n\n- Repository Detective fingerprint: rd-deadbeef\n"
+	if got := ExtractFingerprintFromBody(body); got != "rd-deadbeef" {
+		t.Fatalf("marker parse: got %q", got)
 	}
-	modern := "## Tracking\n\n- Repository Detective fingerprint: bugbot-deadbeef\n"
-	if got := ExtractFingerprintFromBody(modern); got != "bugbot-deadbeef" {
-		t.Fatalf("new marker: got %q", got)
+	if got := ExtractFingerprintFromBody("no marker here"); got != "" {
+		t.Fatalf("expected empty, got %q", got)
 	}
 }
 
@@ -78,6 +77,9 @@ func TestEnrichIssueSetsFingerprintAndLabelsMetadata(t *testing.T) {
 	EnrichIssue("owner/repo", issue, "scan-123")
 	if issue.Fingerprint == "" {
 		t.Fatal("expected fingerprint")
+	}
+	if !strings.HasPrefix(issue.Fingerprint, "rd-") {
+		t.Fatalf("expected rd- prefix, got %q", issue.Fingerprint)
 	}
 	if issue.Category != CategorySecurity {
 		t.Fatalf("expected normalized category security, got %q", issue.Category)

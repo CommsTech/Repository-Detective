@@ -277,9 +277,6 @@ func clientAPIKeyFromRequest(c *gin.Context) string {
 	if key := c.GetHeader("X-Repository-Detective-API-Key"); key != "" {
 		return key
 	}
-	if key := c.GetHeader("X-Bugbot-API-Key"); key != "" { // legacy alias
-		return key
-	}
 	if key := apiKeyFromCookie(c); key != "" {
 		return key
 	}

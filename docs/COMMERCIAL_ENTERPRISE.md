@@ -148,7 +148,7 @@ Commercial requires [AUTH_RBAC_PLAN.md](AUTH_RBAC_PLAN.md) phases 1–5. Enterpr
 
 ## Branding compatibility
 
-All editions honor legacy Bugbot env vars, API headers, labels, and fingerprints. Public docs prefer Repository Detective naming — see [BRANDING_COMPATIBILITY_AUDIT.md](BRANDING_COMPATIBILITY_AUDIT.md).
+All editions honor legacy Repository-Detective env vars, API headers, labels, and fingerprints. Public docs prefer Repository Detective naming — see [BRANDING_COMPATIBILITY_AUDIT.md](BRANDING_COMPATIBILITY_AUDIT.md).
 
 ---
 

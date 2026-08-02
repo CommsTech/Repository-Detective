@@ -23,25 +23,25 @@ func (containerScanBridge) Config(_ *gin.Context) (containers.Config, error) {
 }
 
 func (containerScanBridge) ListReferences(c *gin.Context, repoID int64) ([]store.ContainerImageReference, error) {
-	if bugbotStore == nil {
+	if rdStore == nil {
 		return nil, fmt.Errorf("database disabled")
 	}
-	return bugbotStore.ListContainerImageReferences(c.Request.Context(), repoID)
+	return rdStore.ListContainerImageReferences(c.Request.Context(), repoID)
 }
 
 func (containerScanBridge) ListScans(c *gin.Context, repoID int64) ([]store.ContainerImageScan, error) {
-	if bugbotStore == nil {
+	if rdStore == nil {
 		return nil, fmt.Errorf("database disabled")
 	}
-	return bugbotStore.ListContainerImageScans(c.Request.Context(), repoID, 50)
+	return rdStore.ListContainerImageScans(c.Request.Context(), repoID, 50)
 }
 
 func (containerScanBridge) Discover(c *gin.Context, repoID int64) ([]containers.ImageReference, error) {
 	ctx := c.Request.Context()
-	if bugbotStore == nil {
+	if rdStore == nil {
 		return nil, fmt.Errorf("database disabled")
 	}
-	repo, err := bugbotStore.GetRepository(ctx, repoID)
+	repo, err := rdStore.GetRepository(ctx, repoID)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +62,7 @@ func (containerScanBridge) Discover(c *gin.Context, repoID int64) ([]containers.
 	}
 	refs := containers.DiscoverImages(files, repoID)
 	for _, r := range refs {
-		_, _ = bugbotStore.UpsertContainerImageReference(ctx, store.ContainerImageReference{
+		_, _ = rdStore.UpsertContainerImageReference(ctx, store.ContainerImageReference{
 			RepositoryID: repoID, Image: r.Image, Tag: r.Tag, Digest: r.Digest,
 			TargetType: string(r.TargetType), FilePath: r.FilePath, Line: r.Line,
 			ServiceName: r.ServiceName, MutableTag: r.MutableTag, PrivateRegistry: r.PrivateRegistry,
@@ -74,7 +74,7 @@ func (containerScanBridge) Discover(c *gin.Context, repoID int64) ([]containers.
 func (containerScanBridge) EnqueueScan(c *gin.Context, repoID int64, image string) (map[string]any, error) {
 	ctx := c.Request.Context()
 	cfg := config.ContainerScan.Normalized()
-	if bugbotStore == nil {
+	if rdStore == nil {
 		return nil, fmt.Errorf("database disabled")
 	}
 	if runnerDispatcher == nil {
@@ -84,7 +84,7 @@ func (containerScanBridge) EnqueueScan(c *gin.Context, repoID int64, image strin
 	if err := containers.ValidateEnqueue(cfg, image, false); err != nil {
 		return nil, err
 	}
-	repo, err := bugbotStore.GetRepository(ctx, repoID)
+	repo, err := rdStore.GetRepository(ctx, repoID)
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +104,7 @@ func (containerScanBridge) EnqueueScan(c *gin.Context, repoID int64, image strin
 	}
 	cov, _ := json.Marshal(map[string]string{})
 	warn, _ := json.Marshal([]string{})
-	_, _ = bugbotStore.CreateContainerImageScan(ctx, store.ContainerImageScan{
+	_, _ = rdStore.CreateContainerImageScan(ctx, store.ContainerImageScan{
 		RepositoryID: repoID, ScanID: scanID, RunnerJobID: job.JobID, Image: image,
 		Status: store.ContainerScanStatusQueued, CoverageJSON: cov, WarningsJSON: warn,
 		StartedAt: time.Now().UTC(),
@@ -147,7 +147,7 @@ func applyContainerScanDefaults(cfg *Config) {
 }
 
 func ingestContainerScanResult(ctx context.Context, job store.RunnerJob, result runner.JobResult, repo store.Repository) {
-	if result.ContainerScan == nil || bugbotStore == nil {
+	if result.ContainerScan == nil || rdStore == nil {
 		return
 	}
 	cov, _ := json.Marshal(result.ContainerScan.Coverage)
@@ -156,10 +156,10 @@ func ingestContainerScanResult(ctx context.Context, job store.RunnerJob, result 
 	if result.Status == runner.JobStatusFailed {
 		status = store.ContainerScanStatusFailed
 	}
-	scans, _ := bugbotStore.ListContainerImageScans(ctx, repo.ID, 5)
+	scans, _ := rdStore.ListContainerImageScans(ctx, repo.ID, 5)
 	for _, sc := range scans {
 		if sc.RunnerJobID == job.JobID {
-			_ = bugbotStore.UpdateContainerImageScan(ctx, sc.ID, status, result.ContainerScan.Digest,
+			_ = rdStore.UpdateContainerImageScan(ctx, sc.ID, status, result.ContainerScan.Digest,
 				result.ContainerScan.VulnCount, cov, warn, time.Now().UTC())
 			break
 		}

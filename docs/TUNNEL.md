@@ -12,7 +12,7 @@ Install [cloudflared](https://developers.cloudflare.com/cloudflare-one/connectio
 cloudflared tunnel --url http://127.0.0.1:8081
 ```
 
-Use the printed `https://*.trycloudflare.com` URL as `BUGBOT_PUBLIC_URL`.
+Use the printed `https://*.trycloudflare.com` URL as `REPOSITORY_DETECTIVE_PUBLIC_URL`.
 
 ## Named tunnel (persistent)
 
@@ -40,7 +40,7 @@ sudo cloudflared service install
 sudo systemctl enable --now cloudflared
 ```
 
-Set `BUGBOT_PUBLIC_URL=https://repository-detective.example.com`.
+Set `REPOSITORY_DETECTIVE_PUBLIC_URL=https://repository-detective.example.com`.
 
 ## Verify
 

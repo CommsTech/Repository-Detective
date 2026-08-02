@@ -87,7 +87,7 @@ fi
 cp .env.example "$OUT/.env.example" 2>/dev/null || true
 
 # Never ship live secrets or local databases.
-for forbidden in .env bugbot.db config/config.yaml; do
+for forbidden in .env repository-detective.db config/config.yaml; do
   if [[ -e "$OUT/$forbidden" ]]; then
     echo "ERROR: forbidden artifact would be packaged: $forbidden" >&2
     exit 1

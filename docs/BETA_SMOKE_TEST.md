@@ -167,7 +167,7 @@ Use a **small public HTTPS repo you control** (not production secrets).
 
 ```bash
 docker compose stop repository-detective
-cp data/bugbot.db "data/bugbot-backup-$(date +%F).db"
+cp data/repository-detective.db "data/repository-detective-backup-$(date +%F).db"
 docker compose start repository-detective
 ```
 
@@ -181,7 +181,7 @@ See [BACKUP_RESTORE.md](BACKUP_RESTORE.md).
 
 ```bash
 docker compose stop repository-detective
-cp data/bugbot-backup-YYYY-MM-DD.db data/bugbot.db
+cp data/repository-detective-backup-YYYY-MM-DD.db data/repository-detective.db
 docker compose start repository-detective
 ```
 

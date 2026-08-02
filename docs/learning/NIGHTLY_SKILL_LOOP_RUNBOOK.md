@@ -5,7 +5,7 @@
 `scripts/nightly-rd-skill-loop.py` runs a **safe overnight calibration learner**:
 
 - Validates tests and smoke checks (fixed harness).
-- Ingests learning/calibration evidence from `data/bugbot.db`.
+- Ingests learning/calibration evidence from `data/repository-detective.db`.
 - Proposes **repo-scoped** calibration candidates.
 - Auto-applies **Tier 1** only when `--promote` is set and all gates pass.
 - Never auto-applies Tier 3 (global suppressions, HIGH/CRITICAL downgrades, CVE scanners).
@@ -39,8 +39,8 @@ python3 scripts/nightly-rd-skill-loop.py --daily-mode --promote --max-tier 1
 Requirements:
 
 - Host `go` on PATH **or** Docker available for test execution (see [Go test runner](#go-test-runner))
-- `data/bugbot.db` present
-- API key in `.env` (`REPOSITORY_DETECTIVE_API_KEY` or `BUGBOT_API_KEY`) for optional recompute/scans
+- `data/repository-detective.db` present
+- API key in `.env` (`REPOSITORY_DETECTIVE_API_KEY` or `REPOSITORY_DETECTIVE_API_KEY`) for optional recompute/scans
 - Repository Detective healthy on `http://127.0.0.1:8081` for scan triggers
 
 ## Go test runner
@@ -85,14 +85,14 @@ crontab -e
 Example (02:17 daily, Tier 1 only):
 
 ```cron
-17 2 * * * cd /home/commstech/repository-detective && ./scripts/rd-deterministic-daily.sh >> reports/nightly-rd-evolution/cron.log 2>&1
+17 2 * * * cd /home/commstech/Repository-Detective && ./scripts/rd-deterministic-daily.sh >> reports/nightly-rd-evolution/cron.log 2>&1
 ```
 
 **Cron-environment smoke test** (minimal env, same as cron):
 
 ```bash
 env -i HOME="$HOME" PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
-  bash -lc 'cd /home/commstech/repository-detective && ./scripts/rd-deterministic-daily.sh'
+  bash -lc 'cd /home/commstech/Repository-Detective && ./scripts/rd-deterministic-daily.sh'
 ```
 
 After the first scheduled run:
@@ -158,7 +158,7 @@ Audit history is append-only — nothing is deleted.
 Manual rollback:
 
 ```bash
-sqlite3 data/bugbot.db "UPDATE repo_calibration_rules SET active=0 WHERE id IN (...);"
+sqlite3 data/repository-detective.db "UPDATE repo_calibration_rules SET active=0 WHERE id IN (...);"
 ```
 
 ## Human approval required for

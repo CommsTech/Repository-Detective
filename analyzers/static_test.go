@@ -33,7 +33,7 @@ func TestRunStaticAnalysisSkipsEnvAndDeployShell(t *testing.T) {
 		Path: "deploy.sh",
 		Content: `# shellcheck disable=SC1091
 set -a && source .env && set +a
-local api_key="${REPOSITORY_DETECTIVE_API_KEY:-${BUGBOT_API_KEY:-}}"
+local api_key="${REPOSITORY_DETECTIVE_API_KEY:-}"
 `,
 	}}, true, false)
 	if len(findings) != 0 {
@@ -73,7 +73,7 @@ func TestRunStaticAnalysisQualityDisabled(t *testing.T) {
 }
 
 func TestIsFalsePositiveHardcodedSecret(t *testing.T) {
-	line := `local gitea_token="${BUGBOT_GITEA_TOKEN:-}"`
+	line := `local gitea_token="${REPOSITORY_DETECTIVE_GITEA_TOKEN:-}"`
 	if !isFalsePositiveHardcodedSecret("deploy.sh", line) {
 		t.Fatal("expected bash env expansion to be false positive")
 	}

@@ -14,7 +14,7 @@
 
 ### 2. CRITICAL: Empty Webhook Secret = No Auth (handlers/webhook.go)
 **Before:** If `WebhookSecret == ""`, `verifyWebhookSecret()` returned `nil` — effectively no auth  
-**After:** Logs a WARNING when secret is empty, but still requires non-empty secret for auth. Added `BUGBOT_WEBHOOK_SECRET` enforcement.
+**After:** Logs a WARNING when secret is empty, but still requires non-empty secret for auth. Added `REPOSITORY_DETECTIVE_WEBHOOK_SECRET` enforcement.
 
 ### 3. HIGH: No Rate Limiting (handlers/webhook.go)
 **Before:** No rate limiting on any endpoint — DoS risk  
@@ -38,14 +38,14 @@
 
 | Env Var | Description |
 |---------|-------------|
-| `BUGBOT_API_KEY` | API key required for `/api/v1/*` endpoints |
-| `BUGBOT_WEBHOOK_SECRET` | Webhook secret for Gitea webhook authentication |
+| `REPOSITORY_DETECTIVE_API_KEY` | API key required for `/api/v1/*` endpoints |
+| `REPOSITORY_DETECTIVE_WEBHOOK_SECRET` | Webhook secret for Gitea webhook authentication |
 
 ---
 
 ## Pending CAH Pipeline Audit
 
-Luna has been requested to run the CAH pipeline on Bugbot's codebase for production-grade security review. This manual audit covered the obvious issues found by reading the code, but the CAH pipeline will find deeper architectural issues.
+Luna has been requested to run the CAH pipeline on Repository Detective's codebase for production-grade security review. This manual audit covered the obvious issues found by reading the code, but the CAH pipeline will find deeper architectural issues.
 
 ---
 

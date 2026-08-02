@@ -11,7 +11,6 @@ var redactPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`(?i)(password|api[_-]?key|secret|token|auth)\s*[:=]\s*["'][^"']{4,}["']`),
 	regexp.MustCompile(`(?i)[?&]api_key=[^&\s"']+`),
 	regexp.MustCompile(`(?i)X-Repository-Detective-API-Key:\s*\S+`),
-	regexp.MustCompile(`(?i)X-Bugbot-API-Key:\s*\S+`),
 	regexp.MustCompile(`AKIA[0-9A-Z]{16}`),
 	regexp.MustCompile(`(?i)Bearer\s+[A-Za-z0-9\-._~+/]+=*`),
 	regexp.MustCompile(`(?i)(ghp_|gho_|glpat-|xox[baprs]-)[A-Za-z0-9\-_]+`),

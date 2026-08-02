@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_DB = ROOT / "data/bugbot.db"
+DEFAULT_DB = ROOT / "data/repository-detective.db"
 REPORT_DIR = ROOT / "docs/dogfood-reports"
 DEFAULT_LIMIT = 10
 
@@ -39,8 +39,8 @@ def load_env() -> None:
 
 
 def api_config() -> tuple[str, str]:
-    key = os.environ.get("REPOSITORY_DETECTIVE_API_KEY") or os.environ.get("BUGBOT_API_KEY", "")
-    base = os.environ.get("REPOSITORY_DETECTIVE_PUBLIC_URL") or os.environ.get("BUGBOT_PUBLIC_URL", "http://127.0.0.1:8081")
+    key = os.environ.get("REPOSITORY_DETECTIVE_API_KEY") or os.environ.get("REPOSITORY_DETECTIVE_API_KEY", "")
+    base = os.environ.get("REPOSITORY_DETECTIVE_PUBLIC_URL") or os.environ.get("REPOSITORY_DETECTIVE_PUBLIC_URL", "http://127.0.0.1:8081")
     return key.rstrip("/"), base.rstrip("/")
 
 
@@ -117,11 +117,11 @@ def looks_like_fixture_path(path: str | None, rule_id: str | None) -> bool:
             "/fixtures/",
             "benchmark/",
             ".example",
-            "/tmp/bugbot-",
+            "/tmp/rd-",
         )
     ):
         return True
-    if "gitleaks" in rule and ("test" in p or "/tmp/bugbot" in p):
+    if "gitleaks" in rule and ("test" in p or "/tmp/rd" in p):
         return True
     # Docs / archive markdown often quote secrets or eval examples
     if p.endswith((".md", ".txt", ".rst")) and any(

@@ -35,7 +35,7 @@ dist/repository-detective-beta/
 | docker-compose.beta.yml present | PASS |
 | config.example.yaml safe (no secrets) | PASS |
 | No live `.env` in package | PASS |
-| No bugbot.db in package | PASS |
+| No repository-detective.db in package | PASS |
 | No local binaries beyond release ELF | PASS |
 | `check-beta-package-secrets.sh` | PASS |
 
@@ -53,7 +53,7 @@ Manual grep for real credentials found only safe example references:
 - `.env.example`: `REPOSITORY_DETECTIVE_API_KEY=change-me-to-a-secure-random-string`
 - `docker-compose.beta.yml`: env var substitution comments
 
-No `BUGBOT_GITEA_TOKEN`, `AKIA`, or private keys in package.
+No `REPOSITORY_DETECTIVE_GITEA_TOKEN`, `AKIA`, or private keys in package.
 
 ## Artifacts not committed
 

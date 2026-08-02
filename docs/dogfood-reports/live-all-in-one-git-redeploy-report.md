@@ -20,10 +20,10 @@ All-in-one stage now runs `docker-alpine-runtime-setup.sh wget su-exec git` and 
 ```bash
 docker stop repository-detective && docker rm repository-detective
 docker run -d --name repository-detective --network host --restart unless-stopped \
-  --env-file /home/commstech/repository-detective/.env \
-  -v /home/commstech/repository-detective/config:/app/config:ro \
-  -v /home/commstech/repository-detective/data:/app/data \
-  -v /home/commstech/repository-detective/certs:/app/certs:ro \
+  --env-file /home/commstech/Repository-Detective/.env \
+  -v /home/commstech/Repository-Detective/config:/app/config:ro \
+  -v /home/commstech/Repository-Detective/data:/app/data \
+  -v /home/commstech/Repository-Detective/certs:/app/certs:ro \
   repository-detective:all-in-one
 ```
 

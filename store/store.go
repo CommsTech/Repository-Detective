@@ -78,7 +78,7 @@ func Open(cfg Config) (QueryStore, error) {
 	case "sqlite":
 		path := strings.TrimSpace(cfg.Path)
 		if path == "" {
-			path = "./data/bugbot.db"
+			path = "./data/repository-detective.db"
 		}
 		if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 			return nil, fmt.Errorf("create database directory: %w", err)

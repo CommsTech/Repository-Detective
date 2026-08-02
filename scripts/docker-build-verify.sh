@@ -10,7 +10,7 @@ COMMIT="${RD_COMMIT:-$(git rev-parse --short HEAD 2>/dev/null || echo local)}"
 BUILD_DATE="${RD_BUILD_DATE:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}"
 INSTALL="${INSTALL_EXTERNAL_TOOLS:-true}"
 PORT="${VERIFY_PORT:-18081}"
-API_KEY="${REPOSITORY_DETECTIVE_API_KEY:-${BUGBOT_API_KEY:-}}"
+API_KEY="${REPOSITORY_DETECTIVE_API_KEY:-}"
 
 log() { printf '==> %s\n' "$*"; }
 
@@ -76,14 +76,14 @@ smoke_all_in_one() {
   docker run -d --name "$SMOKE_CONTAINER_NAME" \
     -e REPOSITORY_DETECTIVE_PORT="$PORT" \
     -e REPOSITORY_DETECTIVE_LISTEN_HOST=0.0.0.0 \
-    -e BUGBOT_PORT="$PORT" \
+    -e REPOSITORY_DETECTIVE_PORT="$PORT" \
     -e REPOSITORY_DETECTIVE_SKIP_STARTUP_CHECKS=true \
-    -e REPOSITORY_DETECTIVE_DATABASE_PATH=/app/data/bugbot.db \
+    -e REPOSITORY_DETECTIVE_DATABASE_PATH=/app/data/repository-detective.db \
     -e REPOSITORY_DETECTIVE_GITEA_URL=http://example.com \
     -e REPOSITORY_DETECTIVE_GITEA_TOKEN=verify-smoke \
     -e REPOSITORY_DETECTIVE_API_KEY="${API_KEY:-verify-smoke-key}" \
-    -e BUGBOT_GITEA_URL=http://example.com \
-    -e BUGBOT_GITEA_TOKEN=verify-smoke \
+    -e REPOSITORY_DETECTIVE_GITEA_URL=http://example.com \
+    -e REPOSITORY_DETECTIVE_GITEA_TOKEN=verify-smoke \
     -p "${PORT}:${PORT}" \
     "$tag" >/dev/null
 

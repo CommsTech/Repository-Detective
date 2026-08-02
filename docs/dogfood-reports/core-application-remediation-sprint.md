@@ -1,7 +1,7 @@
 # Core application remediation sprint
 
 **Date:** 2026-06-05  
-**Scope:** Repository Detective product repo (`commstech/repository-detective`) only  
+**Scope:** Repository Detective product repo (`commstech/Repository-Detective`) only  
 **Operating model:** Cursor improves RD core → RD fixes/validates connected repos → humans approve sensitive actions  
 **Paused:** Manual fleet repo cleanup, RuView, Qdrant global enablement, new scanners, GitHub/GitLab connected support, Auth/RBAC Slice 2
 
@@ -125,7 +125,7 @@ Repository Detective created remediation PR → human merged → main rescanned 
 
 | Artifact | Value |
 |----------|-------|
-| Finding | 9971 (`bugbot-2e9bfe809e79bcf0`, Dockerfile:100) |
+| Finding | 9971 (`rd-2e9bfe809e79bcf0`, Dockerfile:100) |
 | Plan | `rp-59815d80d8d32abb` |
 | Patch attempt | `pa-6cbc72da69690560` |
 | PR | [#274](https://git.commsnet.org/commstech/repository-detective/pulls/274) |
@@ -141,7 +141,7 @@ Repository Detective created remediation PR → human merged → main rescanned 
 
 | Artifact | Value |
 |----------|-------|
-| Finding | 11658 (`bugbot-c68376af29742113`, `internal/dogfood/staticcheck_e2e_marker.go:8`) |
+| Finding | 11658 (`rd-c68376af29742113`, `internal/dogfood/staticcheck_e2e_marker.go:8`) |
 | Plan | `rp-08270977049e02e8` |
 | Patch attempt | `pa-12474c8d554fbbf5` |
 | PR | [#288](https://git.commsnet.org/commstech/repository-detective/pulls/288) |
@@ -153,7 +153,7 @@ Repository Detective created remediation PR → human merged → main rescanned 
 
 **Remediation expansion stopped** — two E2Es are enough proof for beta. Next: private beta ops (1 week), then Auth/RBAC Slice 2.
 
-**DB access note:** avoid host-side SQLite against live `bugbot.db` while RD is scanning/writing (`database is locked`). Prefer API, `docker exec`, backup copy, or read-only with `busy_timeout`.
+**DB access note:** avoid host-side SQLite against live `repository-detective.db` while RD is scanning/writing (`database is locked`). Prefer API, `docker exec`, backup copy, or read-only with `busy_timeout`.
 
 ### 6. Auth/RBAC stabilization
 
@@ -199,7 +199,7 @@ After deploy, test fleet workflow on **one** repo:
 curl -X POST http://localhost:8081/api/v1/analyze \
   -H "X-Repository-Detective-API-Key: $REPOSITORY_DETECTIVE_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"owner":"commstech","repository":"Bugbot","ref":"main"}'
+  -d '{"owner":"commstech","repository":"Repository-Detective","ref":"main"}'
 # 5. POST verify-closure OR wait for pending_rescan auto-verify
 # 6. Confirm resolved_verified label; issue stays open (close_issues=false)
 ```

@@ -4,7 +4,7 @@ Use this guide when moving Repository Detective between versions on a homelab or
 
 ## Before upgrade
 
-1. **Backup** — Follow [BACKUP_RESTORE.md](./BACKUP_RESTORE.md) and copy `bugbot.db` plus config.
+1. **Backup** — Follow [BACKUP_RESTORE.md](./BACKUP_RESTORE.md) and copy `repository-detective.db` plus config.
 2. **Note schema version** — On startup, migrations apply sequentially (`schema_migrations` table).
 3. **Review release notes** — Check for new required env vars, scanner binaries, or breaking API changes.
 
@@ -56,7 +56,7 @@ docker restart repository-detective
 ## Rollback
 
 1. Stop the new container.
-2. Restore previous `bugbot.db` **only if** the new version migrated forward and you need to revert (avoid mixing old binary with newer schema).
+2. Restore previous `repository-detective.db` **only if** the new version migrated forward and you need to revert (avoid mixing old binary with newer schema).
 3. Run the previous image tag or binary.
 4. If migrations already advanced schema, prefer fixing forward rather than downgrading the DB file.
 

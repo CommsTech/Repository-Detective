@@ -105,7 +105,7 @@ jobs:
             -e REPOSITORY_DETECTIVE_PORT="$PORT" \
             -e REPOSITORY_DETECTIVE_LISTEN_HOST=0.0.0.0 \
             -e REPOSITORY_DETECTIVE_SKIP_STARTUP_CHECKS=true \
-            -e REPOSITORY_DETECTIVE_DATABASE_PATH=/app/data/bugbot.db \
+            -e REPOSITORY_DETECTIVE_DATABASE_PATH=/app/data/repository-detective.db \
             -e REPOSITORY_DETECTIVE_GITEA_URL=http://example.com \
             -e REPOSITORY_DETECTIVE_GITEA_TOKEN=ci-smoke \
             -e REPOSITORY_DETECTIVE_API_KEY=ci-smoke-key \

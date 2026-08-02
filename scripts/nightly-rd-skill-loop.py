@@ -26,7 +26,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_STATE = ROOT / "state/nightly-rd-evolution"
 DEFAULT_REPORT = ROOT / "reports/nightly-rd-evolution/latest"
-DEFAULT_DB = ROOT / "data/bugbot.db"
+DEFAULT_DB = ROOT / "data/repository-detective.db"
 
 
 def _json_default(obj: Any) -> Any:
@@ -193,8 +193,8 @@ def load_env_file() -> None:
 
 
 def env_api() -> tuple[str, str]:
-    api_key = os.environ.get("REPOSITORY_DETECTIVE_API_KEY") or os.environ.get("BUGBOT_API_KEY", "")
-    base = os.environ.get("REPOSITORY_DETECTIVE_PUBLIC_URL") or os.environ.get("BUGBOT_PUBLIC_URL", "http://127.0.0.1:8081")
+    api_key = os.environ.get("REPOSITORY_DETECTIVE_API_KEY") or os.environ.get("REPOSITORY_DETECTIVE_API_KEY", "")
+    base = os.environ.get("REPOSITORY_DETECTIVE_PUBLIC_URL") or os.environ.get("REPOSITORY_DETECTIVE_PUBLIC_URL", "http://127.0.0.1:8081")
     return api_key.rstrip("/"), base.rstrip("/")
 
 

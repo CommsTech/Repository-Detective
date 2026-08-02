@@ -46,13 +46,13 @@ func TestBackfillExternalIssueMapping(t *testing.T) {
 	repo, _ := s.UpsertRepository(ctx, store.Repository{Owner: "o", Name: "r", FullName: "o/r"})
 	now := time.Now().UTC()
 	f, _ := s.UpsertFinding(ctx, store.Finding{
-		RepositoryID: repo.ID, Fingerprint: "bugbot-backfill1", Title: "x", Severity: "medium",
+		RepositoryID: repo.ID, Fingerprint: "rd-backfill1", Title: "x", Severity: "medium",
 		Source: "health", RuleID: "HEALTH-TEST", FirstSeenAt: now, LastSeenAt: now,
 	})
 
 	forge := &stubForge{issues: []issues.ForgeIssue{{
 		Number: 55, HTMLURL: "http://git/o/r/issues/55",
-		Body:    "## Tracking\n\n- Bugbot fingerprint: bugbot-backfill1\n",
+		Body:    "## Tracking\n\n- Repository Detective fingerprint: rd-backfill1\n",
 	}}}
 
 	result, err := issuelink.BackfillExternalIssueMappings(ctx, &issuelink.Store{Query: s}, forge, "o", "r", repo.ID, "gitea", "scan-bf", logrus.New())
@@ -62,7 +62,7 @@ func TestBackfillExternalIssueMapping(t *testing.T) {
 	if result.Backfilled != 1 {
 		t.Fatalf("backfilled=%d want 1", result.Backfilled)
 	}
-	ext, err := s.GetExternalIssueByFingerprint(ctx, repo.ID, "gitea", "bugbot-backfill1")
+	ext, err := s.GetExternalIssueByFingerprint(ctx, repo.ID, "gitea", "rd-backfill1")
 	if err != nil || ext.IssueNumber != 55 {
 		t.Fatalf("mapping missing: %+v err=%v", ext, err)
 	}
@@ -90,14 +90,14 @@ func TestMappedIssueReturnsLocalLink(t *testing.T) {
 	repo, _ := s.UpsertRepository(ctx, store.Repository{Owner: "o", Name: "r", FullName: "o/r"})
 	now := time.Now().UTC()
 	f, _ := s.UpsertFinding(ctx, store.Finding{
-		RepositoryID: repo.ID, Fingerprint: "bugbot-idem1", Title: "x", Severity: "high",
+		RepositoryID: repo.ID, Fingerprint: "rd-idem1", Title: "x", Severity: "high",
 		Source: "health", FirstSeenAt: now, LastSeenAt: now,
 	})
 	_, _ = s.UpsertExternalIssue(ctx, store.ExternalIssue{
 		FindingID: f.ID, ForgeType: "gitea", IssueNumber: 12, IssueURL: "http://git/o/r/issues/12", State: "open",
 	})
 
-	num, url, ok := issuelink.MappedIssue(ctx, &issuelink.Store{Query: s}, repo.ID, "gitea", "bugbot-idem1")
+	num, url, ok := issuelink.MappedIssue(ctx, &issuelink.Store{Query: s}, repo.ID, "gitea", "rd-idem1")
 	if !ok || num != 12 || url == "" {
 		t.Fatalf("mapped=%d url=%q ok=%v", num, url, ok)
 	}

@@ -33,8 +33,8 @@ dist/repository-detective-beta/
 | config.example.yaml safe | PASS — empty tokens, `auto_create_issues: false` |
 | docker-compose.beta.yml safe | PASS — `AUTO_CREATE_ISSUES=false`, remediation PR off |
 | No live `.env` in package | PASS |
-| No bugbot.db in package | PASS |
-| No local bugbot ELF beyond release binary | PASS |
+| No repository-detective.db in package | PASS |
+| No local repository-detective ELF beyond release binary | PASS |
 | `check-beta-package-secrets.sh` | PASS |
 
 ## SBOM
@@ -47,7 +47,7 @@ dist/repository-detective-beta/
 ## Secrets grep
 
 ```bash
-grep -RInE '(BUGBOT_GITEA_TOKEN|REPOSITORY_DETECTIVE_API_KEY|AKIA|BEGIN RSA|BEGIN OPENSSH|password|secret|token)' \
+grep -RInE '(REPOSITORY_DETECTIVE_GITEA_TOKEN|REPOSITORY_DETECTIVE_API_KEY|AKIA|BEGIN RSA|BEGIN OPENSSH|password|secret|token)' \
   dist/repository-detective-beta
 ```
 

@@ -5,11 +5,11 @@
 | Path | Size / note |
 |------|-------------|
 | Total workspace | ~848M (mostly `vendor/` when present, local DBs) |
-| `data/bugbot.db` | Local runtime DB — **gitignored** |
+| `data/repository-detective.db` | Local runtime DB — **gitignored** |
 | `deployment-backups/` | Operator backups — **gitignored** |
 | `restore-drill-test/` | Drill artifacts — **gitignored** |
 | `deploy/bin/trivy` | ~152M staged binary — **gitignored** |
-| `bugbot` | Local ELF build output — **now gitignored** |
+| `repository-detective` | Local ELF build output — **now gitignored** |
 
 ## Large files (>5M, non-.git)
 
@@ -18,7 +18,7 @@
 
 ## Fixes applied
 
-1. Added `/bugbot` and `bugbot` to `.gitignore`
+1. Added `/repository-detective` and `repository-detective` to `.gitignore`
 2. Confirmed `*.db`, `data/`, `deployment-backups/`, `docs/dogfood-reports/*` ignore rules
 3. Force-add only sanitized summary dogfood reports (see `docs/dogfood-reports/README.md`)
 

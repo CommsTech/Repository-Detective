@@ -80,7 +80,7 @@ Full guide: [AUTH_LOCAL.md](AUTH_LOCAL.md).
 | `evidence_closure_close_issues` | `false` | Comments only |
 | `preinstall_audit_enabled` | `true` | Pre-install audit on-ramp (report-only; no issue filing) |
 | `ai_startup_test_enabled` | `false` | No paid probe on boot |
-| `database_path` | `./data/bugbot.db` | Legacy filename intentional |
+| `database_path` | `./data/repository-detective.db` | Legacy filename intentional |
 | `label_compat_mode` | `new_only` | Writes `repository-detective/*` labels |
 | `auth_mode` | `api_key_only` | `local` enables UI session login |
 
@@ -104,7 +104,7 @@ Set globally or per repo. Recommended day-to-day: **`standard`**.
 
 | Situation | Winner |
 |-----------|--------|
-| `REPOSITORY_DETECTIVE_PORT` and `BUGBOT_PORT` both set | `REPOSITORY_DETECTIVE_*` |
+| `REPOSITORY_DETECTIVE_PORT` and `REPOSITORY_DETECTIVE_PORT` both set | `REPOSITORY_DETECTIVE_*` |
 | YAML `port` and env port | Env |
 | Repo setting vs global | Repo when set |
 

@@ -58,4 +58,4 @@ Generated: 2026-06-02
 |-------|--------|
 | `.env` staged | No |
 | `dist/` staged | No |
-| Local `bugbot` ELF staged | No |
+| Local `repository-detective` ELF staged | No |

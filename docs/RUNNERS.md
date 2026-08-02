@@ -56,7 +56,7 @@ runner_artifact_retention_days: 14
 runner_callback_base_url: ""   # optional; defaults to public_url or listen host
 ```
 
-Env: `REPOSITORY_DETECTIVE_RUNNER_*` (legacy `BUGBOT_RUNNER_*` supported).
+Env: `REPOSITORY_DETECTIVE_RUNNER_*` (legacy `REPOSITORY_DETECTIVE_RUNNER_*` supported).
 
 | Mode | Behavior |
 |------|----------|
@@ -131,14 +131,14 @@ jobs:
       - uses: actions/checkout@v4
       - name: Run Repository Detective runner
         env:
-          BUGBOT_CORE_URL: https://detective.example.com
-          BUGBOT_RUNNER_SHARED_SECRET: ${{ secrets.REPOSITORY_DETECTECTIVE_RUNNER_SECRET }}
-          BUGBOT_WORKSPACE: ${{ github.workspace }}
+          REPOSITORY_DETECTIVE_CORE_URL: https://detective.example.com
+          REPOSITORY_DETECTIVE_RUNNER_SHARED_SECRET: ${{ secrets.REPOSITORY_DETECTECTIVE_RUNNER_SECRET }}
+          REPOSITORY_DETECTIVE_WORKSPACE: ${{ github.workspace }}
         run: |
           repository-detective-runner \
-            --core-url "$BUGBOT_CORE_URL" \
-            --runner-secret "$BUGBOT_RUNNER_SHARED_SECRET" \
-            --workspace "$BUGBOT_WORKSPACE"
+            --core-url "$REPOSITORY_DETECTIVE_CORE_URL" \
+            --runner-secret "$REPOSITORY_DETECTIVE_RUNNER_SHARED_SECRET" \
+            --workspace "$REPOSITORY_DETECTIVE_WORKSPACE"
 ```
 
 ### Runner image (recommended)
@@ -248,7 +248,7 @@ runner_job_timeout_seconds: 900
 runner_max_concurrent_jobs: 2
 ```
 
-Env equivalents: `BUGBOT_RUNNER_DELEGATION_ENABLED`, `BUGBOT_RUNNER_MODE`, `BUGBOT_RUNNER_SHARED_SECRET`, etc.
+Env equivalents: `REPOSITORY_DETECTIVE_RUNNER_DELEGATION_ENABLED`, `REPOSITORY_DETECTIVE_RUNNER_MODE`, `REPOSITORY_DETECTIVE_RUNNER_SHARED_SECRET`, etc.
 
 Restart core after changing secrets or delegation flags.
 
@@ -279,7 +279,7 @@ On the runner host (or Gitea Actions workflow):
 ```bash
 repository-detective-runner \
   --core-url "https://detective.example.com" \
-  --runner-secret "$BUGBOT_RUNNER_SHARED_SECRET" \
+  --runner-secret "$REPOSITORY_DETECTIVE_RUNNER_SHARED_SECRET" \
   --workspace "/path/to/checkout"
 ```
 

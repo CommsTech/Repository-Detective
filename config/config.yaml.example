@@ -96,7 +96,7 @@ embedding_model: "text-embedding-3-small"
 
 database_enabled: true
 database_driver: sqlite
-database_path: ./data/bugbot.db
+database_path: ./data/repository-detective.db
 ui_enabled: true
 ui_base_path: /ui
 scheduler_enabled: true
@@ -109,7 +109,6 @@ max_concurrent_analyses: 2
 analysis_timeout: 900
 rate_limit_per_minute: 60
 skip_startup_checks: true
-label_compat_mode: new_only
 
 reporting:
   mode: high_signal

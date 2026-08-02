@@ -31,7 +31,7 @@ need_go
 GOSUMDB="${GOSUMDB:-sum.golang.org}"
 
 echo "==> vendoring with proxy.golang.org"
-if GOPROXY=https://proxy.golang.org,direct GOSUMDB="$GOSUMDB" go mod vendor 2>/tmp/bugbot-vendor.log; then
+if GOPROXY=https://proxy.golang.org,direct GOSUMDB="$GOSUMDB" go mod vendor 2>/tmp/rd-vendor.log; then
   echo "==> vendor/ ready ($(du -sh vendor | cut -f1))"
   exit 0
 fi

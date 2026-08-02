@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Open operator/deployment tracking issues on commstech/repository-detective (requires GITEA_TOKEN in .env).
+# Open operator/deployment tracking issues on commstech/Repository-Detective (requires GITEA_TOKEN in .env).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 [[ -f .env ]] && set -a && source .env && set +a
-TOKEN="${GITEA_TOKEN:-${BUGBOT_GITEA_TOKEN:-}}"
+TOKEN="${GITEA_TOKEN:-${REPOSITORY_DETECTIVE_GITEA_TOKEN:-}}"
 OWNER="${GITEA_ISSUE_OWNER:-commstech}"
 REPO="${GITEA_ISSUE_REPO:-repository-detective}"
 API="https://git.commsnet.org/api/v1/repos/${OWNER}/${REPO}"

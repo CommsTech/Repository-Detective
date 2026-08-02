@@ -1,7 +1,7 @@
 # CI and release workflow fix report
 
 **Date:** 2026-06-06  
-**Repository:** commstech/repository-detective
+**Repository:** commstech/Repository-Detective
 
 ## Failing workflows (before fix)
 
@@ -10,7 +10,7 @@
 | `.gitea/workflows/ci.yml` | #1835 | **Format check** failed — repo-wide `gofmt -s -l .` flagged ~99 legacy files not formatted in CI |
 | `.gitea/workflows/ci.yml` | (latent) | **Docker job** mapped port `18080:8080` but did not set `REPOSITORY_DETECTIVE_PORT=8080`; health probe could fail depending on image defaults |
 | `.gitea/workflows/ci.yml` | (latent) | **golangci-lint** duplicated staticcheck/vet with different toolchain expectations |
-| `.gitea/workflows/release.yml` | n/a recent pass | Go **1.21** vs module **1.23** mismatch; artifact names still `gitea-bugbot-*` |
+| `.gitea/workflows/release.yml` | n/a recent pass | Go **1.21** vs module **1.23** mismatch; artifact names still `repository-detective-*` |
 
 ## Fixes applied
 

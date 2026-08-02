@@ -32,7 +32,7 @@ Repository: https://git.commsnet.org/commstech/repository-detective
 
 **Cause:** UI is protected by API key middleware (by design).
 
-**Workaround:** Open `http://HOST:8081/ui?api_key=YOUR_BUGBOT_API_KEY` after setting `BUGBOT_API_KEY` in `.env`.
+**Workaround:** Open `http://HOST:8081/ui?api_key=YOUR_REPOSITORY_DETECTIVE_API_KEY` after setting `REPOSITORY_DETECTIVE_API_KEY` in `.env`.
 
 **Onboarding:** Use `http://HOST:8081/onboard/` (no API key needed for the wizard UI).
 
@@ -73,7 +73,7 @@ Repository: https://git.commsnet.org/commstech/repository-detective
 
 **Symptom:** Container restart loop — `unable to open database file: out of memory (14)`.
 
-**Cause:** Bind mount `./data` owned by host UID 1000; container runs as `bugbot` UID 1001.
+**Cause:** Bind mount `./data` owned by host UID 1000; container runs as `repositorydetective` UID 1001.
 
 **Fix (in repo):** `scripts/docker-entrypoint.sh` runs `chown rd:rd /app/data` on start.
 
@@ -97,7 +97,7 @@ Repository: https://git.commsnet.org/commstech/repository-detective
 
 **Fix (in repo):** Mount `./certs/*.crt`; entrypoint runs `update-ca-certificates`.
 
-**Remaining:** Startup check may still timeout if the gateway is slow; set `BUGBOT_SKIP_STARTUP_CHECKS=true`.
+**Remaining:** Startup check may still timeout if the gateway is slow; set `REPOSITORY_DETECTIVE_SKIP_STARTUP_CHECKS=true`.
 
 **Gitea issue:** #8
 
@@ -107,7 +107,7 @@ Repository: https://git.commsnet.org/commstech/repository-detective
 
 **Symptom:** Native binary and Docker compete for port 8081; systemd restarts native process.
 
-**Workaround:** `sudo systemctl disable --now bugbot.service` after Docker is healthy. Legacy `~/bugbot/run.sh` repointed to `docker-compose up -d`.
+**Workaround:** `sudo systemctl disable --now repository-detective.service` after Docker is healthy. Legacy `~/repository-detective/run.sh` repointed to `docker-compose up -d`.
 
 **Gitea issue:** #9
 

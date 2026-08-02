@@ -23,7 +23,7 @@ Updated: 2026-06-07 (Beta UX + Release Gate sprint)
 | Feature flags not fully testable | **documented** | FEATURE_FLAG_TEST_MATRIX + configure page |
 | Staticcheck CI | open | Container network; add CI job |
 | Ruff gating Python/homelab | **implemented** | RUFF_GATING_POLICY.md |
-| Cursor Bugbot benchmark | **planned** | CURSOR_BUGBOT_BENCHMARK_FIXTURE.md |
+| Cursor Repository-Detective benchmark | **planned** | CURSOR_BUGBOT_BENCHMARK_FIXTURE.md |
 | Beta package outside CI | **verified** | `make beta-release` |
 | Docker rebuild | **pass** | docker-build-verify.sh ~23m |
 

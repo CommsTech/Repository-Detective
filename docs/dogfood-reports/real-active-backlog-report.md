@@ -1,4 +1,4 @@
-# Real active backlog — commstech/Bugbot
+# Real active backlog — commstech/Repository-Detective
 
 Generated: 2026-06-06 22:26 UTC
 

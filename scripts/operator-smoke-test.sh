@@ -14,7 +14,7 @@ cd "$ROOT"
 
 PORT="${RD_PORT:-8081}"
 BASE="${RD_BASE_URL:-http://127.0.0.1:${PORT}}"
-API_KEY="${REPOSITORY_DETECTIVE_API_KEY:-${BUGBOT_API_KEY:-}}"
+API_KEY="${REPOSITORY_DETECTIVE_API_KEY}"
 HEADER="X-Repository-Detective-API-Key"
 LEGACY_HEADER="X-Repository-Detective-API-Key"
 
@@ -31,7 +31,7 @@ curl_json() {
 curl_auth() {
   local path=$1
   if [ -z "$API_KEY" ]; then
-    fail "Set REPOSITORY_DETECTIVE_API_KEY (or legacy BUGBOT_API_KEY) for authenticated endpoints"
+    fail "Set REPOSITORY_DETECTIVE_API_KEY for authenticated endpoints"
   fi
   curl_json "$path" -H "${HEADER}: ${API_KEY}"
 }

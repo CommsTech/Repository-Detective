@@ -60,12 +60,12 @@ scan_profile: standard_deterministic
 
 1. Run **one report-only scan** on `commstech/Wifi_Collector`.
 2. Record **scan ID** in every feedback item.
-3. Use Gitea issue templates on `commstech/repository-detective` (preferred) or doc templates below.
+3. Use Gitea issue templates on `commstech/Repository-Detective` (preferred) or doc templates below.
 4. **Never** paste secrets, tokens, `.env`, PHI/PII, or customer data.
 
 ## Required feedback format
 
-Use Gitea templates on `commstech/repository-detective` with scan ID in every submission:
+Use Gitea templates on `commstech/Repository-Detective` with scan ID in every submission:
 
 | Use case | Template |
 |----------|----------|

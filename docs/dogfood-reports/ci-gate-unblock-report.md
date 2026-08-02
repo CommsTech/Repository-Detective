@@ -5,7 +5,7 @@
 | Field | Value |
 |-------|-------|
 | **Authoritative run** | **#1855** (run id 1855) |
-| URL | https://git.commsnet.org/commstech/Bugbot/actions/runs/1855 |
+| URL | https://git.commsnet.org/commstech/Repository-Detective/actions/runs/1855 |
 | Commit | `9a1f629` — fix(ci): probe /health via docker exec on nested runners |
 | Workflow | `ci.yml` |
 | Runner | Hurricane / RemoteSupport |

@@ -280,7 +280,7 @@ func TestFindingDetailEscapesHTML(t *testing.T) {
 	repo, _ := s.UpsertRepository(ctx, store.Repository{Owner: "o", Name: "r", FullName: "o/r"})
 	now := time.Now().UTC()
 	finding, _ := s.UpsertFinding(ctx, store.Finding{
-		RepositoryID: repo.ID, Fingerprint: "bugbot-x", Title: "<script>alert(1)</script>",
+		RepositoryID: repo.ID, Fingerprint: "rd-x", Title: "<script>alert(1)</script>",
 		FirstSeenAt: now, LastSeenAt: now,
 	})
 	_ = s.AddFindingInstance(ctx, store.FindingInstance{
@@ -953,7 +953,7 @@ func TestLayoutTitleContainsRepositoryDetective(t *testing.T) {
 		t.Fatal("expected product title in layout")
 	}
 	if strings.Contains(w.Body.String(), "<title>") && strings.Contains(strings.ToLower(w.Body.String()), "bugbot —") {
-		t.Fatal("product-facing title must not use Bugbot")
+		t.Fatal("product-facing title must not use Repository-Detective")
 	}
 }
 

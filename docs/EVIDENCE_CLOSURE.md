@@ -47,11 +47,11 @@ Gitea labels (dual/legacy/new per `label_compat_mode`):
 
 | Purpose | Legacy | New |
 |---------|--------|-----|
-| Fix PR opened | `bugbot/fix-pr-opened` | `repository-detective/fix-pr-opened` |
-| Fix PR merged | `bugbot/fix-pr-merged` | `repository-detective/fix-pr-merged` |
-| Pending rescan | `bugbot/pending-rescan` | `repository-detective/pending-rescan` |
-| Resolved verified | `bugbot/resolved-verified` | `repository-detective/resolved-verified` |
-| Closure blocked | `bugbot/closure-blocked` | `repository-detective/closure-blocked` |
+| Fix PR opened | `repository-detective/fix-pr-opened` | `repository-detective/fix-pr-opened` |
+| Fix PR merged | `repository-detective/fix-pr-merged` | `repository-detective/fix-pr-merged` |
+| Pending rescan | `repository-detective/pending-rescan` | `repository-detective/pending-rescan` |
+| Resolved verified | `repository-detective/resolved-verified` | `repository-detective/resolved-verified` |
+| Closure blocked | `repository-detective/closure-blocked` | `repository-detective/closure-blocked` |
 
 ## Workflow
 

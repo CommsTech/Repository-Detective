@@ -16,7 +16,7 @@ import urllib.request
 from collections import Counter
 
 API = os.environ.get("RD_API", "http://192.168.255.10:8081/api/v1").rstrip("/")
-KEY = os.environ.get("REPOSITORY_DETECTIVE_API_KEY") or os.environ.get("BUGBOT_API_KEY") or ""
+KEY = os.environ.get("REPOSITORY_DETECTIVE_API_KEY") or os.environ.get("REPOSITORY_DETECTIVE_API_KEY") or ""
 REPO_ID = 1
 
 # Rule families that are calibrated product-repo noise after the 2026-08-02 closeout.
@@ -148,7 +148,7 @@ def should_suppress(detail: dict) -> tuple[bool, str]:
 
 def main() -> int:
     if not KEY:
-        print("REPOSITORY_DETECTIVE_API_KEY / BUGBOT_API_KEY required", file=sys.stderr)
+        print("REPOSITORY_DETECTIVE_API_KEY / REPOSITORY_DETECTIVE_API_KEY required", file=sys.stderr)
         return 1
     findings = list_open_findings()
     # Dedupe by fingerprint keeping newest id

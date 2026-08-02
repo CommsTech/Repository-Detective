@@ -8,7 +8,7 @@ Recorded: 2026-06-02 (sprint start, pre-fix deploy)
 |------|-------|
 | Git HEAD | `da908bf` |
 | Live container image | `repository-detective:all-in-one` (built from `ca56dbf` era) |
-| Product repo ID | 1 (`commstech/repository-detective`) |
+| Product repo ID | 1 (`commstech/Repository-Detective`) |
 | Latest product scan ID | `b21dc57c40411f31` |
 
 ## Graph page (pre-fix)

@@ -34,7 +34,7 @@ func initClosureEngine() {
 type closureStoreAdapter struct{}
 
 func (closureStoreAdapter) ListPatchAttemptsByRepositoryAndStatus(ctx context.Context, repositoryID int64, status string) ([]closure.PatchAttemptRow, error) {
-	recs, err := bugbotStore.ListPatchAttemptsByRepositoryAndStatus(ctx, repositoryID, status)
+	recs, err := rdStore.ListPatchAttemptsByRepositoryAndStatus(ctx, repositoryID, status)
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +46,7 @@ func (closureStoreAdapter) ListPatchAttemptsByRepositoryAndStatus(ctx context.Co
 }
 
 func (closureStoreAdapter) GetPatchAttemptForClosure(ctx context.Context, attemptID string) (closure.PatchAttemptRow, error) {
-	rec, finding, err := bugbotStore.GetPatchAttemptForClosure(ctx, attemptID)
+	rec, finding, err := rdStore.GetPatchAttemptForClosure(ctx, attemptID)
 	if err != nil {
 		return closure.PatchAttemptRow{}, err
 	}
@@ -71,7 +71,7 @@ func patchAttemptToClosureRow(ctx context.Context, rec store.PatchAttemptRecord)
 	}
 	if rec.FindingID != nil {
 		row.FindingID = *rec.FindingID
-		if finding, err := bugbotStore.GetFindingDetail(ctx, *rec.FindingID); err == nil {
+		if finding, err := rdStore.GetFindingDetail(ctx, *rec.FindingID); err == nil {
 			row.Fingerprint = finding.Fingerprint
 			row.OriginalSource = finding.Source
 		}
@@ -83,11 +83,11 @@ func patchAttemptToClosureRow(ctx context.Context, rec store.PatchAttemptRecord)
 }
 
 func (closureStoreAdapter) UpdatePatchAttemptMerged(ctx context.Context, attemptID, mergeSHA string, mergedAt time.Time) error {
-	return bugbotStore.UpdatePatchAttemptMerged(ctx, attemptID, mergeSHA, mergedAt)
+	return rdStore.UpdatePatchAttemptMerged(ctx, attemptID, mergeSHA, mergedAt)
 }
 
 func (closureStoreAdapter) GetLatestClosureEvidenceByFindingID(ctx context.Context, findingID int64) (closure.EvidenceRow, error) {
-	rec, err := bugbotStore.GetLatestClosureEvidenceByFindingID(ctx, findingID)
+	rec, err := rdStore.GetLatestClosureEvidenceByFindingID(ctx, findingID)
 	if err != nil {
 		return closure.EvidenceRow{}, err
 	}
@@ -95,7 +95,7 @@ func (closureStoreAdapter) GetLatestClosureEvidenceByFindingID(ctx context.Conte
 }
 
 func (closureStoreAdapter) SaveClosureEvidence(ctx context.Context, row closure.EvidenceRow) (closure.EvidenceRow, error) {
-	rec, err := bugbotStore.SaveClosureEvidence(ctx, closureEvidenceFromRow(row))
+	rec, err := rdStore.SaveClosureEvidence(ctx, closureEvidenceFromRow(row))
 	if err != nil {
 		return closure.EvidenceRow{}, err
 	}
@@ -103,11 +103,11 @@ func (closureStoreAdapter) SaveClosureEvidence(ctx context.Context, row closure.
 }
 
 func (closureStoreAdapter) UpdateClosureEvidence(ctx context.Context, row closure.EvidenceRow) error {
-	return bugbotStore.UpdateClosureEvidence(ctx, closureEvidenceFromRow(row))
+	return rdStore.UpdateClosureEvidence(ctx, closureEvidenceFromRow(row))
 }
 
 func (closureStoreAdapter) ListClosureEvidenceByRepositoryAndStatus(ctx context.Context, repositoryID int64, status string) ([]closure.EvidenceRow, error) {
-	recs, err := bugbotStore.ListClosureEvidenceByRepositoryAndStatus(ctx, repositoryID, status)
+	recs, err := rdStore.ListClosureEvidenceByRepositoryAndStatus(ctx, repositoryID, status)
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +119,7 @@ func (closureStoreAdapter) ListClosureEvidenceByRepositoryAndStatus(ctx context.
 }
 
 func (closureStoreAdapter) GetFindingByID(ctx context.Context, findingID int64) (closure.FindingRow, error) {
-	detail, err := bugbotStore.GetFindingDetail(ctx, findingID)
+	detail, err := rdStore.GetFindingDetail(ctx, findingID)
 	if err != nil {
 		return closure.FindingRow{}, err
 	}
@@ -127,19 +127,19 @@ func (closureStoreAdapter) GetFindingByID(ctx context.Context, findingID int64) 
 }
 
 func (closureStoreAdapter) UpdateFindingStatus(ctx context.Context, findingID int64, status string) error {
-	return bugbotStore.UpdateFindingStatus(ctx, findingID, status)
+	return rdStore.UpdateFindingStatus(ctx, findingID, status)
 }
 
 func (closureStoreAdapter) AddLifecycleEvent(ctx context.Context, findingID int64, scanID, eventType, message string) error {
 	fid := findingID
-	err := bugbotStore.AddLifecycleEvent(ctx, store.LifecycleEvent{
+	err := rdStore.AddLifecycleEvent(ctx, store.LifecycleEvent{
 		FindingID: &fid, ScanID: scanID, EventType: eventType, Message: message,
 	})
 	if err != nil {
 		return err
 	}
 	if eventType == "closure_verified" {
-		if detail, derr := bugbotStore.GetFindingDetail(ctx, findingID); derr == nil {
+		if detail, derr := rdStore.GetFindingDetail(ctx, findingID); derr == nil {
 			emitClosureVerified(ctx, detail.RepositoryID, scanID, findingID, detail.Fingerprint, detail.Source, detail.RuleID)
 		}
 	}
@@ -147,7 +147,7 @@ func (closureStoreAdapter) AddLifecycleEvent(ctx context.Context, findingID int6
 }
 
 func (closureStoreAdapter) ListExternalIssuesByFinding(ctx context.Context, findingID int64) ([]closure.ExternalIssueRow, error) {
-	recs, err := bugbotStore.ListExternalIssuesByFinding(ctx, findingID)
+	recs, err := rdStore.ListExternalIssuesByFinding(ctx, findingID)
 	if err != nil {
 		return nil, err
 	}
@@ -159,7 +159,7 @@ func (closureStoreAdapter) ListExternalIssuesByFinding(ctx context.Context, find
 }
 
 func (closureStoreAdapter) GetRepository(ctx context.Context, repositoryID int64) (closure.RepositoryRow, error) {
-	repo, err := bugbotStore.GetRepository(ctx, repositoryID)
+	repo, err := rdStore.GetRepository(ctx, repositoryID)
 	if err != nil {
 		return closure.RepositoryRow{}, err
 	}
@@ -242,8 +242,8 @@ func buildClosureScanContext(ctx context.Context, owner, repo string, repository
 		}
 	}
 	scannerMap := map[string]string{}
-	if bugbotStore != nil && result.ScanID != "" {
-		if recs, err := bugbotStore.ListScannerResultsByScan(ctx, result.ScanID); err == nil {
+	if rdStore != nil && result.ScanID != "" {
+		if recs, err := rdStore.ListScannerResultsByScan(ctx, result.ScanID); err == nil {
 			for _, sr := range recs {
 				scannerMap[sr.ScannerName] = sr.Status
 			}
@@ -265,14 +265,14 @@ func buildClosureScanContext(ctx context.Context, owner, repo string, repository
 }
 
 func verifyFindingClosure(ctx context.Context, findingID int64) (closure.Evidence, error) {
-	if closureEngine == nil || bugbotStore == nil {
+	if closureEngine == nil || rdStore == nil {
 		return closure.Evidence{}, fmt.Errorf("evidence closure disabled")
 	}
-	detail, err := bugbotStore.GetFindingDetail(ctx, findingID)
+	detail, err := rdStore.GetFindingDetail(ctx, findingID)
 	if err != nil {
 		return closure.Evidence{}, err
 	}
-	repo, err := bugbotStore.GetRepository(ctx, detail.RepositoryID)
+	repo, err := rdStore.GetRepository(ctx, detail.RepositoryID)
 	if err != nil {
 		return closure.Evidence{}, err
 	}
@@ -288,7 +288,7 @@ func verifyFindingClosure(ctx context.Context, findingID int64) (closure.Evidenc
 }
 
 func latestCompletedScanID(ctx context.Context, repositoryID int64) (string, error) {
-	scans, err := bugbotStore.ListScansByRepository(ctx, repositoryID, store.ListOptions{Limit: 10})
+	scans, err := rdStore.ListScansByRepository(ctx, repositoryID, store.ListOptions{Limit: 10})
 	if err != nil {
 		return "", err
 	}
@@ -305,7 +305,7 @@ func buildClosureScanContextFromStore(ctx context.Context, owner, repo string, r
 		return closure.ScanContext{}, fmt.Errorf("scan id required")
 	}
 	seen := map[string]struct{}{}
-	if fps, err := bugbotStore.ListFingerprintsInScan(ctx, scanID, repositoryID); err == nil {
+	if fps, err := rdStore.ListFingerprintsInScan(ctx, scanID, repositoryID); err == nil {
 		for fp, present := range fps {
 			if present {
 				seen[fp] = struct{}{}
@@ -313,7 +313,7 @@ func buildClosureScanContextFromStore(ctx context.Context, owner, repo string, r
 		}
 	}
 	scannerMap := map[string]string{}
-	if recs, err := bugbotStore.ListScannerResultsByScan(ctx, scanID); err == nil {
+	if recs, err := rdStore.ListScannerResultsByScan(ctx, scanID); err == nil {
 		for _, sr := range recs {
 			scannerMap[sr.ScannerName] = sr.Status
 		}
@@ -329,10 +329,10 @@ func buildClosureScanContextFromStore(ctx context.Context, owner, repo string, r
 }
 
 func recordDirectRemediation(ctx context.Context, findingID int64, mergeCommitSHA, reason string) (closure.Evidence, error) {
-	if closureEngine == nil || bugbotStore == nil {
+	if closureEngine == nil || rdStore == nil {
 		return closure.Evidence{}, fmt.Errorf("evidence closure disabled")
 	}
-	detail, err := bugbotStore.GetFindingDetail(ctx, findingID)
+	detail, err := rdStore.GetFindingDetail(ctx, findingID)
 	if err != nil {
 		return closure.Evidence{}, err
 	}

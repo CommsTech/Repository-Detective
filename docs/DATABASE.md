@@ -8,10 +8,10 @@ Per-repo settings in `repo_settings` are merged with global config on each scan.
 
 | Setting | Default | Env var |
 |---------|---------|---------|
-| Enabled | `true` | `BUGBOT_DATABASE_ENABLED` |
-| Driver | `sqlite` | `BUGBOT_DATABASE_DRIVER` |
-| Path | `./data/bugbot.db` | `BUGBOT_DATABASE_PATH` |
-| DSN | empty | `BUGBOT_DATABASE_DSN` |
+| Enabled | `true` | `REPOSITORY_DETECTIVE_DATABASE_ENABLED` |
+| Driver | `sqlite` | `REPOSITORY_DETECTIVE_DATABASE_DRIVER` |
+| Path | `./data/repository-detective.db` | `REPOSITORY_DETECTIVE_DATABASE_PATH` |
+| DSN | empty | `REPOSITORY_DETECTIVE_DATABASE_DSN` |
 
 SQLite is the homelab default. The parent directory (`./data/`) is created automatically on startup.
 
@@ -26,19 +26,19 @@ database_enabled: false
 Or:
 
 ```text
-BUGBOT_DATABASE_ENABLED=false
+REPOSITORY_DETECTIVE_DATABASE_ENABLED=false
 ```
 
-When disabled, Bugbot behaves as before Phase 5 — no local persistence, no schema creation.
+When disabled, Repository-Detective behaves as before Phase 5 — no local persistence, no schema creation.
 
 If `database_enabled=true` and initialization fails, **startup fails**.
 
 ## Backup
 
-For SQLite, back up the database file while Bugbot is stopped (or use SQLite backup API):
+For SQLite, back up the database file while Repository-Detective is stopped (or use SQLite backup API):
 
 ```bash
-cp ./data/bugbot.db ./backups/bugbot-$(date +%F).db
+cp ./data/repository-detective.db ./backups/repository-detective-$(date +%F).db
 ```
 
 Store backups with your usual homelab backup rotation.
@@ -83,7 +83,7 @@ Phase 5 implements SQLite only. The `store.Store` interface and `database_driver
 ## Rollback
 
 1. Set `database_enabled: false` and restart — no code revert required.
-2. Or revert Phase 5 commits and delete `./data/bugbot.db` if you no longer need history.
+2. Or revert Phase 5 commits and delete `./data/repository-detective.db` if you no longer need history.
 
 ## Migrations
 

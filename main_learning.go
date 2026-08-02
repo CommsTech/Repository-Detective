@@ -9,10 +9,10 @@ import (
 )
 
 func learningStore() learning.EventRecorder {
-	if bugbotStore == nil {
+	if rdStore == nil {
 		return nil
 	}
-	return bugbotStore
+	return rdStore
 }
 
 func emitLearning(ctx context.Context, ev store.LearningEvent) {
@@ -29,11 +29,11 @@ func emitLearningEvidence(ctx context.Context, ev store.LearningEvent, evidence 
 }
 
 func recordScannerHealthFromScan(ctx context.Context, repositoryID int64, scanID string, results []store.ScanCompletionScanner) {
-	if bugbotStore == nil || repositoryID <= 0 || scanID == "" {
+	if rdStore == nil || repositoryID <= 0 || scanID == "" {
 		return
 	}
 	for _, r := range results {
-		_ = bugbotStore.RecordScannerHealth(ctx, store.ScannerHealthRecord{
+		_ = rdStore.RecordScannerHealth(ctx, store.ScannerHealthRecord{
 			RepositoryID: repositoryID,
 			ScanID:       scanID,
 			Scanner:      r.Scanner,

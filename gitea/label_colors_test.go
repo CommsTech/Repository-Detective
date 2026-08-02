@@ -17,7 +17,7 @@ func TestDefaultLabelColorSeverity(t *testing.T) {
 }
 
 func TestDefaultLabelColorCategory(t *testing.T) {
-	if got := DefaultLabelColor("bugbot/security"); got != "991b1b" {
+	if got := DefaultLabelColor("repository-detective/security"); got != "991b1b" {
 		t.Fatalf("security color = %q", got)
 	}
 	if got := DefaultLabelColor("repository-detective/open"); got != "0ea5a4" {

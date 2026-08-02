@@ -2,7 +2,7 @@
 
 Repository Detective — **Inspect. Analyze. Improve.**
 
-Copy this template after your first self-scan. Save as `docs/dogfood-reports/YYYY-MM-DD-gitea-ai-bugbot.md` or your team's wiki.
+Copy this template after your first self-scan. Save as `docs/dogfood-reports/YYYY-MM-DD-repository-detective.md` or your team's wiki.
 
 ---
 

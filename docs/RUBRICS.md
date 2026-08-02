@@ -1,6 +1,6 @@
 # Review Rubrics
 
-Bugbot reports findings with a 0 to 5 review posture:
+Repository-Detective reports findings with a 0 to 5 review posture:
 
 - `0` critical failure
 - `1` major deficiencies
@@ -39,7 +39,7 @@ Pipeline checks are treated as a separate security rubric because a compromised 
 - Pipeline activity logged and monitored
 - Self-hosted runners patched and hardened
 
-Bugbot's built-in static rules flag floating action refs and obvious secret-printing patterns. Branch protection, runner isolation, token scopes, signing, and monitoring require platform API checks or human review.
+Repository-Detective's built-in static rules flag floating action refs and obvious secret-printing patterns. Branch protection, runner isolation, token scopes, signing, and monitoring require platform API checks or human review.
 
 ## Public Release
 
@@ -56,7 +56,7 @@ Public-release review focuses on information disclosure around the code, not onl
 - README, docs, and wiki content sanitized
 - Issues, pull requests, and project metadata reviewed before publication
 
-Bugbot's built-in static rules flag private IPs, localhost, `.local`, and `.internal` references in scanned files. Full history, branch/tag cleanup, authorization, licensing, and issue tracker review need external tooling and human sign-off.
+Repository-Detective's built-in static rules flag private IPs, localhost, `.local`, and `.internal` references in scanned files. Full history, branch/tag cleanup, authorization, licensing, and issue tracker review need external tooling and human sign-off.
 
 ## Optimization
 
@@ -73,4 +73,4 @@ Optimization checks are advisory. Profile first, then fix the measured hot paths
 - Build, image, and binary size
 - Serialization efficiency
 
-Bugbot's built-in static rules flag simple nested-loop and per-call HTTP-client patterns. Use pprof, py-spy, JDK profilers, query analyzers, k6, JMeter, Locust, Prometheus, or Grafana for runtime evidence.
+Repository-Detective's built-in static rules flag simple nested-loop and per-call HTTP-client patterns. Use pprof, py-spy, JDK profilers, query analyzers, k6, JMeter, Locust, Prometheus, or Grafana for runtime evidence.

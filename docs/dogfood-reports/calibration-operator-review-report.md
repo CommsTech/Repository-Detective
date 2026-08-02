@@ -35,5 +35,5 @@ Database: migrated to schema v20; 16 learning events from operator dry-run revie
 ## Expected effect
 
 - **netmapper** and **commsnet_optimizer**: graph orphan findings show calibration note; lower issue-filing eligibility for accepted rules only in that repo.
-- **Bugbot product repo**: unaffected (no rules accepted for repo id 1).
+- **Repository-Detective product repo**: unaffected (no rules accepted for repo id 1).
 - **nextcloud_scripts**: no calibration applied pending more dry-run evidence.

@@ -33,7 +33,7 @@ func TestNeedsAIProvider(t *testing.T) {
 func TestGiteaStatusConfigDefaults(t *testing.T) {
 	v := viper.New()
 	v.SetDefault("enable_gitea_status", false)
-	v.SetDefault("gitea_status_context", "bugbot/security-scan")
+	v.SetDefault("gitea_status_context", "repository-detective/security-scan")
 	v.SetDefault("gitea_status_fail_on", "high")
 	v.SetDefault("gitea_status_warn_on", "medium")
 	v.SetDefault("gitea_status_include_scanner_failures", true)
@@ -45,7 +45,7 @@ func TestGiteaStatusConfigDefaults(t *testing.T) {
 	if cfg.EnableGiteaStatus {
 		t.Fatal("expected enable_gitea_status default false")
 	}
-	if cfg.GiteaStatusContext != "bugbot/security-scan" {
+	if cfg.GiteaStatusContext != "repository-detective/security-scan" {
 		t.Fatalf("unexpected context default %q", cfg.GiteaStatusContext)
 	}
 	if cfg.GiteaStatusFailOn != "high" || cfg.GiteaStatusWarnOn != "medium" {
@@ -56,7 +56,7 @@ func TestGiteaStatusConfigDefaults(t *testing.T) {
 	}
 }
 
-func TestRequireAPIKeyAuthAcceptsPreferredAndLegacyHeaders(t *testing.T) {
+func TestRequireAPIKeyAuthAcceptsRepositoryDetectiveHeader(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	saved := config
 	defer func() { config = saved }()
@@ -73,16 +73,9 @@ func TestRequireAPIKeyAuthAcceptsPreferredAndLegacyHeaders(t *testing.T) {
 		wantStatus int
 	}{
 		{
-			name: "preferred X-Repository-Detective-API-Key",
+			name: "X-Repository-Detective-API-Key",
 			setHeaders: func(req *http.Request) {
 				req.Header.Set("X-Repository-Detective-API-Key", "test-secret-key")
-			},
-			wantStatus: http.StatusOK,
-		},
-		{
-			name: "legacy X-Bugbot-API-Key",
-			setHeaders: func(req *http.Request) {
-				req.Header.Set("X-Bugbot-API-Key", "test-secret-key")
 			},
 			wantStatus: http.StatusOK,
 		},
@@ -92,9 +85,16 @@ func TestRequireAPIKeyAuthAcceptsPreferredAndLegacyHeaders(t *testing.T) {
 			wantStatus: http.StatusUnauthorized,
 		},
 		{
-			name: "wrong key on preferred header",
+			name: "wrong key",
 			setHeaders: func(req *http.Request) {
 				req.Header.Set("X-Repository-Detective-API-Key", "wrong")
+			},
+			wantStatus: http.StatusUnauthorized,
+		},
+		{
+			name: "unknown legacy API key header rejected",
+			setHeaders: func(req *http.Request) {
+				req.Header.Set("X-Bugbot-API-Key", "test-secret-key")
 			},
 			wantStatus: http.StatusUnauthorized,
 		},

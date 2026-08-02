@@ -1,5 +1,5 @@
 # Repository Detective - Deployment Script
-# Run this script to deploy the bugbot
+# Run this script to deploy Repository Detective
 
 Write-Host "🚀 Deploying Repository Detective..." -ForegroundColor Green
 
@@ -39,7 +39,7 @@ if (!(Test-Path "config/config.yaml")) {
     Write-Host "✅ Backed up existing config (if any)" -ForegroundColor Green
 }
 
-Write-Host "🔧 Building and starting the bugbot..." -ForegroundColor Yellow
+Write-Host "🔧 Building and starting Repository Detective..." -ForegroundColor Yellow
 
 # Build and start the services
 docker-compose up -d --build

@@ -30,11 +30,8 @@ services:
     environment:
       REPOSITORY_DETECTIVE_PORT: "${REPOSITORY_DETECTIVE_PORT:-8081}"
       REPOSITORY_DETECTIVE_LISTEN_HOST: "0.0.0.0"
-      REPOSITORY_DETECTIVE_DATABASE_PATH: /app/data/bugbot.db
+      REPOSITORY_DETECTIVE_DATABASE_PATH: /app/data/repository-detective.db
       REPOSITORY_DETECTIVE_SKIP_STARTUP_CHECKS: "true"
-      # Legacy aliases (still read)
-      BUGBOT_PORT: "${REPOSITORY_DETECTIVE_PORT:-8081}"
-      BUGBOT_DATABASE_PATH: /app/data/bugbot.db
     volumes:
       - ../../config:/app/config:ro
       - ../../data:/app/data
@@ -69,9 +66,7 @@ services:
     environment:
       REPOSITORY_DETECTIVE_PORT: "${REPOSITORY_DETECTIVE_PORT:-8081}"
       REPOSITORY_DETECTIVE_LISTEN_HOST: "0.0.0.0"
-      REPOSITORY_DETECTIVE_DATABASE_PATH: /app/data/bugbot.db
-      BUGBOT_PORT: "${REPOSITORY_DETECTIVE_PORT:-8081}"
-      BUGBOT_DATABASE_PATH: /app/data/bugbot.db
+      REPOSITORY_DETECTIVE_DATABASE_PATH: /app/data/repository-detective.db
     volumes:
       - ../../config:/app/config:ro
       - ../../data:/app/data

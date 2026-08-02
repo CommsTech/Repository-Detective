@@ -2,7 +2,7 @@
 
 **Status:** Living architecture plan. **Phase 5–6 complete** (DB + control-plane API/UI). Later phases are planned — not all implemented.
 
-> **Naming:** [Repository Detective](NAMING.md) is the product name. **Bugbot** remains the internal/legacy service name for config, labels, and API compatibility.
+> **Naming:** [Repository Detective](NAMING.md) is the product name. **Repository-Detective** remains the internal/legacy service name for config, labels, and API compatibility.
 
 **Commercial positioning:**
 
@@ -241,7 +241,7 @@ type JobResult struct {
 
 ### 3.4 Forge runner priority
 
-1. **Gitea Actions** (Phase 8) — `.gitea/workflows/bugbot-runner.yml` triggered by `repository_dispatch` or labels
+1. **Gitea Actions** (Phase 8) — `.gitea/workflows/repository-detective-runner.yml` triggered by `repository_dispatch` or labels
 2. **GitHub Actions** (Phase 11+) — same contract, different adapter
 3. **GitLab CI** (Phase 11+) — trigger pipeline with artifact upload
 4. **Fallback:** in-process execution (current behavior) when `runner_preference: core`
@@ -464,7 +464,7 @@ type LifecycleEvent struct {
     ScanID     string
     Event      string    // open | still_present | not_reproduced | needs_review | remediation_candidate | fixed | false_positive
     Detail     string
-    Actor      string    // bugbot | user@email
+    Actor      string    // repository-detective | user@email
     CreatedAt  time.Time
 }
 ```
@@ -649,10 +649,10 @@ type PublicIssueRules struct {
 ### 6.3 Merge order
 
 ```
-global config.yaml → policy template → repo_settings → .bugbot.yaml in repo (optional, maintainer repos only)
+global config.yaml → policy template → repo_settings → .repository-detective.yaml in repo (optional, maintainer repos only)
 ```
 
-Pre-install audits ignore repo `.bugbot.yaml` (untrusted input).
+Pre-install audits ignore repo `.repository-detective.yaml` (untrusted input).
 
 ---
 
@@ -777,7 +777,7 @@ finding (remediation-candidate) on connected repo
   → policy check (level, SafeForAutoPR, fix complexity)
   → if auto_pr_with_approval: wait for user approval
   → test discovery (existing tests for affected package?)
-  → create branch bugbot/fix/<fingerprint-short>
+  → create branch repository-detective/fix/<fingerprint-short>
   → apply bounded patch (max N files, max M lines)
   → runner: tests BEFORE
   → runner: tests AFTER
@@ -792,7 +792,7 @@ finding (remediation-candidate) on connected repo
 
 | Rule | Enforcement |
 |------|-------------|
-| Never push to default/protected branch | forge API: always via PR from `bugbot/fix/*` |
+| Never push to default/protected branch | forge API: always via PR from `repository-detective/fix/*` |
 | Max diff size | e.g. 3 files, 80 lines — policy configurable |
 | No broad rewrite | reject plans touching > X% of repo |
 | No secret rotation without SM | `category=secret` → manual only |
@@ -923,7 +923,7 @@ Naming: use `Repository`, `Issue`, `PullRequest` in `forge/` — not Gitea-speci
 | | |
 |--|--|
 | **Goal** | JobSpec/JobResult contract; Gitea Actions dispatch; core fallback |
-| **Packages** | `runner/`, `.gitea/workflows/bugbot-runner.yml`, `api/jobs.go` |
+| **Packages** | `runner/`, `.gitea/workflows/repository-detective-runner.yml`, `api/jobs.go` |
 | **Tests** | signature validation, timeout, result schema |
 | **Risk** | High — runner security |
 | **Rollback** | `runner_preference: core` |
@@ -1006,14 +1006,14 @@ Do not share private repo metadata.
 Share only sanitized intelligence packages.
 ```
 
-**Not:** a shared Qdrant between Bugbot instances. Embeddings can leak semantic information about private code, architecture, filenames, or secrets if redaction fails. Local Qdrant remains **per-instance, private dedup only**.
+**Not:** a shared Qdrant between Repository-Detective instances. Embeddings can leak semantic information about private code, architecture, filenames, or secrets if redaction fails. Local Qdrant remains **per-instance, private dedup only**.
 
-**Instead:** a **Bugbot Intelligence Feed** — federated trust, one-way pull by default, not peer-to-peer shared memory.
+**Instead:** a **Repository-Detective Intelligence Feed** — federated trust, one-way pull by default, not peer-to-peer shared memory.
 
 ### Architecture
 
 ```text
-Local Bugbot
+Local Repository-Detective
   → sanitizes candidate intelligence
   → strips repo identity
   → operator opt-in required
@@ -1028,7 +1028,7 @@ Community Feed
   → publishes versioned intel packages
   → supports revocation
 
-Other Bugbots
+Other scanners
   → pull signed updates (one-way)
   → local policy decides whether to apply
   → never auto-execute without policy gate

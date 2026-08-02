@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: Private beta scope
-    url: https://git.commsnet.org/commstech/Bugbot/src/branch/main/docs/beta/PRIVATE_BETA_TEST_SCOPE.md
+    url: https://git.commsnet.org/commstech/Repository-Detective/src/branch/main/docs/beta/PRIVATE_BETA_TEST_SCOPE.md
   - name: Feedback templates (docs)
-    url: https://git.commsnet.org/commstech/Bugbot/src/branch/main/docs/beta/PRIVATE_BETA_FEEDBACK_TEMPLATE.md
+    url: https://git.commsnet.org/commstech/Repository-Detective/src/branch/main/docs/beta/PRIVATE_BETA_FEEDBACK_TEMPLATE.md
   - name: Security — do not paste secrets
-    url: https://git.commsnet.org/commstech/Bugbot/src/branch/main/docs/PRIVACY_AND_DATA_PROTECTION.md
+    url: https://git.commsnet.org/commstech/Repository-Detective/src/branch/main/docs/PRIVACY_AND_DATA_PROTECTION.md

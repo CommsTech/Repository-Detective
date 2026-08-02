@@ -57,7 +57,7 @@ func TestFailedAuditSummaryHasZeroIssues(t *testing.T) {
 }
 
 func TestSanitizeFailureMessageRedactsSecrets(t *testing.T) {
-	msg := preinstall.SanitizeFailureMessage("token BUGBOT_GITEA_TOKEN=super-secret-value failed")
+	msg := preinstall.SanitizeFailureMessage("token REPOSITORY_DETECTIVE_GITEA_TOKEN=super-secret-value failed")
 	if strings.Contains(msg, "super-secret-value") {
 		t.Fatalf("secret leaked: %q", msg)
 	}

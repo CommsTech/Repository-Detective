@@ -18,11 +18,11 @@ var suppressionMatcher *calibration.Matcher
 type suppressionBridge struct{}
 
 func initSuppressionMatcher() {
-	if bugbotStore == nil {
+	if rdStore == nil {
 		suppressionMatcher = nil
 		return
 	}
-	suppressionMatcher = calibration.NewMatcher(bugbotStore)
+	suppressionMatcher = calibration.NewMatcher(rdStore)
 }
 
 func (suppressionBridge) SuppressFinding(c *gin.Context, findingID int64, req api.SuppressionRequest) (store.FindingSuppression, error) {
@@ -34,7 +34,7 @@ func (suppressionBridge) MarkFalsePositive(c *gin.Context, findingID int64, req 
 }
 
 func (suppressionBridge) CreateSuppression(c *gin.Context, req api.CreateSuppressionRequest) (store.FindingSuppression, error) {
-	if bugbotStore == nil {
+	if rdStore == nil {
 		return store.FindingSuppression{}, fmt.Errorf("database disabled")
 	}
 	sup := store.FindingSuppression{
@@ -50,7 +50,7 @@ func (suppressionBridge) CreateSuppression(c *gin.Context, req api.CreateSuppres
 		ExpiresAt:    req.ExpiresAt,
 		Active:       true,
 	}
-	created, err := bugbotStore.CreateFindingSuppression(c.Request.Context(), sup)
+	created, err := rdStore.CreateFindingSuppression(c.Request.Context(), sup)
 	if err != nil {
 		return store.FindingSuppression{}, err
 	}
@@ -61,14 +61,14 @@ func (suppressionBridge) CreateSuppression(c *gin.Context, req api.CreateSuppres
 }
 
 func (suppressionBridge) DisableSuppression(c *gin.Context, id int64) (store.FindingSuppression, error) {
-	if bugbotStore == nil {
+	if rdStore == nil {
 		return store.FindingSuppression{}, fmt.Errorf("database disabled")
 	}
-	prev, err := bugbotStore.GetFindingSuppression(c.Request.Context(), id)
+	prev, err := rdStore.GetFindingSuppression(c.Request.Context(), id)
 	if err != nil {
 		return store.FindingSuppression{}, err
 	}
-	disabled, err := bugbotStore.DisableFindingSuppression(c.Request.Context(), id)
+	disabled, err := rdStore.DisableFindingSuppression(c.Request.Context(), id)
 	if err != nil {
 		return store.FindingSuppression{}, err
 	}
@@ -76,7 +76,7 @@ func (suppressionBridge) DisableSuppression(c *gin.Context, id int64) (store.Fin
 		suppressionMatcher.Invalidate(*prev.RepositoryID)
 	}
 	meta, _ := json.Marshal(map[string]any{"suppression_id": id})
-	if err := bugbotStore.AddLifecycleEvent(c.Request.Context(), store.LifecycleEvent{
+	if err := rdStore.AddLifecycleEvent(c.Request.Context(), store.LifecycleEvent{
 		EventType:    store.LifecycleEventUnsuppressed,
 		Message:      "Suppression rule disabled",
 		MetadataJSON: meta,
@@ -87,10 +87,10 @@ func (suppressionBridge) DisableSuppression(c *gin.Context, id int64) (store.Fin
 }
 
 func applyFindingSuppression(ctx context.Context, findingID int64, req api.SuppressionRequest, status, lifecycleEvent string, falsePositive bool) (store.FindingSuppression, error) {
-	if bugbotStore == nil {
+	if rdStore == nil {
 		return store.FindingSuppression{}, fmt.Errorf("database disabled")
 	}
-	detail, err := bugbotStore.GetFindingDetail(ctx, findingID)
+	detail, err := rdStore.GetFindingDetail(ctx, findingID)
 	if err != nil {
 		return store.FindingSuppression{}, fmt.Errorf("finding not found")
 	}
@@ -113,11 +113,11 @@ func applyFindingSuppression(ctx context.Context, findingID int64, req api.Suppr
 		ExpiresAt:    req.ExpiresAt,
 		Active:       true,
 	}
-	created, err := bugbotStore.CreateFindingSuppression(ctx, sup)
+	created, err := rdStore.CreateFindingSuppression(ctx, sup)
 	if err != nil {
 		return store.FindingSuppression{}, err
 	}
-	if err := bugbotStore.UpdateFindingStatus(ctx, findingID, status); err != nil {
+	if err := rdStore.UpdateFindingStatus(ctx, findingID, status); err != nil {
 		return store.FindingSuppression{}, err
 	}
 	fid := findingID
@@ -126,7 +126,7 @@ func applyFindingSuppression(ctx context.Context, findingID int64, req api.Suppr
 		"scope":          created.Scope,
 		"reason":         created.Reason,
 	})
-	if err := bugbotStore.AddLifecycleEvent(ctx, store.LifecycleEvent{
+	if err := rdStore.AddLifecycleEvent(ctx, store.LifecycleEvent{
 		FindingID:    &fid,
 		EventType:    lifecycleEvent,
 		Message:      created.Reason,
@@ -141,7 +141,7 @@ func applyFindingSuppression(ctx context.Context, findingID int64, req api.Suppr
 		}
 	}
 	if issueManager != nil && detail.ExternalIssueNumber > 0 {
-		repo, rerr := bugbotStore.GetRepository(ctx, detail.RepositoryID)
+		repo, rerr := rdStore.GetRepository(ctx, detail.RepositoryID)
 		if rerr == nil {
 			if err := issueManager.AnnotateCalibration(ctx, repo.ForgeType, repo.Owner, repo.Name, detail.ExternalIssueNumber, falsePositive, created.Reason); err != nil {
 				logger.Warnf("annotate calibration on issue #%d: %v", detail.ExternalIssueNumber, err)
@@ -191,10 +191,10 @@ func (suppressionUIBridge) MarkIntentionalStandalone(ctx context.Context, findin
 }
 
 func suppressRepoRule(ctx context.Context, findingID int64, reason, createdBy string, intentional bool) error {
-	if bugbotStore == nil {
+	if rdStore == nil {
 		return fmt.Errorf("database disabled")
 	}
-	detail, err := bugbotStore.GetFindingDetail(ctx, findingID)
+	detail, err := rdStore.GetFindingDetail(ctx, findingID)
 	if err != nil {
 		return fmt.Errorf("finding not found")
 	}
@@ -212,7 +212,7 @@ func suppressRepoRule(ctx context.Context, findingID int64, reason, createdBy st
 		CreatedBy:    strings.TrimSpace(createdBy),
 		Active:       true,
 	}
-	if _, err := bugbotStore.CreateFindingSuppression(ctx, sup); err != nil {
+	if _, err := rdStore.CreateFindingSuppression(ctx, sup); err != nil {
 		return err
 	}
 	status := store.FindingStatusSuppressed
@@ -223,11 +223,11 @@ func suppressRepoRule(ctx context.Context, findingID int64, reason, createdBy st
 			sup.Reason = "intentional standalone: " + sup.Reason
 		}
 	}
-	if err := bugbotStore.UpdateFindingStatus(ctx, findingID, status); err != nil {
+	if err := rdStore.UpdateFindingStatus(ctx, findingID, status); err != nil {
 		return err
 	}
 	fid := findingID
-	if err := bugbotStore.AddLifecycleEvent(ctx, store.LifecycleEvent{
+	if err := rdStore.AddLifecycleEvent(ctx, store.LifecycleEvent{
 		FindingID: &fid,
 		EventType: event,
 		Message:   sup.Reason,

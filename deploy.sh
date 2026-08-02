@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# One-command Bugbot / Repository Detective deployment.
+# One-command Repository-Detective / Repository Detective deployment.
 #
 # Usage:
 #   ./deploy.sh              # build from Dockerfile + start on port 8081
 #   ./deploy.sh --stop       # stop container
 #   ./deploy.sh --restart    # restart container
 #   ./deploy.sh --status     # health + container status
-#   ./deploy.sh --scan       # trigger self-scan on commstech/repository-detective
+#   ./deploy.sh --scan       # trigger self-scan on commstech/Repository-Detective
 #   ./deploy.sh --scan-all        # full scans on every Gitea + GitHub repo (global profile)
 #   ./deploy.sh --scan-all-quick  # fast profile scans on every repo
 #   FORGE=github ./deploy.sh --scan-all   # GitHub repos only
@@ -21,7 +21,7 @@ COMPOSE_FILE="docker-compose.yml"
 COMPOSE=(docker-compose -f "$COMPOSE_FILE")
 CONTAINER="repository-detective"
 HEALTH_URL="http://127.0.0.1:8081/health"
-LEGACY_DIR="${BUGBOT_LEGACY_DIR:-$HOME/bugbot}"
+LEGACY_DIR="${REPOSITORY_DETECTIVE_LEGACY_DIR:-$HOME/repository-detective}"
 BINARY="$ROOT/build/repository-detective"
 
 log() { printf '==> %s\n' "$*"; }
@@ -80,9 +80,9 @@ migrate_legacy_config() {
 }
 
 stop_legacy_process() {
-  if pgrep -f '/home/commstech/repository-detective/(gitea-bugbot|repository-detective)' >/dev/null 2>&1; then
+  if pgrep -f '/home/commstech/Repository-Detective/(repository-detective|repository-detective)' >/dev/null 2>&1; then
     log "stopping legacy non-Docker Repository Detective process"
-    pkill -f '/home/commstech/repository-detective/(gitea-bugbot|repository-detective)' || true
+    pkill -f '/home/commstech/Repository-Detective/(repository-detective|repository-detective)' || true
     sleep 2
   fi
 }
@@ -103,7 +103,7 @@ cd "$ROOT"
 exec docker-compose -f docker-compose.yml up -d --remove-orphans
 EOF
   chmod +x "$run_sh"
-  warn "run 'sudo systemctl disable bugbot.service' (legacy unit) when ready and rely on Docker restart policy instead"
+  warn "run 'sudo systemctl disable repository-detective.service' (legacy unit) when ready and rely on Docker restart policy instead"
 }
 
 start_stack() {
@@ -129,13 +129,13 @@ wait_healthy() {
 register_webhook() {
   # shellcheck disable=SC1091
   set -a && source .env && set +a
-  local api_key="${REPOSITORY_DETECTIVE_API_KEY:-${BUGBOT_API_KEY:-}}"
-  local gitea_url="${REPOSITORY_DETECTIVE_GITEA_URL:-${BUGBOT_GITEA_URL:-}}"
-  local gitea_token="${REPOSITORY_DETECTIVE_GITEA_TOKEN:-${BUGBOT_GITEA_TOKEN:-}}"
-  local public_url="${REPOSITORY_DETECTIVE_PUBLIC_URL:-${BUGBOT_PUBLIC_URL:-}}"
-  local webhook_secret="${REPOSITORY_DETECTIVE_WEBHOOK_SECRET:-${BUGBOT_WEBHOOK_SECRET:-}}"
-  local owner="${BUGBOT_REPO_OWNER:-commstech}"
-  local repo="${BUGBOT_REPO_NAME:-Bugbot}"
+  local api_key="${REPOSITORY_DETECTIVE_API_KEY:-${REPOSITORY_DETECTIVE_API_KEY:-}}"
+  local gitea_url="${REPOSITORY_DETECTIVE_GITEA_URL:-${REPOSITORY_DETECTIVE_GITEA_URL:-}}"
+  local gitea_token="${REPOSITORY_DETECTIVE_GITEA_TOKEN:-${REPOSITORY_DETECTIVE_GITEA_TOKEN:-}}"
+  local public_url="${REPOSITORY_DETECTIVE_PUBLIC_URL:-${REPOSITORY_DETECTIVE_PUBLIC_URL:-}}"
+  local webhook_secret="${REPOSITORY_DETECTIVE_WEBHOOK_SECRET:-${REPOSITORY_DETECTIVE_WEBHOOK_SECRET:-}}"
+  local owner="${REPOSITORY_DETECTIVE_REPO_OWNER:-commstech}"
+  local repo="${REPOSITORY_DETECTIVE_REPO_NAME:-Repository-Detective}"
 
   [[ -n "$gitea_url" && -n "$gitea_token" && -n "$public_url" && -n "$webhook_secret" ]] || {
     warn "skipping webhook registration — set Gitea URL, token, public URL, and webhook secret in .env"
@@ -153,12 +153,12 @@ register_webhook() {
 trigger_scan() {
   # shellcheck disable=SC1091
   set -a && source .env && set +a
-  local api_key="${REPOSITORY_DETECTIVE_API_KEY:-${BUGBOT_API_KEY:-}}"
-  local public_url="${REPOSITORY_DETECTIVE_PUBLIC_URL:-${BUGBOT_PUBLIC_URL:-http://127.0.0.1:8081}}"
-  local owner="${BUGBOT_REPO_OWNER:-commstech}"
-  local repo="${BUGBOT_REPO_NAME:-Bugbot}"
+  local api_key="${REPOSITORY_DETECTIVE_API_KEY:-${REPOSITORY_DETECTIVE_API_KEY:-}}"
+  local public_url="${REPOSITORY_DETECTIVE_PUBLIC_URL:-${REPOSITORY_DETECTIVE_PUBLIC_URL:-http://127.0.0.1:8081}}"
+  local owner="${REPOSITORY_DETECTIVE_REPO_OWNER:-commstech}"
+  local repo="${REPOSITORY_DETECTIVE_REPO_NAME:-Repository-Detective}"
 
-  [[ -n "$api_key" ]] || { warn "BUGBOT_API_KEY not set"; return 1; }
+  [[ -n "$api_key" ]] || { warn "REPOSITORY_DETECTIVE_API_KEY not set"; return 1; }
 
   log "triggering scan on $owner/$repo@main"
   curl -sf -X POST "${public_url%/}/api/v1/analyze" \
@@ -172,9 +172,9 @@ trigger_scan_all() {
   local profile="${1:-}"
   # shellcheck disable=SC1091
   set -a && source .env && set +a
-  local api_key="${REPOSITORY_DETECTIVE_API_KEY:-${BUGBOT_API_KEY:-}}"
-  local public_url="${REPOSITORY_DETECTIVE_PUBLIC_URL:-${BUGBOT_PUBLIC_URL:-http://127.0.0.1:8081}}"
-  [[ -n "$api_key" ]] || { warn "BUGBOT_API_KEY not set"; return 1; }
+  local api_key="${REPOSITORY_DETECTIVE_API_KEY:-${REPOSITORY_DETECTIVE_API_KEY:-}}"
+  local public_url="${REPOSITORY_DETECTIVE_PUBLIC_URL:-${REPOSITORY_DETECTIVE_PUBLIC_URL:-http://127.0.0.1:8081}}"
+  [[ -n "$api_key" ]] || { warn "REPOSITORY_DETECTIVE_API_KEY not set"; return 1; }
 
   local org=""
   if [[ -f .env ]]; then
@@ -211,10 +211,10 @@ trigger_scan_all() {
 register_webhooks_all() {
   # shellcheck disable=SC1091
   set -a && source .env && set +a
-  local gitea_url="${REPOSITORY_DETECTIVE_GITEA_URL:-${BUGBOT_GITEA_URL:-}}"
-  local gitea_token="${REPOSITORY_DETECTIVE_GITEA_TOKEN:-${BUGBOT_GITEA_TOKEN:-}}"
-  local public_url="${REPOSITORY_DETECTIVE_PUBLIC_URL:-${BUGBOT_PUBLIC_URL:-}}"
-  local webhook_secret="${REPOSITORY_DETECTIVE_WEBHOOK_SECRET:-${BUGBOT_WEBHOOK_SECRET:-}}"
+  local gitea_url="${REPOSITORY_DETECTIVE_GITEA_URL:-${REPOSITORY_DETECTIVE_GITEA_URL:-}}"
+  local gitea_token="${REPOSITORY_DETECTIVE_GITEA_TOKEN:-${REPOSITORY_DETECTIVE_GITEA_TOKEN:-}}"
+  local public_url="${REPOSITORY_DETECTIVE_PUBLIC_URL:-${REPOSITORY_DETECTIVE_PUBLIC_URL:-}}"
+  local webhook_secret="${REPOSITORY_DETECTIVE_WEBHOOK_SECRET:-${REPOSITORY_DETECTIVE_WEBHOOK_SECRET:-}}"
 
   [[ -n "$gitea_url" && -n "$gitea_token" && -n "$public_url" && -n "$webhook_secret" ]] || {
     warn "skipping webhook registration — set Gitea URL, token, public URL, and webhook secret in .env"

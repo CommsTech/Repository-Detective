@@ -1,7 +1,7 @@
 # Public repository safety audit
 
 Generated: 2026-06-07  
-Scope: prepare `/home/commstech/repository-detective` for external review without leaking homelab secrets.
+Scope: prepare `/home/commstech/Repository-Detective` for external review without leaking homelab secrets.
 
 ## Scan commands run
 
@@ -17,7 +17,7 @@ Scope: prepare `/home/commstech/repository-detective` for external review withou
 |------|--------|--------|
 | `.env` with live token | **Not tracked** | Listed in `.gitignore`; operators use `.env.example` |
 | `config/config.yaml` | **Not tracked** | `.gitignore` protects local config |
-| `bugbot-build` / `bugbot` ELF | **Not tracked** | Added to `.gitignore` |
+| `repository-detective-build` / `repository-detective` ELF | **Not tracked** | Added to `.gitignore` |
 | `data/*.db` | **Not tracked** | `.gitignore` |
 | Dogfood raw exports | **Ignored by default** | Whitelist only sanitized reports |
 | `deploy.sh` env var names | Safe | References env names only, no values |
@@ -43,6 +43,6 @@ Scope: prepare `/home/commstech/repository-detective` for external review withou
 
 ## Residual risks
 
-1. Operator must never `git add .env`, local DBs, or `bugbot-build`.
+1. Operator must never `git add .env`, local DBs, or `repository-detective-build`.
 2. New dogfood exports default to gitignored — sanitize before whitelisting.
 3. Install gitleaks in CI for ongoing public-repo gate.

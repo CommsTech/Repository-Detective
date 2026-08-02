@@ -58,7 +58,7 @@ Scripts: `./scripts/release-test.sh` · `./scripts/operator-smoke-test.sh`
 
 | Document | Description |
 |----------|-------------|
-| [NAMING.md](NAMING.md) | Product name, legacy Bugbot compatibility |
+| [NAMING.md](NAMING.md) | Product name, naming conventions |
 | [POLICY.md](POLICY.md) | Severity gates, issue policy, remediation policy |
 | [SCAN_PROFILES.md](SCAN_PROFILES.md) | Scan profiles: Light, Standard, Deep, Custom |
 | [SECURITY_HARDENING.md](SECURITY_HARDENING.md) | OWASP baseline + post-remediation safety checklist |
@@ -118,7 +118,7 @@ See [examples/](examples/) for copy-paste YAML profiles:
 
 | Document | Description |
 |----------|-------------|
-| [BRANDING_MIGRATION.md](BRANDING_MIGRATION.md) | Bugbot → Repository Detective migration |
+| [BRANDING_MIGRATION.md](BRANDING_MIGRATION.md) | Repository-Detective → Repository Detective migration |
 | [BRANDING_COMPATIBILITY_AUDIT.md](BRANDING_COMPATIBILITY_AUDIT.md) | Preferred vs legacy naming audit |
 | [EDITIONS.md](EDITIONS.md) | Community / Commercial / Enterprise matrix |
 | [LICENSING_STRATEGY.md](LICENSING_STRATEGY.md) | Proposed AGPL + commercial licensing |

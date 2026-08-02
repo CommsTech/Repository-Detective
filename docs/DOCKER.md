@@ -16,7 +16,7 @@ Includes:
 
 - `repository-detective` binary (web, API, UI, scheduler, DB migrations, issue manager, policy)
 - **git** (repository clone/checkout in-process)
-- SQLite path: `/app/data` (default DB file `bugbot.db`)
+- SQLite path: `/app/data` (default DB file `repository-detective.db`)
 - Config mount: `/app/config/config.yaml`
 
 Does **not** include: trivy, grype, gitleaks, semgrep, govulncheck, gosec, staticcheck, hadolint, checkov.
@@ -111,7 +111,7 @@ Root [docker-compose.yml](../docker-compose.yml) builds **all-in-one** for homel
 
 | Path | Purpose |
 |------|---------|
-| `/app/data` | SQLite database (`REPOSITORY_DETECTIVE_DATABASE_PATH`, default `/app/data/bugbot.db`) |
+| `/app/data` | SQLite database (`REPOSITORY_DETECTIVE_DATABASE_PATH`, default `/app/data/repository-detective.db`) |
 | `/app/config` | Read-only `config.yaml` (mount from host `./config`) |
 | `/app/certs` | Optional CA bundles for private AI/Gitea TLS |
 
@@ -128,7 +128,7 @@ Root [docker-compose.yml](../docker-compose.yml) builds **all-in-one** for homel
 - `GET /health` — liveness (no auth)
 - `GET /api/v1/status` — scanner availability, DB, features (API key)
 
-Container healthcheck runs `scripts/docker-healthcheck.sh`, honoring `REPOSITORY_DETECTIVE_PORT` / `BUGBOT_PORT`.
+Container healthcheck runs `scripts/docker-healthcheck.sh`, honoring `REPOSITORY_DETECTIVE_PORT` / `REPOSITORY_DETECTIVE_PORT`.
 
 ## Runtime user
 
@@ -146,7 +146,7 @@ All targets run as **`repositorydetective` (UID 1001)**. Host `data/` should be 
 
 1. Note current image ID: `docker images repository-detective`
 2. Stop container: `docker compose down`
-3. Backup DB: `cp data/bugbot.db data/bugbot.db.bak` (see [BACKUP_RESTORE.md](BACKUP_RESTORE.md))
+3. Backup DB: `cp data/repository-detective.db data/repository-detective.db.bak` (see [BACKUP_RESTORE.md](BACKUP_RESTORE.md))
 4. Run previous tag: `docker run … repository-detective:all-in-one@<previous-digest>`
 5. Confirm `GET /health` and dashboard; re-run one manual scan
 

@@ -14,26 +14,26 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-DB = ROOT / "data/bugbot.db"
+DB = ROOT / "data/repository-detective.db"
 SCAN_ID = "68cab1ba3dc0591d"
-OWNER, REPO = "commstech", "Bugbot"
+OWNER, REPO = "commstech", "Repository-Detective"
 DOCS = ROOT / "docs/dogfood-reports"
 
 
 def load_env() -> tuple[str, str]:
-    token = os.environ.get("BUGBOT_GITEA_TOKEN", "")
-    base = os.environ.get("BUGBOT_GITEA_URL", "https://git.commsnet.org").rstrip("/")
+    token = os.environ.get("REPOSITORY_DETECTIVE_GITEA_TOKEN", "")
+    base = os.environ.get("REPOSITORY_DETECTIVE_GITEA_URL", "https://git.commsnet.org").rstrip("/")
     for line in (ROOT / ".env").read_text().splitlines() if (ROOT / ".env").exists() else []:
         if "=" not in line or line.strip().startswith("#"):
             continue
         k, _, v = line.partition("=")
         k, v = k.strip(), v.strip().strip('"').strip("'")
-        if k == "BUGBOT_GITEA_TOKEN" and not token:
+        if k == "REPOSITORY_DETECTIVE_GITEA_TOKEN" and not token:
             token = v
-        if k == "BUGBOT_GITEA_URL":
+        if k == "REPOSITORY_DETECTIVE_GITEA_URL":
             base = v.rstrip("/")
     if not token:
-        sys.exit("BUGBOT_GITEA_TOKEN required")
+        sys.exit("REPOSITORY_DETECTIVE_GITEA_TOKEN required")
     return token, base
 
 
@@ -66,7 +66,7 @@ def fetch_open_issues(base: str, token: str) -> list[dict]:
 def extract_fingerprint(body: str) -> str:
     for line in (body or "").splitlines():
         line = line.strip().lstrip("- ")
-        for m in ("Repository Detective fingerprint:", "Bugbot fingerprint:"):
+        for m in ("Repository Detective fingerprint:", "Repository Detective fingerprint:"):
             if line.startswith(m):
                 return line[len(m) :].strip()
     return ""

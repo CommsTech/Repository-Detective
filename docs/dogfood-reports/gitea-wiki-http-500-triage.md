@@ -9,8 +9,8 @@ Recorded: 2026-06-10 (updated)
 ## Repo wiki enabled?
 
 ```bash
-curl -s -H "Authorization: token $BUGBOT_GITEA_TOKEN" \
-  https://git.commsnet.org/api/v1/repos/commstech/repository-detective | jq '.has_wiki'
+curl -s -H "Authorization: token $REPOSITORY_DETECTIVE_GITEA_TOKEN" \
+  https://git.commsnet.org/api/v1/repos/commstech/Repository-Detective | jq '.has_wiki'
 ```
 
 Result: **`true`** (admin/push/pull permissions present).
@@ -75,7 +75,7 @@ journalctl -u gitea --since '10 min ago'
 # or tail /var/log/gitea/gitea.log
 ```
 
-Look for: uninitialized `bugbot.wiki.git`, hook failure, storage permissions, DB error on wiki metadata.
+Look for: uninitialized `repository-detective.wiki.git`, hook failure, storage permissions, DB error on wiki metadata.
 
 ## Root cause
 
@@ -85,7 +85,7 @@ Look for: uninitialized `bugbot.wiki.git`, hook failure, storage permissions, DB
 
 None on client. **Operator next step:**
 
-1. On Gitea host, verify `{data}/gitea-repositories/commstech/repository-detective.wiki.git` exists and is writable.
+1. On Gitea host, verify `{data}/gitea-repositories/commstech/Repository-Detective.wiki.git` exists and is writable.
 2. Create one manual wiki page in Gitea UI (initializes wiki storage).
 3. Retry one-page `git push`; then run `./scripts/publish-gitea-wiki.sh`.
 4. If still 500, repair/recreate wiki bare repo per Gitea admin docs.

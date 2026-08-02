@@ -40,12 +40,12 @@ Rejected by default: `file://`, local paths, SSH URLs, embedded credentials, loc
 | Key | Env | Default |
 |-----|-----|---------|
 | `preinstall_audit_enabled` | `REPOSITORY_DETECTIVE_PREINSTALL_AUDIT_ENABLED` | `true` (report-only; enable on-ramp audits) |
-| `preinstall_allow_private_networks` | `BUGBOT_PREINSTALL_ALLOW_PRIVATE_NETWORKS` | `false` |
-| `preinstall_max_repo_size_mb` | `BUGBOT_PREINSTALL_MAX_REPO_SIZE_MB` | `500` |
-| `preinstall_max_files` | `BUGBOT_PREINSTALL_MAX_FILES` | `5000` |
-| `preinstall_timeout_seconds` | `BUGBOT_PREINSTALL_TIMEOUT_SECONDS` | `600` |
-| `preinstall_max_findings` | `BUGBOT_PREINSTALL_MAX_FINDINGS` | `200` |
-| `preinstall_allow_git_clone` | `BUGBOT_PREINSTALL_ALLOW_GIT_CLONE` | `true` |
+| `preinstall_allow_private_networks` | `REPOSITORY_DETECTIVE_PREINSTALL_ALLOW_PRIVATE_NETWORKS` | `false` |
+| `preinstall_max_repo_size_mb` | `REPOSITORY_DETECTIVE_PREINSTALL_MAX_REPO_SIZE_MB` | `500` |
+| `preinstall_max_files` | `REPOSITORY_DETECTIVE_PREINSTALL_MAX_FILES` | `5000` |
+| `preinstall_timeout_seconds` | `REPOSITORY_DETECTIVE_PREINSTALL_TIMEOUT_SECONDS` | `600` |
+| `preinstall_max_findings` | `REPOSITORY_DETECTIVE_PREINSTALL_MAX_FINDINGS` | `200` |
+| `preinstall_allow_git_clone` | `REPOSITORY_DETECTIVE_PREINSTALL_ALLOW_GIT_CLONE` | `true` |
 
 Requires `database_enabled: true` and `git` on `PATH` when clone is enabled.
 
@@ -131,6 +131,6 @@ Messages include safe repo host/name only — no raw evidence. See [NOTIFICATION
 
 ## Rollback
 
-1. Set `preinstall_audit_enabled: false` (or `BUGBOT_PREINSTALL_AUDIT_ENABLED=false`).
+1. Set `preinstall_audit_enabled: false` (or `REPOSITORY_DETECTIVE_PREINSTALL_AUDIT_ENABLED=false`).
 2. Restart the service.
 3. Schema v2 tables are harmless if unused; downgrade requires manual DB backup/restore to v1 if needed.

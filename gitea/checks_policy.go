@@ -22,7 +22,7 @@ func EvaluateCommitStatusForPolicy(severities []string, scannerResults []Scanner
 		case CommitStateFailure:
 			eval.State = CommitStateWarning
 			if !strings.Contains(eval.Description, "non-blocking") {
-				eval.Description = "Repository Detective (non-blocking): " + strings.TrimPrefix(eval.Description, "Bugbot ")
+				eval.Description = "Repository Detective (non-blocking): " + strings.TrimPrefix(eval.Description, "Repository-Detective ")
 			}
 		case CommitStateError:
 			if !cfg.IncludeScannerFailures {

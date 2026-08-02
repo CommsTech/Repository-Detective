@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Trigger a safe self-scan of commstech/repository-detective (dogfood). Does not create issues unless configured.
+# Trigger a safe self-scan of commstech/Repository-Detective (dogfood). Does not create issues unless configured.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -10,11 +10,11 @@ if [[ -f .env ]]; then
   set +a
 fi
 
-BASE="${REPOSITORY_DETECTIVE_PUBLIC_URL:-${BUGBOT_PUBLIC_URL:-http://127.0.0.1:8081}}"
+BASE="${REPOSITORY_DETECTIVE_PUBLIC_URL:-http://127.0.0.1:8081}}"
 BASE="${BASE%/}"
-API_KEY="${REPOSITORY_DETECTIVE_API_KEY:-${BUGBOT_API_KEY:-}}"
+API_KEY="${REPOSITORY_DETECTIVE_API_KEY}"
 OWNER="${DOGFOOD_OWNER:-commstech}"
-REPO="${DOGFOOD_REPO:-Bugbot}"
+REPO="${DOGFOOD_REPO:-Repository-Detective}"
 
 echo "==> Health"
 curl -sf "${BASE}/health" | head -c 400

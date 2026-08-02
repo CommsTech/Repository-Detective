@@ -51,7 +51,7 @@ health_max_nesting_depth: 5
 health_max_function_params: 7
 ```
 
-Env: `BUGBOT_ENABLE_HEALTH_*`, `BUGBOT_HEALTH_*`.
+Env: `REPOSITORY_DETECTIVE_ENABLE_HEALTH_*`, `REPOSITORY_DETECTIVE_HEALTH_*`.
 
 Per-repo health toggles are supported via `repo_settings` (Phase 10B). Nullable fields inherit global config. Pre-install audits use global pre-install policy only — not per-repo health overrides.
 

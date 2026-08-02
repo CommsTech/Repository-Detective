@@ -51,7 +51,7 @@ func buildConfigureSections(
 			DocPath: "docs/CONFIGURATION.md",
 			Settings: []ConfigureSetting{
 				boolSetting("database_enabled", f.DatabaseEnabled),
-				{Key: "database.path", DisplayValue: "data/repository-detective.db (legacy: bugbot.db)", Source: "config", Hint: "Set database_path in config or DATABASE_PATH env"},
+				{Key: "database.path", DisplayValue: "data/repository-detective.db", Source: "config", Hint: "Set database_path in config or REPOSITORY_DETECTIVE_DATABASE_PATH"},
 			},
 		},
 		{

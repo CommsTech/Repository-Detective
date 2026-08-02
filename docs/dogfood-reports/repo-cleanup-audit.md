@@ -1,7 +1,7 @@
 # Repository cleanup audit
 
 **Date:** 2026-06-05  
-**Scope:** `commstech/repository-detective` working tree — classify operator leftovers vs product artifacts.
+**Scope:** `commstech/Repository-Detective` working tree — classify operator leftovers vs product artifacts.
 
 ---
 
@@ -17,11 +17,11 @@ Clean after `ab97c40` push (pre this audit’s doc-only changes).
 |------|----------------|--------|
 | `.env` | local_only | Already in `.gitignore` — never commit |
 | `config/config.yaml` | local_only | Already gitignored |
-| `data/bugbot.db` | local_only | Already gitignored (`data/`, `*.db`) |
+| `data/repository-detective.db` | local_only | Already gitignored (`data/`, `*.db`) |
 | `deployment-backups/` | local_only | Already gitignored |
 | `restore-drill-test/` | local_only | Already gitignored |
-| `deployment-backups/*/bugbot.db` | local_only | Gitignored via parent |
-| `restore-drill-test/data/bugbot.db` | local_only | Gitignored |
+| `deployment-backups/*/repository-detective.db` | local_only | Gitignored via parent |
+| `restore-drill-test/data/repository-detective.db` | local_only | Gitignored |
 | `redact/secrets.go` | keep | Source — not a secret file |
 
 ---
@@ -63,7 +63,7 @@ Do not delete from this task (may contain drill data the operator wants):
 ```text
 deployment-backups/         # old DB snapshots — prune when no longer needed
 restore-drill-test/         # drill artifact
-data/bugbot.db              # production DB on host — backup before delete
+data/repository-detective.db              # production DB on host — backup before delete
 ```
 
 ---

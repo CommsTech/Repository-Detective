@@ -14,18 +14,18 @@ Open Gitea issues after resolved-absent closeout: **56**
 
 | # | Fingerprint | Source | Rule | Sev | File | Planned fix | Test |
 |--:|-------------|--------|------|-----|------|-------------|------|
-| 327 | bugbot-22ea3ab4d75a571d | static | SEC-SQL-CONCAT | high | issuelink/backfill.go:101 | Skip `db.Query == nil` in static FP filter | analyzers/static_test.go |
-| 328 | bugbot-56df68c874191f41 | static | SEC-SQL-CONCAT | high | issuelink/backfill.go:30 | Same | analyzers/static_test.go |
-| 196 | bugbot-d0a05cf6594a828f | health | HEALTH-IGNORED-ERROR | medium | notify/http.go:36 | Check `io.Copy` error | notify tests |
-| 198 | bugbot-17ce603a440b2a8a | health | HEALTH-IGNORED-ERROR | medium | notify/webhook.go:73 | Check HMAC write error | notify tests |
-| 199 | bugbot-d391ab02bcc6f715 | health | HEALTH-IGNORED-ERROR | medium | notify/webhook.go:89 | Document test helper write | notify tests |
-| 212 | bugbot-01184640a65833ca | health | HEALTH-IGNORED-ERROR | medium | patcher/executor.go:198 | Surface issue comment failure | patcher tests |
-| 213 | bugbot-52ca71ddebab9092 | health | HEALTH-IGNORED-ERROR | medium | preinstall/checks.go:189 | Propagate WalkDir errors | preinstall tests |
-| 214 | bugbot-89bda9c93b10f19b | health | HEALTH-IGNORED-ERROR | medium | preinstall/checks.go:38 | Handle workspace walk errors | preinstall tests |
-| 215 | bugbot-8a66eeb95c8d98f0 | health | HEALTH-IGNORED-ERROR | medium | preinstall/runner.go:104 | Check UpdateAuditRequest | manual |
-| 322 | bugbot-ed1c73d74547022b | gosec | G301 | medium | store/store.go:83 | MkdirAll `0o750` | store tests |
-| 330 | bugbot-837f90a24801401d | gosec | G301 | medium | scanners/archive_extract.go:32 | MkdirAll `0o750` | scanners tests |
-| 331 | bugbot-094959790721052d | gosec | G301 | medium | scanners/archive_extract.go:78 | MkdirAll `0o750` | scanners tests |
+| 327 | rd-22ea3ab4d75a571d | static | SEC-SQL-CONCAT | high | issuelink/backfill.go:101 | Skip `db.Query == nil` in static FP filter | analyzers/static_test.go |
+| 328 | rd-56df68c874191f41 | static | SEC-SQL-CONCAT | high | issuelink/backfill.go:30 | Same | analyzers/static_test.go |
+| 196 | rd-d0a05cf6594a828f | health | HEALTH-IGNORED-ERROR | medium | notify/http.go:36 | Check `io.Copy` error | notify tests |
+| 198 | rd-17ce603a440b2a8a | health | HEALTH-IGNORED-ERROR | medium | notify/webhook.go:73 | Check HMAC write error | notify tests |
+| 199 | rd-d391ab02bcc6f715 | health | HEALTH-IGNORED-ERROR | medium | notify/webhook.go:89 | Document test helper write | notify tests |
+| 212 | rd-01184640a65833ca | health | HEALTH-IGNORED-ERROR | medium | patcher/executor.go:198 | Surface issue comment failure | patcher tests |
+| 213 | rd-52ca71ddebab9092 | health | HEALTH-IGNORED-ERROR | medium | preinstall/checks.go:189 | Propagate WalkDir errors | preinstall tests |
+| 214 | rd-89bda9c93b10f19b | health | HEALTH-IGNORED-ERROR | medium | preinstall/checks.go:38 | Handle workspace walk errors | preinstall tests |
+| 215 | rd-8a66eeb95c8d98f0 | health | HEALTH-IGNORED-ERROR | medium | preinstall/runner.go:104 | Check UpdateAuditRequest | manual |
+| 322 | rd-ed1c73d74547022b | gosec | G301 | medium | store/store.go:83 | MkdirAll `0o750` | store tests |
+| 330 | rd-837f90a24801401d | gosec | G301 | medium | scanners/archive_extract.go:32 | MkdirAll `0o750` | scanners tests |
+| 331 | rd-094959790721052d | gosec | G301 | medium | scanners/archive_extract.go:78 | MkdirAll `0o750` | scanners tests |
 
 ## Deferred to Batch 4b
 

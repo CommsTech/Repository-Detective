@@ -1,6 +1,6 @@
 # Issue and feature tracking
 
-Repository Detective uses **Gitea** for product backlog (`commstech/repository-detective`). Scan findings use separate `repository-detective/*` labels via the issue manager.
+Repository Detective uses **Gitea** for product backlog (`commstech/Repository-Detective`). Scan findings use separate `repository-detective/*` labels via the issue manager.
 
 ## Templates
 
@@ -46,7 +46,7 @@ Markdown issue specs: [issues/](issues/README.md). Create on Gitea with:
 ./scripts/gitea-backlog-setup.sh --issues        # documents manual create only (no bulk API)
 ```
 
-**Closeout evidence:** When `GITEA_TOKEN` is present in `.env`, `gitea-backlog-setup.sh --labels-only` created `type/*`, `severity/*`, `status/*`, `priority/*` labels and Sprint 1–6 milestones on `commstech/repository-detective` (verified via Gitea API list). Individual backlog **issues** were not bulk-created.
+**Closeout evidence:** When `GITEA_TOKEN` is present in `.env`, `gitea-backlog-setup.sh --labels-only` created `type/*`, `severity/*`, `status/*`, `priority/*` labels and Sprint 1–6 milestones on `commstech/Repository-Detective` (verified via Gitea API list). Individual backlog **issues** were not bulk-created.
 
 ## Scan finding issues vs product issues
 

@@ -144,5 +144,5 @@ prbl_scanner_skip_patterns:
 **References:**
 - prbl-scanner README: https://github.com/noreplywmsplaybook-pixel/prbl-scanner/blob/main/README.md
 - prbl-scanner RULES.md: https://github.com/noreplywmsplaybook-pixel/prbl-scanner/blob/main/RULES.md
-- Bugbot scanners: `/tmp/bugbot/scanners/`
-- Bugbot docs: `/tmp/bugbot/docs/`
+- Repository-Detective scanners: `/tmp/repository-detective/scanners/`
+- Repository-Detective docs: `/tmp/repository-detective/docs/`

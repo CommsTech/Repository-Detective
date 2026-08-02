@@ -12,7 +12,7 @@
 | `SECRET_SCANNING_AND_GIT_HISTORY.md` | **pass** |
 | `ISSUE_FINDING_RECONCILIATION.md` explains findings vs issues | **pass** |
 | Secrets in committed docs | **none found** |
-| Product-facing "Bugbot" in guides | **legacy compatibility only** in repo docs |
+| Product-facing "Repository-Detective" in guides | **legacy compatibility only** in repo docs |
 
 ## Wiki
 

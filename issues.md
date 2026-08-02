@@ -4,9 +4,9 @@
 
 | Priority | Issue | Resolution |
 |----------|-------|------------|
-| HIGH | Uncommitted work not on Gitea | Committed and pushed to `commstech/repository-detective` |
-| HIGH | Product still branded Bugbot for release | Module/repo/docs/UI renamed; public surfaces say Repository Detective |
-| MEDIUM | Live deploy still uses legacy env/DB path | Silent compat kept (`envcompat`, `bugbot.db`, fingerprint prefix) |
+| HIGH | Uncommitted work not on Gitea | Committed and pushed to `commstech/Repository-Detective` |
+| HIGH | Product still branded Repository-Detective for release | Module/repo/docs/UI renamed; public surfaces say Repository Detective |
+| MEDIUM | Live deploy still uses legacy env/DB path | Silent compat kept (`envcompat`, `repository-detective.db`, fingerprint prefix) |
 
 ## Fixed (2026-08-02) — Invalid-ref mass failures were forge-outage misclassification
 
@@ -43,7 +43,7 @@
 |----------|-------|------------|
 | HIGH | Scanner availability showed version `unknown` | Restored parallel version probes (stdout-aware, 12s timeout) with 5m cache |
 | HIGH | Scanner run failures were a count only | Health page lists recent failures with Open scan links |
-| MEDIUM | No way to file product issues from health problems | Report issue opens prefilled `system_health.md` on Bugbot Gitea (edit before submit) + Copy details |
+| MEDIUM | No way to file product issues from health problems | Report issue opens prefilled `system_health.md` on Repository-Detective Gitea (edit before submit) + Copy details |
 
 ## Fixed (2026-08-02) — Removed Qdrant completely
 

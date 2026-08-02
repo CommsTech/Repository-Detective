@@ -39,7 +39,7 @@ Verify: `cd dist/repository-detective-beta && sha256sum -c checksums.txt`
 
 ```bash
 ./scripts/check-beta-package-secrets.sh
-grep -RInE '(BUGBOT_GITEA_TOKEN|REPOSITORY_DETECTIVE_API_KEY|AKIA|BEGIN RSA|BEGIN OPENSSH)' \
+grep -RInE '(REPOSITORY_DETECTIVE_GITEA_TOKEN|REPOSITORY_DETECTIVE_API_KEY|AKIA|BEGIN RSA|BEGIN OPENSSH)' \
   dist/repository-detective-beta
 ```
 
@@ -72,4 +72,4 @@ Testers receive bundle + operator pointers to:
 - [ ] Send via secure channel (not public git)
 - [ ] Include announcement draft customized with contact/path
 - [ ] Confirm report-only first scan in onboarding
-- [ ] Do not include operator `.env` or `data/bugbot.db`
+- [ ] Do not include operator `.env` or `data/repository-detective.db`

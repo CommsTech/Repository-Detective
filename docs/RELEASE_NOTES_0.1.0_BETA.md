@@ -22,7 +22,7 @@ Private beta release for **single-operator Gitea** deployments. Not SaaS-ready.
 - **Theme persistence** — system / light / dark
 - **Backup/restore** — SQLite file + documented drill
 - **Docker all-in-one** — non-root, healthcheck, persistent volume
-- **Legacy compatibility** — `REPOSITORY_DETECTIVE_*` env, `X-Repository-Detective-API-Key`, `bugbot-*` fingerprints
+- **Legacy compatibility** — `REPOSITORY_DETECTIVE_*` env, `X-Repository-Detective-API-Key`, `repository-detective-*` fingerprints
 
 ---
 
@@ -59,13 +59,13 @@ Full list: [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md)
 
 ## Upgrade notes
 
-1. Backup `data/bugbot.db` — [BACKUP_RESTORE.md](BACKUP_RESTORE.md)
+1. Backup `data/repository-detective.db` — [BACKUP_RESTORE.md](BACKUP_RESTORE.md)
 2. Pull `main` or checkout tag
 3. `docker compose build repository-detective && docker compose up -d --force-recreate repository-detective`
 4. Migrations apply automatically on startup (schema v16+)
 5. Run `./scripts/operator-smoke-test.sh`
 
-From older Bugbot installs: legacy env vars and labels continue to work — [BRANDING_MIGRATION.md](BRANDING_MIGRATION.md).
+From older Repository-Detective installs: legacy env vars and labels continue to work — [BRANDING_MIGRATION.md](BRANDING_MIGRATION.md).
 
 ---
 
@@ -105,13 +105,13 @@ Use [BETA_SMOKE_TEST.md](BETA_SMOKE_TEST.md) for structured validation.
 
 ## Legacy compatibility
 
-Repository Detective is the product name. Bugbot remains supported:
+Repository Detective is the product name. Repository-Detective remains supported:
 
 - `REPOSITORY_DETECTIVE_*` environment variables
 - `X-Repository-Detective-API-Key` header
-- `bugbot/*` labels (read); `repository-detective/*` (write default)
-- `bugbot-<hex>` fingerprint values
-- `data/bugbot.db` database filename
+- `repository-detective/*` labels (read); `repository-detective/*` (write default)
+- `rd-<hex>` fingerprint values
+- `data/repository-detective.db` database filename
 
 ---
 

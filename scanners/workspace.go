@@ -132,7 +132,7 @@ func ListWorkspaceFiles(root string, maxFiles int) ([]FileEntry, error) {
 
 // CreateWorkspace writes files into a temporary directory tree for scanner tools.
 func CreateWorkspace(files []FileEntry) (dir string, cleanup func(), err error) {
-	dir, err = os.MkdirTemp("", "bugbot-scan-*")
+	dir, err = os.MkdirTemp("", "rd-scan-*")
 	if err != nil {
 		return "", nil, err
 	}

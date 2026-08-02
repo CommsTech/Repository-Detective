@@ -55,10 +55,10 @@ func (remediationBridge) AttemptPR(c *gin.Context, planID string) (patcher.Patch
 }
 
 func (remediationBridge) GetPatchAttempt(c *gin.Context, attemptID string) (patcher.PatchAttempt, error) {
-	if bugbotStore == nil {
+	if rdStore == nil {
 		return patcher.PatchAttempt{}, fmt.Errorf("database disabled")
 	}
-	rec, err := bugbotStore.GetPatchAttemptByAttemptID(c.Request.Context(), attemptID)
+	rec, err := rdStore.GetPatchAttemptByAttemptID(c.Request.Context(), attemptID)
 	if err != nil {
 		return patcher.PatchAttempt{}, err
 	}
@@ -66,10 +66,10 @@ func (remediationBridge) GetPatchAttempt(c *gin.Context, attemptID string) (patc
 }
 
 func (remediationBridge) ListPatchAttemptsByPlan(c *gin.Context, planID string) ([]patcher.PatchAttempt, error) {
-	if bugbotStore == nil {
+	if rdStore == nil {
 		return nil, fmt.Errorf("database disabled")
 	}
-	recs, err := bugbotStore.ListPatchAttemptsByPlanID(c.Request.Context(), planID)
+	recs, err := rdStore.ListPatchAttemptsByPlanID(c.Request.Context(), planID)
 	if err != nil {
 		return nil, err
 	}
@@ -81,10 +81,10 @@ func (remediationBridge) ListPatchAttemptsByPlan(c *gin.Context, planID string) 
 }
 
 func loadPlanAndRepo(ctx context.Context, planID string) (remediation.Plan, store.Repository, error) {
-	if bugbotStore == nil {
+	if rdStore == nil {
 		return remediation.Plan{}, store.Repository{}, fmt.Errorf("database disabled")
 	}
-	rec, err := bugbotStore.GetRemediationPlanByPlanID(ctx, planID)
+	rec, err := rdStore.GetRemediationPlanByPlanID(ctx, planID)
 	if err != nil {
 		return remediation.Plan{}, store.Repository{}, err
 	}
@@ -92,7 +92,7 @@ func loadPlanAndRepo(ctx context.Context, planID string) (remediation.Plan, stor
 	if rec.RepositoryID == nil {
 		return remediation.Plan{}, store.Repository{}, fmt.Errorf("plan has no repository")
 	}
-	repo, err := bugbotStore.GetRepository(ctx, *rec.RepositoryID)
+	repo, err := rdStore.GetRepository(ctx, *rec.RepositoryID)
 	if err != nil {
 		return remediation.Plan{}, store.Repository{}, err
 	}
@@ -112,7 +112,7 @@ func attemptRemediationPR(ctx context.Context, planID string) (patcher.PatchAtte
 	if !cfg.Enabled {
 		return patcher.PatchAttempt{}, fmt.Errorf("remediation PR feature disabled")
 	}
-	if bugbotStore == nil {
+	if rdStore == nil {
 		return patcher.PatchAttempt{}, fmt.Errorf("database disabled")
 	}
 	if giteaClient == nil {
@@ -124,7 +124,7 @@ func attemptRemediationPR(ctx context.Context, planID string) (patcher.PatchAtte
 		return patcher.PatchAttempt{}, err
 	}
 	if plan.FindingID > 0 && plan.TargetLine == 0 {
-		if detail, derr := bugbotStore.GetFindingDetail(ctx, plan.FindingID); derr == nil && detail.Line > 0 {
+		if detail, derr := rdStore.GetFindingDetail(ctx, plan.FindingID); derr == nil && detail.Line > 0 {
 			plan.TargetLine = detail.Line
 		}
 	}
@@ -136,7 +136,7 @@ func attemptRemediationPR(ctx context.Context, planID string) (patcher.PatchAtte
 
 	issueNumber := 0
 	if plan.FindingID > 0 {
-		if issues, ierr := bugbotStore.ListExternalIssuesByFinding(ctx, plan.FindingID); ierr == nil && len(issues) > 0 {
+		if issues, ierr := rdStore.ListExternalIssuesByFinding(ctx, plan.FindingID); ierr == nil && len(issues) > 0 {
 			issueNumber = issues[0].IssueNumber
 		}
 	}
@@ -150,7 +150,7 @@ func attemptRemediationPR(ctx context.Context, planID string) (patcher.PatchAtte
 	}
 	attempt, err := exec.Run(ctx, patcher.AttemptInput{Plan: plan, Repo: repoCtx})
 	rec := store.PatchAttemptFromDomain(attempt)
-	if _, saveErr := bugbotStore.SavePatchAttempt(ctx, rec); saveErr != nil {
+	if _, saveErr := rdStore.SavePatchAttempt(ctx, rec); saveErr != nil {
 		logger.Warnf("save patch attempt: %v", saveErr)
 	}
 	if err != nil {
@@ -158,7 +158,7 @@ func attemptRemediationPR(ctx context.Context, planID string) (patcher.PatchAtte
 	}
 	if plan.FindingID > 0 {
 		addRemediationLifecycle(ctx, plan.FindingID, planID, "remediation_pr_opened", "Remediation PR opened: "+attempt.PullRequestURL)
-		if issues, ierr := bugbotStore.ListExternalIssuesByFinding(ctx, plan.FindingID); ierr == nil && len(issues) > 0 {
+		if issues, ierr := rdStore.ListExternalIssuesByFinding(ctx, plan.FindingID); ierr == nil && len(issues) > 0 {
 			parts := strings.SplitN(repo.FullName, "/", 2)
 			if len(parts) == 2 {
 				markFixPROpened(ctx, parts[0], parts[1], issues[0].IssueNumber)
@@ -194,10 +194,10 @@ func (remediationPRUIBridge) AttemptPR(ctx context.Context, planID string) (patc
 }
 
 func (remediationPRUIBridge) ListPatchAttempts(ctx context.Context, planID string) ([]patcher.PatchAttempt, error) {
-	if bugbotStore == nil {
+	if rdStore == nil {
 		return nil, fmt.Errorf("database disabled")
 	}
-	recs, err := bugbotStore.ListPatchAttemptsByPlanID(ctx, planID)
+	recs, err := rdStore.ListPatchAttemptsByPlanID(ctx, planID)
 	if err != nil {
 		return nil, err
 	}

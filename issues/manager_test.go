@@ -23,14 +23,14 @@ func TestFindIssueByFingerprint(t *testing.T) {
 		issues := []gitea.Issue{{
 			Number:  7,
 			HTMLURL: "https://git.example.com/owner/repo/issues/7",
-			Body:    "## Tracking\n\n- Bugbot fingerprint: bugbot-matchme\n",
+			Body:    "## Tracking\n\n- Repository Detective fingerprint: rd-matchme\n",
 		}}
 		_ = json.NewEncoder(w).Encode(issues)
 	}))
 	defer server.Close()
 
 	client := gitea.NewClient(server.URL, "token", logrus.New())
-	match, err := FindIssueByFingerprint(context.Background(), &GiteaForge{Client: client}, "owner", "repo", "bugbot-matchme")
+	match, err := FindIssueByFingerprint(context.Background(), &GiteaForge{Client: client}, "owner", "repo", "rd-matchme")
 	if err != nil {
 		t.Fatalf("FindIssueByFingerprint: %v", err)
 	}
@@ -47,7 +47,7 @@ func TestCreateIssuesUpdatesExistingFingerprint(t *testing.T) {
 			issues := []gitea.Issue{{
 				Number:  9,
 				HTMLURL: "https://git.example.com/owner/repo/issues/9",
-				Body:    "## Tracking\n\n- Bugbot fingerprint: bugbot-existing\n",
+				Body:    "## Tracking\n\n- Repository Detective fingerprint: rd-existing\n",
 			}}
 			_ = json.NewEncoder(w).Encode(issues)
 		case r.Method == http.MethodPost && strings.Contains(r.URL.Path, "/comments"):
@@ -80,7 +80,7 @@ func TestCreateIssuesUpdatesExistingFingerprint(t *testing.T) {
 	}
 
 	EnrichIssue("owner/repo", &issue, "scan-xyz")
-	issue.Fingerprint = "bugbot-existing"
+	issue.Fingerprint = "rd-existing"
 
 	result, err := manager.CreateIssuesFromAnalysis(context.Background(), &IssueCreationRequest{
 		Owner:      "owner",

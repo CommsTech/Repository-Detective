@@ -24,7 +24,7 @@ scan_profile: standard
 ```
 
 ```text
-BUGBOT_SCAN_PROFILE=standard
+REPOSITORY_DETECTIVE_SCAN_PROFILE=standard
 REPOSITORY_DETECTIVE_SCAN_PROFILE=standard
 ```
 

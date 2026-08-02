@@ -13,17 +13,17 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-DB = ROOT / "data/bugbot.db"
+DB = ROOT / "data/repository-detective.db"
 
 
 def load_env() -> tuple[str, str]:
-    api_key = os.environ.get("REPOSITORY_DETECTIVE_API_KEY") or os.environ.get("BUGBOT_API_KEY", "")
+    api_key = os.environ.get("REPOSITORY_DETECTIVE_API_KEY") or os.environ.get("REPOSITORY_DETECTIVE_API_KEY", "")
     for line in (ROOT / ".env").read_text().splitlines() if (ROOT / ".env").exists() else []:
         if "=" not in line or line.strip().startswith("#"):
             continue
         k, _, v = line.partition("=")
         k, v = k.strip(), v.strip().strip('"').strip("'")
-        if k in ("REPOSITORY_DETECTIVE_API_KEY", "BUGBOT_API_KEY") and not api_key:
+        if k in ("REPOSITORY_DETECTIVE_API_KEY", "REPOSITORY_DETECTIVE_API_KEY") and not api_key:
             api_key = v
     if not api_key:
         sys.exit("API key required")
@@ -31,15 +31,15 @@ def load_env() -> tuple[str, str]:
 
 
 def gitea_count(owner: str, repo: str) -> int:
-    token = os.environ.get("BUGBOT_GITEA_TOKEN", "")
-    base = os.environ.get("BUGBOT_GITEA_URL", "https://git.commsnet.org").rstrip("/")
+    token = os.environ.get("REPOSITORY_DETECTIVE_GITEA_TOKEN", "")
+    base = os.environ.get("REPOSITORY_DETECTIVE_GITEA_URL", "https://git.commsnet.org").rstrip("/")
     for line in (ROOT / ".env").read_text().splitlines() if (ROOT / ".env").exists() else []:
         if "=" not in line or line.strip().startswith("#"):
             continue
         k, _, v = line.partition("=")
-        if k == "BUGBOT_GITEA_TOKEN" and not token:
+        if k == "REPOSITORY_DETECTIVE_GITEA_TOKEN" and not token:
             token = v.strip().strip('"').strip("'")
-        if k == "BUGBOT_GITEA_URL":
+        if k == "REPOSITORY_DETECTIVE_GITEA_URL":
             base = v.strip().strip('"').strip("'").rstrip("/")
     req = urllib.request.Request(
         f"{base}/api/v1/repos/{owner}/{repo}",

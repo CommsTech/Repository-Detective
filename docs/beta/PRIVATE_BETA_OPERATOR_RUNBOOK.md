@@ -75,17 +75,17 @@ If `sbom-go.cdx.json` present in bundle, verify module list matches release tag.
 
 ```bash
 # Backup
-cp data/bugbot.db backups/bugbot-$(date +%Y%m%d).db
+cp data/repository-detective.db backups/repository-detective-$(date +%Y%m%d).db
 
 # Restore (stop service first)
 docker compose -f docker-compose.beta.yml down
-cp backups/bugbot-YYYYMMDD.db data/bugbot.db
+cp backups/repository-detective-YYYYMMDD.db data/repository-detective.db
 docker compose -f docker-compose.beta.yml up -d
 ```
 
 ## Upgrade path
 
-1. Backup `data/bugbot.db`
+1. Backup `data/repository-detective.db`
 2. Pull new image or replace binary
 3. Start service — migrations run automatically
 4. Verify `/health` and `/api/v1/status`

@@ -7,7 +7,7 @@ cd "$ROOT"
 
 PORT="${RD_PORT:-8081}"
 BASE="${RD_BASE_URL:-http://127.0.0.1:${PORT}/ui}"
-API_KEY="${REPOSITORY_DETECTIVE_API_KEY:-${BUGBOT_API_KEY:-}}"
+API_KEY="${REPOSITORY_DETECTIVE_API_KEY}"
 REPORT="${RD_UI_SMOKE_REPORT:-docs/dogfood-reports/ui-route-smoke-report.md}"
 
 pass=0

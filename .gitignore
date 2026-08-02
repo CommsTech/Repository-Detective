@@ -255,7 +255,7 @@ config/config.yaml.bak-*
 /repository-detective-build
 /bugbot
 bugbot
-bugbot-build
+repository-detective-build
 
 # Vendored modules (generate via scripts/vendor-deps.sh when needed)
 vendor/

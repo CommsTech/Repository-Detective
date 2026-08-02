@@ -34,7 +34,7 @@ func TestJobTypeAllowed(t *testing.T) {
 }
 
 func TestRedactLogLine(t *testing.T) {
-	msg := runner.RedactLogLine("failed token BUGBOT_GITEA_TOKEN=super-secret-value")
+	msg := runner.RedactLogLine("failed token REPOSITORY_DETECTIVE_GITEA_TOKEN=super-secret-value")
 	if strings.Contains(msg, "super-secret-value") {
 		t.Fatalf("secret leaked: %q", msg)
 	}

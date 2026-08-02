@@ -12,9 +12,9 @@ if [[ -f .env ]]; then
   set +a
 fi
 
-BASE="${REPOSITORY_DETECTIVE_PUBLIC_URL:-${BUGBOT_PUBLIC_URL:-http://127.0.0.1:8081}}"
+BASE="${REPOSITORY_DETECTIVE_PUBLIC_URL:-http://127.0.0.1:8081}}"
 BASE="${BASE%/}"
-KEY="${REPOSITORY_DETECTIVE_API_KEY:-${BUGBOT_API_KEY:-}}"
+KEY="${REPOSITORY_DETECTIVE_API_KEY}"
 REPO_ID="${RD_MATRIX_REPO_ID:-1}"
 REPORT="${RD_FEATURE_MATRIX_REPORT:-docs/dogfood-reports/feature-matrix-$(date -u +%Y%m%dT%H%M%SZ).md}"
 
@@ -93,7 +93,7 @@ if [[ -z "$KEY" ]]; then
   record "manual_scan" "skip" "no API key"
 else
   echo "==> Manual report-only scan"
-  payload=$(printf '{"owner":"commstech","repository":"Bugbot","ref":"main","report_only_dry_run":true}')
+  payload=$(printf '{"owner":"commstech","repository":"Repository-Detective","ref":"main","report_only_dry_run":true}')
   code=$(curl -sS -o /tmp/rd-matrix-scan.json -w '%{http_code}' -m 30 \
     -H "Content-Type: application/json" "${auth[@]}" \
     -d "$payload" "${BASE}/api/v1/analyze" || echo 000)

@@ -14,7 +14,7 @@ func CSRFToken(apiSecret, clientKey string) string {
 		return ""
 	}
 	mac := hmac.New(sha256.New, []byte(apiSecret))
-	if _, err := mac.Write([]byte("bugbot-csrf-v1:")); err != nil {
+	if _, err := mac.Write([]byte("rd-csrf-v1:")); err != nil {
 		return ""
 	}
 	if _, err := mac.Write([]byte(clientKey)); err != nil {

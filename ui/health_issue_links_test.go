@@ -15,7 +15,7 @@ func TestBuildScannerFailureReportPrefillsIssue(t *testing.T) {
 		Status:       "timed_out",
 		Error:        "context deadline exceeded",
 		ScanID:       "abc123def456",
-		RepoFullName: "commstech/repository-detective",
+		RepoFullName: "commstech/Repository-Detective",
 		StartedAt:    time.Date(2026, 8, 2, 12, 0, 0, 0, time.UTC),
 	}, "rc-health-ux", "http://192.168.255.10:8081/ui")
 

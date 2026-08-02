@@ -65,7 +65,7 @@ Config: `config/private-beta.example.yaml`, `docker-compose.beta.yml`
 |-------|--------|
 | `.env` staged | No |
 | `dist/` staged | No (gitignored) |
-| Local `bugbot` ELF staged | No |
+| Local `repository-detective` ELF staged | No |
 | Working tree | Clean |
 
 ## Remaining risks

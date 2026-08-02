@@ -1,7 +1,7 @@
 # RC active-present 21 classification
 
 **Scan ID:** `e42b3e175e313904`  
-**Repository:** commstech/repository-detective (id=1)
+**Repository:** commstech/Repository-Detective (id=1)
 
 All 21 findings classified. Actionable = medium/high/critical per reconciliation (`actionable_active_open`).
 

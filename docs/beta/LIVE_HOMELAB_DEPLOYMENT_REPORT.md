@@ -21,7 +21,7 @@ Rebuild live homelab container from current `main` so UI routes (`/ui/configure`
 Full `./scripts/docker-build-verify.sh` **not** run (~23 min matrix). Minimum homelab target built directly:
 
 ```bash
-cd /home/commstech/repository-detective
+cd /home/commstech/Repository-Detective
 export RD_VERSION=beta
 export RD_COMMIT=$(git rev-parse --short HEAD)
 export RD_BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
@@ -48,10 +48,10 @@ docker stop repository-detective && docker rm repository-detective
 docker run -d --name repository-detective \
   --network host \
   --restart unless-stopped \
-  --env-file /home/commstech/repository-detective/.env \
-  -v /home/commstech/repository-detective/config:/app/config:ro \
-  -v /home/commstech/repository-detective/data:/app/data \
-  -v /home/commstech/repository-detective/certs:/app/certs:ro \
+  --env-file /home/commstech/Repository-Detective/.env \
+  -v /home/commstech/Repository-Detective/config:/app/config:ro \
+  -v /home/commstech/Repository-Detective/data:/app/data \
+  -v /home/commstech/Repository-Detective/certs:/app/certs:ro \
   repository-detective:all-in-one
 ```
 

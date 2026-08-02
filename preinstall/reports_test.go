@@ -11,7 +11,7 @@ import (
 
 func testReportConfig() preinstall.Config {
 	cfg := preinstall.DefaultConfig()
-	cfg.RepositoryDetectiveProjectURL = "https://git.example.com/commstech/repository-detective"
+	cfg.RepositoryDetectiveProjectURL = "https://git.example.com/commstech/Repository-Detective"
 	return cfg
 }
 

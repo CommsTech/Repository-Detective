@@ -25,7 +25,7 @@ func operatorScannerConfig() operator.ScannerConfig {
 }
 
 func operatorFeatureFlags() operator.FeatureFlags {
-	healthy := config.DatabaseEnabled && bugbotStore != nil
+	healthy := config.DatabaseEnabled && rdStore != nil
 	return operator.FeatureFlags{
 		DatabaseEnabled:           config.DatabaseEnabled,
 		DatabaseHealthy:           healthy,

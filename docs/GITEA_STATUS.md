@@ -1,12 +1,12 @@
 # Gitea Commit Status / Checks
 
-Bugbot can optionally post Gitea commit statuses on push and pull request scans. This gives immediate PR feedback without changing issue creation behavior.
+Repository-Detective can optionally post Gitea commit statuses on push and pull request scans. This gives immediate PR feedback without changing issue creation behavior.
 
 ## Enable
 
 ```yaml
 enable_gitea_status: true
-gitea_status_context: bugbot/security-scan
+gitea_status_context: repository-detective/security-scan
 gitea_status_fail_on: high
 gitea_status_warn_on: medium
 gitea_status_include_scanner_failures: true
@@ -16,12 +16,12 @@ public_url: https://repository-detective.example.com
 Environment equivalents:
 
 ```bash
-BUGBOT_ENABLE_GITEA_STATUS=true
-BUGBOT_GITEA_STATUS_CONTEXT=bugbot/security-scan
-BUGBOT_GITEA_STATUS_FAIL_ON=high
-BUGBOT_GITEA_STATUS_WARN_ON=medium
-BUGBOT_GITEA_STATUS_INCLUDE_SCANNER_FAILURES=true
-BUGBOT_PUBLIC_URL=https://repository-detective.example.com
+REPOSITORY_DETECTIVE_ENABLE_GITEA_STATUS=true
+REPOSITORY_DETECTIVE_GITEA_STATUS_CONTEXT=repository-detective/security-scan
+REPOSITORY_DETECTIVE_GITEA_STATUS_FAIL_ON=high
+REPOSITORY_DETECTIVE_GITEA_STATUS_WARN_ON=medium
+REPOSITORY_DETECTIVE_GITEA_STATUS_INCLUDE_SCANNER_FAILURES=true
+REPOSITORY_DETECTIVE_PUBLIC_URL=https://repository-detective.example.com
 ```
 
 Default is **disabled** (`enable_gitea_status: false`).
@@ -39,7 +39,7 @@ If no commit SHA is available (branch-only PR without `head.sha`), status report
 
 ## API
 
-Bugbot uses the Gitea commit status endpoint:
+Repository-Detective uses the Gitea commit status endpoint:
 
 ```text
 POST /api/v1/repos/{owner}/{repo}/statuses/{sha}
@@ -70,4 +70,4 @@ enable_semgrep: true
 enable_linters: true
 ```
 
-This turns Bugbot into a CI-style quality gate on PRs while still opening issues separately when configured.
+This turns Repository-Detective into a CI-style quality gate on PRs while still opening issues separately when configured.

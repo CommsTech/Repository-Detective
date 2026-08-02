@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# Create Gitea labels, milestones, and optional backlog issues for commstech/repository-detective.
+# Create Gitea labels, milestones, and optional backlog issues for commstech/Repository-Detective.
 # Does nothing without GITEA_TOKEN (or REPOSITORY_DETECTIVE_GITEA_TOKEN) in environment or .env.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-GITEA_URL="${GITEA_URL:-${REPOSITORY_DETECTIVE_GITEA_URL:-${BUGBOT_GITEA_URL:-https://git.commsnet.org}}}"
+GITEA_URL="${GITEA_URL:-${REPOSITORY_DETECTIVE_GITEA_URL:-${REPOSITORY_DETECTIVE_GITEA_URL:-https://git.commsnet.org}}}"
 GITEA_URL="${GITEA_URL%/}"
 OWNER="${GITEA_OWNER:-commstech}"
-REPO="${GITEA_REPO:-Bugbot}"
+REPO="${GITEA_REPO:-Repository-Detective}"
 API="${GITEA_URL}/api/v1/repos/${OWNER}/${REPO}"
 
 if [[ -f .env ]]; then
@@ -17,7 +17,7 @@ if [[ -f .env ]]; then
   set +a
 fi
 
-TOKEN="${GITEA_TOKEN:-${REPOSITORY_DETECTIVE_GITEA_TOKEN:-${BUGBOT_GITEA_TOKEN:-}}}"
+TOKEN="${GITEA_TOKEN:-${REPOSITORY_DETECTIVE_GITEA_TOKEN:-${REPOSITORY_DETECTIVE_GITEA_TOKEN:-}}}"
 if [[ -z "${TOKEN}" ]]; then
   echo "No Gitea token — export GITEA_TOKEN or add to .env. Prepared issues: docs/issues/"
   exit 0

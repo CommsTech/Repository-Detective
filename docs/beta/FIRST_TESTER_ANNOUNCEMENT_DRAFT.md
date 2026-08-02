@@ -84,7 +84,7 @@ We especially want to hear about:
 
 - `.env` files
 - Forge tokens or API keys
-- `bugbot.db` or full database dumps
+- `repository-detective.db` or full database dumps
 - Unredacted logs containing credentials
 
 ## Questions?

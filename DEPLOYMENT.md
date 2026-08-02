@@ -16,7 +16,7 @@ See **[docs/SETUP.md](docs/SETUP.md)** for the full walkthrough.
 ```bash
 git clone https://git.commsnet.org/commstech/repository-detective.git
 cd repository-detective
-cp .env.example .env   # or copy from a legacy install at ~/bugbot/.env
+cp .env.example .env   # or copy from a legacy install at ~/repository-detective/.env
 # edit .env
 docker compose up -d --build
 curl -m 5 http://127.0.0.1:8081/health
@@ -26,7 +26,7 @@ Or use the helper script:
 
 ```bash
 ./deploy.sh
-./deploy.sh --scan     # optional: dogfood scan on commstech/repository-detective
+./deploy.sh --scan     # optional: dogfood scan on commstech/Repository-Detective
 ```
 
 ### DNS-filtered networks
@@ -52,7 +52,7 @@ When Docker bridge IP pools are exhausted, the default `docker-compose.yml` uses
 Disable the legacy systemd unit after Docker is healthy:
 
 ```bash
-sudo systemctl disable --now bugbot.service
+sudo systemctl disable --now repository-detective.service
 ```
 
 ## Compose files

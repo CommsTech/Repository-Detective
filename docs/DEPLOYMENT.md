@@ -24,7 +24,7 @@ Central index for deploying private beta instances. For fastest path see [QUICKS
 ```text
 Image:     repository-detective:all-in-one
 Compose:   docker-compose.yml (port 8081, host networking)
-Database:  ./data/bugbot.db (volume mount)
+Database:  ./data/repository-detective.db (volume mount)
 Config:    ./config/config.yaml + .env
 Profile:   beta_standard (see BETA_READINESS.md)
 ```

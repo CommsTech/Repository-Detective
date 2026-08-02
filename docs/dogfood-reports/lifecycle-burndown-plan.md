@@ -1,4 +1,4 @@
-# Lifecycle burndown plan — commstech/Bugbot
+# Lifecycle burndown plan — commstech/Repository-Detective
 
 **Generated:** 2026-06-06  
 **Latest scan:** `852f2fb850b2b56d` (1080/1080 persisted, reconcilable)  

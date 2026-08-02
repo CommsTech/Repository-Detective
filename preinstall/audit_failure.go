@@ -25,7 +25,7 @@ const (
 // RiskScoreUnavailable marks audits that did not complete scoring.
 const RiskScoreUnavailable = -1
 
-var failureEnvSecretPattern = regexp.MustCompile(`(?i)(BUGBOT_|REPOSITORY_DETECTIVE_|GITEA_)[A-Z0-9_]*TOKEN=[^\s]+`)
+var failureEnvSecretPattern = regexp.MustCompile(`(?i)(REPOSITORY_DETECTIVE_|GITEA_)[A-Z0-9_]*TOKEN=[^\s]+`)
 
 // ApplyAuditFailure records a failed audit without implying a safe score.
 func ApplyAuditFailure(req *store.AuditRequest, stage, rawErr string, sandbox SandboxMeta) {

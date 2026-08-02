@@ -19,7 +19,7 @@ const (
 	CategoryUnknown         = "unknown"
 )
 
-// NormalizeCategory maps legacy/scanner categories to formal Bugbot categories.
+// NormalizeCategory maps legacy/scanner categories to formal Repository Detective categories.
 func NormalizeCategory(category, source string) string {
 	category = strings.ToLower(strings.TrimSpace(category))
 	source = strings.ToLower(strings.TrimSpace(source))
@@ -104,26 +104,4 @@ func MapSemgrepCategory(metadataCategory string) string {
 // CategoryLabel returns the Gitea category label for writes (Repository Detective namespace).
 func CategoryLabel(category string) string {
 	return CategoryLabelNew(category)
-}
-
-// CategoryLabelLegacy returns legacy bugbot/* category labels (legacy_only compat mode).
-func CategoryLabelLegacy(category string) string {
-	switch NormalizeCategory(category, "") {
-	case CategorySecurity, CategoryMisconfiguration:
-		return "bugbot/security"
-	case CategorySecret:
-		return "bugbot/secret"
-	case CategoryDependency:
-		return "bugbot/dependency"
-	case CategoryCodeQuality, CategoryMaintainability, CategoryTechDebt, CategoryTestGap, CategoryPerformance:
-		return "bugbot/code-quality"
-	case CategoryReliability:
-		return "bugbot/reliability"
-	case CategoryAIGeneratedRisk:
-		return "bugbot/ai-generated-risk"
-	case CategoryArchitecture:
-		return "bugbot/architecture"
-	default:
-		return "bugbot/code-quality"
-	}
 }

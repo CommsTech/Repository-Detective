@@ -136,13 +136,13 @@ func TestGitleaksIDStableAcrossTempWorkspaces(t *testing.T) {
     "Match": "REDACTED",
     "Secret": "REDACTED",
     "File": "redact/secrets_test.go",
-    "Fingerprint": "/tmp/bugbot-archive-12345/redact/secrets_test.go:aws-access-token:13"
+    "Fingerprint": "/tmp/rd-archive-12345/redact/secrets_test.go:aws-access-token:13"
   }]`
-	a, err := scanners.ParseGitleaksOutputForTest([]byte(payload), "/tmp/bugbot-archive-111")
+	a, err := scanners.ParseGitleaksOutputForTest([]byte(payload), "/tmp/rd-archive-111")
 	if err != nil {
 		t.Fatal(err)
 	}
-	b, err := scanners.ParseGitleaksOutputForTest([]byte(payload), "/tmp/bugbot-archive-222")
+	b, err := scanners.ParseGitleaksOutputForTest([]byte(payload), "/tmp/rd-archive-222")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -152,7 +152,7 @@ func TestGitleaksIDStableAcrossTempWorkspaces(t *testing.T) {
 	if a[0].ID != b[0].ID {
 		t.Fatalf("unstable ids across workspaces: %q vs %q", a[0].ID, b[0].ID)
 	}
-	if strings.Contains(a[0].ID, "bugbot-archive") {
+	if strings.Contains(a[0].ID, "rd-archive") {
 		t.Fatalf("id still has archive path: %q", a[0].ID)
 	}
 }

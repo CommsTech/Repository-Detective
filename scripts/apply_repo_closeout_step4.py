@@ -37,8 +37,8 @@ DISPOSITIONS = {
 
 
 def load_env() -> tuple[str, str]:
-    api_key = os.environ.get("BUGBOT_API_KEY", "")
-    token = os.environ.get("BUGBOT_GITEA_TOKEN", "")
+    api_key = os.environ.get("REPOSITORY_DETECTIVE_API_KEY", "")
+    token = os.environ.get("REPOSITORY_DETECTIVE_GITEA_TOKEN", "")
     env_path = ROOT / ".env"
     if env_path.exists():
         for line in env_path.read_text().splitlines():
@@ -46,12 +46,12 @@ def load_env() -> tuple[str, str]:
                 continue
             k, _, v = line.partition("=")
             k, v = k.strip(), v.strip().strip('"').strip("'")
-            if k == "BUGBOT_API_KEY" and not api_key:
+            if k == "REPOSITORY_DETECTIVE_API_KEY" and not api_key:
                 api_key = v
-            if k == "BUGBOT_GITEA_TOKEN" and not token:
+            if k == "REPOSITORY_DETECTIVE_GITEA_TOKEN" and not token:
                 token = v
     if not api_key:
-        sys.exit("BUGBOT_API_KEY required")
+        sys.exit("REPOSITORY_DETECTIVE_API_KEY required")
     return api_key, token
 
 

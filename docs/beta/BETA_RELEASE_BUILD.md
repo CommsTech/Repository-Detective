@@ -3,7 +3,7 @@
 ## Quick start
 
 ```bash
-cd /home/commstech/repository-detective
+cd /home/commstech/Repository-Detective
 make beta-release
 ```
 

@@ -21,7 +21,7 @@
 | **Not yet** | SaaS, multi-tenant, billing, auto-merge, third-party auto-submit |
 | **Editions docs** | [Community](docs/COMMUNITY_EDITION.md) · [Commercial](docs/COMMERCIAL_ENTERPRISE.md) · [Editions overview](docs/EDITIONS.md) |
 
-> **Naming:** The product is **Repository Detective**. Prefer `REPOSITORY_DETECTIVE_*` env vars and `X-Repository-Detective-API-Key`. Silent legacy aliases remain for existing deployments — see [docs/NAMING.md](docs/NAMING.md).
+> **Naming:** The product is **Repository Detective**. Use `REPOSITORY_DETECTIVE_*` env vars and `X-Repository-Detective-API-Key`. See [docs/NAMING.md](docs/NAMING.md).
 
 Repo: https://git.commsnet.org/commstech/repository-detective.git
 
@@ -69,16 +69,17 @@ Enterprise: use your internal artifact proxy. Offline: `go mod vendor` then `GOP
 
 ## Configuration
 
-Environment variables prefer the `REPOSITORY_DETECTIVE_` prefix. Legacy `REPOSITORY_DETECTIVE_*` variables remain supported.
+Environment variables use the `REPOSITORY_DETECTIVE_` prefix only.
 
-| Setting | Preferred variable | Legacy alias |
-|---------|-------------------|--------------|
-| HTTP port | `REPOSITORY_DETECTIVE_PORT` | `BUGBOT_PORT` |
-| API key | `REPOSITORY_DETECTIVE_API_KEY` | `BUGBOT_API_KEY` |
-| Public URL for webhooks | `REPOSITORY_DETECTIVE_PUBLIC_URL` | `BUGBOT_PUBLIC_URL` |
-| Gitea | `REPOSITORY_DETECTIVE_GITEA_URL`, `REPOSITORY_DETECTIVE_GITEA_TOKEN` | `BUGBOT_GITEA_*` |
-| Webhook secret | `REPOSITORY_DETECTIVE_WEBHOOK_SECRET` | `BUGBOT_WEBHOOK_SECRET` |
-| Local auth | `REPOSITORY_DETECTIVE_AUTH_MODE`, `REPOSITORY_DETECTIVE_SESSION_SECRET` | `REPOSITORY_DETECTIVE_*` |
+| Setting | Variable |
+|---------|----------|
+| HTTP port | `REPOSITORY_DETECTIVE_PORT` |
+| API key | `REPOSITORY_DETECTIVE_API_KEY` |
+| Public URL for webhooks | `REPOSITORY_DETECTIVE_PUBLIC_URL` |
+| Gitea | `REPOSITORY_DETECTIVE_GITEA_URL`, `REPOSITORY_DETECTIVE_GITEA_TOKEN` |
+| Webhook secret | `REPOSITORY_DETECTIVE_WEBHOOK_SECRET` |
+| Local auth | `REPOSITORY_DETECTIVE_AUTH_MODE`, `REPOSITORY_DETECTIVE_SESSION_SECRET` |
+| Database | `REPOSITORY_DETECTIVE_DATABASE_PATH` (default `./data/repository-detective.db`) |
 
 Full reference: [docs/CONFIGURATION.md](docs/CONFIGURATION.md)
 
@@ -89,16 +90,16 @@ Full reference: [docs/CONFIGURATION.md](docs/CONFIGURATION.md)
 | `GET /health` | none | Orchestrator probe |
 | `GET /onboard` | none | Setup wizard |
 | `POST /webhook` | HMAC (`X-Gitea-Signature`) | Gitea calls this |
-| `/api/v1/*` | API key (preferred or legacy header) | Automation |
+| `/api/v1/*` | API key header | Automation |
 | `/ui/*` | API key (default) or session (`auth_mode=local`) | Operator UI |
 
-**Preferred** API key header:
+**API key header:**
 
 ```http
 X-Repository-Detective-API-Key: your-key
 ```
 
-Legacy `X-Repository-Detective-API-Key` still accepted. See [docs/API_ROUTES.md](docs/API_ROUTES.md).
+See [docs/API_ROUTES.md](docs/API_ROUTES.md).
 
 ## Documentation
 

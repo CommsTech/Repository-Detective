@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_DB = ROOT / "data/bugbot.db"
+DEFAULT_DB = ROOT / "data/repository-detective.db"
 DEFAULT_REPORT = ROOT / "docs/dogfood-reports/fleet-scanning-and-filing-audit.md"
 STALE_HOURS = 24
 

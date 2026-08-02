@@ -183,7 +183,7 @@ curl -s -H "X-Repository-Detective-API-Key: $REPOSITORY_DETECTIVE_API_KEY" "$BAS
 
 1. Open `{public_url}/onboard`
 2. Enter Gitea URL, token, public URL, webhook secret, API key
-3. Select the repository that hosts **Gitea_AI_Bugbot** (or your fork name)
+3. Select the repository that hosts **Repository-Detective** (or your fork name)
 4. Register webhooks (push + pull request)
 
 See [ONBOARDING.md](ONBOARDING.md).
@@ -219,7 +219,7 @@ Replace `owner`, `repo`, and `ref` with your Gitea coordinates:
 curl -X POST "$BASE/api/v1/analyze" \
   -H "X-Repository-Detective-API-Key: $KEY" \
   -H "Content-Type: application/json" \
-  -d '{"owner":"your-org","repo":"Gitea_AI_Bugbot","ref":"main"}'
+  -d '{"owner":"your-org","repo":"Repository-Detective","ref":"main"}'
 ```
 
 ### Webhook trigger

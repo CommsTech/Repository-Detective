@@ -37,4 +37,4 @@ All passed in Docker `golang:1.23` (2026-06-06).
 
 ## URL
 
-https://git.commsnet.org/commstech/Bugbot/actions/runs/1842 (superseded after push)
+https://git.commsnet.org/commstech/Repository-Detective/actions/runs/1842 (superseded after push)

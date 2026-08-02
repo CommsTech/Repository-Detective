@@ -11,15 +11,15 @@ if [[ -f .env ]]; then
   set +a
 fi
 
-BASE="${REPOSITORY_DETECTIVE_PUBLIC_URL:-${BUGBOT_PUBLIC_URL:-http://127.0.0.1:8081}}"
+BASE="${REPOSITORY_DETECTIVE_PUBLIC_URL:-http://127.0.0.1:8081}}"
 BASE="${BASE%/}"
-API_KEY="${REPOSITORY_DETECTIVE_API_KEY:-${BUGBOT_API_KEY:-}}"
-PROFILE="${SCAN_PROFILE:-${BUGBOT_SCAN_PROFILE:-maintainer_deep}}"
+API_KEY="${REPOSITORY_DETECTIVE_API_KEY}"
+PROFILE="${SCAN_PROFILE:-maintainer_deep}"
 DRY_RUN="${DRY_RUN:-false}"
 FORGE="${FORGE:-all}"
 
 if [[ -z "${API_KEY}" ]]; then
-  echo "Set REPOSITORY_DETECTIVE_API_KEY or BUGBOT_API_KEY in .env" >&2
+  echo "Set REPOSITORY_DETECTIVE_API_KEY in .env" >&2
   exit 1
 fi
 
@@ -45,7 +45,7 @@ if not orgs:
 
 print(json.dumps({
     "dry_run": os.environ.get("DRY_RUN", "false").lower() in ("1", "true", "yes"),
-    "scan_profile": os.environ.get("SCAN_PROFILE") or os.environ.get("BUGBOT_SCAN_PROFILE") or "maintainer_deep",
+    "scan_profile": os.environ.get("SCAN_PROFILE") or "maintainer_deep",
     "forge": os.environ.get("FORGE", "all"),
     "orgs": orgs,
 }))

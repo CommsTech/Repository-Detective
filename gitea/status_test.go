@@ -35,8 +35,8 @@ func TestCreateCommitStatusPayload(t *testing.T) {
 	err := client.CreateCommitStatus(context.Background(), "owner", "repo", "abc1234", &CommitStatus{
 		State:       CommitStatePending,
 		TargetURL:   "https://repository-detective.example.com",
-		Description: "Bugbot scan started",
-		Context:     "bugbot/security-scan",
+		Description: "Repository-Detective scan started",
+		Context:     "repository-detective/security-scan",
 	})
 	if err != nil {
 		t.Fatalf("CreateCommitStatus: %v", err)
@@ -54,7 +54,7 @@ func TestCreateCommitStatusPayload(t *testing.T) {
 	if gotBody.State != CommitStatePending {
 		t.Fatalf("expected pending state, got %q", gotBody.State)
 	}
-	if gotBody.Context != "bugbot/security-scan" {
+	if gotBody.Context != "repository-detective/security-scan" {
 		t.Fatalf("unexpected context %q", gotBody.Context)
 	}
 }
@@ -77,7 +77,7 @@ func TestStatusReporterPending(t *testing.T) {
 	reporter := NewStatusReporter(
 		NewClient(server.URL, "token", logrus.New()),
 		true,
-		ChecksConfig{Context: "bugbot/security-scan", TargetURL: "https://repository-detective.example.com"},
+		ChecksConfig{Context: "repository-detective/security-scan", TargetURL: "https://repository-detective.example.com"},
 		logrus.New(),
 	)
 	reporter.ReportPending(context.Background(), "owner", "repo", "abc1234567890")
@@ -85,7 +85,7 @@ func TestStatusReporterPending(t *testing.T) {
 	if posted.State != CommitStatePending {
 		t.Fatalf("expected pending, got %q", posted.State)
 	}
-	if posted.Description != "Bugbot scan started" {
+	if posted.Description != "Repository-Detective scan started" {
 		t.Fatalf("unexpected description %q", posted.Description)
 	}
 }
@@ -102,7 +102,7 @@ func TestStatusReporterSkipsWithoutSHA(t *testing.T) {
 	reporter := NewStatusReporter(
 		NewClient(server.URL, "token", logger),
 		true,
-		ChecksConfig{Context: "bugbot/security-scan"},
+		ChecksConfig{Context: "repository-detective/security-scan"},
 		logger,
 	)
 	reporter.ReportPending(context.Background(), "owner", "repo", "main")
@@ -120,7 +120,7 @@ func TestStatusReporterNonFatalOnAPIError(t *testing.T) {
 	reporter := NewStatusReporter(
 		NewClient(server.URL, "token", logrus.New()),
 		true,
-		ChecksConfig{Context: "bugbot/security-scan"},
+		ChecksConfig{Context: "repository-detective/security-scan"},
 		logrus.New(),
 	)
 	reporter.ReportFinal(context.Background(), "owner", "repo", "abc1234567890", nil, nil, false)

@@ -30,10 +30,10 @@ Environment variables:
 
 | Variable | Default |
 |----------|---------|
-| `REPOSITORY_DETECTIVE_GITEA_URL` | `BUGBOT_GITEA_URL` or `https://git.commsnet.org` |
+| `REPOSITORY_DETECTIVE_GITEA_URL` | `REPOSITORY_DETECTIVE_GITEA_URL` or `https://git.commsnet.org` |
 | `REPOSITORY_DETECTIVE_GITEA_OWNER` | `commstech` |
-| `REPOSITORY_DETECTIVE_GITEA_REPO` | `Bugbot` |
-| `REPOSITORY_DETECTIVE_GITEA_TOKEN` | `BUGBOT_GITEA_TOKEN` |
+| `REPOSITORY_DETECTIVE_GITEA_REPO` | `Repository-Detective` |
+| `REPOSITORY_DETECTIVE_GITEA_TOKEN` | `REPOSITORY_DETECTIVE_GITEA_TOKEN` |
 | `WIKI_SOURCE_DIR` | `docs/wiki` |
 | `WIKI_WORK_DIR` | temp directory |
 | `KEEP_WIKI_WORKDIR` | `false` — set `true` to keep clone for debugging |

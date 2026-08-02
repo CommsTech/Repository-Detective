@@ -9,7 +9,7 @@ Repository Detective includes a browser-based setup wizard for connecting Gitea 
 | `http://your-host:8080/onboard` | Public (UI only) |
 | `http://your-host:8080/` | Redirects to `/onboard` |
 
-API calls from the wizard require the operator API key (`REPOSITORY_DETECTIVE_API_KEY` in `.env`; legacy `BUGBOT_API_KEY` still works). **Preferred** header:
+API calls from the wizard require the operator API key (`REPOSITORY_DETECTIVE_API_KEY` in `.env`; legacy `REPOSITORY_DETECTIVE_API_KEY` still works). **Preferred** header:
 
 ```http
 X-Repository-Detective-API-Key: your-api-key
@@ -41,7 +41,7 @@ Or environment variable:
 REPOSITORY_DETECTIVE_PUBLIC_URL=https://detective.example.com
 ```
 
-Legacy: `BUGBOT_PUBLIC_URL` still works.
+Legacy: `REPOSITORY_DETECTIVE_PUBLIC_URL` still works.
 
 The wizard registers hooks at `{public_url}/webhook`.
 
@@ -92,5 +92,5 @@ Your Gitea personal access token needs at least:
 ## Related
 
 - [SETUP.md](SETUP.md) — full deployment walkthrough
-- [BRANDING_MIGRATION.md](BRANDING_MIGRATION.md) — legacy Bugbot compatibility
+- [BRANDING_MIGRATION.md](BRANDING_MIGRATION.md) — naming conventions
 - [NAMING.md](NAMING.md) — product naming rules

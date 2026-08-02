@@ -7,7 +7,7 @@ Mode: **report-only dry-run** (no issue filing, no PR creation)
 
 | Repository | Issue creation | PR creation | Learning events | Calibration |
 |------------|----------------|-------------|-----------------|-------------|
-| commstech/Bugbot (product) | 0 | 0 | Schema v20 + prior scans | No repo rules accepted |
+| commstech/Repository-Detective (product) | 0 | 0 | Schema v20 + prior scans | No repo rules accepted |
 | commstech/netmapper | 0 | 0 | 16 events seeded + dry-run history | 2 rules accepted (graph orphan) |
 | commstech/commsnet_optimizer | 0 | 0 | Events seeded | 1 rule accepted, 1 rejected |
 
@@ -21,7 +21,7 @@ Mode: **report-only dry-run** (no issue filing, no PR creation)
 - [x] Findings remain visible after calibration
 - [x] LLM sanity gate disabled by default
 - [x] Structural dedup verified on benchmark fixture
-- [x] Per-repo isolation — netmapper rules do not apply to commstech/Bugbot
+- [x] Per-repo isolation — netmapper rules do not apply to commstech/Repository-Detective
 
 ## Learning health (post-migration)
 

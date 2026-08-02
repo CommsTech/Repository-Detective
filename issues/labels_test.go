@@ -7,10 +7,7 @@ import (
 	"git.commsnet.org/commstech/repository-detective/ai"
 )
 
-func TestBuildLabelsDualMode(t *testing.T) {
-	SetLabelCompatMode(LabelCompatDual)
-	t.Cleanup(func() { SetLabelCompatMode(LabelCompatNewOnly) })
-
+func TestBuildLabelsUsesRepositoryDetectiveNamespace(t *testing.T) {
 	issue := &ai.CodeIssue{
 		Severity:   "high",
 		Category:   "secret",
@@ -29,7 +26,7 @@ func TestBuildLabelsDualMode(t *testing.T) {
 	}
 	for _, label := range labels {
 		if strings.HasPrefix(label, "bugbot") {
-			t.Fatalf("dual mode must not write legacy bugbot labels, got %q", label)
+			t.Fatalf("must not write legacy bugbot labels, got %q", label)
 		}
 		if !want[label] {
 			t.Fatalf("unexpected label %q in %v", label, labels)
@@ -41,28 +38,9 @@ func TestBuildLabelsDualMode(t *testing.T) {
 	}
 }
 
-func TestBuildLabelsLegacyOnly(t *testing.T) {
-	SetLabelCompatMode(LabelCompatLegacyOnly)
-	t.Cleanup(func() { SetLabelCompatMode(LabelCompatDual) })
-
-	issue := &ai.CodeIssue{Severity: "low", Category: "reliability", Source: "health", Confidence: 0.9}
-	labels := BuildLabels(nil, issue)
-	for _, label := range labels {
-		if label == "repository-detective" || strings.HasPrefix(label, "repository-detective/") {
-			t.Fatalf("legacy_only should not write new label %q", label)
-		}
-	}
-}
-
-func TestBuildLabelsNewOnly(t *testing.T) {
-	SetLabelCompatMode(LabelCompatNewOnly)
-	t.Cleanup(func() { SetLabelCompatMode(LabelCompatDual) })
-
-	issue := &ai.CodeIssue{Severity: "low", Category: "tech_debt", Source: "health", Confidence: 0.9}
-	labels := BuildLabels(nil, issue)
-	for _, label := range labels {
-		if label == "bugbot" || label == "bugbot/open" || strings.HasPrefix(label, "bugbot/") {
-			t.Fatalf("new_only should not write legacy label %q", label)
-		}
+func TestIssueLookupBaseLabels(t *testing.T) {
+	labels := IssueLookupBaseLabels()
+	if len(labels) != 1 || labels[0] != "repository-detective" {
+		t.Fatalf("unexpected lookup labels: %v", labels)
 	}
 }

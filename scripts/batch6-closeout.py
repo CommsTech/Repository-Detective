@@ -13,9 +13,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-DB = ROOT / "data/bugbot.db"
+DB = ROOT / "data/repository-detective.db"
 SCAN_ID = "5e570c95bc4e3467"
-OWNER, REPO = "commstech", "Bugbot"
+OWNER, REPO = "commstech", "Repository-Detective"
 DOCS = ROOT / "docs/dogfood-reports"
 
 SUMMARY_ISSUES = [
@@ -25,19 +25,19 @@ SUMMARY_ISSUES = [
 
 
 def load_env() -> tuple[str, str]:
-    token = os.environ.get("BUGBOT_GITEA_TOKEN", "")
-    base = os.environ.get("BUGBOT_GITEA_URL", "https://git.commsnet.org").rstrip("/")
+    token = os.environ.get("REPOSITORY_DETECTIVE_GITEA_TOKEN", "")
+    base = os.environ.get("REPOSITORY_DETECTIVE_GITEA_URL", "https://git.commsnet.org").rstrip("/")
     for line in (ROOT / ".env").read_text().splitlines() if (ROOT / ".env").exists() else []:
         if "=" not in line or line.strip().startswith("#"):
             continue
         k, _, v = line.partition("=")
         k, v = k.strip(), v.strip().strip('"').strip("'")
-        if k == "BUGBOT_GITEA_TOKEN" and not token:
+        if k == "REPOSITORY_DETECTIVE_GITEA_TOKEN" and not token:
             token = v
-        if k == "BUGBOT_GITEA_URL":
+        if k == "REPOSITORY_DETECTIVE_GITEA_URL":
             base = v.rstrip("/")
     if not token:
-        sys.exit("BUGBOT_GITEA_TOKEN required")
+        sys.exit("REPOSITORY_DETECTIVE_GITEA_TOKEN required")
     return token, base
 
 
@@ -74,7 +74,7 @@ def repair_stale_issue_sync():
     """
     try:
         out = subprocess.run(
-            ["docker", "exec", "repository-detective", "sqlite3", "/app/data/bugbot.db", sql],
+            ["docker", "exec", "repository-detective", "sqlite3", "/app/data/repository-detective.db", sql],
             capture_output=True,
             text=True,
             timeout=30,
@@ -108,8 +108,8 @@ def main() -> int:
         "This is homelab infrastructure configuration, not an active product code finding.\n\n"
         "**Operator checklist:**\n"
         "- [ ] Confirm Qdrant reachable from container if semantic dedup needed\n"
-        "- [ ] Or set `BUGBOT_QDRANT_ENABLED=false` when not required\n"
-        "- [ ] Or keep `BUGBOT_SKIP_STARTUP_CHECKS=true` for offline homelab\n"
+        "- [ ] Or set `REPOSITORY_DETECTIVE_QDRANT_ENABLED=false` when not required\n"
+        "- [ ] Or keep `REPOSITORY_DETECTIVE_SKIP_STARTUP_CHECKS=true` for offline homelab\n"
         "- [ ] Verify with `docker exec repository-detective wget -q -O- --timeout=5 http://<qdrant-host>:6333/collections`\n\n"
         "Product repo scan `5e570c95bc4e3467`: **0 active-present findings**.\n"
     )

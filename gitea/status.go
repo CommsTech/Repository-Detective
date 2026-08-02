@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-// Commit status states understood by Bugbot before Gitea compatibility mapping.
+// Commit status states understood by Repository-Detective before Gitea compatibility mapping.
 const (
 	CommitStatePending = "pending"
 	CommitStateSuccess = "success"
@@ -67,7 +67,7 @@ func (c *Client) CreateCommitStatus(ctx context.Context, owner, repo, sha string
 	return nil
 }
 
-// MapGiteaCommitState maps logical Bugbot states to Gitea-compatible API states.
+// MapGiteaCommitState maps logical Repository-Detective states to Gitea-compatible API states.
 // Gitea does not support "warning"; map it to "failure" with warning wording in description.
 func MapGiteaCommitState(state string) string {
 	switch strings.ToLower(strings.TrimSpace(state)) {

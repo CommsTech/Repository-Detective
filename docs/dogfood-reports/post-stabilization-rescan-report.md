@@ -6,10 +6,10 @@ After gate-unblock fixes (Docker build + API auth):
 
 ```bash
 POST /api/v1/analyze
-{"owner":"commstech","repository":"Bugbot","ref":"main"}
+{"owner":"commstech","repository":"Repository-Detective","ref":"main"}
 ```
 
-Auth: `X-Repository-Detective-API-Key` header (from `.env` `BUGBOT_API_KEY`)
+Auth: `X-Repository-Detective-API-Key` header (from `.env` `REPOSITORY_DETECTIVE_API_KEY`)
 
 ## Scan results
 

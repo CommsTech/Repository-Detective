@@ -93,7 +93,7 @@ Before expanding beyond report-only:
 
 1. Stop service / remove beta container
 2. Restore previous binary or image tag
-3. Restore `data/bugbot.db` backup if schema migration issues
+3. Restore `data/repository-detective.db` backup if schema migration issues
 4. Revoke tester API keys and forge tokens if compromised
 5. Re-distribute prior bundle checksum if bad build detected
 

@@ -94,7 +94,7 @@ Preferred path (structured, fixable issues):
 
 1. Run **report-only** scan and capture **scan ID**
 2. Review findings in UI (detail pages include fingerprint + template links)
-3. For each item, open the matching Gitea template on `commstech/repository-detective`:
+3. For each item, open the matching Gitea template on `commstech/Repository-Detective`:
    - General feedback → `beta_feedback`
    - False positive → `scanner_false_positive`
    - Missed detection → `missed_detection`
@@ -146,7 +146,7 @@ Or use reconciliation API / UI panel.
 
 ## Verify no secrets committed
 
-- Never commit tester `.env`, `data/bugbot.db`, or logs with tokens
+- Never commit tester `.env`, `data/repository-detective.db`, or logs with tokens
 - Run `./scripts/check-beta-package-secrets.sh` before distributing bundle
 
 ## Disable tester access

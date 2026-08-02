@@ -1,7 +1,7 @@
 # Non-product dry-run baseline
 
 Generated: 2026-06-07  
-Mission: controlled report-only dry run (1 small + 1 medium non-Bugbot repo)
+Mission: controlled report-only dry run (1 small + 1 medium non-Repository-Detective repo)
 
 ## Product repo state (Phase 0)
 
@@ -13,7 +13,7 @@ Mission: controlled report-only dry run (1 small + 1 medium non-Bugbot repo)
 | Active-present findings | **0** |
 | New issues on latest scan | **0** |
 | `.env` staged | **no** |
-| `bugbot-build` ELF staged | **no** |
+| `repository-detective-build` ELF staged | **no** |
 
 ## Backlog-control state
 

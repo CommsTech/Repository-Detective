@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Seed repo-scoped calibration rules for product repo (commstech/repository-detective, id=1)."""
+"""Seed repo-scoped calibration rules for product repo (commstech/Repository-Detective, id=1)."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-DB = ROOT / "data/bugbot.db"
+DB = ROOT / "data/repository-detective.db"
 REPO_ID = 1
 EXPIRES = (datetime.now(timezone.utc) + timedelta(days=90)).strftime("%Y-%m-%dT%H:%M:%SZ")
 NOW = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")

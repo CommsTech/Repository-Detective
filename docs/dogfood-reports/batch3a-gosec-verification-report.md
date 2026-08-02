@@ -4,8 +4,8 @@
 
 | Issue | Fingerprint | Rule | File | Fix |
 |-------|-------------|------|------|-----|
-| #316 | bugbot-32ea466677b98678 | G115 | `scanners/archive_extract.go` | Safe size check via `uncompressedSizeWouldExceed` (bounds before int64 cast) |
-| #323 | bugbot-a668d741a770ea04 | G101 | `ui/api_key_cookie.go` | Renamed cookie constant to `rd_ui_sess` (name only, not a credential) |
+| #316 | rd-32ea466677b98678 | G115 | `scanners/archive_extract.go` | Safe size check via `uncompressedSizeWouldExceed` (bounds before int64 cast) |
+| #323 | rd-a668d741a770ea04 | G101 | `ui/api_key_cookie.go` | Renamed cookie constant to `rd_ui_sess` (name only, not a credential) |
 
 ## Files changed
 

@@ -1,7 +1,7 @@
 # Repository Detective DL3018 Self-Remediation Test
 
 **Date:** 2026-06-06  
-**Repository:** commstech/repository-detective  
+**Repository:** commstech/Repository-Detective  
 **Rule:** hadolint DL3018 (pin apk package versions)  
 **Outcome:** **PASS** — full loop completed with verified closure
 
@@ -19,7 +19,7 @@
 | Field | Value |
 |-------|-------|
 | Finding ID | **9971** |
-| Fingerprint | `bugbot-2e9bfe809e79bcf0` |
+| Fingerprint | `rd-2e9bfe809e79bcf0` |
 | File | `Dockerfile:100` |
 | Severity | medium |
 | Category | container |
@@ -32,7 +32,7 @@
 | Remediation plan (approved) | **rp-59815d80d8d32abb** |
 | Patch attempt (PR opened) | **pa-6cbc72da69690560** |
 | Pull request | [#274](https://git.commsnet.org/commstech/repository-detective/pulls/274) |
-| PR branch | `repository-detective/fix/bugbot-2e9bf` |
+| PR branch | `repository-detective/fix/repository-detective-2e9bf` |
 | PR commit | `8adaa9d6c86fc61abd13cadb47e245f01938e53a` |
 | Merge commit (manual) | **6f42552233ed15521085b51dca26fb82dfb86d6f** |
 | Post-merge rescan | **09a44ba983243aab** |

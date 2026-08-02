@@ -30,7 +30,7 @@ func (r *StatusReporter) ReportPending(ctx context.Context, owner, repo, sha str
 		return
 	}
 	if !IsCommitSHA(sha) {
-		r.logger.Infof("Bugbot scan skipped status: no commit SHA")
+		r.logger.Infof("Repository-Detective scan skipped status: no commit SHA")
 		return
 	}
 	r.post(ctx, owner, repo, sha, PendingCommitStatusEvaluation())
@@ -47,7 +47,7 @@ func (r *StatusReporter) ReportFinalWithPolicy(ctx context.Context, owner, repo,
 		return CommitStatusEvaluation{}
 	}
 	if !IsCommitSHA(sha) {
-		r.logger.Infof("Bugbot scan skipped status: no commit SHA")
+		r.logger.Infof("Repository-Detective scan skipped status: no commit SHA")
 		return CommitStatusEvaluation{}
 	}
 

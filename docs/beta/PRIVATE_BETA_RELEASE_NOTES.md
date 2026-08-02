@@ -75,7 +75,7 @@ Shipped config: `config/private-beta.example.yaml` and `docker-compose.beta.yml`
 
 - `.env` files
 - Gitea/GitHub tokens
-- `data/bugbot.db` (may contain repo metadata)
+- `data/repository-detective.db` (may contain repo metadata)
 - Unredacted API keys in logs
 - Customer proprietary source code (describe issue abstractly)
 

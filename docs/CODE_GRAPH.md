@@ -65,7 +65,7 @@ graph_include_functions: true
 graph_include_findings: true
 ```
 
-Env: `BUGBOT_ENABLE_CODE_GRAPH`, `BUGBOT_GRAPH_*`.
+Env: `REPOSITORY_DETECTIVE_ENABLE_CODE_GRAPH`, `REPOSITORY_DETECTIVE_GRAPH_*`.
 
 ### Per-repo overrides (Phase 11B)
 

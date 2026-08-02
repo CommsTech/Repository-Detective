@@ -19,16 +19,16 @@ ROOT = Path(__file__).resolve().parents[1]
 PLAN_PATH = ROOT / "docs/dogfood-reports/current-294-issue-closeout-plan.md"
 RESOLVED_REPORT = ROOT / "docs/dogfood-reports/verified-resolved-issue-closure-report.md"
 DUPLICATE_REPORT = ROOT / "docs/dogfood-reports/duplicate-issue-closure-report.md"
-DB_PATH = ROOT / "data/bugbot.db"
+DB_PATH = ROOT / "data/repository-detective.db"
 OWNER = "commstech"
-REPO = "Bugbot"
+REPO = "Repository-Detective"
 FORGE_BASE = "https://git.commsnet.org"
 
 
 def load_env() -> tuple[str, str, str]:
-    api_key = os.environ.get("BUGBOT_API_KEY", "")
-    token = os.environ.get("BUGBOT_GITEA_TOKEN", "")
-    base = os.environ.get("BUGBOT_GITEA_URL", FORGE_BASE).rstrip("/")
+    api_key = os.environ.get("REPOSITORY_DETECTIVE_API_KEY", "")
+    token = os.environ.get("REPOSITORY_DETECTIVE_GITEA_TOKEN", "")
+    base = os.environ.get("REPOSITORY_DETECTIVE_GITEA_URL", FORGE_BASE).rstrip("/")
     env_path = ROOT / ".env"
     if env_path.exists():
         for line in env_path.read_text().splitlines():
@@ -36,16 +36,16 @@ def load_env() -> tuple[str, str, str]:
                 continue
             k, _, v = line.partition("=")
             k, v = k.strip(), v.strip().strip('"').strip("'")
-            if k == "BUGBOT_API_KEY" and not api_key:
+            if k == "REPOSITORY_DETECTIVE_API_KEY" and not api_key:
                 api_key = v
-            if k == "BUGBOT_GITEA_TOKEN" and not token:
+            if k == "REPOSITORY_DETECTIVE_GITEA_TOKEN" and not token:
                 token = v
-            if k == "BUGBOT_GITEA_URL" and base == FORGE_BASE:
+            if k == "REPOSITORY_DETECTIVE_GITEA_URL" and base == FORGE_BASE:
                 base = v.rstrip("/")
     if not api_key:
-        sys.exit("BUGBOT_API_KEY required")
+        sys.exit("REPOSITORY_DETECTIVE_API_KEY required")
     if not token:
-        sys.exit("BUGBOT_GITEA_TOKEN required")
+        sys.exit("REPOSITORY_DETECTIVE_GITEA_TOKEN required")
     return api_key, token, base
 
 
@@ -100,7 +100,7 @@ def open_issue_count(base: str, token: str) -> int:
 def extract_fingerprint(body: str) -> str:
     for line in body.splitlines():
         line = line.strip().lstrip("- ")
-        for marker in ("Repository Detective fingerprint:", "Bugbot fingerprint:"):
+        for marker in ("Repository Detective fingerprint:", "Repository Detective fingerprint:"):
             if line.startswith(marker):
                 return line[len(marker) :].strip()
     return ""
@@ -353,7 +353,7 @@ def write_plan(rows: list[dict], open_before: int, scan_id: str) -> None:
     close_resolved = counts.get("close_now_resolved_verified", 0)
     close_dup = counts.get("close_now_duplicate", 0)
     lines = [
-        f"# Issue closeout plan — commstech/repository-detective\n",
+        f"# Issue closeout plan — commstech/Repository-Detective\n",
         f"Generated: {now}\n",
         f"Gitea open issues (start): **{open_before}**\n",
         f"Latest scan: **`{scan_id}`**\n",

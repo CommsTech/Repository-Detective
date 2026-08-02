@@ -56,10 +56,10 @@ func (remediationBridge) GeneratePlanForFinding(c *gin.Context, findingID int64)
 }
 
 func (remediationBridge) GetPlanByID(c *gin.Context, planID string) (remediation.Plan, error) {
-	if bugbotStore == nil {
+	if rdStore == nil {
 		return remediation.Plan{}, fmt.Errorf("database disabled")
 	}
-	rec, err := bugbotStore.GetRemediationPlanByPlanID(c.Request.Context(), planID)
+	rec, err := rdStore.GetRemediationPlanByPlanID(c.Request.Context(), planID)
 	if err != nil {
 		return remediation.Plan{}, err
 	}
@@ -75,10 +75,10 @@ func (remediationBridge) RejectPlan(c *gin.Context, planID string) error {
 }
 
 func getLatestPlan(ctx context.Context, findingID int64) (remediation.Plan, error) {
-	if bugbotStore == nil {
+	if rdStore == nil {
 		return remediation.Plan{}, fmt.Errorf("database disabled")
 	}
-	rec, err := bugbotStore.GetLatestRemediationPlanByFindingID(ctx, findingID)
+	rec, err := rdStore.GetLatestRemediationPlanByFindingID(ctx, findingID)
 	if err != nil {
 		return remediation.Plan{}, fmt.Errorf("no remediation plan found")
 	}
@@ -89,14 +89,14 @@ func generateRemediationPlan(ctx context.Context, findingID int64) (remediation.
 	if remediationPlanner == nil || !config.RemediationPlannerEnabled {
 		return remediation.Plan{}, fmt.Errorf("remediation planner disabled")
 	}
-	if bugbotStore == nil {
+	if rdStore == nil {
 		return remediation.Plan{}, fmt.Errorf("database disabled")
 	}
-	detail, err := bugbotStore.GetFindingDetail(ctx, findingID)
+	detail, err := rdStore.GetFindingDetail(ctx, findingID)
 	if err != nil {
 		return remediation.Plan{}, fmt.Errorf("finding not found")
 	}
-	repo, err := bugbotStore.GetRepository(ctx, detail.RepositoryID)
+	repo, err := rdStore.GetRepository(ctx, detail.RepositoryID)
 	if err != nil {
 		return remediation.Plan{}, fmt.Errorf("repository not found")
 	}
@@ -107,14 +107,14 @@ func generateRemediationPlan(ctx context.Context, findingID int64) (remediation.
 	if !remediationPlanner.ShouldPlan(fctx) {
 		return remediation.Plan{}, fmt.Errorf("finding not eligible for remediation planning")
 	}
-	if err := bugbotStore.SupersedeRemediationPlansForFinding(ctx, findingID); err != nil {
+	if err := rdStore.SupersedeRemediationPlansForFinding(ctx, findingID); err != nil {
 		logger.Warnf("supersede remediation plans for finding %d: %v", findingID, err)
 	}
 	plan, err := remediationPlanner.Generate(ctx, fctx)
 	if err != nil {
 		return remediation.Plan{}, err
 	}
-	rec, err := bugbotStore.SaveRemediationPlan(ctx, store.RemediationPlanFromDomain(plan))
+	rec, err := rdStore.SaveRemediationPlan(ctx, store.RemediationPlanFromDomain(plan))
 	if err != nil {
 		return remediation.Plan{}, err
 	}
@@ -127,14 +127,14 @@ func generateRemediationPlan(ctx context.Context, findingID int64) (remediation.
 }
 
 func updatePlanStatus(ctx context.Context, planID, status string) error {
-	if bugbotStore == nil {
+	if rdStore == nil {
 		return fmt.Errorf("database disabled")
 	}
-	rec, err := bugbotStore.GetRemediationPlanByPlanID(ctx, planID)
+	rec, err := rdStore.GetRemediationPlanByPlanID(ctx, planID)
 	if err != nil {
 		return err
 	}
-	if err := bugbotStore.UpdateRemediationPlanStatus(ctx, planID, status); err != nil {
+	if err := rdStore.UpdateRemediationPlanStatus(ctx, planID, status); err != nil {
 		return err
 	}
 	if rec.FindingID != nil {
@@ -144,10 +144,10 @@ func updatePlanStatus(ctx context.Context, planID, status string) error {
 }
 
 func maybeGenerateRemediationPlans(ctx context.Context, repositoryID int64, codeIssues []ai.CodeIssue, processed []issues.ProcessedIssueRecord) {
-	if remediationPlanner == nil || !config.RemediationPlannerEnabled || bugbotStore == nil {
+	if remediationPlanner == nil || !config.RemediationPlannerEnabled || rdStore == nil {
 		return
 	}
-	repo, err := bugbotStore.GetRepository(ctx, repositoryID)
+	repo, err := rdStore.GetRepository(ctx, repositoryID)
 	if err != nil || !repo.ConnectedRepo {
 		return
 	}
@@ -165,7 +165,7 @@ func maybeGenerateRemediationPlans(ctx context.Context, repositoryID int64, code
 		if !ok || pitem.IssueNumber == 0 {
 			continue
 		}
-		finding, err := bugbotStore.GetFindingByFingerprint(ctx, repositoryID, issue.Fingerprint)
+		finding, err := rdStore.GetFindingByFingerprint(ctx, repositoryID, issue.Fingerprint)
 		if err != nil {
 			continue
 		}
@@ -193,7 +193,7 @@ func maybeGenerateRemediationPlans(ctx context.Context, repositoryID int64, code
 		if !remediationPlanner.ShouldPlan(fctx) {
 			continue
 		}
-		if err := bugbotStore.SupersedeRemediationPlansForFinding(ctx, finding.ID); err != nil {
+		if err := rdStore.SupersedeRemediationPlansForFinding(ctx, finding.ID); err != nil {
 			logger.Warnf("supersede remediation plans for finding %d: %v", finding.ID, err)
 		}
 		plan, err := remediationPlanner.Generate(ctx, fctx)
@@ -201,7 +201,7 @@ func maybeGenerateRemediationPlans(ctx context.Context, repositoryID int64, code
 			logger.Warnf("remediation plan for finding %d: %v", finding.ID, err)
 			continue
 		}
-		rec, err := bugbotStore.SaveRemediationPlan(ctx, store.RemediationPlanFromDomain(plan))
+		rec, err := rdStore.SaveRemediationPlan(ctx, store.RemediationPlanFromDomain(plan))
 		if err != nil {
 			logger.Warnf("save remediation plan: %v", err)
 			continue
@@ -209,7 +209,7 @@ func maybeGenerateRemediationPlans(ctx context.Context, repositoryID int64, code
 		plan = store.RemediationPlanToDomain(rec)
 		addRemediationLifecycle(ctx, finding.ID, plan.ID, "remediation_plan_created", "Remediation plan generated after issue update")
 		if config.RemediationCommentOnIssue {
-			detail, derr := bugbotStore.GetFindingDetail(ctx, finding.ID)
+			detail, derr := rdStore.GetFindingDetail(ctx, finding.ID)
 			if derr == nil {
 				maybeCommentRemediationPlan(ctx, detail, repo, plan)
 			}
@@ -253,11 +253,11 @@ func findingContextFromDetail(detail store.FindingDetail, repo store.Repository)
 }
 
 func addRemediationLifecycle(ctx context.Context, findingID int64, planID, eventType, message string) {
-	if bugbotStore == nil {
+	if rdStore == nil {
 		return
 	}
 	fid := findingID
-	if err := bugbotStore.AddLifecycleEvent(ctx, store.LifecycleEvent{
+	if err := rdStore.AddLifecycleEvent(ctx, store.LifecycleEvent{
 		FindingID:    &fid,
 		EventType:    eventType,
 		Message:      message,

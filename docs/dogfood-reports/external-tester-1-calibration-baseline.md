@@ -72,7 +72,7 @@
 
 | Field | Value |
 |-------|-------|
-| Fingerprint | `bugbot-7d677a8f45b47b2b` |
+| Fingerprint | `rd-7d677a8f45b47b2b` |
 | Rule | `SEC-HARDCODED-SECRET` |
 | Path | `wifi_collector.py` (~line 6198) |
 | Matched line | `password = "Decryption failed"` |
@@ -87,10 +87,10 @@
 
 | Fingerprint | Rule | Path | Why flagged | Classification | Planned action |
 |-------------|------|------|-------------|----------------|----------------|
-| `bugbot-0d0e51dc420fed9a` | `REL-INTERNAL-INFRA-REF` | `install.py` | `f.write("# 192.168.1.0/24\n")` example config | useful_info / FP in homelab | Skip example CIDR writes |
-| `bugbot-5307e7d9252af115` | `REL-INTERNAL-INFRA-REF` | `LEGAL.md` | `192.168.1.0/24` in legal/docs text | useful_info | Downgrade .md homelab refs to info |
-| `bugbot-6fcc0632682cbd01` | `HEALTH-LARGE-FILE` | `wifi_collector.py` | ~6k line monolithic collector | useful_info | low severity for operational `.py` |
-| `bugbot-ae56e8161ef3f88c` | `HEALTH-TECH-MARKER` | (tech_debt) | TODO/FIXME-style marker | useful_info | Keep — informational |
+| `rd-0d0e51dc420fed9a` | `REL-INTERNAL-INFRA-REF` | `install.py` | `f.write("# 192.168.1.0/24\n")` example config | useful_info / FP in homelab | Skip example CIDR writes |
+| `rd-5307e7d9252af115` | `REL-INTERNAL-INFRA-REF` | `LEGAL.md` | `192.168.1.0/24` in legal/docs text | useful_info | Downgrade .md homelab refs to info |
+| `rd-6fcc0632682cbd01` | `HEALTH-LARGE-FILE` | `wifi_collector.py` | ~6k line monolithic collector | useful_info | low severity for operational `.py` |
+| `rd-ae56e8161ef3f88c` | `HEALTH-TECH-MARKER` | (tech_debt) | TODO/FIXME-style marker | useful_info | Keep — informational |
 
 ## Info / graph noise
 
@@ -113,12 +113,12 @@
 
 | Fingerprint | Rule | Sev | Conf | Path | Scanner | Why flagged | Tester feedback | Classification | Planned action |
 |-------------|------|-----|------|------|---------|-------------|-----------------|----------------|----------------|
-| `bugbot-7d677a8f45b47b2b` | SEC-HARDCODED-SECRET | high | 0.87 | wifi_collector.py | static | password status message | FP | false_positive | Rule fix — skip placeholders |
-| `bugbot-0d0e51dc420fed9a` | REL-INTERNAL-INFRA-REF | medium | 0.80 | install.py | static | example CIDR write | acceptable | global_rule_fix_candidate | Skip example lines |
-| `bugbot-5307e7d9252af115` | REL-INTERNAL-INFRA-REF | medium | 0.50 | LEGAL.md | static | docs CIDR | acceptable | global_rule_fix_candidate | Homelab .md → info |
-| `bugbot-6fcc0632682cbd01` | HEALTH-LARGE-FILE | medium | 0.95 | wifi_collector.py | maintainability | huge script | context-dependent | global_rule_fix_candidate | low for .py scripts |
-| `bugbot-00ad40d31efe3` | QUAL-DEBUG | low | 0.80 | (multiple) | static | print/debug | noisy | duplicate_or_groupable | UI group ≥3 |
-| `bugbot-3eff61541dc8b` | GRAPH-ORPHAN-FILE | info | 0.33 | (multiple) | graph | orphan heuristic | noisy | duplicate_or_groupable | UI group ≥3 |
+| `rd-7d677a8f45b47b2b` | SEC-HARDCODED-SECRET | high | 0.87 | wifi_collector.py | static | password status message | FP | false_positive | Rule fix — skip placeholders |
+| `rd-0d0e51dc420fed9a` | REL-INTERNAL-INFRA-REF | medium | 0.80 | install.py | static | example CIDR write | acceptable | global_rule_fix_candidate | Skip example lines |
+| `rd-5307e7d9252af115` | REL-INTERNAL-INFRA-REF | medium | 0.50 | LEGAL.md | static | docs CIDR | acceptable | global_rule_fix_candidate | Homelab .md → info |
+| `rd-6fcc0632682cbd01` | HEALTH-LARGE-FILE | medium | 0.95 | wifi_collector.py | maintainability | huge script | context-dependent | global_rule_fix_candidate | low for .py scripts |
+| `rd-00ad40d31efe3` | QUAL-DEBUG | low | 0.80 | (multiple) | static | print/debug | noisy | duplicate_or_groupable | UI group ≥3 |
+| `rd-3eff61541dc8b` | GRAPH-ORPHAN-FILE | info | 0.33 | (multiple) | graph | orphan heuristic | noisy | duplicate_or_groupable | UI group ≥3 |
 | — | binary_missing | — | — | — | trivy/grype/… | tool absent | confusing | scanner_missing_status | Docs + scan UI |
 | — | sbom_tool_missing | — | — | — | sbom | syft absent | confusing | docs_gap | SBOM messaging |
 

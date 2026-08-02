@@ -16,9 +16,9 @@ scheduler_max_concurrent_scans: 1
 Environment variables:
 
 ```text
-BUGBOT_SCHEDULER_ENABLED=true
-BUGBOT_SCHEDULER_POLL_INTERVAL_SECONDS=60
-BUGBOT_SCHEDULER_MAX_CONCURRENT_SCANS=1
+REPOSITORY_DETECTIVE_SCHEDULER_ENABLED=true
+REPOSITORY_DETECTIVE_SCHEDULER_POLL_INTERVAL_SECONDS=60
+REPOSITORY_DETECTIVE_SCHEDULER_MAX_CONCURRENT_SCANS=1
 ```
 
 Defaults:
@@ -98,6 +98,6 @@ When global runner delegation is enabled and a repo's `runner_policy` allows it,
 
 ## Rollback
 
-1. Set `scheduler_enabled: false` or `BUGBOT_SCHEDULER_ENABLED=false` and reload/restart.
+1. Set `scheduler_enabled: false` or `REPOSITORY_DETECTIVE_SCHEDULER_ENABLED=false` and reload/restart.
 2. Disable per-repo schedules via UI/API (`schedule_enabled: false`).
 3. No schema migration required for Phase 7 — existing tables unchanged.

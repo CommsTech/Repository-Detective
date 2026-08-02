@@ -47,5 +47,5 @@
 ## Verification plan post-deploy
 
 1. Push stabilization commits → confirm new CI run green
-2. Rebuild container → rescan `commstech/Bugbot@main`
+2. Rebuild container → rescan `commstech/Repository-Detective@main`
 3. Verify graph, executive report, print/PDF, health capabilities, dark mode, setup nav

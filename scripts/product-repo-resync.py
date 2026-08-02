@@ -15,16 +15,16 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-DB = ROOT / "data/bugbot.db"
-OWNER, REPO = "commstech", "Bugbot"
+DB = ROOT / "data/repository-detective.db"
+OWNER, REPO = "commstech", "Repository-Detective"
 REPO_ID = 1
 API = os.environ.get("RD_API_BASE", "http://127.0.0.1:8081/api/v1")
 
 
 def load_env() -> tuple[str, str, str]:
-    token = os.environ.get("BUGBOT_GITEA_TOKEN", "")
-    base = os.environ.get("BUGBOT_GITEA_URL", "https://git.commsnet.org").rstrip("/")
-    api_key = os.environ.get("REPOSITORY_DETECTIVE_API_KEY") or os.environ.get("BUGBOT_API_KEY", "")
+    token = os.environ.get("REPOSITORY_DETECTIVE_GITEA_TOKEN", "")
+    base = os.environ.get("REPOSITORY_DETECTIVE_GITEA_URL", "https://git.commsnet.org").rstrip("/")
+    api_key = os.environ.get("REPOSITORY_DETECTIVE_API_KEY") or os.environ.get("REPOSITORY_DETECTIVE_API_KEY", "")
     env_file = ROOT / ".env"
     if env_file.exists():
         for line in env_file.read_text().splitlines():
@@ -32,14 +32,14 @@ def load_env() -> tuple[str, str, str]:
                 continue
             k, _, v = line.partition("=")
             k, v = k.strip(), v.strip().strip('"').strip("'")
-            if k == "BUGBOT_GITEA_TOKEN" and not token:
+            if k == "REPOSITORY_DETECTIVE_GITEA_TOKEN" and not token:
                 token = v
-            if k == "BUGBOT_GITEA_URL":
+            if k == "REPOSITORY_DETECTIVE_GITEA_URL":
                 base = v.rstrip("/")
-            if k in ("REPOSITORY_DETECTIVE_API_KEY", "BUGBOT_API_KEY") and not api_key:
+            if k in ("REPOSITORY_DETECTIVE_API_KEY", "REPOSITORY_DETECTIVE_API_KEY") and not api_key:
                 api_key = v
     if not token:
-        sys.exit("BUGBOT_GITEA_TOKEN required")
+        sys.exit("REPOSITORY_DETECTIVE_GITEA_TOKEN required")
     if not api_key:
         sys.exit("REPOSITORY_DETECTIVE_API_KEY required")
     return token, base, api_key
@@ -99,7 +99,7 @@ def sync_external_issues(base: str, token: str) -> int:
         conn = sqlite3.connect(DB)
     except sqlite3.OperationalError:
         out = subprocess.run(
-            ["docker", "exec", "repository-detective", "sqlite3", "/app/data/bugbot.db",
+            ["docker", "exec", "repository-detective", "sqlite3", "/app/data/repository-detective.db",
              "SELECT issue_number FROM external_issues WHERE state='open'"],
             capture_output=True, text=True, timeout=30,
         )
@@ -107,7 +107,7 @@ def sync_external_issues(base: str, token: str) -> int:
         for num in nums:
             if num not in open_gitea:
                 subprocess.run(
-                    ["docker", "exec", "repository-detective", "sqlite3", "/app/data/bugbot.db", sql_close, str(num)],
+                    ["docker", "exec", "repository-detective", "sqlite3", "/app/data/repository-detective.db", sql_close, str(num)],
                     check=False, timeout=30,
                 )
                 repaired += 1

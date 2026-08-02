@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Generate scan-quality JSON from live SQLite (offline from running API).
-# Usage: ./scripts/generate-scan-quality-report.sh [path-to-bugbot.db] [output.json]
+# Usage: ./scripts/generate-scan-quality-report.sh [path-to-repository-detective.db] [output.json]
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-DB="${1:-$ROOT/data/bugbot.db}"
+DB="${1:-$ROOT/data/repository-detective.db}"
 OUT="${2:-$ROOT/docs/dogfood-reports/scan-quality-first-39-repos.json}"
 
 if [ ! -f "$DB" ]; then

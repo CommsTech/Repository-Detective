@@ -12,10 +12,10 @@ type issueLinkBridge struct {
 }
 
 func initIssueLinkBridge() {
-	if bugbotStore == nil {
+	if rdStore == nil {
 		return
 	}
-	bridge := &issueLinkBridge{store: &issuelink.Store{Query: bugbotStore}}
+	bridge := &issueLinkBridge{store: &issuelink.Store{Query: rdStore}}
 	if issueManager != nil {
 		issueManager.SetIssueMappingLookup(bridge)
 		issueManager.SetBackfillRunner(bridge)

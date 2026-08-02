@@ -61,7 +61,7 @@ Small backfill/classification code fixes (uncommitted at first push):
 ## CI status (post-push)
 
 See newest run on `2ff94d6` or follow-up commit at:
-https://git.commsnet.org/commstech/Bugbot/actions
+https://git.commsnet.org/commstech/Repository-Detective/actions
 
 ## Batch 3a readiness
 

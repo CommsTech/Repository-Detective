@@ -55,7 +55,7 @@ Cleaned ~128 modified/untracked paths into committed product artifacts, gitignor
 |------|--------|
 | `.env` | Secrets / operator tokens |
 | `config/config.yaml` | Homelab URLs and secrets (gitignored) |
-| `data/bugbot.db` | Local SQLite (gitignored) |
+| `data/repository-detective.db` | Local SQLite (gitignored) |
 | `deployment-backups/` | Pre-image-recreate DB backup (gitignored) |
 | `restore-drill-test/` | Operator drill workspace (gitignored) |
 | `docs/DOGFOOD_REPORT_FIRST_39_REPOS.md` | Unsanitized private dogfood |

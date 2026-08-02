@@ -6,14 +6,14 @@ import (
 )
 
 func TestMinimalSubprocessEnvDoesNotForwardSecrets(t *testing.T) {
-	t.Setenv("BUGBOT_API_KEY", "super-secret-key")
+	t.Setenv("REPOSITORY_DETECTIVE_API_KEY", "super-secret-key")
 	t.Setenv("AWS_ACCESS_KEY_ID", "AKIAEXAMPLE")
 	t.Setenv("GITHUB_TOKEN", "ghp_example")
 	t.Setenv("SSH_AUTH_SOCK", "/tmp/ssh-agent")
 
 	env := MinimalSubprocessEnv()
 	joined := strings.Join(env, "\n")
-	for _, forbidden := range []string{"BUGBOT_API_KEY", "AWS_ACCESS_KEY_ID", "GITHUB_TOKEN", "SSH_AUTH_SOCK"} {
+	for _, forbidden := range []string{"REPOSITORY_DETECTIVE_API_KEY", "AWS_ACCESS_KEY_ID", "GITHUB_TOKEN", "SSH_AUTH_SOCK"} {
 		if strings.Contains(joined, forbidden+"=") {
 			t.Fatalf("forbidden var %s leaked into subprocess env: %v", forbidden, env)
 		}

@@ -3,12 +3,22 @@
 **Last updated:** 2026-08-02  
 **Repository:** https://git.commsnet.org/commstech/repository-detective.git
 
+## Live deploy (2026-08-02) — Full Bugbot brand purge
+
+| Item | Value |
+|------|-------|
+| Focus | Zero Bugbot legacy for public release |
+| Shipped | REPOSITORY_DETECTIVE_* only; X-Repository-Detective-API-Key only; rd- fingerprints; repository-detective labels; DB `repository-detective.db` |
+| Gitea | https://git.commsnet.org/commstech/Repository-Detective.git |
+| Live | `rc-rd-brand-purge` |
+
+
 ## Live deploy (2026-08-02) — Product rename + Gitea sync
 
 | Item | Value |
 |------|-------|
 | Focus | Sync uncommitted work; public brand is Repository Detective |
-| Shipped | Go module `repository-detective`; Gitea repo `commstech/repository-detective`; docs/UI scrub; silent legacy env/header/fingerprint shims retained |
+| Shipped | Go module `repository-detective`; Gitea repo `commstech/Repository-Detective`; docs/UI scrub; silent legacy env/header/fingerprint shims retained |
 | Live hotpatch baseline | `rc-invalid-ref-truth` (+ rename in source) |
 
 ## Live deploy (2026-08-02) — Invalid-ref / fleet failure truthfulness
@@ -118,7 +128,7 @@
 
 | Item | Value |
 |------|-------|
-| Focus | Clear open findings for `commstech/repository-detective` (repo_id=1) from Repository Detective |
+| Focus | Clear open findings for `commstech/Repository-Detective` (repo_id=1) from Repository Detective |
 | Commits | `adff149`, `a26a5f1`, plus placeholder TECH-MARKER fix on `main` |
 | Live | `rc-adff149`, healthy, tools **10/10** |
 | Dogfood scan | `fed458d08455a5f8` completed (report-only) |
@@ -210,7 +220,7 @@ See [docs/AI_PROVIDERS.md](docs/AI_PROVIDERS.md).
 
 Browser wizard at `/onboard` — see [docs/ONBOARDING.md](docs/ONBOARDING.md).
 
-Requires `public_url` / `BUGBOT_PUBLIC_URL` for webhook registration.
+Requires `public_url` / `REPOSITORY_DETECTIVE_PUBLIC_URL` for webhook registration.
 
 ## CI/CD
 

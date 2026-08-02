@@ -207,7 +207,7 @@ func TestFindingsAndLifecycle(t *testing.T) {
 	repo := seedRepo(t, s)
 	now := time.Now().UTC()
 	finding, _ := s.UpsertFinding(ctx, store.Finding{
-		RepositoryID: repo.ID, Fingerprint: "bugbot-api-test", Title: "Test", Severity: "high",
+		RepositoryID: repo.ID, Fingerprint: "rd-api-test", Title: "Test", Severity: "high",
 		FirstSeenAt: now, LastSeenAt: now,
 	})
 	fid := finding.ID

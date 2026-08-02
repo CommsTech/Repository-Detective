@@ -1,4 +1,4 @@
-# Gitea issue backlog (commstech/repository-detective)
+# Gitea issue backlog (commstech/Repository-Detective)
 
 Tracks feature and bug issues on Gitea vs implementation status. Update when closing or shipping work.
 

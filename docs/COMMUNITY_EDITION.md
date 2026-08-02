@@ -57,7 +57,7 @@ Local dashboard access
 
 ## Auth model (current + future)
 
-**Today:** global API key (`REPOSITORY_DETECTIVE_API_KEY`; legacy `BUGBOT_API_KEY`).
+**Today:** global API key (`REPOSITORY_DETECTIVE_API_KEY`; legacy `REPOSITORY_DETECTIVE_API_KEY`).
 
 **After Auth/RBAC ships:** Community stays single-operator or optional single local admin; multi-user RBAC moves to Commercial.
 

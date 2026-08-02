@@ -52,11 +52,11 @@ Build and confirm the container starts and `/health` responds:
 ```bash
 docker build -t repository-detective:test .
 docker run -d --rm --name repository-detective-test -p 18080:8080 \
-  -e BUGBOT_SKIP_STARTUP_CHECKS=true \
-  -e BUGBOT_GITEA_URL=http://example.com \
-  -e BUGBOT_GITEA_TOKEN=test \
-  -e BUGBOT_AI_PROVIDER=ollama \
-  -e BUGBOT_AI_BASE_URL=http://127.0.0.1:11434/v1 \
+  -e REPOSITORY_DETECTIVE_SKIP_STARTUP_CHECKS=true \
+  -e REPOSITORY_DETECTIVE_GITEA_URL=http://example.com \
+  -e REPOSITORY_DETECTIVE_GITEA_TOKEN=test \
+  -e REPOSITORY_DETECTIVE_AI_PROVIDER=ollama \
+  -e REPOSITORY_DETECTIVE_AI_BASE_URL=http://127.0.0.1:11434/v1 \
   repository-detective:test
 sleep 5
 curl -sf http://127.0.0.1:18080/health
@@ -76,7 +76,7 @@ All five commands should print version info.
 
 ## End-to-end scan test
 
-1. Start Repository Detective with real Gitea and AI credentials (or `BUGBOT_ENABLE_LLM_AUDITORS=false` for deterministic-only).
+1. Start Repository Detective with real Gitea and AI credentials (or `REPOSITORY_DETECTIVE_ENABLE_LLM_AUDITORS=false` for deterministic-only).
 2. Trigger a manual scan:
 
 ```bash
@@ -106,7 +106,7 @@ Expected log lines when scanners run:
 Disable LLM auditors to confirm zero AI calls during scan:
 
 ```bash
-BUGBOT_ENABLE_LLM_AUDITORS=false
+REPOSITORY_DETECTIVE_ENABLE_LLM_AUDITORS=false
 ```
 
 Push a commit with a known issue (e.g. hardcoded secret in a `.go` file) and confirm a Gitea issue is created without `[CAH:SCAN] Running LLM auditors` in logs.

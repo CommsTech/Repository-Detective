@@ -19,7 +19,7 @@
 On Gitea host, bare wiki repo typically at:
 
 ```text
-{GITEA_DATA}/gitea-repositories/commstech/repository-detective.wiki.git
+{GITEA_DATA}/gitea-repositories/commstech/Repository-Detective.wiki.git
 ```
 
 Exact path depends on `app.ini` `[repository] ROOT` and `[server] LFS_*` settings.
@@ -29,15 +29,15 @@ Exact path depends on `app.ini` `[repository] ROOT` and `[server] LFS_*` setting
 ```bash
 # 1. Confirm wiki enabled (token redacted)
 curl -s -H "Authorization: token $GITEA_TOKEN" \
-  https://git.commsnet.org/api/v1/repos/commstech/repository-detective | jq '.has_wiki, .permissions'
+  https://git.commsnet.org/api/v1/repos/commstech/Repository-Detective | jq '.has_wiki, .permissions'
 
 # 2. Create one page in Gitea UI: Wiki → New Page → "Init-Test"
 
 # 3. Clone (expect failure until fixed)
-git clone "https://oauth2:${GITEA_TOKEN}@git.commsnet.org/commstech/repository-detective.wiki.git" /tmp/bugbot-wiki-test
+git clone "https://oauth2:${GITEA_TOKEN}@git.commsnet.org/commstech/repository-detective.wiki.git" /tmp/rd-wiki-test
 
 # 4. One-page push test (after clone works)
-cd /tmp/bugbot-wiki-test
+cd /tmp/rd-wiki-test
 echo "# Repair test $(date -Iseconds)" >> Repair-Test.md
 git add Repair-Test.md && git commit -m "wiki repair test"
 git push origin HEAD
@@ -62,7 +62,7 @@ Look for: missing bare repo, permission denied, hook failure, DB error on wiki m
 ## Likely causes (ordered)
 
 1. **Wiki bare repo never initialized** — fix: create first page in UI or `gitea admin regenerate hooks`
-2. **Missing or corrupt `bugbot.wiki.git` directory** — fix: recreate from Gitea admin docs
+2. **Missing or corrupt `repository-detective.wiki.git` directory** — fix: recreate from Gitea admin docs
 3. **Storage path permissions** — Gitea user cannot write `{ROOT}/commstech/`
 4. **Reverse proxy / git HTTP backend misroute** — 500 on smart HTTP only for `.wiki.git`
 5. **Server-side hook failure** — pre-receive/update hook error in log
@@ -77,7 +77,7 @@ Look for: missing bare repo, permission denied, hook failure, DB error on wiki m
    - Verify directory exists and owner is `git` / `gitea`
    - Check disk space and inode availability
    - Run Gitea doctor: `gitea doctor check --run all` (on server)
-5. If repo missing, use Gitea admin to recreate wiki repository for `commstech/repository-detective`
+5. If repo missing, use Gitea admin to recreate wiki repository for `commstech/Repository-Detective`
 6. Retry one-page push
 7. Run `./scripts/publish-gitea-wiki.sh` (not dry-run)
 

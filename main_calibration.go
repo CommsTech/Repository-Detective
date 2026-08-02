@@ -13,35 +13,35 @@ import (
 type calibrationBridge struct{}
 
 func (calibrationBridge) Summary(c *gin.Context) (map[string]any, error) {
-	if bugbotStore == nil {
+	if rdStore == nil {
 		return nil, fmt.Errorf("database disabled")
 	}
 	ctx := c.Request.Context()
-	out, err := bugbotStore.CalibrationSummary(ctx)
+	out, err := rdStore.CalibrationSummary(ctx)
 	if err != nil {
 		return nil, err
 	}
-	lh, _ := bugbotStore.LearningHealthSummary(ctx)
+	lh, _ := rdStore.LearningHealthSummary(ctx)
 	out["learning_health"] = lh
 	return out, nil
 }
 
 func (calibrationBridge) ListRecommendations(c *gin.Context, status string) ([]store.CalibrationRecommendation, error) {
-	if bugbotStore == nil {
+	if rdStore == nil {
 		return nil, fmt.Errorf("database disabled")
 	}
 	if status == "" {
 		status = "proposed"
 	}
-	return bugbotStore.ListCalibrationRecommendations(c.Request.Context(), status, 100)
+	return rdStore.ListCalibrationRecommendations(c.Request.Context(), status, 100)
 }
 
 func (calibrationBridge) AcceptRecommendation(c *gin.Context, id int64) error {
-	if bugbotStore == nil {
+	if rdStore == nil {
 		return fmt.Errorf("database disabled")
 	}
 	ctx := c.Request.Context()
-	recs, err := bugbotStore.ListCalibrationRecommendations(ctx, "", 1000)
+	recs, err := rdStore.ListCalibrationRecommendations(ctx, "", 1000)
 	if err != nil {
 		return err
 	}
@@ -68,7 +68,7 @@ func (calibrationBridge) AcceptRecommendation(c *gin.Context, id int64) error {
 		return fmt.Errorf("global calibration recommendations require multi-repo evidence review — use repo-scoped recommendations")
 	}
 	if rec.RecommendedAction == "report_only" && rec.RuleID != "" {
-		_, err = bugbotStore.CreateFindingSuppression(ctx, store.FindingSuppression{
+		_, err = rdStore.CreateFindingSuppression(ctx, store.FindingSuppression{
 			RepositoryID: repoIDPtr,
 			Source:       rec.Source,
 			RuleID:       rec.RuleID,
@@ -83,7 +83,7 @@ func (calibrationBridge) AcceptRecommendation(c *gin.Context, id int64) error {
 		}
 		if repoIDPtr != nil {
 			expires := time.Now().UTC().Add(90 * 24 * time.Hour)
-			_, _ = bugbotStore.CreateRepoCalibrationRule(ctx, store.RepoCalibrationRule{
+			_, _ = rdStore.CreateRepoCalibrationRule(ctx, store.RepoCalibrationRule{
 				RepositoryID: repoIDPtr, Scope: "repo", Source: rec.Source, RuleID: rec.RuleID,
 				FindingCategory: rec.Category, Action: "downgrade_confidence", Reason: rec.Reason,
 				EvidenceCount: int(rec.Confidence * 100), FalsePositiveRate: rec.Confidence,
@@ -96,15 +96,15 @@ func (calibrationBridge) AcceptRecommendation(c *gin.Context, id int64) error {
 		repoID = *rec.RepositoryID
 	}
 	emitRecommendationLearning(ctx, repoID, rec.ID, true, rec.Source, rec.RuleID)
-	return bugbotStore.UpdateCalibrationRecommendationStatus(ctx, id, "accepted")
+	return rdStore.UpdateCalibrationRecommendationStatus(ctx, id, "accepted")
 }
 
 func (calibrationBridge) RejectRecommendation(c *gin.Context, id int64) error {
-	if bugbotStore == nil {
+	if rdStore == nil {
 		return fmt.Errorf("database disabled")
 	}
 	ctx := c.Request.Context()
-	recs, _ := bugbotStore.ListCalibrationRecommendations(ctx, "", 1000)
+	recs, _ := rdStore.ListCalibrationRecommendations(ctx, "", 1000)
 	for i := range recs {
 		if recs[i].ID == id {
 			repoID := int64(0)
@@ -115,26 +115,26 @@ func (calibrationBridge) RejectRecommendation(c *gin.Context, id int64) error {
 			break
 		}
 	}
-	return bugbotStore.UpdateCalibrationRecommendationStatus(ctx, id, "rejected")
+	return rdStore.UpdateCalibrationRecommendationStatus(ctx, id, "rejected")
 }
 
 func (calibrationBridge) Recompute(c *gin.Context) (map[string]any, error) {
-	if bugbotStore == nil {
+	if rdStore == nil {
 		return nil, fmt.Errorf("database disabled")
 	}
 	ctx := c.Request.Context()
-	stats, err := bugbotStore.RecomputeCalibrationRuleStats(ctx)
+	stats, err := rdStore.RecomputeCalibrationRuleStats(ctx)
 	if err != nil {
 		return nil, err
 	}
-	recs, err := bugbotStore.GenerateCalibrationRecommendations(ctx, config.CalibrationMinFindingsForRecommendation)
+	recs, err := rdStore.GenerateCalibrationRecommendations(ctx, config.CalibrationMinFindingsForRecommendation)
 	if err != nil {
 		return nil, err
 	}
 	repoRecs := 0
-	repos, _ := bugbotStore.ListRepositoriesWithSummary(ctx, store.ListOptions{Limit: 50})
+	repos, _ := rdStore.ListRepositoriesWithSummary(ctx, store.ListOptions{Limit: 50})
 	for _, r := range repos {
-		n, _ := bugbotStore.GenerateRepoScopedRecommendations(ctx, r.ID, 5)
+		n, _ := rdStore.GenerateRepoScopedRecommendations(ctx, r.ID, 5)
 		repoRecs += n
 	}
 	return map[string]any{
@@ -145,7 +145,7 @@ func (calibrationBridge) Recompute(c *gin.Context) (map[string]any, error) {
 }
 
 func startCalibrationBackgroundJob() {
-	if !config.CalibrationEnabled || bugbotStore == nil {
+	if !config.CalibrationEnabled || rdStore == nil {
 		return
 	}
 	interval := time.Duration(config.CalibrationIntervalHours) * time.Hour
@@ -156,11 +156,11 @@ func startCalibrationBackgroundJob() {
 		time.Sleep(2 * time.Minute)
 		for {
 			ctx, cancel := contextWithTimeout(5 * time.Minute)
-			stats, err := bugbotStore.RecomputeCalibrationRuleStats(ctx)
+			stats, err := rdStore.RecomputeCalibrationRuleStats(ctx)
 			if err != nil {
 				logger.Debugf("calibration background job: %v", err)
 			} else {
-				recs, _ := bugbotStore.GenerateCalibrationRecommendations(ctx, config.CalibrationMinFindingsForRecommendation)
+				recs, _ := rdStore.GenerateCalibrationRecommendations(ctx, config.CalibrationMinFindingsForRecommendation)
 				logger.Infof("Calibration job: updated %d rule stats, %d recommendations", stats, recs)
 			}
 			cancel()

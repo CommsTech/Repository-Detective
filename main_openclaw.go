@@ -22,22 +22,22 @@ func (openclawReviewBridge) RunReview(c *gin.Context, scanID string) (openclaw.R
 		return openclaw.ReviewResult{}, fmt.Errorf("openclaw review service unavailable")
 	}
 	ctx := c.Request.Context()
-	scan, err := bugbotStore.GetScan(ctx, scanID)
+	scan, err := rdStore.GetScan(ctx, scanID)
 	if err != nil {
 		return openclaw.ReviewResult{}, err
 	}
-	repo, err := bugbotStore.GetRepository(ctx, scan.RepositoryID)
+	repo, err := rdStore.GetRepository(ctx, scan.RepositoryID)
 	if err != nil {
 		return openclaw.ReviewResult{}, err
 	}
 	cfg := config.OpenClawAIReview.Normalized()
 	limit := cfg.MaxFindingsPerScan
-	findings, err := bugbotStore.ListFindingsForScan(ctx, scanID, limit)
+	findings, err := rdStore.ListFindingsForScan(ctx, scanID, limit)
 	if err != nil {
 		return openclaw.ReviewResult{}, err
 	}
-	instances, _ := bugbotStore.ListFindingInstancesByScan(ctx, scanID)
-	scannerResults, _ := bugbotStore.ListScannerResultsByScan(ctx, scanID)
+	instances, _ := rdStore.ListFindingInstancesByScan(ctx, scanID)
+	scannerResults, _ := rdStore.ListScannerResultsByScan(ctx, scanID)
 	var coverage []string
 	for _, sr := range scannerResults {
 		coverage = append(coverage, sr.ScannerName+":"+sr.Status)
@@ -55,28 +55,28 @@ func (openclawReviewBridge) RunReview(c *gin.Context, scanID string) (openclaw.R
 
 func (openclawReviewBridge) GetReview(c *gin.Context, scanID string) (store.AIAdvisoryReview, []store.AIAdvisoryRecommendation, error) {
 	ctx := c.Request.Context()
-	review, err := bugbotStore.GetAIAdvisoryReviewByScanID(ctx, scanID)
+	review, err := rdStore.GetAIAdvisoryReviewByScanID(ctx, scanID)
 	if err != nil {
 		return store.AIAdvisoryReview{}, nil, err
 	}
-	recs, err := bugbotStore.ListAIAdvisoryRecommendations(ctx, review.ReviewID)
+	recs, err := rdStore.ListAIAdvisoryRecommendations(ctx, review.ReviewID)
 	return review, recs, err
 }
 
 func (openclawReviewBridge) AcceptRecommendation(c *gin.Context, id int64) error {
 	cfg := config.OpenClawAIReview.Normalized()
 	if cfg.RequireOperatorApproval {
-		return bugbotStore.UpdateAIAdvisoryRecommendationStatus(c.Request.Context(), id, "accepted")
+		return rdStore.UpdateAIAdvisoryRecommendationStatus(c.Request.Context(), id, "accepted")
 	}
 	return fmt.Errorf("operator approval required")
 }
 
 func (openclawReviewBridge) RejectRecommendation(c *gin.Context, id int64) error {
-	return bugbotStore.UpdateAIAdvisoryRecommendationStatus(c.Request.Context(), id, "rejected")
+	return rdStore.UpdateAIAdvisoryRecommendationStatus(c.Request.Context(), id, "rejected")
 }
 
 func (openclawReviewBridge) ListPendingRecommendations(c *gin.Context, limit int) ([]store.AIAdvisoryRecommendation, error) {
-	return bugbotStore.ListPendingAIAdvisoryRecommendations(c.Request.Context(), limit)
+	return rdStore.ListPendingAIAdvisoryRecommendations(c.Request.Context(), limit)
 }
 
 func initOpenClawReview() {
@@ -85,7 +85,7 @@ func initOpenClawReview() {
 	cfg.FallbackModel = firstNonEmpty(config.AIModel, config.OpenWebUIModel)
 	cfg.FallbackAPIKey = firstNonEmpty(config.AIAPIKey, config.OpenWebUIToken)
 	config.OpenClawAIReview = cfg
-	if bugbotStore == nil {
+	if rdStore == nil {
 		return
 	}
 	if !cfg.EndpointConfigured() {
@@ -102,7 +102,7 @@ func initOpenClawReview() {
 		logger.Warnf("OpenClaw advisory review transport not configured: %v", err)
 		return
 	}
-	openclawReviewService = openclaw.NewService(cfg, bugbotStore, transport)
+	openclawReviewService = openclaw.NewService(cfg, rdStore, transport)
 	if cfg.Enabled {
 		logger.Info("OpenClaw advisory review enabled (advisory-only, redacted packets)")
 	} else {

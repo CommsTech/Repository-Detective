@@ -55,7 +55,7 @@ Evidence: [../dogfood-reports/private-beta-report-only-validation.md](../dogfood
 | Check | Status |
 |-------|--------|
 | `.env` staged | No |
-| Local `bugbot` ELF staged | No |
+| Local `repository-detective` ELF staged | No |
 | `dist/` artifacts staged | No (gitignored) |
 | Working tree | Clean at baseline |
 

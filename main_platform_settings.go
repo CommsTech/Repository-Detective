@@ -197,10 +197,10 @@ func uhPlatformContextFromConfig() ui.PlatformContext {
 }
 
 func loadAndApplyPlatformSettingsOverrides() error {
-	if bugbotStore == nil {
+	if rdStore == nil {
 		return nil
 	}
-	settings, err := bugbotStore.GetPlatformSettings(context.Background())
+	settings, err := rdStore.GetPlatformSettings(context.Background())
 	if err != nil {
 		return fmt.Errorf("load platform settings: %w", err)
 	}

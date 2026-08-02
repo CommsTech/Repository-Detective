@@ -17,18 +17,18 @@ cp .env.example .env
 Edit `.env`. Required values:
 
 ```bash
-BUGBOT_API_KEY=generate-a-long-random-string
-BUGBOT_GITEA_URL=https://git.example.com
-BUGBOT_GITEA_TOKEN=your-gitea-token
-BUGBOT_WEBHOOK_SECRET=another-random-string
-BUGBOT_AI_PROVIDER=openai          # or anthropic, ollama, openwebui, openclaw, etc.
-BUGBOT_AI_API_KEY=your-ai-key      # if your provider needs one
-BUGBOT_AI_MODEL=gpt-4o-mini
+REPOSITORY_DETECTIVE_API_KEY=generate-a-long-random-string
+REPOSITORY_DETECTIVE_GITEA_URL=https://git.example.com
+REPOSITORY_DETECTIVE_GITEA_TOKEN=your-gitea-token
+REPOSITORY_DETECTIVE_WEBHOOK_SECRET=another-random-string
+REPOSITORY_DETECTIVE_AI_PROVIDER=openai          # or anthropic, ollama, openwebui, openclaw, etc.
+REPOSITORY_DETECTIVE_AI_API_KEY=your-ai-key      # if your provider needs one
+REPOSITORY_DETECTIVE_AI_MODEL=gpt-4o-mini
 ```
 
-Set `BUGBOT_AI_BASE_URL` when the provider has no built-in default, or when the AI service runs on another host (use a hostname/IP reachable from the Bugbot container).
+Set `REPOSITORY_DETECTIVE_AI_BASE_URL` when the provider has no built-in default, or when the AI service runs on another host (use a hostname/IP reachable from the Repository-Detective container).
 
-Leave `BUGBOT_PUBLIC_URL` empty until Step 4.
+Leave `REPOSITORY_DETECTIVE_PUBLIC_URL` empty until Step 4.
 
 ---
 
@@ -68,19 +68,19 @@ Expect `"status":"starting"` briefly, then `"status":"healthy"`.
 If startup fails or hangs, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md). Often helps:
 
 ```bash
-BUGBOT_SKIP_STARTUP_CHECKS=true   # in .env
+REPOSITORY_DETECTIVE_SKIP_STARTUP_CHECKS=true   # in .env
 ```
 
 ---
 
 ## Step 4 — Expose Repository Detective to Gitea
 
-If Gitea runs on the public internet and Bugbot is on a private network, Gitea must reach Bugbot via a public URL. See [NETWORKING.md](NETWORKING.md) for port forwarding, reverse proxy, Traefik, or Cloudflare tunnel.
+If Gitea runs on the public internet and Repository-Detective is on a private network, Gitea must reach Repository-Detective via a public URL. See [NETWORKING.md](NETWORKING.md) for port forwarding, reverse proxy, Traefik, or Cloudflare tunnel.
 
 After exposure:
 
 ```bash
-BUGBOT_PUBLIC_URL=https://repository-detective.example.com   # in .env
+REPOSITORY_DETECTIVE_PUBLIC_URL=https://repository-detective.example.com   # in .env
 docker compose up -d
 curl https://repository-detective.example.com/health
 ```
@@ -93,9 +93,9 @@ Open `https://repository-detective.example.com/onboard`, enter your API key, tes
 
 Manual alternative (per repo → Settings → Webhooks):
 
-- URL: `{BUGBOT_PUBLIC_URL}/webhook`
+- URL: `{REPOSITORY_DETECTIVE_PUBLIC_URL}/webhook`
 - Content type: `application/json`
-- Secret: same as `BUGBOT_WEBHOOK_SECRET` (Gitea uses this to HMAC-sign the body; Bugbot checks the `X-Gitea-Signature` header)
+- Secret: same as `REPOSITORY_DETECTIVE_WEBHOOK_SECRET` (Gitea uses this to HMAC-sign the body; Repository-Detective checks the `X-Gitea-Signature` header)
 - Events: Push, Pull request
 
 ---

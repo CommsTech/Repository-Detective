@@ -212,7 +212,7 @@ func TestFindingUpsertAndInstance(t *testing.T) {
 	now := time.Now().UTC()
 	f1, err := s.UpsertFinding(ctx, store.Finding{
 		RepositoryID:    repo.ID,
-		Fingerprint:     "bugbot-deadbeef",
+		Fingerprint:     "rd-deadbeef",
 		Category:        "security",
 		Severity:        "high",
 		Confidence:      0.99,
@@ -229,7 +229,7 @@ func TestFindingUpsertAndInstance(t *testing.T) {
 
 	f2, err := s.UpsertFinding(ctx, store.Finding{
 		RepositoryID:   repo.ID,
-		Fingerprint:    "bugbot-deadbeef",
+		Fingerprint:    "rd-deadbeef",
 		Category:       "security",
 		Severity:       "high",
 		Confidence:     0.99,
@@ -267,7 +267,7 @@ func TestNoDuplicateFindingsForSameFingerprint(t *testing.T) {
 	for i := 0; i < 3; i++ {
 		_, err := s.UpsertFinding(ctx, store.Finding{
 			RepositoryID: repo.ID,
-			Fingerprint:  "bugbot-same",
+			Fingerprint:  "rd-same",
 			Title:        "same",
 			LastSeenAt:   now,
 			FirstSeenAt:  now,
@@ -277,7 +277,7 @@ func TestNoDuplicateFindingsForSameFingerprint(t *testing.T) {
 		}
 	}
 
-	got, err := s.GetFindingByFingerprint(ctx, repo.ID, "bugbot-same")
+	got, err := s.GetFindingByFingerprint(ctx, repo.ID, "rd-same")
 	if err != nil {
 		t.Fatalf("get finding: %v", err)
 	}
@@ -292,7 +292,7 @@ func TestExternalIssueMapping(t *testing.T) {
 	repo, _ := s.UpsertRepository(ctx, store.Repository{Owner: "o", Name: "r", FullName: "o/r"})
 	finding, _ := s.UpsertFinding(ctx, store.Finding{
 		RepositoryID: repo.ID,
-		Fingerprint:  "bugbot-issue",
+		Fingerprint:  "rd-issue",
 		Title:        "issue",
 		FirstSeenAt:  time.Now().UTC(),
 		LastSeenAt:   time.Now().UTC(),
@@ -318,7 +318,7 @@ func TestLifecycleEventInsert(t *testing.T) {
 	repo, _ := s.UpsertRepository(ctx, store.Repository{Owner: "o", Name: "r", FullName: "o/r"})
 	finding, _ := s.UpsertFinding(ctx, store.Finding{
 		RepositoryID: repo.ID,
-		Fingerprint:  "bugbot-life",
+		Fingerprint:  "rd-life",
 		Title:        "life",
 		FirstSeenAt:  time.Now().UTC(),
 		LastSeenAt:   time.Now().UTC(),
@@ -391,7 +391,7 @@ func TestRecorderPersistsIssues(t *testing.T) {
 	}
 
 	issuesList := []ai.CodeIssue{{
-		Fingerprint: "bugbot-rec001",
+		Fingerprint: "rd-rec001",
 		Category:    "security",
 		Severity:    "high",
 		Title:       "Recorder test",
@@ -399,7 +399,7 @@ func TestRecorderPersistsIssues(t *testing.T) {
 		LineNumber:  1,
 	}}
 	processed := []issues.ProcessedIssueRecord{{
-		Fingerprint: "bugbot-rec001",
+		Fingerprint: "rd-rec001",
 		IssueNumber: 7,
 		IssueURL:    "https://git.example/acme/demo/issues/7",
 		Action:      "created",
@@ -409,7 +409,7 @@ func TestRecorderPersistsIssues(t *testing.T) {
 		t.Fatalf("record issues: %v", err)
 	}
 
-	got, err := s.GetFindingByFingerprint(ctx, repo.ID, "bugbot-rec001")
+	got, err := s.GetFindingByFingerprint(ctx, repo.ID, "rd-rec001")
 	if err != nil {
 		t.Fatalf("get finding: %v", err)
 	}

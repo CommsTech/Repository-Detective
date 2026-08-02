@@ -11,7 +11,7 @@ Operator must change state to `approved_for_one_test_pr` before any PR is create
 | Field | Value |
 |-------|-------|
 | Owner | `commstech` |
-| Repository | `Bugbot` (product — use only with explicit approval) |
+| Repository | `Repository-Detective` (product — use only with explicit approval) |
 | Alternative | dedicated owned test repo (preferred for first live PR) |
 
 ## Candidate finding (low severity)

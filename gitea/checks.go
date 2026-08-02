@@ -30,7 +30,7 @@ type CommitStatusEvaluation struct {
 func PendingCommitStatusEvaluation() CommitStatusEvaluation {
 	return CommitStatusEvaluation{
 		State:       CommitStatePending,
-		Description: "Bugbot scan started",
+		Description: "Repository-Detective scan started",
 	}
 }
 
@@ -38,7 +38,7 @@ func PendingCommitStatusEvaluation() CommitStatusEvaluation {
 func SkippedCommitStatusEvaluation() CommitStatusEvaluation {
 	return CommitStatusEvaluation{
 		State:       CommitStateSuccess,
-		Description: "Bugbot scan skipped status: no commit SHA",
+		Description: "Repository-Detective scan skipped status: no commit SHA",
 	}
 }
 
@@ -46,7 +46,7 @@ func SkippedCommitStatusEvaluation() CommitStatusEvaluation {
 func AnalysisFailedCommitStatusEvaluation() CommitStatusEvaluation {
 	return CommitStatusEvaluation{
 		State:       CommitStateError,
-		Description: "Bugbot scan failed",
+		Description: "Repository-Detective scan failed",
 	}
 }
 
@@ -55,7 +55,7 @@ func EvaluateCommitStatus(severities []string, scannerResults []ScannerResultSum
 	if cfg.IncludeScannerFailures && hasBadScannerFailure(scannerResults) {
 		return CommitStatusEvaluation{
 			State:       CommitStateError,
-			Description: "Bugbot scan completed with scanner failures",
+			Description: "Repository-Detective scan completed with scanner failures",
 		}
 	}
 
@@ -73,7 +73,7 @@ func EvaluateCommitStatus(severities []string, scannerResults []ScannerResultSum
 	if hasSeverityAtOrAbove(severities, warnOn) {
 		desc := formatFindingDescription(counts)
 		if MapGiteaCommitState(CommitStateWarning) == CommitStateFailure {
-			desc = "Bugbot warning: " + strings.TrimPrefix(desc, "Bugbot ")
+			desc = "Repository-Detective warning: " + strings.TrimPrefix(desc, "Repository-Detective ")
 		}
 		return CommitStatusEvaluation{
 			State:       CommitStateWarning,
@@ -83,7 +83,7 @@ func EvaluateCommitStatus(severities []string, scannerResults []ScannerResultSum
 
 	return CommitStatusEvaluation{
 		State:       CommitStateSuccess,
-		Description: "Bugbot scan passed with no findings",
+		Description: "Repository-Detective scan passed with no findings",
 	}
 }
 
@@ -163,9 +163,9 @@ func formatFindingDescription(counts map[string]int) string {
 		}
 	}
 	if len(parts) == 0 {
-		return "Bugbot scan passed with no findings"
+		return "Repository-Detective scan passed with no findings"
 	}
-	return "Bugbot found " + strings.Join(parts, ", ") + " findings"
+	return "Repository-Detective found " + strings.Join(parts, ", ") + " findings"
 }
 
 func hasBadScannerFailure(results []ScannerResultSummary) bool {

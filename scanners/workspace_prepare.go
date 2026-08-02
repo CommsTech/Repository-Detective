@@ -83,7 +83,7 @@ func prepareArchiveWorkspace(
 	}
 	defer archiveCleanup()
 
-	destRoot, err := os.MkdirTemp("", "bugbot-archive-*")
+	destRoot, err := os.MkdirTemp("", "rd-archive-*")
 	if err != nil {
 		return PreparedWorkspace{}, err
 	}

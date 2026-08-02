@@ -12,7 +12,7 @@ Operator-focused fixes for private beta deployments. Prefer `REPOSITORY_DETECTIV
 
 **Fix:**
 
-1. Confirm `.env` has `REPOSITORY_DETECTIVE_API_KEY` (or legacy `BUGBOT_API_KEY`).
+1. Confirm `.env` has `REPOSITORY_DETECTIVE_API_KEY` (or legacy `REPOSITORY_DETECTIVE_API_KEY`).
 2. Send **preferred** header:
 
    ```bash
@@ -197,14 +197,14 @@ See [SCANNERS.md](SCANNERS.md), [DOCKER.md](DOCKER.md).
 **Fix:**
 
 1. Only one writer — stop duplicate containers binding same `./data`
-2. Check permissions: container user must read/write `data/bugbot.db`
+2. Check permissions: container user must read/write `data/repository-detective.db`
 3. Restore from backup if corrupted — [BACKUP_RESTORE.md](BACKUP_RESTORE.md)
 
 **Restore:**
 
 ```bash
 docker compose stop repository-detective
-cp /backups/bugbot-YYYY-MM-DD.db data/bugbot.db
+cp /backups/repository-detective-YYYY-MM-DD.db data/repository-detective.db
 docker compose start repository-detective
 ```
 
@@ -253,15 +253,15 @@ docker compose start repository-detective
 
 ---
 
-## Legacy Bugbot naming confusion
+## Legacy Repository-Detective naming confusion
 
 | You see | Meaning |
 |---------|---------|
 | `REPOSITORY_DETECTIVE_*` in old docs | Use `REPOSITORY_DETECTIVE_*` — both work |
 | `X-Repository-Detective-API-Key` | Legacy — prefer `X-Repository-Detective-API-Key` |
-| `bugbot.db` | Database filename — intentional |
-| `commstech/repository-detective` git repo | Forge repo name — not product name |
-| Container `gitea-bugbot` | Old name — current is `repository-detective` |
+| `repository-detective.db` | Database filename — intentional |
+| `commstech/Repository-Detective` git repo | Forge repo name — not product name |
+| Container `repository-detective` | Old name — current is `repository-detective` |
 
 See [BRANDING_MIGRATION.md](BRANDING_MIGRATION.md), [BRANDING_COMPATIBILITY_AUDIT.md](BRANDING_COMPATIBILITY_AUDIT.md).
 

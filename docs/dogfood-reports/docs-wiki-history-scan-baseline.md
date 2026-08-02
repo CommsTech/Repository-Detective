@@ -9,7 +9,7 @@
 | Check | Status |
 |-------|--------|
 | `.env` staged | no |
-| Local `bugbot` ELF staged | no |
+| Local `repository-detective` ELF staged | no |
 | `dist/` artifacts staged | no |
 | Working tree clean | yes |
 

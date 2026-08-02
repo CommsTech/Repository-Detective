@@ -79,7 +79,7 @@ func (c *Client) downloadArchiveURL(ctx context.Context, archiveURL string, maxB
 		return "", nil, 0, fmt.Errorf("gitea archive API returned status %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
 	}
 
-	tmp, err := os.CreateTemp("", "bugbot-archive-*.zip")
+	tmp, err := os.CreateTemp("", "rd-archive-*.zip")
 	if err != nil {
 		return "", nil, 0, err
 	}

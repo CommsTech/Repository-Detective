@@ -1,4 +1,4 @@
-# Gitleaks config for Repository Detective (Bugbot) self-scans and CI.
+# Gitleaks config for Repository Detective self-scans and CI.
 # Unit tests and benchmark fixtures intentionally contain secret-shaped strings.
 
 title = "repository-detective"

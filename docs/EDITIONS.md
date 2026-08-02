@@ -85,7 +85,7 @@ See [LICENSING_STRATEGY.md](LICENSING_STRATEGY.md) and implementation plan in [C
 
 ## Compatibility
 
-Legacy **Bugbot** naming remains supported in all editions for env vars, API headers, labels, and fingerprints. See [BRANDING_MIGRATION.md](BRANDING_MIGRATION.md).
+Legacy **Repository-Detective** naming remains supported in all editions for env vars, API headers, labels, and fingerprints. See [BRANDING_MIGRATION.md](BRANDING_MIGRATION.md).
 
 ---
 

@@ -14,25 +14,25 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 REPORT = ROOT / "docs/dogfood-reports/batch4b-resolved-absent-closeout-report.md"
-DB = ROOT / "data/bugbot.db"
+DB = ROOT / "data/repository-detective.db"
 SCAN_ID = "db2d7061eaac8eb0"
-OWNER, REPO = "commstech", "Bugbot"
+OWNER, REPO = "commstech", "Repository-Detective"
 
 
 def load_env() -> tuple[str, str]:
-    token = os.environ.get("BUGBOT_GITEA_TOKEN", "")
-    base = os.environ.get("BUGBOT_GITEA_URL", "https://git.commsnet.org").rstrip("/")
+    token = os.environ.get("REPOSITORY_DETECTIVE_GITEA_TOKEN", "")
+    base = os.environ.get("REPOSITORY_DETECTIVE_GITEA_URL", "https://git.commsnet.org").rstrip("/")
     for line in (ROOT / ".env").read_text().splitlines() if (ROOT / ".env").exists() else []:
         if "=" not in line or line.strip().startswith("#"):
             continue
         k, _, v = line.partition("=")
         k, v = k.strip(), v.strip().strip('"').strip("'")
-        if k == "BUGBOT_GITEA_TOKEN" and not token:
+        if k == "REPOSITORY_DETECTIVE_GITEA_TOKEN" and not token:
             token = v
-        if k == "BUGBOT_GITEA_URL":
+        if k == "REPOSITORY_DETECTIVE_GITEA_URL":
             base = v.rstrip("/")
     if not token:
-        sys.exit("BUGBOT_GITEA_TOKEN required")
+        sys.exit("REPOSITORY_DETECTIVE_GITEA_TOKEN required")
     return token, base
 
 
@@ -51,7 +51,7 @@ def gitea(base: str, token: str, method: str, path: str, body: dict | None = Non
 def extract_fingerprint(body: str) -> str:
     for line in (body or "").splitlines():
         line = line.strip().lstrip("- ")
-        for m in ("Repository Detective fingerprint:", "Bugbot fingerprint:"):
+        for m in ("Repository Detective fingerprint:", "Repository Detective fingerprint:"):
             if line.startswith(m):
                 return line[len(m) :].strip()
     return ""

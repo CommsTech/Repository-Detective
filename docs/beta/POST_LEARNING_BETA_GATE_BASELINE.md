@@ -37,7 +37,7 @@ Production `data/` is owned by container user. Use `docker run ... go run ./cmd/
 ## Remaining blockers (start of sprint)
 
 1. `make beta-release` — root-owned `dist/repository-detective-beta`
-2. Cursor Bugbot benchmark fixture run
+2. Cursor Repository-Detective benchmark fixture run
 3. staticcheck CI confirmation
 4. Operator calibration accept/reject on homelab dry-run repos
 

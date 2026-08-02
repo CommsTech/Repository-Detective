@@ -24,7 +24,7 @@ Not implemented: call graph builder, git history analyzer, memory/race auditors 
 
 ## Overview (target design)
 
-Bugbot's goal is to implement a CAH-style multi-agent security pipeline for Gitea repositories. Unlike simple AI code analysis tools that do a single-pass "analyze this code" prompt, Bugbot should orchestrate multiple specialized agents through a structured discovery → validation → proof pipeline.
+Repository-Detective's goal is to implement a CAH-style multi-agent security pipeline for Gitea repositories. Unlike simple AI code analysis tools that do a single-pass "analyze this code" prompt, Repository-Detective should orchestrate multiple specialized agents through a structured discovery → validation → proof pipeline.
 
 ---
 
@@ -136,7 +136,7 @@ Bugbot's goal is to implement a CAH-style multi-agent security pipeline for Gite
 
 ---
 
-## Final Output: Bugbot Report
+## Final Output: Repository-Detective Report
 
 ```json
 {

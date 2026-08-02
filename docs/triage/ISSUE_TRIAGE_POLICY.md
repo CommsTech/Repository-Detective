@@ -2,7 +2,7 @@
 
 Repository Detective — Inspect. Analyze. Improve.
 
-This policy applies to **product repo** issues (`commstech/repository-detective`) filed via Gitea templates during the private beta.
+This policy applies to **product repo** issues (`commstech/Repository-Detective`) filed via Gitea templates during the private beta.
 
 ## Triage SLA (beta feedback)
 
