@@ -146,14 +146,13 @@ func parseGitleaksOutput(output []byte, dir string) ([]Finding, error) {
 }
 
 func gitleaksFindingToFinding(item gitleaksFinding, dir string) Finding {
-	file := strings.TrimPrefix(item.File, dir)
-	file = strings.TrimPrefix(file, "/")
-	file = strings.TrimPrefix(file, "\\")
+	file := normalizeGitleaksPath(item.File, dir)
 
 	ruleID := strings.TrimSpace(item.RuleID)
 	if ruleID == "" {
 		ruleID = "unknown-rule"
 	}
+	ruleID = sanitizeScannerRuleID(ruleID)
 
 	title := fmt.Sprintf("Potential secret detected by gitleaks: %s", ruleID)
 	if desc := strings.TrimSpace(item.Description); desc != "" {
@@ -163,11 +162,12 @@ func gitleaksFindingToFinding(item gitleaksFinding, dir string) Finding {
 	description := buildGitleaksDescription(item)
 	evidence := gitleaksRedactedEvidence(item)
 
-	id := fmt.Sprintf("GITLEAKS-%s", ruleID)
-	if item.Fingerprint != "" {
-		id = fmt.Sprintf("GITLEAKS-%s", item.Fingerprint)
-	} else if file != "" {
-		id = fmt.Sprintf("GITLEAKS-%s-%s-%d", ruleID, file, item.StartLine)
+	// Prefer stable rule+path+line IDs. Raw gitleaks fingerprints embed absolute
+	// workspace paths (/tmp/bugbot-archive-*), which created a new RuleID/fingerprint
+	// on every scan and flooded the open queue with duplicates.
+	id := fmt.Sprintf("GITLEAKS-%s:%s:%d", ruleID, file, item.StartLine)
+	if file == "" {
+		id = fmt.Sprintf("GITLEAKS-%s:%d", ruleID, item.StartLine)
 	}
 
 	desc := description
@@ -184,9 +184,69 @@ func gitleaksFindingToFinding(item gitleaksFinding, dir string) Finding {
 		File:        file,
 		Line:        item.StartLine,
 		Confidence:  0.95,
-		Reference:   firstNonEmpty(item.Fingerprint, ruleID),
+		Reference:   firstNonEmpty(sanitizeGitleaksFingerprint(item.Fingerprint, dir), ruleID),
 		Code:        evidence,
 	}
+}
+
+func normalizeGitleaksPath(file, dir string) string {
+	file = strings.TrimSpace(file)
+	file = strings.ReplaceAll(file, "\\", "/")
+	dir = strings.ReplaceAll(strings.TrimSpace(dir), "\\", "/")
+	if dir != "" {
+		file = strings.TrimPrefix(file, dir)
+		file = strings.TrimPrefix(file, dir+"/")
+	}
+	file = strings.TrimPrefix(file, "/")
+	// Strip leftover temp scan prefixes if gitleaks reported an absolute path.
+	if idx := strings.Index(file, "/tmp/bugbot-"); idx >= 0 {
+		rest := file[idx+1:]
+		if slash := strings.Index(rest, "/"); slash >= 0 {
+			file = rest[slash+1:]
+		}
+	}
+	if strings.HasPrefix(file, "tmp/bugbot-") {
+		if slash := strings.Index(file, "/"); slash >= 0 {
+			file = file[slash+1:]
+		}
+	}
+	return file
+}
+
+func sanitizeGitleaksFingerprint(fp, dir string) string {
+	fp = strings.TrimSpace(fp)
+	if fp == "" {
+		return ""
+	}
+	fp = strings.ReplaceAll(fp, "\\", "/")
+	dir = strings.ReplaceAll(strings.TrimSpace(dir), "\\", "/")
+	if dir != "" {
+		fp = strings.ReplaceAll(fp, dir+"/", "")
+		fp = strings.ReplaceAll(fp, dir, "")
+	}
+	// Drop absolute temp workspace segments from historical fingerprints.
+	for _, marker := range []string{"/tmp/bugbot-archive-", "/tmp/bugbot-scan-"} {
+		for {
+			idx := strings.Index(fp, marker)
+			if idx < 0 {
+				break
+			}
+			rest := fp[idx+1:]
+			slash := strings.Index(rest, "/")
+			if slash < 0 {
+				fp = fp[:idx]
+				break
+			}
+			fp = fp[:idx] + rest[slash+1:]
+		}
+	}
+	return strings.Trim(fp, ":/")
+}
+
+func sanitizeScannerRuleID(ruleID string) string {
+	ruleID = strings.TrimSpace(ruleID)
+	ruleID = strings.Trim(ruleID, "`\"'")
+	return strings.TrimSpace(ruleID)
 }
 
 func buildGitleaksDescription(item gitleaksFinding) string {

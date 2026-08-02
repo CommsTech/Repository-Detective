@@ -22,11 +22,16 @@ func ActionabilityAdjust(severity string, confidence float64, in ReachabilityInp
 		note = "Reachable from detected entrypoint — raised actionability."
 	}
 	if in.TestOnlyPath || in.DocsOnlyPath {
-		if severity == "medium" || severity == "low" {
+		switch severity {
+		case "critical", "high":
+			// Keep secrets/CVE visible, but stop docs/archive noise from dominating the high queue.
+			severity = "medium"
+			confidence = min(confidence, 0.7)
+		case "medium", "low":
 			severity = "info"
 			confidence = min(confidence, 0.55)
 		}
-		note = "Test/docs-only path — lowered actionability (finding remains visible)."
+		note = "Test/docs/archive path — lowered actionability (finding remains visible)."
 	}
 	if in.VendorPath {
 		confidence = min(confidence, 0.5)
@@ -55,13 +60,20 @@ func ClassifyPath(path string) ReachabilityInput {
 		in.TestOnlyPath = true
 	}
 	if strings.Contains(p, "/docs/") || strings.Contains(p, "readme") ||
-		strings.HasPrefix(p, "config/") && strings.Contains(p, ".example") {
+		strings.HasPrefix(p, "wiki/") || strings.Contains(p, "/wiki/") ||
+		strings.Contains(p, "/archive/") || strings.Contains(p, "/session_summaries/") ||
+		strings.HasSuffix(p, ".md") || strings.HasSuffix(p, ".mdx") ||
+		strings.HasSuffix(p, ".example") || strings.HasSuffix(p, ".sample") ||
+		strings.Contains(p, ".example.") || strings.Contains(p, "/examples/") ||
+		strings.Contains(p, "/test_generated_apps/") || strings.Contains(p, "/generated_apps/") {
 		in.DocsOnlyPath = true
 	}
-	if strings.HasPrefix(p, "web/static/") {
+	if strings.HasPrefix(p, "web/static/") || strings.HasSuffix(p, "pdf.js") ||
+		strings.Contains(p, "/min.js") || strings.HasSuffix(p, ".min.js") {
 		in.VendorPath = true
 	}
-	if strings.Contains(p, "/vendor/") || strings.Contains(p, "node_modules") {
+	if strings.Contains(p, "/vendor/") || strings.Contains(p, "node_modules") ||
+		strings.Contains(p, "/ansible_collections/") {
 		in.VendorPath = true
 	}
 	return in

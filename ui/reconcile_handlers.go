@@ -45,6 +45,9 @@ func (h *Handler) RepoReconcileApply(c *gin.Context) {
 		c.String(http.StatusServiceUnavailable, "reconciliation disabled")
 		return
 	}
+	if !h.requireCSRF(c) {
+		return
+	}
 	id, ok := parseID(c, "id")
 	if !ok {
 		return

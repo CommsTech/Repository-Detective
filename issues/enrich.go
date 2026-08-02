@@ -71,6 +71,7 @@ func EnrichIssue(repository string, issue *ai.CodeIssue, scanID string) {
 	if issue.RuleID == "" {
 		issue.RuleID = issue.ClusterID
 	}
+	issue.RuleID = strings.Trim(strings.TrimSpace(issue.RuleID), "`\"'")
 
 	if issue.Fingerprint == "" {
 		issue.Fingerprint = ComputeFingerprint(FingerprintFromIssue(repository, issue))

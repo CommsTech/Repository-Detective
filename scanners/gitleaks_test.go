@@ -107,6 +107,13 @@ func TestParseGitleaksOutputFound(t *testing.T) {
 	if finding.Line != 10 {
 		t.Fatalf("expected line 10, got %d", finding.Line)
 	}
+	wantID := "GITLEAKS-generic-api-key:config/env.py:10"
+	if finding.ID != wantID {
+		t.Fatalf("expected stable id %q, got %q", wantID, finding.ID)
+	}
+	if strings.Contains(finding.ID, "/tmp/") {
+		t.Fatalf("id must not embed temp paths: %q", finding.ID)
+	}
 	if !strings.Contains(finding.Title, "generic-api-key") {
 		t.Fatalf("unexpected title %q", finding.Title)
 	}
@@ -118,6 +125,36 @@ func TestParseGitleaksOutputFound(t *testing.T) {
 		t.Fatalf("expected auditor type gitleaks, got %q", candidate.AuditorType)
 	}
 	assertNoRawSecret(t, candidate.Evidence.Code)
+}
+
+func TestGitleaksIDStableAcrossTempWorkspaces(t *testing.T) {
+	payload := `[{
+    "RuleID": "aws-access-token",
+    "Description": "AWS",
+    "StartLine": 13,
+    "EndLine": 13,
+    "Match": "REDACTED",
+    "Secret": "REDACTED",
+    "File": "redact/secrets_test.go",
+    "Fingerprint": "/tmp/bugbot-archive-12345/redact/secrets_test.go:aws-access-token:13"
+  }]`
+	a, err := scanners.ParseGitleaksOutputForTest([]byte(payload), "/tmp/bugbot-archive-111")
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := scanners.ParseGitleaksOutputForTest([]byte(payload), "/tmp/bugbot-archive-222")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(a) != 1 || len(b) != 1 {
+		t.Fatalf("expected 1 finding each")
+	}
+	if a[0].ID != b[0].ID {
+		t.Fatalf("unstable ids across workspaces: %q vs %q", a[0].ID, b[0].ID)
+	}
+	if strings.Contains(a[0].ID, "bugbot-archive") {
+		t.Fatalf("id still has archive path: %q", a[0].ID)
+	}
 }
 
 const gitleaksFoundOneLine = `[{"RuleID":"generic-api-key","Description":"Generic API Key","StartLine":10,"EndLine":10,"Match":"api_key=REDACTED_FOR_TEST_ONLY","Secret":"REDACTED_FOR_TEST_ONLY","File":"config/env.py","Commit":"0000000000000000","Entropy":4.5,"Fingerprint":"test-fingerprint-001"}]`

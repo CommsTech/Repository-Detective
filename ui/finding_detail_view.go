@@ -131,16 +131,44 @@ func issueFilingView(d store.FindingDetail) (status, detail string) {
 }
 
 func fixAndVerify(d store.FindingDetail) (fix string, steps []string) {
+	rule := strings.ToUpper(strings.TrimSpace(d.RuleID))
 	switch strings.ToLower(d.Category) {
 	case "secret":
 		fix = "Remove the secret from source, rotate the credential, and purge from git history if exposed."
 		steps = []string{"Confirm secret is real and active", "Rotate/revoke credential", "Remove from code and history", "Re-scan to verify fingerprint cleared"}
-	case "vulnerability", "vuln":
-		fix = "Upgrade affected package to a fixed version or apply vendor mitigation."
-		steps = []string{"Confirm package is used at runtime", "Check fixed version availability", "Upgrade and run tests", "Re-scan image or lockfile"}
+	case "vulnerability", "vuln", "dependency":
+		fix = "Upgrade the affected package/image to a fixed version, or apply the vendor mitigation and re-scan."
+		steps = []string{"Confirm the package is reachable at runtime", "Identify fixed version from advisory metadata", "Upgrade lockfile/image and run tests", "Re-scan to clear the CVE fingerprint"}
+	case "reliability":
+		fix = "Handle the failed operation explicitly (return/log/retry) instead of ignoring errors or omitting timeouts."
+		steps = []string{"Reproduce the failure path", "Propagate or log the error with context", "Add/adjust timeouts for network calls", "Cover with a unit or integration test", "Re-scan"}
+	case "security":
+		fix = "Apply the scanner-recommended hardening (pin action SHAs, sanitize inputs, or remove unsafe APIs)."
+		steps = []string{"Confirm the match is not a false positive in tests/docs", "Apply the minimal secure change", "Add a regression test or lint allowlist if intentional", "Re-scan"}
+	case "public_release":
+		fix = "Replace internal hostnames/IPs with documented placeholders, or keep them only in private ops docs that are excluded from public release scans."
+		steps = []string{"Confirm whether the reference is intentional for private deploy docs", "Redact or templatize for public surfaces", "Re-scan"}
+	case "optimization", "performance":
+		fix = "Reduce hot-path cost only when profiling shows impact; otherwise calibrate as accepted noise for non-hot paths."
+		steps = []string{"Confirm the path is performance-sensitive", "Refactor if measurable", "Otherwise mark intentional/false positive with reason", "Re-scan"}
+	case "maintainability", "code_quality", "tech_debt", "architecture", "test_gap":
+		fix = "Treat as backlog hygiene unless it blocks a release gate — prefer small refactors with tests over drive-by rewrites."
+		steps = []string{"Confirm the finding is still present on main", "Decide fix vs calibrate based on release risk", "If fixing, keep the change scoped to the reported location", "Re-scan or suppress with an auditable reason"}
 	default:
-		fix = "Apply minimal fix at reported location; follow remediation plan when available."
+		fix = "Apply a minimal fix at the reported location; follow the remediation plan when available."
 		steps = []string{"Reproduce at listed path", "Apply targeted fix", "Run project tests/CI", "Re-scan or mark false positive with reason"}
+	}
+	if strings.HasPrefix(rule, "GITLEAKS") || rule == "SEC-HARDCODED-SECRET" {
+		fix = "Treat as a credential incident until proven otherwise: rotate, remove from tree/history, and re-scan."
+		steps = []string{"Validate the match is not a test fixture or placeholder", "Rotate/revoke if real", "Remove from source and history", "Add allowlist only for intentional fixtures", "Re-scan"}
+	}
+	if strings.HasPrefix(rule, "TRIVY-") || strings.HasPrefix(rule, "GRYPE-") {
+		fix = "Upgrade the vulnerable dependency or base image to a patched version listed in the advisory."
+		steps = []string{"Map package to lockfile/Dockerfile", "Upgrade to fixed version", "Rebuild and test", "Re-scan SBOM/image"}
+	}
+	if strings.Contains(rule, "MUTABLE-ACTION") || strings.Contains(strings.ToLower(d.Title), "mutable-action") {
+		fix = "Pin GitHub/Gitea Actions to a full commit SHA with a version comment."
+		steps = []string{"Resolve the tag to a commit SHA", "Update the workflow uses: line", "Re-scan workflows"}
 	}
 	return fix, steps
 }

@@ -9,8 +9,6 @@ PORT="${RD_PORT:-8081}"
 BASE="${RD_BASE_URL:-http://127.0.0.1:${PORT}/ui}"
 API_KEY="${REPOSITORY_DETECTIVE_API_KEY:-${BUGBOT_API_KEY:-}}"
 REPORT="${RD_UI_SMOKE_REPORT:-docs/dogfood-reports/ui-route-smoke-report.md}"
-QS=""
-if [ -n "$API_KEY" ]; then QS="?api_key=${API_KEY}"; fi
 
 pass=0
 fail=0
@@ -33,11 +31,11 @@ EOF
 check_route() {
   local path=$1
   local expect=${2:-}
-  local url="${BASE}${path}${QS}"
+  local url="${BASE}${path}"
   local code body
-  local curl_args=(-sSL -o /tmp/rd-ui-body.html -w '%{http_code}' -m 20)
+  local curl_args=(-sS -o /tmp/rd-ui-body.html -w '%{http_code}' -m 45 --max-redirs 3)
   if [ -n "$API_KEY" ]; then
-    curl_args+=(-H "X-Repository-Detective-API-Key: ${API_KEY}")
+    curl_args+=(-H "X-Repository-Detective-API-Key: ${API_KEY}" -H "Authorization: Bearer ${API_KEY}")
   fi
   code=$(curl "${curl_args[@]}" "$url" || echo "000")
   body=$(head -c 4000 /tmp/rd-ui-body.html 2>/dev/null || true)
@@ -72,14 +70,19 @@ ROUTES=(
   "/repos/1/containers"
   "/repos/1/sbom"
   "/repos/1/graph"
+  "/repos/1/report"
+  "/repos/1/reconcile"
+  "/repos/1/scan"
   "/scans"
   "/findings"
+  "/findings?repo_id=1&status=open"
   "/findings/1"
   "/configure"
   "/learning"
   "/health"
   "/preinstall"
   "/reports"
+  "/projects"
 )
 
 for r in "${ROUTES[@]}"; do

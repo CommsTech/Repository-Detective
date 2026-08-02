@@ -3,6 +3,19 @@
 **Last updated:** 2026-08-02  
 **Repository:** https://git.commsnet.org/commstech/Bugbot.git
 
+## Live deploy (2026-08-02) — release readiness / fleet burn-down
+
+| Item | Value |
+|------|-------|
+| Focus | Fleet findings accuracy, feature/UIX matrix, AI token policy, other-repo remediations |
+| Live | `rc-release-ready`, healthy, tools **10/10**, `scan_profile=beta_standard` |
+| Accuracy | Stable gitleaks RuleIDs; docs/archive/example/vendor actionability downgrades |
+| AI defaults | Recommendations **off**; when enabled: 1500/1200 token CAH budget, no snippets/full files |
+| Fleet queue | Open unsuppressed ~3.6k (from ~12.6k); high+critical ~67 (from ~900) before remediations settle |
+| Other repos | House_Grocery_AI secrets removed from git; optouter CVE/container harden pushed |
+| UIX | UI route smoke 19/19; feature-matrix UI/API pass; reconcile CSRF + containers page truth |
+| Ops bugfix | Fleet health audit `started_at` TEXT→time parse (repos list warning) |
+
 ## Live deploy (2026-08-02) — RD findings closeout
 
 | Item | Value |

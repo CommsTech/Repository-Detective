@@ -57,8 +57,35 @@ enable_hadolint: true
 enable_checkov: true
 enable_linters: true
 enable_llm_auditors: false
+enable_ai_risk_checks: false
+enable_performance_checks: false
 scanner_timeout_seconds: 120
-min_issue_confidence: 0.7
+min_issue_confidence: 0.75
+health_max_findings: 80
+
+# AI recommendations — disabled by default; token-efficient when enabled.
+ai_recommendations_enabled: false
+ai_recommendations_max_tokens_per_scan: 1500
+ai_recommendations_token_budget_per_scan: 1200
+ai_recommendations_max_findings_per_scan: 15
+ai_recommendations_cah_enabled: true
+ai_recommendations_cah_max_candidates: 8
+ai_recommendations_cah_min_uncertainty_score: 0.5
+ai_recommendations_use_cah_harness: true
+ai_recommendations_send_source_snippets: false
+ai_recommendations_send_full_files: false
+ai_recommendations_redact_secrets: true
+ai_recommendations_redact_pii: true
+ai_recommendations_advisory_only: true
+ai_recommendations_require_operator_approval: true
+ai_recommendations_store_prompts: false
+ai_recommendations_store_responses: true
+ai_recommendations_allow_preinstall: false
+ai_recommendations_allow_container_scans: false
+ai_recommendations_allow_repo_scans: true
+ai_startup_test_enabled: false
+ai_connection_test_mode: metadata_only
+ai_max_tokens_per_scan: 0
 
 qdrant_enabled: false
 qdrant_url: "http://127.0.0.1:6333"

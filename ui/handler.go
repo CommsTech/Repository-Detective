@@ -712,7 +712,10 @@ func (h *Handler) ContainerImages(c *gin.Context) {
 	scans, _ := h.store.ListContainerImageScans(c.Request.Context(), id, 20)
 	h.renderNav(c, "container_images.html", repo.FullName+" — Container Images", "repos", map[string]any{
 		"RepoID": id, "Repo": repo, "References": refs, "Scans": scans,
-		"Enabled": false, "RequireRunner": true, "AllowCoreSocket": false, "CreateIssues": false,
+		"Enabled":          h.platform.ContainerScanningEnabled,
+		"RequireRunner":    h.platform.ContainerScanRequireRunner,
+		"AllowCoreSocket":  h.platform.ContainerScanAllowCoreSocket,
+		"CreateIssues":     h.platform.ContainerScanCreateIssues,
 	})
 }
 

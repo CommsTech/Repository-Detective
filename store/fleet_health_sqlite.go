@@ -52,7 +52,7 @@ func (s *SQLiteStore) listFleetAuditRows(ctx context.Context) ([]fleetAuditBase,
 	for rows.Next() {
 		var b fleetAuditBase
 		var connected int
-		var lastScan, lastWebhook sql.NullTime
+		var lastScan, lastWebhook sql.NullString
 		var dryRun int
 		if err := rows.Scan(
 			&b.ID, &b.FullName, &b.ForgeType, &connected,
@@ -64,12 +64,12 @@ func (s *SQLiteStore) listFleetAuditRows(ctx context.Context) ([]fleetAuditBase,
 		}
 		b.ConnectedRepo = connected == 1
 		b.DryRunReportOnly = dryRun == 1
-		if lastScan.Valid {
-			t := lastScan.Time
+		if lastScan.Valid && lastScan.String != "" {
+			t := parseTime(lastScan.String)
 			b.LastScanAt = &t
 		}
-		if lastWebhook.Valid {
-			t := lastWebhook.Time
+		if lastWebhook.Valid && lastWebhook.String != "" {
+			t := parseTime(lastWebhook.String)
 			b.LastWebhookAt = &t
 		}
 		out = append(out, b)

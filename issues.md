@@ -81,3 +81,10 @@
 - Multi-language code analysis accuracy
 - Performance optimization for large repositories
 - Error handling and logging
+
+## 2026-08-02 release readiness notes
+- Gitleaks RuleID/fingerprint stability fixed (temp workspace paths no longer create duplicate highs).
+- AI recommendations remain disabled by default with tight token/CAH budgets when enabled.
+- Fleet noise calibrated (docs/archive/example/vendor + report-only categories).
+- Remaining high/critical mostly real: SEC-EVAL in AI assistants, dependency/misconfig in apps not yet rescanned clean.
+- Rotate credentials that were previously committed in House_Grocery_AI history.

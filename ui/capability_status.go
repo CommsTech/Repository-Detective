@@ -44,6 +44,10 @@ type PlatformContext struct {
 	GiteaActionsTestBackendEnabled bool
 	OpenClawAIReviewEnabled        bool
 	OpenClawEndpointConfigured     bool
+	ContainerScanningEnabled       bool
+	ContainerScanRequireRunner     bool
+	ContainerScanAllowCoreSocket   bool
+	ContainerScanCreateIssues      bool
 }
 
 func buildCapabilityStatuses(

@@ -1088,6 +1088,10 @@ func initializeComponents() error {
 				GiteaActionsTestBackendEnabled:     config.GiteaActionsTestBackendEnabled,
 				OpenClawAIReviewEnabled:            config.OpenClawAIReview.Enabled,
 				OpenClawEndpointConfigured:         config.OpenClawAIReview.EndpointConfigured(),
+				ContainerScanningEnabled:           config.ContainerScan.Enabled,
+				ContainerScanRequireRunner:         config.ContainerScan.RequireRunner,
+				ContainerScanAllowCoreSocket:       config.ContainerScan.AllowCoreDockerSocket,
+				ContainerScanCreateIssues:          config.ContainerScan.CreateIssues,
 			})
 		}
 		if err != nil {

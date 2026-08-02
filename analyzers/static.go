@@ -163,7 +163,7 @@ func isStaticFalsePositive(rule staticRule, path, line string) bool {
 	case "SEC-CMD-EXEC":
 		return isFalsePositiveCmdExec(path, line)
 	case "SEC-EVAL":
-		return isFalsePositiveEval(line)
+		return isFalsePositiveEval(path, line)
 	case "QUAL-DEBUG":
 		return isFalsePositiveDebugLine(path, line)
 	case "REL-INTERNAL-INFRA-REF":
@@ -182,7 +182,12 @@ func isFalsePositiveNestedLoop(path string) bool {
 	return strings.HasPrefix(lower, "operator/")
 }
 
-func isFalsePositiveEval(line string) bool {
+func isFalsePositiveEval(path, line string) bool {
+	lowerPath := strings.ToLower(strings.ReplaceAll(path, "\\", "/"))
+	if strings.HasSuffix(lowerPath, "pdf.js") || strings.Contains(lowerPath, "/vendor/") ||
+		strings.Contains(lowerPath, "node_modules/") || strings.HasSuffix(lowerPath, ".min.js") {
+		return true
+	}
 	trimmed := strings.TrimSpace(line)
 	// PyTorch/TensorFlow/JAX: model.eval() is inference mode, not dynamic code execution.
 	if regexp.MustCompile(`\.eval\s*\(\s*\)`).MatchString(trimmed) {
@@ -194,6 +199,15 @@ func isFalsePositiveEval(line string) bool {
 		if regexp.MustCompile(`(?i)\beval\s*\(`).MatchString(trimmed) {
 			return true
 		}
+	}
+	// Common library false positives (sourcemaps / safe wrappers).
+	lower := strings.ToLower(trimmed)
+	if strings.Contains(lower, "/*#__pure__*/") {
+		return true
+	}
+	// ast.literal_eval is not arbitrary code execution.
+	if strings.Contains(trimmed, "ast.literal_eval") || strings.Contains(trimmed, "literal_eval(") {
+		return true
 	}
 	return false
 }

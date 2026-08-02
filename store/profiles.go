@@ -129,7 +129,7 @@ func ProfileDefaults(profile string) EffectiveSettings {
 		base.EnablePerformanceChecks = true
 		base.EnableAIRiskChecks = false
 		base.EnableCodeGraph = true
-		base.GraphIncludeFunctions = true
+		base.GraphIncludeFunctions = false
 		base.GraphIncludeFindings = true
 		return base
 	case ScanProfileBetaStandard:
@@ -141,6 +141,8 @@ func ProfileDefaults(profile string) EffectiveSettings {
 		base.ConfidenceGate = 0.85
 		base.IssuePolicy = IssuePolicyAll
 		base.RemediationPolicy = "suggest"
+		base.EnablePerformanceChecks = false
+		base.GraphIncludeFunctions = false
 		return base
 	case ScanProfileHomelabInfra:
 		base = ProfileDefaults(ScanProfileStandardDeterministic)
@@ -152,8 +154,9 @@ func ProfileDefaults(profile string) EffectiveSettings {
 		base.IssuePolicy = IssuePolicyAll
 		base.RemediationPolicy = "off"
 		base.EnableCodeGraph = true
-		base.GraphIncludeFunctions = true
+		base.GraphIncludeFunctions = false
 		base.GraphIncludeFindings = true
+		base.EnablePerformanceChecks = false
 		return base
 	case ScanProfileStrictSecurity:
 		base.AnalysisDepth = 2

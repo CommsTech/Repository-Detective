@@ -26,10 +26,32 @@ func TestReachabilityTestPathDowngrade(t *testing.T) {
 	}
 }
 
-func TestReachabilityTestdataFixtureDowngrade(t *testing.T) {
-	in := ClassifyPath("testdata/fixtures/go-single/main.go")
-	sev, _, note := ActionabilityAdjust("medium", 0.8, in)
-	if sev != "info" || note == "" {
-		t.Fatalf("testdata should downgrade: sev=%s note=%q", sev, note)
+func TestReachabilityDocsHighDowngrade(t *testing.T) {
+	in := ClassifyPath("docs/guides/SETUP.md")
+	sev, conf, note := ActionabilityAdjust("high", 0.95, in)
+	if sev != "medium" || conf > 0.7 || note == "" {
+		t.Fatalf("docs high should downgrade to medium: sev=%s conf=%v note=%q", sev, conf, note)
+	}
+	in = ClassifyPath("archive/session_summaries/NOTE.md")
+	sev, _, note = ActionabilityAdjust("critical", 0.9, in)
+	if sev != "medium" || note == "" {
+		t.Fatalf("archive critical should downgrade: sev=%s note=%q", sev, note)
 	}
 }
+
+func TestReachabilityExampleAndVendorPaths(t *testing.T) {
+	in := ClassifyPath("collaboration-framework/config.yaml.example")
+	sev, _, note := ActionabilityAdjust("high", 0.9, in)
+	if sev != "medium" || note == "" {
+		t.Fatalf("example path high should downgrade: sev=%s note=%q", sev, note)
+	}
+	in = ClassifyPath("vendor/pdf.js")
+	if !in.VendorPath {
+		t.Fatal("expected pdf.js vendor classification")
+	}
+	in = ClassifyPath("ansible/collections/ansible_collections/community/windows/plugins/lookup/laps_password.py")
+	if !in.VendorPath {
+		t.Fatal("expected ansible_collections vendor classification")
+	}
+}
+
