@@ -1,5 +1,17 @@
 # Development Issues Log
 
+## Fixed (2026-08-02) — Full WebUI flow evaluation (theme / brand / charts)
+
+| Priority | Issue | Resolution |
+|----------|-------|------------|
+| HIGH | Light-mode heading/KPI text used hardcoded white / translucent parents → unreadable | `--rd-heading` + solid `--rd-surface-2` for KPI/inset/report surfaces |
+| HIGH | System Health showed historical `commstech/Bugbot` forge errors | `displayBrand` / `redactHealthText` scrub to Repository-Detective |
+| HIGH | Findings showed `bugbot-scan-*` workspace paths | `displayPath` strips scratch prefixes + brand tokens |
+| MEDIUM | Charts ignored theme toggles | dashboard/learning/repo-report charts remount on `rd-theme-change` |
+| MEDIUM | Duplicate Policies nav; Learning buried | Policies removed; Learning under Intelligence; repo settings nav=`repos` |
+| MEDIUM | Project groups showed raw repo IDs | Resolve primary/members to repository full names |
+| LOW | Theme toggle did not update `colorScheme` | `theme.js` sets `colorScheme` + page background on apply |
+
 ## Fixed (2026-08-02) — Learning page missing Accept on recommendation tiles
 
 | Priority | Issue | Resolution |

@@ -790,7 +790,7 @@ func (h *Handler) RepoSettings(c *gin.Context) {
 		Limit:        100,
 	})
 	sections := buildRepoSettingsSections(effective, meta, h.global)
-	h.renderNav(c, "repo_settings.html", "Settings — "+repo.FullName, "policies", map[string]any{
+	h.renderNav(c, "repo_settings.html", "Settings — "+repo.FullName, "repos", map[string]any{
 		"Repo": repo, "Settings": settings, "Effective": effective, "ProfileMeta": meta,
 		"SelectedProfile": selectedProfile,
 		"Profiles":        store.PrimaryScanProfileOptions, "ProfileDescriptions": store.ProfileDescriptions,
@@ -1730,9 +1730,18 @@ func (h *Handler) ProjectGroups(c *gin.Context) {
 		return
 	}
 	repos, _ := h.store.ListRepositoriesWithSummary(c.Request.Context(), store.ListOptions{Limit: 500})
+	repoNames := make(map[int64]string, len(repos))
+	for _, r := range repos {
+		if r.FullName != "" {
+			repoNames[r.ID] = r.FullName
+		} else {
+			repoNames[r.ID] = fmt.Sprintf("repo-%d", r.ID)
+		}
+	}
 	h.renderNav(c, "projects.html", "Project groups", "projects", map[string]any{
-		"Groups": groups,
-		"Repos":  repos,
+		"Groups":    groups,
+		"Repos":     repos,
+		"RepoNames": repoNames,
 	})
 }
 

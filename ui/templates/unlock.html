@@ -16,7 +16,7 @@
       <li>Paste your key below to unlock this browser session (HttpOnly cookie, 7 days)</li>
     </ul>
     {{if not .Data.SetupComplete}}
-    <p class="rd-alert info">First-time setup may be incomplete. See <a href="https://git.commsnet.org/commstech/repository-detective/src/branch/main/docs/DEPLOYMENT.md">deployment docs</a> for configuration.</p>
+    <p class="rd-alert info">First-time setup may be incomplete. See <a href="https://git.commsnet.org/commstech/Repository-Detective/src/branch/main/docs/DEPLOYMENT.md">deployment docs</a> for configuration.</p>
     {{end}}
     <form method="post" action="{{.BasePath}}/unlock" class="rd-auth-form">
       <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">

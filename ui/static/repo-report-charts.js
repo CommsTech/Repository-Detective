@@ -1,12 +1,7 @@
 (function () {
   "use strict";
 
-  var palette = {
-    teal: "#0ea5a4",
-    blue: "#2563eb",
-    grid: "rgba(148, 163, 184, 0.12)",
-    text: "#94a3b8",
-  };
+  var chartHandle = null;
 
   function cssColor(name, fallback) {
     var v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -25,13 +20,19 @@
 
   function initRadar(ctx, data) {
     if (!data.categoryLabels || !data.categoryLabels.length) {
-      ctx.parentElement.innerHTML = "<p class=\"rd-muted\">No category data for radar chart.</p>";
+      if (ctx.parentElement && !ctx.parentElement.querySelector(".rd-chart-empty")) {
+        ctx.style.display = "none";
+        var note = document.createElement("p");
+        note.className = "rd-muted rd-chart-empty";
+        note.textContent = "No category data for radar chart.";
+        ctx.parentElement.appendChild(note);
+      }
       return;
     }
     var max = Math.max.apply(null, data.categoryValues.concat([1]));
-    palette.text = cssColor("--rd-text-dim", palette.text);
-    palette.grid = cssColor("--rd-border", palette.grid);
-    new Chart(ctx, {
+    var text = cssColor("--rd-text-dim", "#94a3b8");
+    var grid = cssColor("--rd-border", "rgba(148, 163, 184, 0.12)");
+    chartHandle = new Chart(ctx, {
       type: "radar",
       data: {
         labels: data.categoryLabels,
@@ -39,8 +40,8 @@
           label: "Open findings by category",
           data: data.categoryValues,
           backgroundColor: "rgba(37, 99, 235, 0.25)",
-          borderColor: palette.blue,
-          pointBackgroundColor: palette.teal,
+          borderColor: "#2563eb",
+          pointBackgroundColor: "#0ea5a4",
           borderWidth: 2,
         }],
       },
@@ -49,9 +50,9 @@
         maintainAspectRatio: false,
         scales: {
           r: {
-            angleLines: { color: palette.grid },
-            grid: { color: palette.grid },
-            pointLabels: { color: palette.text, font: { size: 10 } },
+            angleLines: { color: grid },
+            grid: { color: grid },
+            pointLabels: { color: text, font: { size: 10 } },
             ticks: { display: false },
             suggestedMin: 0,
             suggestedMax: max * 1.15,
@@ -63,9 +64,16 @@
   }
 
   function mount() {
+    if (chartHandle) {
+      try { chartHandle.destroy(); } catch (e) { /* ignore */ }
+      chartHandle = null;
+    }
+    var empty = document.querySelector(".rd-chart-empty");
+    if (empty) empty.remove();
+    var radar = document.getElementById("rd-report-radar");
+    if (radar) radar.style.display = "";
     if (typeof Chart === "undefined") return;
     var data = readPayload();
-    var radar = document.getElementById("rd-report-radar");
     if (radar && data) {
       initRadar(radar, data);
     }
@@ -76,4 +84,5 @@
   } else {
     window.addEventListener("load", mount);
   }
+  document.documentElement.addEventListener("rd-theme-change", mount);
 })();

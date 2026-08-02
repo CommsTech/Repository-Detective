@@ -21,13 +21,19 @@
 <button type="submit" {{if not .Data.Enabled}}disabled{{end}}>Start audit</button>
 </form>
 </div>
-<div class="rd-card"><h2>Recent audits</h2><table>
-<tr><th>Repo</th><th>Status</th><th>Risk</th><th>Recommendation</th><th>Started</th></tr>
-{{range .Data.Audits}}<tr>
-<td><a href="{{$.BasePath}}/preinstall/audits/{{.AuditID}}{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}">{{.NormalizedRepoURL}}</a></td>
-<td>{{.Status}}</td><td>{{if eq .Status "failed"}}unavailable{{else}}{{preinstallRiskDisplay .}}{{end}}</td><td>{{preinstallRecDisplay .}}</td><td class="rd-muted">{{.StartedAt}}</td>
-</tr>{{else}}<tr><td colspan="5" class="rd-muted">No audits yet</td></tr>{{end}}
-</table></div>
+<div class="rd-card">
+  <div class="rd-card-head"><h2>Recent audits</h2></div>
+  <table class="rd-table">
+    <tr><th scope="col">Repo</th><th scope="col">Status</th><th scope="col">Risk</th><th scope="col">Recommendation</th><th scope="col">Started</th></tr>
+    {{range .Data.Audits}}<tr>
+      <td><a class="rd-link" href="{{$.BasePath}}/preinstall/audits/{{.AuditID}}{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}">{{.NormalizedRepoURL}}</a></td>
+      <td><span class="rd-badge {{scanBadge .Status}}">{{.Status}}</span></td>
+      <td>{{if eq .Status "failed"}}unavailable{{else}}{{preinstallRiskDisplay .}}{{end}}</td>
+      <td>{{preinstallRecDisplay .}}</td>
+      <td class="rd-muted">{{.StartedAt}}</td>
+    </tr>{{else}}<tr><td colspan="5" class="rd-muted">No audits yet</td></tr>{{end}}
+  </table>
+</div>
 {{end}}
 {{template "foot" .}}
 </body></html>

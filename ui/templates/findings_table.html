@@ -21,7 +21,7 @@
     <td class="rd-finding-cell">
       <a class="rd-link" href="{{$.BasePath}}/findings/{{.ID}}{{apiKeyQS $.APIKey}}"><strong>{{.Title}}</strong></a>
       {{if .Suppressed}}<span class="rd-badge skipped">suppressed</span>{{end}}
-      {{if .FilePath}}<div class="rd-muted rd-finding-loc">{{.FilePath}}{{if .Line}}:{{.Line}}{{end}}</div>{{end}}
+      {{if .FilePath}}<div class="rd-muted rd-finding-loc">{{displayPath .FilePath}}{{if .Line}}:{{.Line}}{{end}}</div>{{end}}
       {{if .RuleID}}<div class="rd-muted rd-finding-meta">{{.RuleID}}</div>{{end}}
     </td>
     {{if $.ShowRepo}}<td>{{.RepoFullName}}</td>{{end}}

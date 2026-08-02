@@ -61,7 +61,7 @@
   <div class="rd-chart-card rd-chart-card-wide">
     <div class="rd-card-head"><h2>Scan activity (14 days)</h2><span class="rd-chip">Completed scans</span></div>
     <div class="rd-chart-canvas-wrap rd-chart-trend">
-      <canvas id="rd-chart-trend" role="img" aria-label="Findings detected per day"></canvas>
+      <canvas id="rd-chart-trend" role="img" aria-label="Completed scans per day over 14 days"></canvas>
     </div>
   </div>
   <div class="rd-chart-card">
@@ -254,7 +254,7 @@
     {{range $.Data.RecentSevereFindings}}
     <tr>
       <td><span class="rd-badge {{severityBadge .Severity}}">{{.Severity}}</span></td>
-      <td><strong>{{.Title}}</strong>{{if .FilePath}}<br><span class="rd-muted">{{.FilePath}}</span>{{end}}</td>
+      <td><strong>{{.Title}}</strong>{{if .FilePath}}<br><span class="rd-muted">{{displayPath .FilePath}}</span>{{end}}</td>
       <td>{{.RepoFullName}}</td>
       <td><span class="rd-badge skipped">{{.Source}}</span></td>
       <td>{{printf "%.0f%%" (mul .Confidence 100)}}</td>

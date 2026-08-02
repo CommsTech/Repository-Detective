@@ -183,6 +183,7 @@ func writeHealthCommonMeta(b *strings.Builder, version, publicUIBase string) {
 
 func redactHealthText(value string) string {
 	value = issues.SanitizeSecretEvidence(strings.TrimSpace(value))
+	value = scrubLegacyBrand(value)
 	value = strings.ReplaceAll(value, "\n", " ")
 	value = strings.Join(strings.Fields(value), " ")
 	if len(value) > 400 {

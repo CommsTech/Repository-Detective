@@ -175,7 +175,7 @@
       <td><strong>{{$row.Event.ScannerName}}</strong></td>
       <td><span class="rd-badge binary_missing">{{$row.Event.Status}}</span></td>
       <td>{{$row.Event.RepoFullName}}</td>
-      <td class="rd-muted rd-health-error">{{if $row.Event.Error}}{{$row.Event.Error}}{{else if $row.Event.Detail}}{{$row.Event.Detail}}{{else}}—{{end}}</td>
+      <td class="rd-muted rd-health-error">{{if $row.Event.Error}}{{displayBrand $row.Event.Error}}{{else if $row.Event.Detail}}{{displayBrand $row.Event.Detail}}{{else}}—{{end}}</td>
       <td class="rd-health-actions">
         <a class="rd-link" href="{{$row.ScanURL}}{{apiKeyQS $.APIKey}}">Open scan</a>
         <a class="rd-btn rd-btn-sm rd-btn-ghost" href="{{$row.Report.URL}}" target="_blank" rel="noopener">{{$row.Report.Label}}</a>
@@ -210,7 +210,7 @@
       <td class="rd-muted">{{formatTimeValue $row.Brief.StartedAt}}</td>
       <td><strong>{{$row.Brief.RepoFullName}}</strong></td>
       <td><code>{{$row.Brief.Bucket}}</code></td>
-      <td class="rd-muted rd-health-error">{{if $row.Brief.Error}}{{$row.Brief.Error}}{{else}}—{{end}}</td>
+      <td class="rd-muted rd-health-error">{{if $row.Brief.Error}}{{displayBrand $row.Brief.Error}}{{else}}—{{end}}</td>
       <td class="rd-health-actions">
         <a class="rd-link" href="{{$row.ScanURL}}{{apiKeyQS $.APIKey}}">Open scan</a>
         <a class="rd-btn rd-btn-sm rd-btn-ghost" href="{{$row.Report.URL}}" target="_blank" rel="noopener">{{$row.Report.Label}}</a>
@@ -231,7 +231,7 @@
   <p><strong>{{.Title}}</strong></p>
   <p class="rd-muted">{{.Message}}</p>
   {{if .Detail}}<p class="rd-muted">{{.Detail}}</p>{{end}}
-  {{if .Action}}<p class="rd-muted"><strong>Next:</strong> {{.Action}} · <a class="rd-link" href="https://git.commsnet.org/commstech/repository-detective/src/branch/main/docs/RUNNERS.md" target="_blank" rel="noopener">docs/RUNNERS.md</a></p>{{end}}
+  {{if .Action}}<p class="rd-muted"><strong>Next:</strong> {{.Action}} · <a class="rd-link" href="https://git.commsnet.org/commstech/Repository-Detective/src/branch/main/docs/RUNNERS.md" target="_blank" rel="noopener">docs/RUNNERS.md</a></p>{{end}}
   {{if .JobsByStatus}}
   <table class="rd-table rd-table-compact">
     {{range $status, $count := .JobsByStatus}}

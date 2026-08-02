@@ -3,6 +3,16 @@
 **Last updated:** 2026-08-02  
 **Repository:** https://git.commsnet.org/commstech/Repository-Detective.git
 
+## Live deploy (2026-08-02) — Full WebUI flow evaluation
+
+| Item | Value |
+|------|-------|
+| Focus | Browser walk of all operator pages in light/dark/system; branding + theme + charts |
+| Verdict | **36/36 pages OK** (Playwright headless against live `:8081`) |
+| Shipped | Theme contrast (KPI/inset/report solids); theme-aware charts; nav Learning under Intelligence; brand scrub for historical Bugbot text/paths; project group names |
+| Live | Hotpatched `rc-ui-flow-eval2` |
+| Branding | No Bugbot in UI templates; historical forge/errors/paths scrubbed at display |
+
 ## Live deploy (2026-08-02) — Agent / MCP / OpenAPI docs
 
 | Item | Value |

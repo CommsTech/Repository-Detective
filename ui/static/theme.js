@@ -65,6 +65,9 @@
     }
     var opts = options || {};
     document.documentElement.dataset.theme = mode;
+    var resolved = resolvedTheme(mode);
+    document.documentElement.style.colorScheme = resolved;
+    document.documentElement.style.backgroundColor = resolved === "dark" ? "#0a1018" : "#f0f4f8";
     updateThemeColorMeta(mode);
     syncToggleUI(mode);
     if (opts.emit !== false) {

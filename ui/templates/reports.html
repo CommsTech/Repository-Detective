@@ -56,7 +56,12 @@
     </tr>
     {{end}}{{end}}
   </table>
-  {{if not $.Data.Repositories}}<p class="rd-muted">No repositories with open findings.</p>{{end}}
+  {{if not $.Data.Repositories}}
+  <p class="rd-muted">No repositories registered yet.</p>
+  {{else}}
+  {{$shown := 0}}{{range $.Data.Repositories}}{{if gt .OpenFindingsCount 0}}{{$shown = add $shown 1}}{{end}}{{end}}
+  {{if eq $shown 0}}<p class="rd-muted">No repositories currently have open findings.</p>{{end}}
+  {{end}}
 </div>
 
 <div class="rd-card">

@@ -52,7 +52,7 @@
 
 <div class="rd-card">
   <h2>Location</h2>
-  {{if .FilePath}}<p><code>{{.FilePath}}{{if .Line}}:{{.Line}}{{end}}</code></p>{{else}}<p class="rd-muted">No file path — may be repo-level, container image, or graph finding.</p>{{end}}
+  {{if .FilePath}}<p><code>{{displayPath .FilePath}}{{if .Line}}:{{.Line}}{{end}}</code></p>{{else}}<p class="rd-muted">No file path — may be repo-level, container image, or graph finding.</p>{{end}}
   {{if $.Data.Actionable.PackageName}}<p><strong>Package:</strong> {{$.Data.Actionable.PackageName}}{{if $.Data.Actionable.PackageVersion}} @ {{$.Data.Actionable.PackageVersion}}{{end}}</p>{{end}}
   {{if $.Data.Actionable.CVEID}}<p><strong>CVE:</strong> {{$.Data.Actionable.CVEID}}{{if $.Data.Actionable.FixedVersion}} · fixed in {{$.Data.Actionable.FixedVersion}}{{end}}</p>{{end}}
   {{if $.Data.Actionable.CommitSHA}}<p><strong>Historical commit:</strong> <code>{{$.Data.Actionable.CommitSHA}}</code> — rotate secrets removed from history.</p>{{end}}

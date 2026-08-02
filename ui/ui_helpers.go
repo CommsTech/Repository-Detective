@@ -52,6 +52,8 @@ func templateFuncs() template.FuncMap {
 		"preinstallRiskDisplay":     preinstallRiskDisplay,
 		"preinstallRecDisplay":      preinstallRecDisplay,
 		"preinstallFailureStage":    preinstallFailureStage,
+		"displayBrand":              displayBrandText,
+		"displayPath":               displayPath,
 	}
 }
 

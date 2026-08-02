@@ -36,8 +36,16 @@
     {{range .Data.Groups}}
     <tr>
       <td><strong>{{.Name}}</strong><br><span class="rd-muted">{{.Description}}</span></td>
-      <td>{{.PrimaryRepositoryID}}</td>
-      <td>{{len .RepositoryIDs}}</td>
+      <td>{{with index $.Data.RepoNames .PrimaryRepositoryID}}{{.}}{{else}}{{if .PrimaryRepositoryID}}repo-{{.PrimaryRepositoryID}}{{else}}—{{end}}{{end}}</td>
+      <td>
+        {{if .RepositoryIDs}}
+        <ul class="rd-inline-list">
+          {{range .RepositoryIDs}}
+          <li>{{with index $.Data.RepoNames .}}{{.}}{{else}}repo-{{.}}{{end}}</li>
+          {{end}}
+        </ul>
+        {{else}}<span class="rd-muted">None</span>{{end}}
+      </td>
     </tr>
     {{else}}<tr><td colspan="3" class="rd-muted">No project groups yet</td></tr>{{end}}
   </table>

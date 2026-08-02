@@ -4,7 +4,7 @@
 <meta name="theme-color" content="#0d1b2a">
 <title>{{.Title}} — Repository Detective — Inspect. Analyze. Improve.</title>
 <link rel="icon" href="{{.BasePath}}/static/favicon.svg?v=2" type="image/svg+xml">
-<link rel="shortcut icon" href="/favicon.ico">
+<link rel="shortcut icon" href="{{.BasePath}}/static/favicon.svg?v=2">
 <link rel="apple-touch-icon" href="{{.BasePath}}/static/favicon.svg?v=2">
 <script>
 (function () {
@@ -44,17 +44,16 @@
       <a href="{{.BasePath}}{{apiKeyQS .APIKey}}" class="{{navActive "dashboard" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">◉</span> Dashboard</a>
       <a href="{{.BasePath}}/repos{{apiKeyQS .APIKey}}" class="{{navActive "repos" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">▣</span> Repositories</a>
       <a href="{{.BasePath}}/scans{{apiKeyQS .APIKey}}" class="{{navActive "scans" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">◎</span> Scans</a>
-      <a href="{{.BasePath}}/findings{{apiKeyQS .APIKey}}" class="{{navActive "findings" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">⚠</span> Findings</a>
+      <a href="{{.BasePath}}/findings{{apiKeyQS .APIKey}}" class="{{navActive "findings" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">◇</span> Findings</a>
       <span class="rd-nav-label">Intelligence</span>
       <a href="{{.BasePath}}/reports{{apiKeyQS .APIKey}}" class="{{navActive "reports" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">▤</span> Reports</a>
-      <a href="{{.BasePath}}/repos{{apiKeyQS .APIKey}}" class="{{navActive "policies" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">⚙</span> Policies</a>
+      <a href="{{.BasePath}}/learning{{apiKeyQS .APIKey}}" class="{{navActive "learning" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">↻</span> Learning</a>
       <span class="rd-nav-label">Platform</span>
       <a href="{{.BasePath}}/health{{apiKeyQS .APIKey}}" class="{{navActive "health" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">♥</span> System Health</a>
-      <a href="{{.BasePath}}/preinstall{{apiKeyQS .APIKey}}" class="{{navActive "preinstall" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">🔍</span> Pre-install audit</a>
+      <a href="{{.BasePath}}/preinstall{{apiKeyQS .APIKey}}" class="{{navActive "preinstall" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">⌕</span> Pre-install audit</a>
       <a href="{{.BasePath}}/projects{{apiKeyQS .APIKey}}" class="{{navActive "projects" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">◫</span> Project groups</a>
-      <a href="{{.BasePath}}/learning{{apiKeyQS .APIKey}}" class="{{navActive "learning" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">↻</span> Learning</a>
       {{if .SetupComplete}}
-      <a href="{{.BasePath}}/configure{{apiKeyQS .APIKey}}" class="{{navActive "settings" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">⚙</span> Configure</a>
+      <a href="{{.BasePath}}/configure{{apiKeyQS .APIKey}}" class="{{navActive "settings" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">☰</span> Configure</a>
       {{else}}
       <a href="/onboard/" target="_blank" rel="noopener"><span class="rd-nav-icon" aria-hidden="true">↗</span> Setup wizard</a>
       {{end}}
@@ -87,9 +86,9 @@
           <button type="button" class="rd-theme-btn" data-theme-choice="light" aria-pressed="false" aria-labelledby="rd-theme-label">Light</button>
           <button type="button" class="rd-theme-btn" data-theme-choice="dark" aria-pressed="false" aria-labelledby="rd-theme-label">Dark</button>
         </div>
-        <span class="rd-status-pill" title="Platform operational">
+        <span class="rd-status-pill" title="Operator UI connected to this control plane">
           <span class="rd-status-dot" aria-hidden="true"></span>
-          <span class="rd-status-text">Live</span>
+          <span class="rd-status-text">Control plane</span>
         </span>
       </div>
     </header>
