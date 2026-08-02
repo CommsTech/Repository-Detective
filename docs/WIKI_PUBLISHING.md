@@ -52,11 +52,25 @@ Environment variables:
 | `REPOSITORY_DETECTIVE_GITEA_TOKEN` | (required) |
 | `WIKI_SOURCE_DIR` | `docs/wiki` |
 
-## Safety
+# Publish to GitHub wiki
 
-- Never commit secrets or `docs/dogfood-reports/` content to the wiki.
-- Do not force-push the wiki remote.
-- CI does **not** auto-publish on every commit.
+GitHub stores the wiki in a separate git remote (`Repository-Detective.wiki.git`).
+That remote is **created only after** the first page is saved in the GitHub UI.
+
+```bash
+# One-time: open https://github.com/CommsTech/Repository-Detective/wiki
+# → “Create the first page” → Save (Home)
+
+export PATH="$HOME/.local/bin:$PATH"   # if using user-local gh
+gh auth status                          # needs repo scope
+./scripts/publish-github-wiki.sh
+# or: ./scripts/publish-github-wiki.sh --wait
+```
+
+Auth: `gh auth login` (recommended) or `REPOSITORY_DETECTIVE_GITHUB_TOKEN` with `repo` scope.
+Main-repo **deploy keys cannot** push the wiki remote.
+
+In-repo copies stay at `docs/wiki/` (always browsable on GitHub without the wiki tab).
 
 ## Gitea wiki link format
 

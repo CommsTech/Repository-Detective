@@ -2,7 +2,7 @@
 
 Operator documentation for **Repository Detective** — Inspect. Analyze. Improve.
 
-Live control plane (homelab): see [Quick Start](QUICK_START) and [Private Beta Install](PRIVATE_BETA_INSTALL).
+Live control plane: after install, open `/ui` (see [Quick Start](QUICK_START) and [Public beta guide](https://github.com/CommsTech/Repository-Detective/blob/main/docs/PUBLIC_BETA.md)).
 
 ## Start here
 
