@@ -50,8 +50,19 @@ SSH host alias: `github.com-repository-detective` (see `~/.ssh/config`).
 
 The script never stores tokens in `git remote` URLs.
 
-## Safety
+## History note (public seed)
 
-- Do not push `.env`, `config/config.yaml`, or `data/*.db` (gitignored).
-- Do not force-push `main` on either remote unless recovering a broken mirror intentionally.
-- After publish, keep the GitHub repo description/website pointing at the Gitea project and wiki.
+The first GitHub `main` was seeded as a **clean public snapshot** (single commit) because GitHub push protection blocked a full-history mirror on a Stripe-shaped string inside an old analyzer *test* fixture (`analyzers/hardcoded_secret_test.go`). That fixture is fixed on Gitea `main`; the historical blob remains in Gitea history.
+
+To replace the GitHub seed with full Gitea history later:
+
+1. Allow the false-positive at GitHub → Settings → Secret scanning alerts / the unblock link from the rejected push, **or**
+2. Coordinate a history rewrite of that test string on Gitea (force-push) and then `./scripts/sync-gitea-to-github.sh --github-only` (may need `--force` once).
+
+Until then, refresh GitHub with:
+
+```bash
+./scripts/sync-gitea-to-github.sh --github-snapshot
+```
+
+(rewrites GitHub `main` to match the current Gitea tree as a fresh snapshot — for tester-facing updates without full history).

@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
-# Keep Gitea (canonical) up to date. Optionally mirror to GitHub when the
-# release is ready for public discovery.
+# Keep Gitea (canonical) up to date. Optionally refresh the public GitHub mirror.
 #
 # Usage:
-#   ./scripts/sync-gitea-to-github.sh              # push main → Gitea only
-#   ./scripts/sync-gitea-to-github.sh --github     # push main → Gitea + GitHub
-#   ./scripts/sync-gitea-to-github.sh --github-only # push main → GitHub only
-#   ./scripts/sync-gitea-to-github.sh --dry-run    # show remotes / planned pushes
+#   ./scripts/sync-gitea-to-github.sh                 # push main → Gitea only
+#   ./scripts/sync-gitea-to-github.sh --github         # Gitea + full-history GitHub push
+#   ./scripts/sync-gitea-to-github.sh --github-only    # full-history GitHub push only
+#   ./scripts/sync-gitea-to-github.sh --github-snapshot  # Gitea + tree snapshot → GitHub
+#   ./scripts/sync-gitea-to-github.sh --dry-run
+#
+# Prefer --github-snapshot while GitHub push protection blocks full history
+# (historical Stripe-shaped test fixture). After allowlisting or history rewrite,
+# use --github for a normal fast-forward mirror.
 #
 # GitHub auth (first match wins):
 #   1) SSH deploy key ~/.ssh/repository-detective-github-deploy
@@ -19,14 +23,16 @@ cd "$ROOT"
 DRY_RUN=false
 PUSH_GITEA=true
 PUSH_GITHUB=false
+GITHUB_SNAPSHOT=false
 
 usage() {
   cat <<'EOF'
-Keep Gitea (canonical) up to date. Mirror to GitHub only for public releases.
+Keep Gitea (canonical) up to date. Refresh GitHub for public testers.
 
 Usage:
-  ./scripts/sync-gitea-to-github.sh              # push main → Gitea only
-  ./scripts/sync-gitea-to-github.sh --github     # push main → Gitea + GitHub
+  ./scripts/sync-gitea-to-github.sh                    # push main → Gitea only
+  ./scripts/sync-gitea-to-github.sh --github-snapshot  # Gitea + clean tree snapshot → GitHub
+  ./scripts/sync-gitea-to-github.sh --github           # Gitea + full-history GitHub (after allowlist)
   ./scripts/sync-gitea-to-github.sh --github-only
   ./scripts/sync-gitea-to-github.sh --dry-run
 EOF
@@ -38,7 +44,8 @@ for arg in "$@"; do
     --dry-run|-n) DRY_RUN=true ;;
     --github|--with-github|--public) PUSH_GITHUB=true ;;
     --github-only) PUSH_GITEA=false; PUSH_GITHUB=true ;;
-    --gitea-only) PUSH_GITEA=true; PUSH_GITHUB=false ;;
+    --github-snapshot) PUSH_GITHUB=true; GITHUB_SNAPSHOT=true ;;
+    --gitea-only) PUSH_GITEA=true; PUSH_GITHUB=false; GITHUB_SNAPSHOT=false ;;
     -h|--help) usage ;;
     *) printf 'error: unknown arg %s (try --help)\n' "$arg" >&2; exit 1 ;;
   esac
@@ -69,7 +76,6 @@ auth_url() {
     printf '%s\n' "$base"
     return
   fi
-  # oauth2:token works for Gitea; x-access-token works for GitHub PATs
   printf 'https://%s:%s@%s\n' "$user" "$token" "${base#https://}"
 }
 
@@ -82,12 +88,40 @@ ensure_remote() {
   fi
 }
 
+push_github_snapshot() {
+  local tmp sha msg
+  tmp="$(mktemp -d)"
+  sha="$(git rev-parse --short HEAD)"
+  msg="Public mirror snapshot of Gitea ${BRANCH}@${sha}
+
+Canonical history: https://git.commsnet.org/commstech/repository-detective
+License: AGPL-3.0-or-later"
+  log "building clean GitHub tree snapshot from $BRANCH@$sha"
+  git clone --no-local --quiet "$ROOT" "$tmp/rd"
+  (
+    cd "$tmp/rd"
+    git checkout --orphan "public-snapshot"
+    git rm -rf . >/dev/null 2>&1 || true
+    git checkout "$BRANCH" -- .
+    git add -A
+    git -c user.email="release@commsnet.org" -c user.name="Repository Detective Release" \
+      commit -m "$msg" >/dev/null
+    if [[ -f "$DEPLOY_KEY" ]]; then
+      GIT_SSH_COMMAND="ssh -i $DEPLOY_KEY -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new" \
+        git push --force git@github.com-repository-detective:CommsTech/Repository-Detective.git HEAD:main
+    else
+      [[ -n "$GITHUB_TOKEN" ]] || die "deploy key or GITHUB token required for snapshot push"
+      git push --force "$(auth_url "$GITHUB_HTTPS_URL" "$GITHUB_TOKEN" "x-access-token")" HEAD:main
+    fi
+  )
+  rm -rf "$tmp"
+}
+
 use_github_ssh=false
 if [[ -f "$DEPLOY_KEY" ]]; then
   use_github_ssh=true
 fi
 
-# Keep origin as the human-readable Gitea URL (no embedded token in git config).
 ensure_remote origin "$GITEA_URL"
 if $use_github_ssh; then
   ensure_remote github "$GITHUB_SSH_URL"
@@ -95,10 +129,10 @@ else
   ensure_remote github "$GITHUB_HTTPS_URL"
 fi
 
-log "policy: Gitea=canonical (default push); GitHub=public mirror (explicit --github only)"
+log "policy: Gitea=canonical; GitHub=public mirror"
 log "remotes:"
 git remote -v
-log "plan: gitea=$PUSH_GITEA github=$PUSH_GITHUB dry_run=$DRY_RUN"
+log "plan: gitea=$PUSH_GITEA github=$PUSH_GITHUB snapshot=$GITHUB_SNAPSHOT dry_run=$DRY_RUN"
 
 if $DRY_RUN; then
   exit 0
@@ -112,17 +146,22 @@ if $PUSH_GITEA; then
 fi
 
 if $PUSH_GITHUB; then
-  log "push $BRANCH → GitHub (public mirror)"
-  if $use_github_ssh; then
-    GIT_SSH_COMMAND="ssh -i $DEPLOY_KEY -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new" \
-      git push github "HEAD:refs/heads/$BRANCH"
+  if $GITHUB_SNAPSHOT; then
+    log "push tree snapshot → GitHub (public mirror)"
+    push_github_snapshot
   else
-    [[ -n "$GITHUB_TOKEN" ]] || die "Add deploy key ~/.ssh/repository-detective-github-deploy or set REPOSITORY_DETECTIVE_GITHUB_TOKEN"
-    github_push="$(auth_url "$GITHUB_HTTPS_URL" "$GITHUB_TOKEN" "x-access-token")"
-    git push "$github_push" "HEAD:refs/heads/$BRANCH"
+    log "push $BRANCH → GitHub (full history)"
+    if $use_github_ssh; then
+      GIT_SSH_COMMAND="ssh -i $DEPLOY_KEY -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new" \
+        git push github "HEAD:refs/heads/$BRANCH"
+    else
+      [[ -n "$GITHUB_TOKEN" ]] || die "Add deploy key or set REPOSITORY_DETECTIVE_GITHUB_TOKEN"
+      github_push="$(auth_url "$GITHUB_HTTPS_URL" "$GITHUB_TOKEN" "x-access-token")"
+      git push "$github_push" "HEAD:refs/heads/$BRANCH"
+    fi
   fi
 else
-  log "skipping GitHub (not a public release push — re-run with --github when ready)"
+  log "skipping GitHub — use --github-snapshot (testers) or --github (full history)"
 fi
 
 log "done"
