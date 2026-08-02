@@ -8,10 +8,12 @@
 | Item | Value |
 |------|-------|
 | Focus | Clear open findings for `commstech/Bugbot` (repo_id=1) from Repository Detective |
-| Code | Gitleaks allowlist + test fixture hardening; workflow SHA pins; reliability error handling |
-| Config | `gitleaks_config: config/gitleaks.toml`; expanded `skip_patterns`; calibration seed rules |
-| UI smoke | 15/15 routes HTTP 200 (`docs/dogfood-reports/ui-route-smoke-2026-08-02.md`) |
-| Follow-up | Hotpatch/redeploy binary, dogfood rescan, run `scripts/closeout-repo1-findings.py` |
+| Commits | `adff149`, `a26a5f1`, plus placeholder TECH-MARKER fix on `main` |
+| Live | `rc-adff149`, healthy, tools **10/10** |
+| Dogfood scan | `fed458d08455a5f8` completed (report-only) |
+| Open queue | **0** unsuppressed open findings (`status=open&suppressed=false`) |
+| UI smoke | 15/15 routes HTTP 200 (pre + post closeout) |
+| Closeout | `scripts/closeout-repo1-findings.py` + expanded calibration seed |
 
 ## Live deploy (2026-08-01)
 
