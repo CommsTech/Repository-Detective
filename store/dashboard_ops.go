@@ -373,11 +373,14 @@ func BuildDashboardActions(
 }
 
 // ApplyPlatformReadiness merges runtime tool probes into platform summary.
+// ScannerToolsMissingCount is aligned to *current* PATH probes (not historical
+// binary_missing rows), so the dashboard matches System Health.
 func ApplyPlatformReadiness(summary *DashboardSummary, tools []operator.ToolStatus) {
 	if summary.platformRollups == nil {
 		summary.platformRollups = map[string]scannerDBRollup{}
 	}
 	summary.Platform = MergeScannerRollups(summary.platformRollups, tools)
+	summary.ScannerToolsMissingCount = summary.Platform.ConfiguredMissingRuntime
 }
 
 func itoa(n int) string {

@@ -49,56 +49,40 @@ Published Gitea content is application + docs. Operator `.env`, `config/config.y
 
 ## Core Components
 
-### 1. Webhook Handler (`handlers/webhook.go`)
-- Rate limiting per client IP
-- Webhook secret verification (HMAC-safe)
-- Repository include/exclude pattern filtering
-- Dispatches push and pull request events to the analysis processor
+### 1. Control plane (`main.go`, `api/`, `ui/`)
+- Authenticated JSON API under `/api/v1` and operator Web UI under `/ui`
+- Dashboard / health / findings / learning / reports / configure
+- OpenAPI served at `GET /api/v1/openapi.yaml`; MCP bridge in `cmd/repository-detective-mcp`
 
-### 2. Onboarding UI (`web/`, `handlers/onboarding.go`)
-- Embedded static wizard at `/onboard`
-- Tests Gitea and AI connections
-- Lists repositories and registers webhooks
-- Exports environment variables for deployment
+### 2. Webhook & onboarding (`handlers/`, `web/`)
+- Webhook auth, rate limit, include/exclude patterns
+- Onboarding wizard at `/onboard` for forge + API key setup
 
-### 3. Analysis Engine (`analyzers/engine.go`)
-- **Prepare** — repository structure and attack surface mapping
-- **Scan** — static pattern rules, then LLM auditors with full file content
-- **Validate** — advocate/counsel debate (high-confidence static hits skip debate)
-- **Dedup** — merge findings by location
-- **Prove** — generate proof-of-concept for validated findings
+### 3. Scan orchestration (`analyzers/engine.go`, `scanners/`)
+- Primary path: external **scanner registry** (trivy, grype, gitleaks, semgrep, Go/IAC/linters) run concurrently
+- SBOM generation (`sbom/`) via cyclonedx-gomod / Syft
+- Optional LLM CAH stages (prepare → scan → validate → prove) when AI policy enables them
 
-### 4. Static Scanner (`analyzers/static.go`)
-- Deterministic regex rules for SQL injection, secrets, XSS, command injection, debug logging
-- Runs before any LLM call
-- LLM auditors target files flagged by static analysis when possible
+### 4. Persistence & learning (`store/`, calibration UI/API)
+- SQLite findings, scans, suppressions, external issue mappings
+- Repo-scoped calibration recommendations (`/ui/learning`, `/api/v1/calibration/*`)
 
-### 5. AI Integration (`ai/`)
-- Provider abstraction: OpenAI-compatible and Anthropic Messages APIs
-- Supported: OpenAI, Anthropic, OpenRouter, Ollama, OpenWebUI, OpenClaw
-- Auditor prompts include fetched source code
+### 5. Forge & remediation (`gitea/`, `issues/`, remediation/closure packages)
+- Issue filing, reconciliation, optional remediation PRs and evidence closure
 
-### 6. Gitea Client (`gitea/`)
-- Repository file listing and content fetch (base64 decode)
-- Webhook creation for onboarding
-- Label resolution and creation for issues
-
-### 7. Issue Manager (`issues/`)
-- Creates labeled Gitea issues from analysis results
-- Issue body includes severity, file, line, code snippet, and PoC
+### 6. Runners & containers
+- Optional HMAC runner delegation and container image scanning routes
 
 ## Data Flow
 
 ```
-Gitea webhook
-    → handlers.WebhookHandler (auth, rate limit, repo filter)
-    → main.webhookProcessor (concurrency limiter)
-    → analyzers.Engine.RunCAHPipeline
-        → Prepare (structure + attack surface)
-        → Scan (static → LLM on flagged files)
-        → Validate → Dedup → Prove
-    → issues.Manager.CreateIssuesFromAnalysis
-    → Gitea issues with labels
+Webhook / Analyze API / scheduled Scan Now
+    → clone workspace
+    → scanners.Registry.RunAll (parallel external tools)
+    → sbom.Generate (cyclonedx-gomod / Syft)
+    → optional LLM CAH stages when AI policy enabled
+    → persist findings + scanner_results + scan summary
+    → optional forge issues / remediation / closure
 ```
 
 ## Module Path
@@ -109,12 +93,11 @@ git.commsnet.org/commstech/repository-detective
 
 ## Configuration
 
-- `gitea_url`, `gitea_token`, `webhook_secret`
-- `public_url` — required for webhook registration via onboarding UI
-- `api_key` — protects API and onboarding endpoints
-- `ai_provider`, `ai_base_url`, `ai_api_key`, `ai_model`
-- `enable_security`, `enable_quality`
-- `repository_include_patterns`, `repository_exclude_patterns`
-- `skip_patterns`, `max_file_size`, `max_concurrent_analyses`
+- Forge: `gitea_url`, `gitea_token`, `webhook_secret`, `public_url`
+- Auth: `api_key` / `REPOSITORY_DETECTIVE_API_KEY`
+- Per-scanner enables (`enable_trivy`, `enable_gitleaks`, …) and scan profiles (Light/Standard/Deep/Custom)
+- Timeouts: `analysis_timeout_seconds`, `scanner_timeout_seconds`
+- Optional AI: `ai_provider`, `ai_base_url`, `ai_api_key`, `ai_model` (off by default for beta)
+- Include/exclude and skip patterns for repositories and files
 
-See [docs/ONBOARDING.md](docs/ONBOARDING.md) and [docs/AI_PROVIDERS.md](docs/AI_PROVIDERS.md).
+See [docs/CONFIGURATION.md](docs/CONFIGURATION.md), [docs/ONBOARDING.md](docs/ONBOARDING.md), and [docs/AI_PROVIDERS.md](docs/AI_PROVIDERS.md).

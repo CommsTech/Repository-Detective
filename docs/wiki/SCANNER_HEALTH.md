@@ -84,3 +84,7 @@ Dashboard may show both: degraded coverage from probes and historical missing ev
 | Scans fail with `binary_missing` | Same as missing probe — install or disable scanner |
 
 See [SCANNERS.md](SCANNERS.md), [OPERATOR_READINESS.md](OPERATOR_READINESS.md), [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
+
+---
+
+See also [Home](Home).

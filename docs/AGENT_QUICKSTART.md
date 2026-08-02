@@ -120,11 +120,12 @@ Wire that binary into OpenClaw / Cursor as an MCP stdio server. Tool names and s
 | What can I do? | `GET /api/v1/about`, `GET /api/v1/status` | `rd_about`, `rd_status` |
 | List repos | `GET /api/v1/repos` | `rd_list_repos` |
 | Start scan | `POST /api/v1/analyze` | `rd_analyze` |
+| List scans for a repo | `GET /api/v1/repos/:id/scans` | (use REST; no fleet `/scans` list) |
 | Inspect scan | `GET /api/v1/scans/:id` | `rd_get_scan` |
-| Triage findings | `GET /api/v1/findings` | `rd_list_findings` |
+| Triage findings | `GET /api/v1/findings?repo_id=` | `rd_list_findings` |
 | Dashboard rollup | `GET /api/v1/dashboard/summary` | `rd_dashboard_summary` |
 | AI advisory | `POST /api/v1/scans/:id/ai-recommendations` | `rd_run_ai_review` |
-| Calibration | `/api/v1/calibration/*` | `rd_calibration_*` |
+| Calibration / learning | `/api/v1/calibration/*` (UI: `/ui/learning`) | `rd_calibration_*` |
 
 ## Related docs
 

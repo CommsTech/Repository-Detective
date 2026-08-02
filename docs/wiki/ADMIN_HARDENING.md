@@ -51,3 +51,7 @@ Privacy-aware deployment checklist for operators. **Not** a compliance certifica
 - [ ] Purge workspace directories under scan work path if they may contain cloned secrets
 
 See also [SECURITY_HARDENING.md](SECURITY_HARDENING.md), [PRIVACY_AND_DATA_PROTECTION.md](PRIVACY_AND_DATA_PROTECTION.md).
+
+---
+
+See also [Home](Home).

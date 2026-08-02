@@ -3,6 +3,19 @@
 **Last updated:** 2026-08-02  
 **Repository:** https://git.commsnet.org/commstech/Repository-Detective.git
 
+## Live deploy (2026-08-02) — Full application audit
+
+| Item | Value |
+|------|-------|
+| Verdict | **Conditional GO** — accuracy/docs/wiki fixed; residual Go 1.23 image vs go.mod 1.25 |
+| Evidence | [docs/dogfood-reports/full-application-audit-2026-08-02.md](docs/dogfood-reports/full-application-audit-2026-08-02.md) |
+| Live | `rc-full-audit7` |
+| Dashboard tools missing | **0** (live probe overlay) |
+| SBOM | Syft fallback → **`sbom_generated` / 58 packages** |
+| Shellcheck / Trivy | **found** on product scans |
+| Grype | Rebuilt DB under container `XDG_CACHE_HOME=/app/data/cache` (was malformed; `$HOME/.cache` rebuild was the wrong path) |
+| Wiki | **24 pages** at https://git.commsnet.org/commstech/repository-detective/wiki |
+
 ## Live deploy (2026-08-02) — Full UI eval clean pass
 
 | Item | Value |

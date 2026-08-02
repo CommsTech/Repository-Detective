@@ -60,3 +60,7 @@ Report contrast issues with the **Accessibility** issue template.
 ## Feedback
 
 File issues with template **Accessibility** and label `type/accessibility`.
+
+---
+
+See also [Home](Home).

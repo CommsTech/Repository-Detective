@@ -9,6 +9,27 @@
   Gitea-first repository assessment, issue lifecycle, and evidence-based remediation.
 </p>
 
+<p align="center">
+  <a href="https://git.commsnet.org/commstech/repository-detective/actions?workflow=ci.yml&amp;actor=0&amp;status=0">
+    <img src="https://git.commsnet.org/commstech/repository-detective/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI Status">
+  </a>
+  <a href="https://pkg.go.dev/git.commsnet.org/commstech/repository-detective">
+    <img src="https://img.shields.io/badge/go-1.25-00ADD8?style=flat&logo=go&logoColor=white" alt="Go 1.25">
+  </a>
+  <a href="docs/LICENSING_STRATEGY.md">
+    <img src="https://img.shields.io/badge/license-AGPL--3.0%20(proposed)-blue?style=flat" alt="License: AGPL-3.0 proposed">
+  </a>
+  <a href="docs/DOCKER.md">
+    <img src="https://img.shields.io/badge/platforms-linux%2Famd64-lightgrey?style=flat&logo=linux&logoColor=white" alt="Platforms: linux/amd64">
+  </a>
+  <a href="docs/DOCKER.md">
+    <img src="https://img.shields.io/badge/docker-all--in--one-2496ED?style=flat&logo=docker&logoColor=white" alt="Docker">
+  </a>
+  <a href="docs/COMMUNITY_EDITION.md">
+    <img src="https://img.shields.io/badge/edition-private%20beta-orange?style=flat" alt="Private beta">
+  </a>
+</p>
+
 ---
 
 ## Community private beta
@@ -23,7 +44,8 @@
 
 > **Naming:** The product is **Repository Detective**. Use `REPOSITORY_DETECTIVE_*` env vars and `X-Repository-Detective-API-Key`. See [docs/NAMING.md](docs/NAMING.md).
 
-Repo: https://git.commsnet.org/commstech/Repository-Detective.git
+Repo (canonical Gitea): https://git.commsnet.org/commstech/Repository-Detective.git  
+GitHub mirror: https://github.com/CommsTech/Repository-Detective.git — sync: [docs/GITHUB_MIRROR.md](docs/GITHUB_MIRROR.md)
 
 **Beta feedback:** use [Gitea issue templates](https://git.commsnet.org/commstech/Repository-Detective/issues/new) (`.gitea/ISSUE_TEMPLATE/`) — include scan ID and finding fingerprint; never paste secrets.
 
@@ -112,4 +134,7 @@ See [docs/README.md](docs/README.md) for the full index. Agent entry points: [AG
 
 ## License
 
-See repository license file. Edition strategy: [docs/EDITIONS.md](docs/EDITIONS.md).
+**Community (proposed):** AGPL-3.0-or-later — see [docs/LICENSING_STRATEGY.md](docs/LICENSING_STRATEGY.md).  
+**Commercial / Enterprise:** paid terms — see [docs/EDITIONS.md](docs/EDITIONS.md).
+
+License text is not yet published as a root `LICENSE` file; treat the strategy doc as planning guidance until formal SPDX text is added.

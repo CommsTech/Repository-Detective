@@ -1,21 +1,25 @@
 # Gitea wiki publishing
 
-Repository Detective keeps **source** wiki pages under `docs/wiki/`. The live Gitea wiki is a **separate git repository**:
+Repository Detective keeps **source** wiki pages under `docs/wiki/`. The live operator wiki is:
 
 ```text
-https://git.commsnet.org/commstech/repository-detective.wiki.git
+https://git.commsnet.org/commstech/repository-detective/wiki
 ```
+
+Gitea’s HTML/wiki slug for this product is **lowercase** `repository-detective`. Clone URLs may still use `Repository-Detective` casing; both should resolve on this forge. Prefer the lowercase slug for wiki API and wiki git remotes.
 
 ## Source of truth
 
 | Location | Role |
 |----------|------|
 | `docs/wiki/*.md` | Editable source copies in the main repo |
-| `*.wiki.git` | Published operator wiki (Gitea UI) |
+| Gitea wiki UI / API | Published operator wiki |
 
-Edit pages in `docs/wiki/`, then publish with the script below.
+Edit pages in `docs/wiki/`, then publish.
 
-## Publish (manual)
+## Publish (preferred): Gitea Wiki API
+
+Git push to `*.wiki.git` may return **HTTP 500** on this forge. Use the API publisher:
 
 ```bash
 export REPOSITORY_DETECTIVE_GITEA_URL=https://git.commsnet.org
@@ -23,26 +27,36 @@ export REPOSITORY_DETECTIVE_GITEA_OWNER=commstech
 export REPOSITORY_DETECTIVE_GITEA_REPO=repository-detective
 export REPOSITORY_DETECTIVE_GITEA_TOKEN=your-token-with-wiki-write
 
+python3 scripts/publish-gitea-wiki-api.py
+```
+
+The script creates or updates each `docs/wiki/*.md` page via `POST /wiki/new` and `PATCH /wiki/page/{title}`.
+
+## Publish (fallback): wiki git remote
+
+```bash
+export REPOSITORY_DETECTIVE_GITEA_REPO=repository-detective
+export REPOSITORY_DETECTIVE_GITEA_TOKEN=your-token-with-wiki-write
 ./scripts/publish-gitea-wiki.sh
 ```
+
+If clone/push fails with HTTP 500, use the API publisher above.
 
 Environment variables:
 
 | Variable | Default |
 |----------|---------|
-| `REPOSITORY_DETECTIVE_GITEA_URL` | `REPOSITORY_DETECTIVE_GITEA_URL` or `https://git.commsnet.org` |
+| `REPOSITORY_DETECTIVE_GITEA_URL` | `https://git.commsnet.org` |
 | `REPOSITORY_DETECTIVE_GITEA_OWNER` | `commstech` |
-| `REPOSITORY_DETECTIVE_GITEA_REPO` | `Repository-Detective` |
-| `REPOSITORY_DETECTIVE_GITEA_TOKEN` | `REPOSITORY_DETECTIVE_GITEA_TOKEN` |
+| `REPOSITORY_DETECTIVE_GITEA_REPO` | `repository-detective` |
+| `REPOSITORY_DETECTIVE_GITEA_TOKEN` | (required) |
 | `WIKI_SOURCE_DIR` | `docs/wiki` |
-| `WIKI_WORK_DIR` | temp directory |
-| `KEEP_WIKI_WORKDIR` | `false` — set `true` to keep clone for debugging |
 
 ## Safety
 
 - Never commit secrets or `docs/dogfood-reports/` content to the wiki.
 - Do not force-push the wiki remote.
-- CI does **not** auto-publish on every commit — use manual dispatch or release tagging when trusted.
+- CI does **not** auto-publish on every commit.
 
 ## Gitea wiki link format
 
@@ -52,6 +66,4 @@ Gitea wiki pages use names **without** `.md`:
 [Dashboard guide](DASHBOARD_GUIDE)
 ```
 
-## Deprecated: docs-only wiki
-
-If pages only exist under `docs/wiki/` in the main repo, the Gitea wiki UI will **not** show them until `publish-gitea-wiki.sh` runs successfully.
+Curated `docs/wiki/Home.md` is the published Home page — do not overwrite it with auto-generated bullet lists.

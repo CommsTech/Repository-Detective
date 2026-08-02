@@ -419,7 +419,7 @@ func loadConfig() error {
 	viper.SetDefault("max_file_size", 1024*1024) // 1MB
 	viper.SetDefault("enable_security", true)
 	viper.SetDefault("enable_quality", true)
-	viper.SetDefault("enable_llm_auditors", true)
+	viper.SetDefault("enable_llm_auditors", false)
 	viper.SetDefault("enable_trivy", true)
 	viper.SetDefault("enable_grype", true)
 	viper.SetDefault("enable_gitleaks", false)
@@ -993,6 +993,9 @@ func initializeComponents() error {
 	}
 	initNotifyManager()
 	controlPlaneHandler = api.NewHandler(rdStore, globalSnapshot, logger)
+	controlPlaneHandler.SetToolsProbe(func() []operator.ToolStatus {
+		return operator.CheckTools(operatorScannerConfig())
+	})
 	if notifyManager != nil {
 		controlPlaneHandler.SetNotificationGlobal(notifyManager.Config())
 	}

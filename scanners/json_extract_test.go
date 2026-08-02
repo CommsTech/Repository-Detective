@@ -38,3 +38,15 @@ func TestExtractJSONObjectWithTrailingNoise(t *testing.T) {
 		t.Fatalf("invalid json: %s", payload)
 	}
 }
+
+func TestExtractJSONObjectWithDashProgressTrailer(t *testing.T) {
+	raw := []byte("{\"SchemaVersion\":2,\"Results\":[]}\n- scanning complete\n")
+	payload, err := extractJSONObject(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var report map[string]any
+	if err := json.Unmarshal(payload, &report); err != nil {
+		t.Fatalf("unmarshal extracted: %v payload=%s", err, payload)
+	}
+}

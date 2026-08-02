@@ -6,8 +6,8 @@ Repository Detective pins dependencies in source control. This document is the o
 
 | Component | Version | Lock source |
 |-----------|---------|-------------|
-| Go toolchain (module) | 1.21 | `go.mod` |
-| Go toolchain (Docker build) | 1.22 | `Dockerfile` builder stage |
+| Go toolchain (module) | 1.25.0 | `go.mod` |
+| Go toolchain (Docker build) | 1.25 | `Dockerfile` `ARG GO_VERSION` |
 | gin-gonic/gin | v1.9.1 | `go.mod` / `go.sum` |
 | google/uuid | v1.6.0 | `go.mod` / `go.sum` |
 | robfig/cron/v3 | v3.0.1 | `go.mod` / `go.sum` |
@@ -29,7 +29,7 @@ Optional offline builds: `./scripts/vendor-deps.sh` then build with `-mod=vendor
 
 | Component | Version | Notes |
 |-----------|---------|--------|
-| golang (builder) | 1.22-alpine | `Dockerfile` |
+| golang (builder) | 1.25-alpine | `Dockerfile` |
 | alpine (runtime) | 3.20 | `Dockerfile` |
 
 ## Scanner binaries (Docker, `INSTALL_EXTERNAL_TOOLS=true`)
@@ -66,7 +66,7 @@ Optional offline builds: `./scripts/vendor-deps.sh` then build with `-mod=vendor
 | OpenSCAP | Not integrated — compliance scanning roadmap |
 | TruffleHog | Not integrated — gitleaks covers secret patterns |
 | OWASP Dependency-Check | Partial overlap — trivy/grype |
-| Syft / Dependency-Track | SBOM export manual; continuous monitor roadmap |
+| Syft / Dependency-Track | Syft + cyclonedx-gomod in image; UI `/ui/repos/:id/sbom`; Dependency-Track continuous monitor still roadmap |
 | CodeQL / SonarQube | Not integrated — semgrep + staticcheck cover SAST for supported langs |
 
 See [SCANNERS.md](SCANNERS.md) and [SCANNER_ROADMAP.md](SCANNER_ROADMAP.md).

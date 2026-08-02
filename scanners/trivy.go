@@ -1,9 +1,12 @@
 package scanners
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -63,31 +66,85 @@ func RunTrivy(ctx context.Context, logger *logrus.Logger, dir string, cfg Config
 		severity = "HIGH,CRITICAL"
 	}
 
+	reportPath := filepath.Join(dir, ".repository-detective-trivy.json")
+	_ = os.Remove(reportPath)
+	reportFile, err := os.Create(reportPath)
+	if err != nil {
+		tmp, tmpErr := os.CreateTemp("", "rd-trivy-*.json")
+		if tmpErr != nil {
+			result.Status = StatusFailed
+			result.Detail = fmt.Sprintf("create trivy report file: %v", err)
+			return result
+		}
+		reportPath = tmp.Name()
+		_ = tmp.Close()
+	} else {
+		_ = reportFile.Close()
+	}
+	defer func() { _ = os.Remove(reportPath) }()
+
+	cacheDir := filepath.Join(dir, ".rd-trivy-cache")
+	_ = os.MkdirAll(cacheDir, 0o755)
+
 	args := []string{
 		"fs",
 		"--scanners", "vuln,secret,misconfig",
 		"--severity", severity,
 		"--format", "json",
 		"--quiet",
+		"--cache-dir", cacheDir,
+		"--output", reportPath,
 		dir,
 	}
 
 	timeout := time.Duration(cfg.TimeoutSeconds) * time.Second
-	output, err := runCommand(ctx, timeout, dir, "trivy", args...)
-	if err != nil {
-		if len(output) == 0 {
-			result.Status = classifyCommandError(err)
-			result.Detail = err.Error()
-			logger.Warnf("[SCANNER:trivy] scan failed: status=%s err=%v", result.Status, err)
-			return result
-		}
+	stdout, stderr, err := runCommandStreams(ctx, timeout, dir, "trivy", args...)
+	reportBytes, readErr := os.ReadFile(reportPath)
+	if readErr != nil {
+		reportBytes = nil
+	}
+	defer func() { _ = os.RemoveAll(cacheDir) }()
+
+	if err != nil && len(bytes.TrimSpace(reportBytes)) == 0 && len(bytes.TrimSpace(stdout)) == 0 && len(bytes.TrimSpace(stderr)) == 0 {
+		result.Status = classifyCommandError(err)
+		result.Detail = err.Error()
+		logger.Warnf("[SCANNER:trivy] scan failed: status=%s err=%v", result.Status, err)
+		return result
 	}
 
-	findings, parseErr := parseTrivyOutput(output, dir)
+	findings, parseErr := parseTrivyOutput(reportBytes, dir)
+	if parseErr != nil && len(bytes.TrimSpace(stdout)) > 0 {
+		findings, parseErr = parseTrivyOutput(stdout, dir)
+	}
+	if parseErr != nil && len(bytes.TrimSpace(stderr)) > 0 {
+		findings, parseErr = parseTrivyOutput(stderr, dir)
+	}
 	if parseErr != nil {
+		merged := append(append([]byte{}, stdout...), stderr...)
+		findings, parseErr = parseTrivyOutput(merged, dir)
+	}
+	if parseErr != nil {
+		errText := strings.TrimSpace(string(stripANSI(stderr)))
+		if errText == "" {
+			errText = strings.TrimSpace(string(stripANSI(stdout)))
+		}
+		errText = redactScannerDetail(errText)
+		if len(bytes.TrimSpace(reportBytes)) == 0 && errText != "" {
+			// Tool failed before producing JSON (cache lock, DB, permissions, etc.).
+			result.Status = StatusFailed
+			result.Detail = errText
+			if err != nil {
+				result.Detail += "; " + err.Error()
+			}
+			logger.Warnf("[SCANNER:trivy] scanner failed: %s", result.Detail)
+			return result
+		}
 		result.Status = StatusParseFailed
-		result.Detail = parseErr.Error()
-		logger.Warnf("[SCANNER:trivy] failed to parse output: %v", parseErr)
+		result.Detail = fmt.Sprintf("%v (report_bytes=%d stdout=%d stderr=%d)", parseErr, len(reportBytes), len(stdout), len(stderr))
+		if errText != "" {
+			result.Detail += "; " + errText
+		}
+		logger.Warnf("[SCANNER:trivy] failed to parse output: %v", result.Detail)
 		return result
 	}
 
@@ -97,9 +154,9 @@ func RunTrivy(ctx context.Context, logger *logrus.Logger, dir string, cfg Config
 }
 
 func parseTrivyOutput(output []byte, dir string) ([]Finding, error) {
-	payload := output
-	if raw, err := extractJSONObject(output); err == nil {
-		payload = raw
+	payload, err := extractJSONObject(output)
+	if err != nil {
+		return nil, err
 	}
 	var report trivyReport
 	if err := json.Unmarshal(payload, &report); err != nil {

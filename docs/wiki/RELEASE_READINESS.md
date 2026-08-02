@@ -1,52 +1,56 @@
 # Release readiness
 
-Checklist for deploying Repository Detective after the closeout sprint. Evidence paths are relative to repo root.
+Checklist for deploying Repository Detective. Evidence paths are relative to repo root.
 
 ## Build and test
 
-| Check | Command | Closeout evidence |
-|-------|---------|-------------------|
-| Unit tests | `docker run --rm -v $PWD:/src -w /src golang:1.23-bookworm go test ./... -count=1` | Run 2026-06-02 — all packages `ok` |
-| Verify script | `./scripts/verify-all.sh` | Requires local Go + staticcheck |
-| Docker health | `curl -sf http://<host>:8081/health` | `status: healthy` observed on local deployment |
+| Check | Command | Notes |
+|-------|---------|-------|
+| Unit tests | `docker run --rm -v $PWD:/src -w /src golang:1.25-bookworm go test ./... -count=1` | Match `go.mod` (`go 1.25`) |
+| Vendor build | `CGO_ENABLED=0 go build -mod=vendor -o build/repository-detective .` | Production binary |
+| Docker health | `curl -sf http://127.0.0.1:8081/health` | Expect `status: healthy`, `tools_summary.missing: []` |
 
 ## Functional smoke
 
 | Area | Verify |
 |------|--------|
-| Dashboard | `/ui/` loads; charts or empty states; text summary present |
-| Scanner health | `/ui/health` — configured/missing/optional distinct |
+| Dashboard | `/ui/` loads; charts or empty states |
+| Scanner health | `/ui/health` — live tools match `/health` |
 | Findings | `/ui/findings` queue loads |
+| Learning | `/ui/learning` accept/reject/recompute |
+| Configure | `/ui/configure` platform settings |
 | Reports | `/ui/reports` executive summary |
-| API | `GET /api/v1/status` with API key |
+| Scans UI | `/ui/scans` list |
+| API | `GET /api/v1/status` + `GET /api/v1/repos/:id/scans` with API key |
 
 ## Documentation
 
-- [x] [PRIVACY_AND_DATA_PROTECTION.md](PRIVACY_AND_DATA_PROTECTION.md)
-- [x] [ACCESSIBILITY.md](ACCESSIBILITY.md)
-- [x] [SCANNER_HEALTH.md](SCANNER_HEALTH.md)
-- [x] [DASHBOARD_GUIDE.md](DASHBOARD_GUIDE.md)
-- [x] [ADMIN_HARDENING.md](ADMIN_HARDENING.md)
-- [x] [DATA_RETENTION.md](DATA_RETENTION.md)
-- [x] [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md)
-- [x] [CHANGELOG.md](../CHANGELOG.md)
+- [x] Privacy, accessibility, scanner health, dashboard, admin hardening
+- [x] Known limitations + this checklist
+- [x] Agent / MCP / OpenAPI (`docs/AGENT_QUICKSTART.md`, `docs/MCP.md`, `docs/openapi.yaml`)
+- [x] Wiki source under `docs/wiki/` — publish with `scripts/publish-gitea-wiki-api.py`
 
 ## Wiki
 
-- Prepared: `docs/wiki/` — **not pushed** (no wiki remote on clone)
-- See [WIKI_PUBLISHING.md](WIKI_PUBLISHING.md)
+- Live: https://git.commsnet.org/commstech/repository-detective/wiki
+- Source: `docs/wiki/`
+- Publisher: API script (git `*.wiki.git` push may HTTP 500) — see [WIKI_PUBLISHING.md](WIKI_PUBLISHING.md)
 
 ## Self-scan (dogfood)
 
 - Guide: [DOGFOODING.md](DOGFOODING.md)
 - Script: [scripts/dogfood-self-scan.sh](../scripts/dogfood-self-scan.sh)
-- Closeout: health endpoint verified; full analyze requires API key + repo registration
+- After SBOM/tool image upgrades, always rescan before trusting historical scan summaries
 
 ## Sign-off
 
 | Role | Status |
 |------|--------|
-| Engineering | Tests pass; closeout fixes merged locally |
+| Engineering | Tests + live health verified on deploy |
 | Security | Privacy-aware handling documented; not compliance certified |
 | Accessibility | WCAG-aligned improvements; formal audit not run |
 | Operations | Admin hardening + retention docs provided |
+
+---
+
+See also [Home](Home).

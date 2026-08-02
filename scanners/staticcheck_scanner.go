@@ -48,6 +48,14 @@ func runStaticcheckWithCommand(ctx context.Context, logger *logrus.Logger, dir s
 
 	parsed, parseErr := parseStaticcheckOutput(output, dir, cfg)
 	if parseErr != nil && len(parsed.Findings) == 0 {
+		msg := strings.ToLower(parseErr.Error())
+		if strings.Contains(msg, "compile") ||
+			strings.Contains(msg, "requires at least go") ||
+			strings.Contains(msg, "built with go") {
+			result.Status = StatusScannerUnavailable
+			result.Detail = parseErr.Error()
+			return result
+		}
 		result.Status = StatusParseFailed
 		result.Detail = parseErr.Error()
 		return result
@@ -80,10 +88,23 @@ func parseStaticcheckOutput(output []byte, dir string, cfg Config) (cappedFindin
 		if msg.Code == "" {
 			continue
 		}
+		if strings.EqualFold(msg.Code, "compile") {
+			detail := strings.TrimSpace(msg.Message)
+			if detail == "" {
+				detail = "staticcheck compile error"
+			}
+			return cappedFindings{}, fmt.Errorf("%s", detail)
+		}
 		parsedAny = true
 		findings = append(findings, staticcheckFinding(msg, dir))
 	}
 	if !parsedAny && len(strings.TrimSpace(clean)) > 0 && strings.TrimSpace(clean) != "[]" {
+		lower := strings.ToLower(clean)
+		if strings.Contains(lower, "requires at least go") ||
+			strings.Contains(lower, "built with go") ||
+			strings.Contains(lower, "compile") {
+			return cappedFindings{}, fmt.Errorf("%s", firstNonEmptyLine(clean))
+		}
 		return cappedFindings{}, fmt.Errorf("no staticcheck findings parsed from output")
 	}
 	capped := capFindings(findings, goScannerMaxFindings(cfg))
@@ -128,4 +149,14 @@ func mapStaticcheckCode(code string) (category, severity string, confidence floa
 
 func ParseStaticcheckOutputForTest(output []byte, dir string, cfg Config) (cappedFindings, error) {
 	return parseStaticcheckOutput(output, dir, cfg)
+}
+
+func firstNonEmptyLine(text string) string {
+	for _, line := range strings.Split(text, "\n") {
+		line = strings.TrimSpace(line)
+		if line != "" {
+			return line
+		}
+	}
+	return strings.TrimSpace(text)
 }

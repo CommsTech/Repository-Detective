@@ -100,6 +100,7 @@ type golangciIssue struct {
 
 type golangciReport struct {
 	Issues []golangciIssue `json:"Issues"`
+	Error  string          `json:"Error"`
 }
 
 func runGolangciLint(ctx context.Context, logger *logrus.Logger, dir string, files []string, cfg Config) RunResult {
@@ -168,9 +169,16 @@ func runGolangciLint(ctx context.Context, logger *logrus.Logger, dir string, fil
 }
 
 func parseGolangciOutput(output []byte, dir, relPath string, cfg Config) ([]Finding, error) {
+	payload := output
+	if raw, err := extractJSONObject(output); err == nil {
+		payload = raw
+	}
 	var report golangciReport
-	if err := json.Unmarshal(output, &report); err != nil {
+	if err := json.Unmarshal(payload, &report); err != nil {
 		return nil, err
+	}
+	if len(report.Issues) == 0 && strings.TrimSpace(report.Error) != "" {
+		return nil, fmt.Errorf("golangci-lint: %s", strings.TrimSpace(report.Error))
 	}
 
 	var findings []Finding
@@ -341,11 +349,29 @@ func runShellcheck(ctx context.Context, logger *logrus.Logger, dir string, files
 }
 
 func parseShellcheckOutput(output []byte, dir string, cfg Config) ([]Finding, error) {
-	var reports [][]shellcheckIssue
-	if err := json.Unmarshal(output, &reports); err != nil {
-		return nil, err
+	payload := output
+	if raw, err := extractJSONArray(output); err == nil {
+		payload = raw
+	}
+	trimmed := strings.TrimSpace(string(payload))
+	if trimmed == "" || trimmed == "[]" || trimmed == "null" {
+		return nil, nil
 	}
 
+	// ShellCheck 0.10+ emits a flat [{...}] array; older builds used [[{...}]].
+	var flat []shellcheckIssue
+	if err := json.Unmarshal(payload, &flat); err == nil {
+		return shellcheckIssuesToFindings([][]shellcheckIssue{flat}, dir, cfg), nil
+	}
+
+	var reports [][]shellcheckIssue
+	if err := json.Unmarshal(payload, &reports); err != nil {
+		return nil, err
+	}
+	return shellcheckIssuesToFindings(reports, dir, cfg), nil
+}
+
+func shellcheckIssuesToFindings(reports [][]shellcheckIssue, dir string, cfg Config) []Finding {
 	var findings []Finding
 	for _, group := range reports {
 		for _, issue := range group {
@@ -370,7 +396,12 @@ func parseShellcheckOutput(output []byte, dir string, cfg Config) ([]Finding, er
 			})
 		}
 	}
-	return findings, nil
+	return findings
+}
+
+// ParseShellcheckOutputForTest exposes shellcheck JSON parsing for unit tests.
+func ParseShellcheckOutputForTest(output []byte, dir string, cfg Config) ([]Finding, error) {
+	return parseShellcheckOutput(output, dir, cfg)
 }
 
 func shellcheckSeverity(level string) string {

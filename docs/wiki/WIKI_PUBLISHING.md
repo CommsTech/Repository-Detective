@@ -1,80 +1,73 @@
-# Wiki publishing (Gitea)
+# Gitea wiki publishing
 
-Repository Detective docs live in the **`docs/`** directory of the main repository. Gitea wikis use a **separate git remote** (`*.wiki.git`).
+Repository Detective keeps **source** wiki pages under `docs/wiki/`. The live operator wiki is:
 
-## Wiki-ready copies
-
-Markdown prepared for wiki import is under **`docs/wiki/`** (mirrors key operator pages). Update those files when changing the corresponding `docs/*.md` sources.
-
-## Verify remote (do not force-push)
-
-```bash
-cd /path/to/repository-detective
-git remote -v
-# Look for a wiki remote, e.g.:
-# wiki  https://git.commsnet.org/commstech/repository-detective.wiki.git (fetch)
+```text
+https://git.commsnet.org/commstech/repository-detective/wiki
 ```
 
-If no wiki remote exists, the wiki has not been linked from this clone.
+Gitea’s HTML/wiki slug for this product is **lowercase** `repository-detective`. Clone URLs may still use `Repository-Detective` casing; both should resolve on this forge. Prefer the lowercase slug for wiki API and wiki git remotes.
 
-## Manual publish (recommended)
+## Source of truth
 
-From a machine with credentials to `git.commsnet.org`:
+| Location | Role |
+|----------|------|
+| `docs/wiki/*.md` | Editable source copies in the main repo |
+| Gitea wiki UI / API | Published operator wiki |
 
-```bash
-# One-time clone of the empty wiki repo
-git clone https://git.commsnet.org/commstech/repository-detective.wiki.git /tmp/repository-detective-wiki
-cd /tmp/repository-detective-wiki
+Edit pages in `docs/wiki/`, then publish.
 
-# Copy prepared pages (adjust paths to your checkout)
-cp /path/to/Repository-Detective/docs/wiki/*.md .
+## Publish (preferred): Gitea Wiki API
 
-git add -A
-git status
-git commit -m "Sync operator docs from main repo"
-git push origin master   # or main — match your wiki default branch
-```
-
-### Initial wiki home page
-
-Create `Home.md` in the wiki repo with:
-
-```markdown
-# Repository Detective wiki
-
-Operator documentation synced from the main repository.
-
-- [Privacy and data protection](PRIVACY_AND_DATA_PROTECTION)
-- [Scanner health](SCANNER_HEALTH)
-- [Dashboard guide](DASHBOARD_GUIDE)
-- [Setup](SETUP) — copy from docs/SETUP.md when needed
-```
-
-Gitea wiki links use page names without `.md`.
-
-## Automated sync (recommended script)
+Git push to `*.wiki.git` may return **HTTP 500** on this forge. Use the API publisher:
 
 ```bash
-# Dry-run (lists pages, no credentials required for listing)
-WIKI_DRY_RUN=true ./scripts/publish-gitea-wiki.sh
+export REPOSITORY_DETECTIVE_GITEA_URL=https://git.commsnet.org
+export REPOSITORY_DETECTIVE_GITEA_OWNER=commstech
+export REPOSITORY_DETECTIVE_GITEA_REPO=repository-detective
+export REPOSITORY_DETECTIVE_GITEA_TOKEN=your-token-with-wiki-write
 
-# Publish (token via env — not stored in git config)
-export REPOSITORY_DETECTIVE_GITEA_TOKEN='…'   # wiki-write scope
+python3 scripts/publish-gitea-wiki-api.py
+```
+
+The script creates or updates each `docs/wiki/*.md` page via `POST /wiki/new` and `PATCH /wiki/page/{title}`.
+
+## Publish (fallback): wiki git remote
+
+```bash
+export REPOSITORY_DETECTIVE_GITEA_REPO=repository-detective
+export REPOSITORY_DETECTIVE_GITEA_TOKEN=your-token-with-wiki-write
 ./scripts/publish-gitea-wiki.sh
 ```
 
-Options:
+If clone/push fails with HTTP 500, use the API publisher above.
 
-| Variable | Purpose |
+Environment variables:
+
+| Variable | Default |
 |----------|---------|
-| `WIKI_DRY_RUN=true` | List pages only |
-| `WIKI_REMOTE_URL` | Override wiki git URL |
-| `KEEP_WIKI_WORKDIR=true` | Inspect clone after run |
+| `REPOSITORY_DETECTIVE_GITEA_URL` | `https://git.commsnet.org` |
+| `REPOSITORY_DETECTIVE_GITEA_OWNER` | `commstech` |
+| `REPOSITORY_DETECTIVE_GITEA_REPO` | `repository-detective` |
+| `REPOSITORY_DETECTIVE_GITEA_TOKEN` | (required) |
+| `WIKI_SOURCE_DIR` | `docs/wiki` |
 
-Never use `git push --force` on the wiki remote.
+## Safety
 
-## Status in this environment
+- Never commit secrets or `docs/dogfood-reports/` content to the wiki.
+- Do not force-push the wiki remote.
+- CI does **not** auto-publish on every commit.
 
-Wiki push requires credentials to `git.commsnet.org`. **Prepared copies** are under `docs/wiki/`; verify push locally with the commands above.
+## Gitea wiki link format
 
-**Do not claim the wiki was updated unless `git push` to the wiki remote succeeded.**
+Gitea wiki pages use names **without** `.md`:
+
+```markdown
+[Dashboard guide](DASHBOARD_GUIDE)
+```
+
+Curated `docs/wiki/Home.md` is the published Home page — do not overwrite it with auto-generated bullet lists.
+
+---
+
+See also [Home](Home).

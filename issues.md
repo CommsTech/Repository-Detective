@@ -1,5 +1,31 @@
 # Development Issues Log
 
+## Open (2026-08-02) — External architecture review + our audit merge
+
+| Priority | Issue | Plan |
+|----------|-------|------|
+| HIGH | Live image Go toolchain older than `go.mod` 1.25 | Rebuild all-in-one from current Dockerfile |
+| HIGH | Finding backlog ~11k open (crit/high still material) | Calibration / suppressions / focus triage |
+| HIGH | Mega `main.go` (~2594 lines) + flat Config | Safe vertical split — see reconciliation report |
+| MEDIUM | Was: viper `enable_llm_auditors` default `true` vs beta YAML `false` | **Fixed in tree** — default now `false` |
+| INFO | External review praised deterministic-first / isolation / fingerprints | Preserve as invariants during refactor |
+
+See [docs/dogfood-reports/external-review-reconciliation-2026-08-02.md](docs/dogfood-reports/external-review-reconciliation-2026-08-02.md).
+
+## Fixed (2026-08-02) — Full application audit (accuracy / reliability / docs / wiki)
+
+| Priority | Issue | Resolution |
+|----------|-------|------------|
+| HIGH | Dashboard `scanner_tools_missing_count` showed historical 10 while health was 12/12 | `ApplyPlatformReadiness` sets missing from live probes; API + System Health apply overlay |
+| HIGH | ShellCheck 0.10 flat `[{…}]` JSON always `parse_failed` | Parser accepts flat + nested arrays |
+| HIGH | SBOM `sbom_tool_missing` / cyclonedx fail left no artifact | Syft fallback after cyclonedx-gomod; keep SBOM when grype DB broken |
+| HIGH | Wiki stubs / “not published” | Full wiki pages + API publish **23/23** |
+| MEDIUM | OpenAPI wrong `repository_id`; missing repo scans route | `repo_id`, `GET /repos/{id}/scans`, calibration recompute, partial-spec banner |
+| MEDIUM | Trivy trailing progress / empty stdout parse failures | `--output` report file + per-scan `--cache-dir` |
+| MEDIUM | Misleading SBOM status when only grype DB failed | Status stays generated; detail notes grype DB |
+| MEDIUM | Grype `malformed` during scans while CLI looked fine | Live `XDG_CACHE_HOME=/app/data/cache` held corrupt DB; rebuilt there (not `$HOME/.cache`) |
+| LOW | Dogfood script `BASE` typo `8081}}` | Fixed |
+
 ## Fixed (2026-08-02) — Full UI eval residual contrast + clean re-pass
 
 | Priority | Issue | Resolution |

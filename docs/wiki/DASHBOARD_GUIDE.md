@@ -50,3 +50,7 @@ Charts use slate grid lines and `#94a3b8` label colors for contrast on the defau
 - [UI.md](UI.md)
 - [SCANNER_HEALTH.md](SCANNER_HEALTH.md)
 - [REPORTING.md](REPORTING.md)
+
+---
+
+See also [Home](Home).

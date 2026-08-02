@@ -36,8 +36,16 @@ func MinimalSubprocessEnv() []string {
 	if path != "" {
 		env = append(env, "PATH="+path)
 	}
+	home := os.Getenv("HOME")
+	if home == "" {
+		// Scanner tools (grype/trivy/syft) store DBs under $HOME/.cache.
+		// Without HOME they fall back to /.cache and fail in the container.
+		if st, err := os.Stat("/home/repositorydetective"); err == nil && st.IsDir() {
+			home = "/home/repositorydetective"
+		}
+	}
 	for _, key := range []string{
-		"HOME", "USERPROFILE", "SystemRoot", "TEMP", "TMP", "TMPDIR",
+		"USERPROFILE", "SystemRoot", "TEMP", "TMP", "TMPDIR",
 		"XDG_CACHE_HOME", "XDG_CONFIG_HOME", "APPDATA", "LOCALAPPDATA",
 		"LANG", "LC_ALL",
 	} {
@@ -45,9 +53,14 @@ func MinimalSubprocessEnv() []string {
 			env = append(env, key+"="+v)
 		}
 	}
+	if home != "" {
+		env = append(env, "HOME="+home)
+		if os.Getenv("XDG_CACHE_HOME") == "" {
+			env = append(env, "XDG_CACHE_HOME="+home+"/.cache")
+		}
+	}
 	return env
 }
-
 func isSensitiveEnvKey(key string) bool {
 	key = strings.ToUpper(strings.TrimSpace(key))
 	for _, blocked := range SensitiveEnvKeys {

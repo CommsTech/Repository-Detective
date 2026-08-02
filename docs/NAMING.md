@@ -17,7 +17,8 @@ Public release surfaces say **Repository Detective** only.
 | Fingerprint body marker | `Repository Detective fingerprint:` |
 | Fingerprint values | `rd-<hex>` |
 | Go module | `git.commsnet.org/commstech/repository-detective` |
-| Gitea repo | `https://git.commsnet.org/commstech/Repository-Detective.git` |
+| Gitea repo (canonical) | `https://git.commsnet.org/commstech/Repository-Detective.git` |
+| GitHub mirror | `https://github.com/CommsTech/Repository-Detective.git` |
 | Binary / container / image | `repository-detective` |
 | SQLite path | `./data/repository-detective.db` |
 

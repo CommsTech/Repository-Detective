@@ -164,6 +164,8 @@ reports/nightly-rd-evolution/
 !docs/dogfood-reports/ui-route-smoke-report.md
 !docs/dogfood-reports/ui-responsiveness-bench-2026-08-02.md
 !docs/dogfood-reports/ui-flow-eval-2026-08-02.md
+!docs/dogfood-reports/full-application-audit-2026-08-02.md
+!docs/dogfood-reports/external-review-reconciliation-2026-08-02.md
 !docs/dogfood-reports/container-log-health-report.md
 !docs/dogfood-reports/full-application-acceptance-report.md
 !docs/dogfood-reports/live-rc-redeploy-baseline.md

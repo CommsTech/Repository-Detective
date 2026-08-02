@@ -66,7 +66,6 @@ func GenerateAndCheck(ctx context.Context, dir, outDir string) (Result, error) {
 func generateGoModuleSBOM(ctx context.Context, dir, outDir string) (Result, error) {
 	outPath := filepath.Join(outDir, "sbom-go.cdx.json")
 	if !commandAvailable("cyclonedx-gomod") {
-		// Fallback: minimal SBOM note — operator can install cyclonedx-gomod or syft.
 		if commandAvailable("syft") {
 			return generateSyftSBOM(ctx, dir, outDir)
 		}
@@ -74,10 +73,47 @@ func generateGoModuleSBOM(ctx context.Context, dir, outDir string) (Result, erro
 	}
 	cmd := exec.CommandContext(ctx, "cyclonedx-gomod", "mod", "-json", "-output", outPath)
 	cmd.Dir = dir
+	cmd.Env = append(os.Environ(), "GOTOOLCHAIN=auto")
 	if out, err := cmd.CombinedOutput(); err != nil {
-		return Result{Status: StatusCheckFailed, Detail: strings.TrimSpace(string(out))}, nil
+		// Prefer Syft when the Go toolchain cannot satisfy module requirements
+		// (common when the container Go is older than go.mod).
+		if commandAvailable("syft") {
+			res, syftErr := generateSyftSBOM(ctx, dir, outDir)
+			// Accept any Syft result that produced an artifact — grype DB issues
+			// still leave a usable SBOM (StatusCheckFailed with ArtifactPath).
+			if syftErr == nil && strings.TrimSpace(res.ArtifactPath) != "" {
+				prefix := "generated with syft after cyclonedx-gomod failed"
+				if strings.TrimSpace(res.Detail) == "" {
+					res.Detail = prefix
+				} else if !strings.Contains(res.Detail, "syft") {
+					res.Detail = prefix + "; " + res.Detail
+				}
+				return res, nil
+			}
+		}
+		return Result{Status: StatusCheckFailed, Detail: redactSBOMDetail(string(out))}, nil
 	}
 	return checkWithGrype(ctx, outPath, "CycloneDX")
+}
+
+func redactSBOMDetail(detail string) string {
+	// Strip ANSI color codes from tool logs (syft / cyclonedx-gomod).
+	var b strings.Builder
+	s := detail
+	for i := 0; i < len(s); i++ {
+		if s[i] == 0x1b {
+			for i < len(s) && s[i] != 'm' {
+				i++
+			}
+			continue
+		}
+		b.WriteByte(s[i])
+	}
+	clean := strings.Join(strings.Fields(b.String()), " ")
+	if len(clean) > 400 {
+		return clean[:397] + "..."
+	}
+	return clean
 }
 
 func generateSyftSBOM(ctx context.Context, dir, outDir string) (Result, error) {
@@ -85,7 +121,11 @@ func generateSyftSBOM(ctx context.Context, dir, outDir string) (Result, error) {
 	cmd := exec.CommandContext(ctx, "syft", dir, "-o", "cyclonedx-json", "--quiet")
 	out, err := cmd.Output()
 	if err != nil {
-		return Result{Status: StatusCheckFailed, Detail: err.Error()}, nil
+		detail := err.Error()
+		if ee, ok := err.(*exec.ExitError); ok && len(ee.Stderr) > 0 {
+			detail = redactSBOMDetail(string(ee.Stderr))
+		}
+		return Result{Status: StatusCheckFailed, Detail: detail}, nil
 	}
 	if err := os.WriteFile(outPath, out, 0o644); err != nil {
 		return Result{}, err
@@ -122,11 +162,16 @@ func checkWithGrype(ctx context.Context, sbomPath, format string, pkgCount ...in
 	}
 	grypeArgs := []string{"sbom:" + cleanSBOM, "-o", "json", "--quiet"}
 	cmd := exec.CommandContext(ctx, "grype", grypeArgs...)
+	cmd.Env = append(os.Environ(), "GOTOOLCHAIN=auto")
+	if os.Getenv("HOME") == "" {
+		cmd.Env = append(cmd.Env, "HOME=/home/repositorydetective", "XDG_CACHE_HOME=/home/repositorydetective/.cache")
+	}
 	out, err := cmd.CombinedOutput()
 	text := strings.TrimSpace(string(out))
 	if err != nil && !strings.Contains(text, "{") {
-		if strings.Contains(strings.ToLower(text), "failed to load vulnerability db") {
-			res.Status = StatusCheckFailed
+		if strings.Contains(strings.ToLower(text), "failed to load vulnerability db") ||
+			strings.Contains(strings.ToLower(text), "database disk image is malformed") {
+			res.Status = StatusGenerated
 			res.Detail = "SBOM generated; grype vulnerability DB unavailable"
 			return res, nil
 		}

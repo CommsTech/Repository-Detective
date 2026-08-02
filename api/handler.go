@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"git.commsnet.org/commstech/repository-detective/notify"
+	"git.commsnet.org/commstech/repository-detective/operator"
 	"git.commsnet.org/commstech/repository-detective/store"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
@@ -18,11 +19,20 @@ type Handler struct {
 	global       store.GlobalSettingsSnapshot
 	notifyGlobal notify.Config
 	logger       *logrus.Logger
+	toolsProbe   func() []operator.ToolStatus
 }
 
 // NewHandler creates an API handler. store may be nil when database is disabled.
 func NewHandler(s store.QueryStore, global store.GlobalSettingsSnapshot, logger *logrus.Logger) *Handler {
 	return &Handler{store: s, global: global, logger: logger}
+}
+
+// SetToolsProbe attaches a live scanner PATH probe used to align dashboard metrics
+// with System Health (current missing binaries, not historical rows).
+func (h *Handler) SetToolsProbe(fn func() []operator.ToolStatus) {
+	if h != nil {
+		h.toolsProbe = fn
+	}
 }
 
 // SetGlobal replaces the in-memory global settings snapshot used by API handlers.
@@ -110,6 +120,9 @@ func (h *Handler) DashboardSummary(c *gin.Context) {
 		h.logger.Errorf("dashboard summary: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load dashboard"})
 		return
+	}
+	if h.toolsProbe != nil {
+		store.ApplyPlatformReadiness(&summary, h.toolsProbe())
 	}
 	c.JSON(http.StatusOK, toDashboardSummaryResponse(summary))
 }

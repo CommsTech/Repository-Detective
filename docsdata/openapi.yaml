@@ -4,7 +4,12 @@ info:
   description: |
     Operator JSON API for Repository Detective (Inspect. Analyze. Improve.).
     Authenticate with `X-Repository-Detective-API-Key` or `Authorization: Bearer`.
-    Agent guide: docs/AGENT_QUICKSTART.md · MCP: docs/MCP.md
+    Agent guide: docs/AGENT_QUICKSTART.md · MCP: docs/MCP.md · Full route list: docs/API_ROUTES.md
+
+    This OpenAPI document is a **partial** agent-facing surface (discovery, core scans/findings,
+    calibration, AI recommendations). It is not exhaustive — see API_ROUTES.md for the complete map.
+    There is no `GET /api/v1/scans` (list-all) and no `/api/v1/learning/*`; use
+    `GET /api/v1/repos/{id}/scans` and `/api/v1/calibration/*` (UI learning is `/ui/learning`).
   version: "1.0.0"
   contact:
     name: Repository Detective
@@ -137,6 +142,25 @@ paths:
         "200":
           description: Repository list
 
+  /api/v1/repos/{id}/scans:
+    get:
+      tags: [scans]
+      summary: List scans for a repository (no fleet-wide /scans list)
+      security:
+        - ApiKeyHeader: []
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/RepoId"
+        - in: query
+          name: limit
+          schema: { type: integer }
+        - in: query
+          name: offset
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Scan list for one repository
+
   /api/v1/scans/{scan_id}:
     get:
       tags: [scans]
@@ -165,8 +189,9 @@ paths:
           name: severity
           schema: { type: string }
         - in: query
-          name: repository_id
+          name: repo_id
           schema: { type: integer }
+          description: Repository id filter (not repository_id)
         - in: query
           name: limit
           schema: { type: integer }
@@ -311,6 +336,17 @@ paths:
         "200":
           description: Rejected
 
+  /api/v1/calibration/recompute:
+    post:
+      tags: [calibration]
+      summary: Recompute calibration recommendations (global + repo-scoped)
+      security:
+        - ApiKeyHeader: []
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Recompute started or completed
+
 components:
   securitySchemes:
     ApiKeyHeader:
@@ -321,6 +357,11 @@ components:
       type: http
       scheme: bearer
   parameters:
+    RepoId:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer }
     ScanId:
       name: scan_id
       in: path

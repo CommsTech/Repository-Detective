@@ -616,6 +616,7 @@ func (h *Handler) SystemHealth(c *gin.Context) {
 	if h.readinessFn != nil {
 		r := h.readinessFn()
 		readiness = &r
+		store.ApplyPlatformReadiness(&summary, readiness.Tools)
 	}
 	active, _ := h.store.CountActiveScans(c.Request.Context())
 	runnerJobs := summary.RunnerJobsByStatus
