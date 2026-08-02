@@ -91,10 +91,18 @@ func (s *Service) RunReview(ctx context.Context, in PacketInput) (ReviewResult, 
 	client, err := NewClient(cfg, s.transport)
 	if err != nil {
 		result.Error = err.Error()
-		_ = s.failReview(ctx, rec, result.Error)
+		if failErr := s.failReview(ctx, rec, result.Error); failErr != nil {
+			return result, fmt.Errorf("%w (also failed to persist review failure: %v)", err, failErr)
+		}
 		return result, err
 	}
-	reviewResult, _ := client.Review(ctx, cfg, reviewID, pkt)
+	reviewResult, reviewErr := client.Review(ctx, cfg, reviewID, pkt)
+	if reviewErr != nil && reviewResult.Error == "" {
+		reviewResult.Error = reviewErr.Error()
+		if reviewResult.Status == "" {
+			reviewResult.Status = "failed"
+		}
+	}
 	reviewResult.RedactionCount = redactions
 	if reviewResult.FindingsSent == 0 {
 		reviewResult.FindingsSent = len(pkt.Findings)
@@ -109,23 +117,34 @@ func (s *Service) RunReview(ctx context.Context, in PacketInput) (ReviewResult, 
 	rec.ErrorMessage = reviewResult.Error
 	rec.FinishedAt = &finished
 	if cfg.StoreResponses && reviewResult.Response != nil {
-		sanitized, _ := json.Marshal(reviewResult.Response)
-		rec.ResponseJSON = sanitized
+		sanitized, marshalErr := json.Marshal(reviewResult.Response)
+		if marshalErr != nil {
+			rec.ErrorMessage = strings.TrimSpace(rec.ErrorMessage + "; response marshal: " + marshalErr.Error())
+		} else {
+			rec.ResponseJSON = sanitized
+		}
 	}
-	_ = s.store.UpdateAIAdvisoryReview(ctx, rec)
+	if err := s.store.UpdateAIAdvisoryReview(ctx, rec); err != nil {
+		return reviewResult, fmt.Errorf("update ai advisory review: %w", err)
+	}
 	if reviewResult.Response != nil {
 		for _, r := range reviewResult.Response.Recommendations {
-			gaps, _ := json.Marshal(r.EvidenceGaps)
-			_, _ = s.store.CreateAIAdvisoryRecommendation(ctx, store.AIAdvisoryRecommendation{
+			gaps, gapErr := json.Marshal(r.EvidenceGaps)
+			if gapErr != nil {
+				gaps = []byte("[]")
+			}
+			if _, err := s.store.CreateAIAdvisoryRecommendation(ctx, store.AIAdvisoryRecommendation{
 				ReviewID: reviewID, FindingFingerprint: r.Fingerprint,
 				Classification: r.Classification, SuggestedAction: r.SuggestedAction,
 				SuggestedSeverity: r.SuggestedSeverity, SuggestedConfidence: r.SuggestedConfidence,
 				Reason: r.Reason, EvidenceGapsJSON: string(gaps),
 				OperatorStatus: "pending", CreatedAt: now, UpdatedAt: now,
-			})
+			}); err != nil {
+				return reviewResult, fmt.Errorf("create ai advisory recommendation: %w", err)
+			}
 		}
 	}
-	return reviewResult, nil
+	return reviewResult, reviewErr
 }
 
 func (s *Service) failReview(ctx context.Context, rec store.AIAdvisoryReview, msg string) error {
@@ -149,8 +168,7 @@ func SanitizeStoredResponse(raw json.RawMessage) string {
 	if len(raw) == 0 {
 		return ""
 	}
-	out, n := RedactText(string(raw), true)
-	_ = n
+	out, _ := RedactText(string(raw), true)
 	return out
 }
 

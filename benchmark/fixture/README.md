@@ -9,7 +9,7 @@ Not scanned in production homelab by default.
 |------|-----------------|
 | `secret_hardcoded.go` | True positive — fake API key pattern |
 | `sql_concat.go` | True positive — SQL string concat |
-| `requirements.txt` | Dependency/SBOM candidate — pinned old requests |
+| `requirements.txt` | Dependency/SBOM candidate — pinned requests/urllib3 for lockfile shape |
 | `mock_secret_test.go` | Likely false positive — mock token in test |
 | `vendor/minified.js` | False positive candidate — minified vendor |
 | `orphan_module.go` | Graph/dead-code candidate |

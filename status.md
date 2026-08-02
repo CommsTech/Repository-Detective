@@ -1,7 +1,17 @@
 # Gitea Bugbot Plugin - Implementation Status
 
-**Last updated:** 2026-08-01  
+**Last updated:** 2026-08-02  
 **Repository:** https://git.commsnet.org/commstech/Bugbot.git
+
+## Live deploy (2026-08-02) — RD findings closeout
+
+| Item | Value |
+|------|-------|
+| Focus | Clear open findings for `commstech/Bugbot` (repo_id=1) from Repository Detective |
+| Code | Gitleaks allowlist + test fixture hardening; workflow SHA pins; reliability error handling |
+| Config | `gitleaks_config: config/gitleaks.toml`; expanded `skip_patterns`; calibration seed rules |
+| UI smoke | 15/15 routes HTTP 200 (`docs/dogfood-reports/ui-route-smoke-2026-08-02.md`) |
+| Follow-up | Hotpatch/redeploy binary, dogfood rescan, run `scripts/closeout-repo1-findings.py` |
 
 ## Live deploy (2026-08-01)
 

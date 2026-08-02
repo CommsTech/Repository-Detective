@@ -30,9 +30,13 @@ func EnsureScannerTempDir(dataDir string, logger *logrus.Logger) string {
 		logger.WithError(err).Warn("could not set TMPDIR for scanners")
 	}
 	if cache := filepath.Join(dataDir, "cache"); true {
-		_ = os.MkdirAll(cache, 0o755)
+		if err := os.MkdirAll(cache, 0o755); err != nil && logger != nil {
+			logger.WithError(err).Debug("could not create scanner cache dir")
+		}
 		if os.Getenv("XDG_CACHE_HOME") == "" {
-			_ = os.Setenv("XDG_CACHE_HOME", cache)
+			if err := os.Setenv("XDG_CACHE_HOME", cache); err != nil && logger != nil {
+				logger.WithError(err).Debug("could not set XDG_CACHE_HOME for scanners")
+			}
 		}
 	}
 	return tmpDir

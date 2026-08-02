@@ -98,14 +98,21 @@ func (e *Engine) run(ctx context.Context, repositoryID int64, preview bool) (Res
 	}
 	scannerResults := map[string]string{}
 	if latestScan.ID != "" {
-		rows, _ := e.store.ListScannerResultsByScan(ctx, latestScan.ID)
+		rows, err := e.store.ListScannerResultsByScan(ctx, latestScan.ID)
+		if err != nil {
+			return Result{}, fmt.Errorf("list scanner results for reconciliation: %w", err)
+		}
 		for _, r := range rows {
 			scannerResults[strings.ToLower(r.ScannerName)] = r.Status
 		}
 	}
 	fpInScan := map[string]bool{}
 	if latestScan.ID != "" {
-		fpInScan, _ = e.store.ListFingerprintsInScan(ctx, latestScan.ID, repositoryID)
+		var err error
+		fpInScan, err = e.store.ListFingerprintsInScan(ctx, latestScan.ID, repositoryID)
+		if err != nil {
+			return Result{}, fmt.Errorf("list fingerprints in scan for reconciliation: %w", err)
+		}
 	}
 
 	openIssues := make([]store.ExternalIssue, 0, len(extIssues))
@@ -151,7 +158,9 @@ func (e *Engine) run(ctx context.Context, repositoryID int64, preview bool) (Res
 	}
 
 	if e.matcher != nil {
-		_ = e.matcher.LoadRepository(ctx, repositoryID)
+		if err := e.matcher.LoadRepository(ctx, repositoryID); err != nil {
+			return Result{}, fmt.Errorf("load semantic matcher for reconciliation: %w", err)
+		}
 	}
 
 	for _, ic := range contexts {
@@ -365,17 +374,23 @@ func (e *Engine) applyItem(ctx context.Context, repo store.Repository, item *Ite
 			return nil
 		}
 		if e.cfg.Comment {
-			_ = e.forge.CreateIssueComment(ctx, owner, name, item.IssueNumber,
-				"Repository Detective verified this finding is absent from the latest scan. Closing with evidence.")
+			if err := e.forge.CreateIssueComment(ctx, owner, name, item.IssueNumber,
+				"Repository Detective verified this finding is absent from the latest scan. Closing with evidence."); err != nil {
+				return fmt.Errorf("comment on verified close #%d: %w", item.IssueNumber, err)
+			}
 		}
 		if err := e.forge.CloseIssue(ctx, owner, name, item.IssueNumber); err != nil {
 			return err
 		}
-		_, _ = e.store.UpsertExternalIssue(ctx, store.ExternalIssue{
+		if _, err := e.store.UpsertExternalIssue(ctx, store.ExternalIssue{
 			FindingID: item.FindingID, ForgeType: forgeType,
 			IssueNumber: item.IssueNumber, IssueURL: item.IssueURL, State: "closed",
-		})
-		_ = e.store.UpdateFindingStatus(ctx, item.FindingID, store.FindingStatusResolvedVerified)
+		}); err != nil {
+			return fmt.Errorf("upsert closed external issue #%d: %w", item.IssueNumber, err)
+		}
+		if err := e.store.UpdateFindingStatus(ctx, item.FindingID, store.FindingStatusResolvedVerified); err != nil {
+			return fmt.Errorf("mark finding verified for #%d: %w", item.IssueNumber, err)
+		}
 	case ActionCloseDuplicate:
 		if !e.cfg.CloseDuplicates {
 			return nil
@@ -384,7 +399,9 @@ func (e *Engine) applyItem(ctx context.Context, repo store.Repository, item *Ite
 			return nil
 		}
 		if len(item.LabelsToAdd) > 0 {
-			_ = e.forge.AddIssueLabels(ctx, owner, name, item.IssueNumber, item.LabelsToAdd)
+			if err := e.forge.AddIssueLabels(ctx, owner, name, item.IssueNumber, item.LabelsToAdd); err != nil {
+				return fmt.Errorf("add duplicate labels on #%d: %w", item.IssueNumber, err)
+			}
 		}
 		comment := fmt.Sprintf(
 			"Repository Detective closed this issue as a **duplicate** of #%d.\n\n"+
@@ -394,7 +411,9 @@ func (e *Engine) applyItem(ctx context.Context, repo store.Repository, item *Ite
 			item.CanonicalIssue, item.Fingerprint, item.LatestScanID,
 		)
 		if e.cfg.Comment {
-			_ = e.forge.CreateIssueComment(ctx, owner, name, item.IssueNumber, comment)
+			if err := e.forge.CreateIssueComment(ctx, owner, name, item.IssueNumber, comment); err != nil {
+				return fmt.Errorf("comment on duplicate #%d: %w", item.IssueNumber, err)
+			}
 		}
 		if err := e.forge.CloseIssue(ctx, owner, name, item.IssueNumber); err != nil {
 			return err

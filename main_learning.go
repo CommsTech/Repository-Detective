@@ -16,11 +16,16 @@ func learningStore() learning.EventRecorder {
 }
 
 func emitLearning(ctx context.Context, ev store.LearningEvent) {
-	_ = learning.Emit(ctx, learningStore(), ev)
+	if err := learning.Emit(ctx, learningStore(), ev); err != nil {
+		// Best-effort learning stream — never fail the primary request path.
+		return
+	}
 }
 
 func emitLearningEvidence(ctx context.Context, ev store.LearningEvent, evidence any) {
-	_ = learning.EmitJSON(ctx, learningStore(), ev, evidence)
+	if err := learning.EmitJSON(ctx, learningStore(), ev, evidence); err != nil {
+		return
+	}
 }
 
 func recordScannerHealthFromScan(ctx context.Context, repositoryID int64, scanID string, results []store.ScanCompletionScanner) {

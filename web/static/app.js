@@ -61,7 +61,9 @@ async function loadDefaults() {
     if (data.ai_model) document.getElementById('aiModel').value = data.ai_model;
     if (data.webhook_url) document.getElementById('publicUrl').placeholder = data.webhook_url.replace('/webhook', '');
     updateEnvExport();
-  } catch (_) {}
+  } catch (err) {
+    console.warn('Failed to load onboarding defaults', err);
+  }
 }
 
 document.getElementById('testGiteaBtn').addEventListener('click', async () => {

@@ -54,7 +54,7 @@ func (h *Handler) setRepoScanEnabledAPI(c *gin.Context, enabled bool) {
 	if enabled {
 		eventType = "repo_scan_enabled"
 	}
-	_, _ = h.store.RecordLearningEvent(c.Request.Context(), store.LearningEvent{
+	_, err = h.store.RecordLearningEvent(c.Request.Context(), store.LearningEvent{
 		RepositoryID:   id,
 		EventType:      eventType,
 		Source:         "api",
@@ -62,5 +62,9 @@ func (h *Handler) setRepoScanEnabledAPI(c *gin.Context, enabled bool) {
 		EvidenceJSON:   []byte(fmt.Sprintf(`{"enabled":%t}`, enabled)),
 		IdempotencyKey: fmt.Sprintf("%d:%s:%d", id, eventType, time.Now().UnixNano()),
 	})
+	if err != nil {
+		// Settings save already succeeded; learning is best-effort.
+		c.Header("X-Learning-Event-Error", "1")
+	}
 	c.JSON(http.StatusOK, toSettingsResponse(id, merged, h.global, h.notifyGlobal))
 }

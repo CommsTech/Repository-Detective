@@ -86,7 +86,10 @@ func ShallowClone(ctx context.Context, parsed ParsedRepoURL, cfg Config) (CloneR
 		return CloneResult{}, err
 	}
 	if cfg.SandboxReadonlyWorkspace {
-		_ = makeWorkspaceReadOnly(dest)
+		if err := makeWorkspaceReadOnly(dest); err != nil {
+			cleanup()
+			return CloneResult{}, fmt.Errorf("make workspace read-only: %w", err)
+		}
 	}
 
 	return CloneResult{

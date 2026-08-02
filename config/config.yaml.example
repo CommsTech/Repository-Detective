@@ -40,6 +40,8 @@ enable_quality: true
 enable_trivy: true
 enable_grype: true
 enable_gitleaks: true
+# Operator-controlled gitleaks config (also ship .gitleaks.toml at repo root for clone scans).
+gitleaks_config: "config/gitleaks.toml"
 # Git-history secret scan (slower; labeled gitleaks-history in reports)
 secret_scan_git_history_enabled: true
 secret_scan_history_max_commits: 0          # 0 = full history when cloning
@@ -241,3 +243,13 @@ gitea_actions_workflow_name: repository-detective-verify.yml
 gitea_actions_trigger_mode: workflow_dispatch
 gitea_actions_timeout_seconds: 1800
 gitea_actions_require_operator_approval: true
+
+# Paths skipped by health/graph/static collection (fixtures + vendor noise).
+skip_patterns:
+  - "vendor/"
+  - "testdata/"
+  - "benchmark/fixture/"
+  - "deployment-backups/"
+  - "data/tmp/"
+  - "docs/dogfood-reports/"
+

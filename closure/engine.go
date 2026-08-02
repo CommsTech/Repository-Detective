@@ -352,7 +352,10 @@ func (e *Engine) commentAndLabel(ctx context.Context, repo RepositoryRow, issueN
 	}
 	_ = e.Issues.CommentIssue(ctx, repo.Owner, repo.Name, issueNum, comment)
 	if label != "" {
-		_ = e.Issues.AddLifecycleLabels(ctx, repo.Owner, repo.Name, issueNum, label)
+		if err := e.Issues.AddLifecycleLabels(ctx, repo.Owner, repo.Name, issueNum, label); err != nil {
+			_ = e.Store.AddLifecycleEvent(ctx, row.FindingID, scanID, EventClosureIssueCloseFailed,
+				fmt.Sprintf("add lifecycle label on #%d: %v", issueNum, err))
+		}
 	}
 }
 
@@ -362,8 +365,14 @@ func (e *Engine) onPRMerged(ctx context.Context, attempt PatchAttemptRow, repo R
 	ext, _ := e.Store.ListExternalIssuesByFinding(ctx, attempt.FindingID)
 	if e.Issues != nil && len(ext) > 0 && e.Config.Comment {
 		_ = e.Issues.CommentIssue(ctx, repo.Owner, repo.Name, ext[0].IssueNumber, PRMergedComment())
-		_ = e.Issues.AddLifecycleLabels(ctx, repo.Owner, repo.Name, ext[0].IssueNumber, issues.LifecycleFixPRMerged)
-		_ = e.Issues.AddLifecycleLabels(ctx, repo.Owner, repo.Name, ext[0].IssueNumber, issues.LifecyclePendingRescan)
+		if err := e.Issues.AddLifecycleLabels(ctx, repo.Owner, repo.Name, ext[0].IssueNumber, issues.LifecycleFixPRMerged); err != nil {
+			_ = e.Store.AddLifecycleEvent(ctx, attempt.FindingID, "", EventClosureIssueCloseFailed,
+				fmt.Sprintf("add fix-pr-merged label on #%d: %v", ext[0].IssueNumber, err))
+		}
+		if err := e.Issues.AddLifecycleLabels(ctx, repo.Owner, repo.Name, ext[0].IssueNumber, issues.LifecyclePendingRescan); err != nil {
+			_ = e.Store.AddLifecycleEvent(ctx, attempt.FindingID, "", EventClosureIssueCloseFailed,
+				fmt.Sprintf("add pending-rescan label on #%d: %v", ext[0].IssueNumber, err))
+		}
 	}
 	if e.Notify != nil {
 		e.Notify.Emit(ctx, attempt.RepositoryID, EventFixPRMerged, "info", repo.FullName, "", "Remediation PR merged", "Waiting for verification scan")

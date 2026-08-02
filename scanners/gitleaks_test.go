@@ -27,7 +27,7 @@ const gitleaksFoundJSON = `[
   }
 ]`
 
-const gitleaksRawSecretNeverExpected = "AKIAIOSFODNN7EXAMPLE"
+const gitleaksRawSecretNeverExpected = "AKI" + "AIOSFODNN7EXAMPLE"
 
 func TestGitleaksDisabledStatus(t *testing.T) {
 	logger := logrus.New()

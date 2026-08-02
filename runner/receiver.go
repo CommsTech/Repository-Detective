@@ -100,7 +100,11 @@ func (r *Receiver) SubmitResult(ctx context.Context, jobID string, result JobRes
 	}
 
 	var policy analyzers.PolicySnapshot
-	_ = json.Unmarshal(job.PolicySnapshotJSON, &policy)
+	if len(job.PolicySnapshotJSON) > 0 {
+		if err := json.Unmarshal(job.PolicySnapshotJSON, &policy); err != nil {
+			return fmt.Errorf("decode runner job policy snapshot: %w", err)
+		}
+	}
 	effective := policyToEffective(policy)
 
 	now := time.Now().UTC()

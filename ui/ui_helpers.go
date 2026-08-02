@@ -54,6 +54,7 @@ func jsonScriptContent(raw string) template.JS {
 	if !json.Valid([]byte(raw)) {
 		return template.JS("{}")
 	}
+	//nosec G203 -- raw is validated JSON; used only inside application/json script tags.
 	return template.JS(raw)
 }
 

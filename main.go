@@ -1300,7 +1300,9 @@ func initializeComponents() error {
 	}
 	var githubIssueClient *github.Client
 	if githubClient != nil {
-		githubIssueClient, _ = githubClient.(*github.Client)
+		if gc, ok := githubClient.(*github.Client); ok {
+			githubIssueClient = gc
+		}
 	}
 	issueConfig.GitHubBaseURL = strings.TrimSpace(config.GitHubURL)
 	if issueConfig.GitHubBaseURL == "" || strings.Contains(issueConfig.GitHubBaseURL, "api.github.com") {

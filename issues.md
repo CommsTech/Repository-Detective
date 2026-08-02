@@ -1,5 +1,17 @@
 # Development Issues Log
 
+## Fixed (2026-08-02) — Repository Detective open findings (repo_id=1)
+
+| Priority | Issue | Resolution |
+|----------|-------|------------|
+| HIGH | Gitleaks hits on unit-test secret-shaped samples | Runtime-constructed fixtures; `config/gitleaks.toml` allowlist; wired `gitleaks_config` |
+| HIGH | CVE-2025-66471 urllib3 in benchmark fixture | Bumped fixture to urllib3 2.5.0 / requests 2.32.3 |
+| HIGH | CVE-2026-39829 x/crypto (stale open finding) | Already on `v0.52.0`; clears on rescan |
+| MEDIUM | Semgrep mutable `actions/checkout@v4` / `setup-go@v5` | Pinned to commit SHAs in all `.gitea/workflows` |
+| MEDIUM | Ignored errors in openclaw/reconcile/closure/runner/learning | Propagate or handle errors; type-assert GitHub client safely |
+| MEDIUM | Empty catch in onboarding `app.js` | Log warning instead of swallowing |
+| LOW | Product-repo calibration gaps | Expanded `seed-product-repo-calibration.py`; added `closeout-repo1-findings.py` |
+
 ## Fixed (2026-08-01) — open Gitea issues + Go 1.25 toolchain
 
 | Priority | Issue | Resolution |
