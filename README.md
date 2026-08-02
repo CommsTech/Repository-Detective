@@ -45,7 +45,7 @@
 > **Naming:** The product is **Repository Detective**. Use `REPOSITORY_DETECTIVE_*` env vars and `X-Repository-Detective-API-Key`. See [docs/NAMING.md](docs/NAMING.md).
 
 Repo (canonical Gitea): https://git.commsnet.org/commstech/Repository-Detective.git  
-GitHub mirror: https://github.com/CommsTech/Repository-Detective.git — sync: [docs/GITHUB_MIRROR.md](docs/GITHUB_MIRROR.md)
+GitHub mirror (public release only): https://github.com/CommsTech/Repository-Detective.git — keep Gitea current; push GitHub when public: [docs/GITHUB_MIRROR.md](docs/GITHUB_MIRROR.md)
 
 **Beta feedback:** use [Gitea issue templates](https://git.commsnet.org/commstech/Repository-Detective/issues/new) (`.gitea/ISSUE_TEMPLATE/`) — include scan ID and finding fingerprint; never paste secrets.
 

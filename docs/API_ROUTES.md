@@ -29,7 +29,7 @@ Local UI (`auth_mode=local`): session cookie on `/ui/*`; API JSON still uses API
 | `GET /health` | none | yes | smoke test |
 | `GET /onboard`, static | none | yes | manual |
 | `POST /webhook` | HMAC-SHA256 + rate limit | no (Gitea only) | `handlers/webhook_*_test.go` |
-| `/api/v1/*` (operator) | API key (preferred/legacy/Bearer) | no | `main_test.go`, `main_auth_test.go`, `api/security_test.go` |
+| `/api/v1/*` (operator) | API key (`X-Repository-Detective-API-Key` or Bearer) | no | `main_test.go`, `main_auth_test.go`, `api/security_test.go` |
 | `/api/v1/runner/*` (worker) | Runner HMAC | no | `runner/runner_test.go` |
 | `/ui/static/*` | none | yes | — |
 | `/ui/*` pages | API key (default) or session | no | `ui/auth_handlers_test.go` |

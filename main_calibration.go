@@ -75,11 +75,7 @@ func acceptCalibrationRecommendation(ctx context.Context, id int64) (int, error)
 		return 0, err
 	}
 	if rec.RecommendedAction != "report_only" || strings.TrimSpace(rec.RuleID) == "" {
-		emitRecommendationLearning(ctx, repoIDFromRec(rec), rec.ID, true, rec.Source, rec.RuleID)
-		if err := rdStore.UpdateCalibrationRecommendationStatus(ctx, id, "accepted"); err != nil {
-			return 0, err
-		}
-		return 0, nil
+		return 0, fmt.Errorf("only report_only recommendations with a rule_id can be accepted (got action=%q rule_id=%q)", rec.RecommendedAction, rec.RuleID)
 	}
 
 	repoIDs := make([]int64, 0, 1)
@@ -89,7 +85,7 @@ func acceptCalibrationRecommendation(ctx context.Context, id int64) (int, error)
 		}
 		repoIDs = append(repoIDs, *rec.RepositoryID)
 	} else {
-		// Global tiles expand into repo-scoped suppressions — never a fleet-wide global rule.
+		// Global tiles expand into repo-scoped calibration rules — never a fleet-wide global rule.
 		repoIDs, err = rdStore.ListRepositoryIDsAffectedByRule(ctx, rec.Source, rec.RuleID, 100)
 		if err != nil {
 			return 0, err
@@ -122,31 +118,27 @@ func repoIDFromRec(rec *store.CalibrationRecommendation) int64 {
 }
 
 func applyRepoCalibrationAccept(ctx context.Context, rec *store.CalibrationRecommendation, repoID int64) error {
-	repoIDCopy := repoID
-	if alreadyHasRuleSuppression(ctx, repoID, rec.Source, rec.RuleID) {
-		// Still refresh matcher / ensure calibration rule row exists.
-	} else {
-		_, err := rdStore.CreateFindingSuppression(ctx, store.FindingSuppression{
-			RepositoryID: &repoIDCopy,
-			Source:       rec.Source,
-			RuleID:       rec.RuleID,
-			Category:     rec.Category,
-			Scope:        store.SuppressionScopeRepo,
-			Reason:       rec.Reason,
-			CreatedBy:    "calibration-accept",
-			Active:       true,
-		})
-		if err != nil {
-			return err
+	// Accept installs a repo-scoped calibration rule only. Findings stay visible;
+	// high/critical are never downgraded (findinglearn.ApplyRepoRule). Do not create
+	// rule-wide FindingSuppressions here — those bypass severity guards and hide
+	// findings from forge filing/notifications.
+	if alreadyHasCalibrationRule(ctx, repoID, rec.Source, rec.RuleID) {
+		if suppressionMatcher != nil {
+			suppressionMatcher.Invalidate(repoID)
+			_ = suppressionMatcher.LoadRepository(ctx, repoID)
 		}
+		return nil
 	}
+	repoIDCopy := repoID
 	expires := time.Now().UTC().Add(90 * 24 * time.Hour)
-	_, _ = rdStore.CreateRepoCalibrationRule(ctx, store.RepoCalibrationRule{
+	if _, err := rdStore.CreateRepoCalibrationRule(ctx, store.RepoCalibrationRule{
 		RepositoryID: &repoIDCopy, Scope: "repo", Source: rec.Source, RuleID: rec.RuleID,
-		FindingCategory: rec.Category, Action: "downgrade_confidence", Reason: rec.Reason,
+		FindingCategory: rec.Category, Action: "report_only", Reason: rec.Reason,
 		EvidenceCount: int(rec.Confidence * 100), FalsePositiveRate: rec.Confidence,
 		Active: true, ExpiresAt: &expires, RecommendationID: &rec.ID,
-	})
+	}); err != nil {
+		return fmt.Errorf("create repo calibration rule: %w", err)
+	}
 	if suppressionMatcher != nil {
 		suppressionMatcher.Invalidate(repoID)
 		_ = suppressionMatcher.LoadRepository(ctx, repoID)
@@ -154,16 +146,16 @@ func applyRepoCalibrationAccept(ctx context.Context, rec *store.CalibrationRecom
 	return nil
 }
 
-func alreadyHasRuleSuppression(ctx context.Context, repoID int64, source, ruleID string) bool {
+func alreadyHasCalibrationRule(ctx context.Context, repoID int64, source, ruleID string) bool {
 	if rdStore == nil {
 		return false
 	}
-	active, err := rdStore.ListActiveSuppressionsForRepository(ctx, repoID)
+	rules, err := rdStore.ListRepoCalibrationRules(ctx, repoID, true)
 	if err != nil {
 		return false
 	}
-	for _, s := range active {
-		if strings.EqualFold(s.Source, source) && strings.EqualFold(s.RuleID, ruleID) {
+	for _, r := range rules {
+		if strings.EqualFold(r.Source, source) && strings.EqualFold(r.RuleID, ruleID) {
 			return true
 		}
 	}

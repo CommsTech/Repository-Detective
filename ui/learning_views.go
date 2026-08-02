@@ -28,10 +28,10 @@ func enrichCalibrationRecommendationViews(recs []store.CalibrationRecommendation
 		view.CanAccept = true
 		if strings.EqualFold(rec.Scope, "global") {
 			view.AcceptLabel = "Accept for affected repos"
-			view.AcceptHint = "Creates repo-scoped report_only rules for repositories that already have this finding — not a fleet-wide global suppression."
+			view.AcceptHint = "Creates repo-scoped report_only rules for repositories that already have this finding — findings stay visible; high/critical are never downgraded."
 		} else {
 			view.AcceptLabel = "Accept"
-			view.AcceptHint = "Creates a repo-scoped suppression + calibration rule for this repository."
+			view.AcceptHint = "Creates a repo-scoped report_only calibration rule — findings stay visible; high/critical are never downgraded."
 		}
 		out = append(out, view)
 	}
