@@ -1357,10 +1357,9 @@ func initializeComponents() error {
 	}
 
 	if bugbotStore != nil {
-		staleAge := time.Duration(config.AnalysisTimeout) * time.Second * 2
-		if staleAge < 30*time.Minute {
-			staleAge = 30 * time.Minute
-		}
+		// In-memory scan workers do not survive process restart. Reap any "started"
+		// rows older than a short grace window so concurrent slots are not stuck.
+		staleAge := 2 * time.Minute
 		if n, err := bugbotStore.ReapStaleScans(context.Background(), staleAge); err != nil {
 			logger.Warnf("Failed to reap stale scans: %v", err)
 		} else if n > 0 {
