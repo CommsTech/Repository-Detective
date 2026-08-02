@@ -33,7 +33,7 @@ Private beta packaging sprint complete (`de6122b` … `0e33258`).
 
 | Item | Value |
 |------|-------|
-| URL | `http://192.168.255.10:8081` |
+| URL | `http://127.0.0.1:8081` |
 | Container | `repository-detective` |
 | Network | host |
 | Image revision (stale) | `f64789d` (built 2026-06-06) |

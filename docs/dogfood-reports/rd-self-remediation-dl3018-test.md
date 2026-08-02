@@ -96,7 +96,7 @@ POST /api/v1/findings/9971/verify-closure
 
 ## Bugs found during test
 
-1. **Empty `clone_url` in SQLite** — connected repo row had blank clone URL; patch attempts failed with `clone URL unavailable`. Fixed by setting `https://git.commsnet.org/commstech/repository-detective.git` on repo id=1.
+1. **Empty `clone_url` in SQLite** — connected repo row had blank clone URL; patch attempts failed with `clone URL unavailable`. Fixed by setting `https://git.commsnet.org/commstech/Repository-Detective.git` on repo id=1.
 
 2. **Deterministic scanners misclassified as AI** — `issues.isAIAuditor()` treated `hadolint` (and other scanners) as AI sources, setting `from_ai: true` in metadata and blocking `safe_for_auto_pr`. Fixed by extending the deterministic scanner allowlist and ignoring stale `from_ai` metadata for those sources in plan generation.
 

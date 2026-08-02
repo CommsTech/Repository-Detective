@@ -1,7 +1,7 @@
 # Private beta smoke test report
 
 Date: 2026-06-02  
-Target: Live operator instance (`192.168.255.10:8081`) + local unit tests  
+Target: Live operator instance (`127.0.0.1:8081`) + local unit tests  
 Beta bundle: `dist/repository-detective-beta/` (commit `b4f1a60`)
 
 ## Summary
@@ -20,7 +20,7 @@ Beta bundle: `dist/repository-detective-beta/` (commit `b4f1a60`)
 ## API checks (live)
 
 ```bash
-RD_BASE_URL=http://192.168.255.10:8081 ./scripts/operator-smoke-test.sh
+RD_BASE_URL=http://127.0.0.1:8081 ./scripts/operator-smoke-test.sh
 ```
 
 | Check | Result |

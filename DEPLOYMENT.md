@@ -14,7 +14,7 @@ See **[docs/SETUP.md](docs/SETUP.md)** for the full walkthrough.
 ## Quick deploy
 
 ```bash
-git clone https://git.commsnet.org/commstech/repository-detective.git
+git clone https://git.commsnet.org/commstech/Repository-Detective.git
 cd repository-detective
 cp .env.example .env   # or copy from a legacy install at ~/repository-detective/.env
 # edit .env

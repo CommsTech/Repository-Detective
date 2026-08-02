@@ -37,35 +37,46 @@ func (calibrationBridge) ListRecommendations(c *gin.Context, status string) ([]s
 }
 
 func (calibrationBridge) AcceptRecommendation(c *gin.Context, id int64) error {
+	return acceptCalibrationRecommendation(c.Request.Context(), id)
+}
+
+func (calibrationBridge) RejectRecommendation(c *gin.Context, id int64) error {
+	return rejectCalibrationRecommendation(c.Request.Context(), id)
+}
+
+func (calibrationBridge) Recompute(c *gin.Context) (map[string]any, error) {
+	return recomputeCalibration(c.Request.Context())
+}
+
+func findCalibrationRecommendation(ctx context.Context, id int64) (*store.CalibrationRecommendation, error) {
 	if rdStore == nil {
-		return fmt.Errorf("database disabled")
+		return nil, fmt.Errorf("database disabled")
 	}
-	ctx := c.Request.Context()
 	recs, err := rdStore.ListCalibrationRecommendations(ctx, "", 1000)
+	if err != nil {
+		return nil, err
+	}
+	for i := range recs {
+		if recs[i].ID == id {
+			return &recs[i], nil
+		}
+	}
+	return nil, fmt.Errorf("recommendation not found")
+}
+
+func acceptCalibrationRecommendation(ctx context.Context, id int64) error {
+	rec, err := findCalibrationRecommendation(ctx, id)
 	if err != nil {
 		return err
 	}
-	var rec *store.CalibrationRecommendation
-	for i := range recs {
-		if recs[i].ID == id {
-			rec = &recs[i]
-			break
-		}
-	}
-	if rec == nil {
-		return fmt.Errorf("recommendation not found")
-	}
-	if learning.IsProtectedFromAutoDowngrade("high", rec.Category) {
-		return fmt.Errorf("recommendation affects protected security category — requires explicit operator override on finding")
+	if err := learning.ValidateCalibrationAccept(rec.Category, rec.Scope); err != nil {
+		return err
 	}
 	scope := store.SuppressionScopeGlobal
 	var repoIDPtr *int64
 	if rec.Scope == "repo" && rec.RepositoryID != nil && *rec.RepositoryID > 0 {
 		scope = store.SuppressionScopeRepo
 		repoIDPtr = rec.RepositoryID
-	} else if rec.Scope == "global" {
-		// Global rules require explicit multi-repo evidence — block naive global accept in beta.
-		return fmt.Errorf("global calibration recommendations require multi-repo evidence review — use repo-scoped recommendations")
 	}
 	if rec.RecommendedAction == "report_only" && rec.RuleID != "" {
 		_, err = rdStore.CreateFindingSuppression(ctx, store.FindingSuppression{
@@ -89,6 +100,10 @@ func (calibrationBridge) AcceptRecommendation(c *gin.Context, id int64) error {
 				EvidenceCount: int(rec.Confidence * 100), FalsePositiveRate: rec.Confidence,
 				Active: true, ExpiresAt: &expires, RecommendationID: &rec.ID,
 			})
+			if suppressionMatcher != nil {
+				suppressionMatcher.Invalidate(*repoIDPtr)
+				_ = suppressionMatcher.LoadRepository(ctx, *repoIDPtr)
+			}
 		}
 	}
 	repoID := int64(0)
@@ -99,30 +114,26 @@ func (calibrationBridge) AcceptRecommendation(c *gin.Context, id int64) error {
 	return rdStore.UpdateCalibrationRecommendationStatus(ctx, id, "accepted")
 }
 
-func (calibrationBridge) RejectRecommendation(c *gin.Context, id int64) error {
+func rejectCalibrationRecommendation(ctx context.Context, id int64) error {
 	if rdStore == nil {
 		return fmt.Errorf("database disabled")
 	}
-	ctx := c.Request.Context()
-	recs, _ := rdStore.ListCalibrationRecommendations(ctx, "", 1000)
-	for i := range recs {
-		if recs[i].ID == id {
-			repoID := int64(0)
-			if recs[i].RepositoryID != nil {
-				repoID = *recs[i].RepositoryID
-			}
-			emitRecommendationLearning(ctx, repoID, id, false, recs[i].Source, recs[i].RuleID)
-			break
-		}
+	rec, err := findCalibrationRecommendation(ctx, id)
+	if err != nil {
+		return err
 	}
+	repoID := int64(0)
+	if rec.RepositoryID != nil {
+		repoID = *rec.RepositoryID
+	}
+	emitRecommendationLearning(ctx, repoID, id, false, rec.Source, rec.RuleID)
 	return rdStore.UpdateCalibrationRecommendationStatus(ctx, id, "rejected")
 }
 
-func (calibrationBridge) Recompute(c *gin.Context) (map[string]any, error) {
+func recomputeCalibration(ctx context.Context) (map[string]any, error) {
 	if rdStore == nil {
 		return nil, fmt.Errorf("database disabled")
 	}
-	ctx := c.Request.Context()
 	stats, err := rdStore.RecomputeCalibrationRuleStats(ctx)
 	if err != nil {
 		return nil, err
@@ -138,8 +149,8 @@ func (calibrationBridge) Recompute(c *gin.Context) (map[string]any, error) {
 		repoRecs += n
 	}
 	return map[string]any{
-		"rules_updated":               stats,
-		"recommendations_generated":   recs,
+		"rules_updated":                  stats,
+		"recommendations_generated":      recs,
 		"repo_recommendations_generated": repoRecs,
 	}, nil
 }
@@ -156,12 +167,12 @@ func startCalibrationBackgroundJob() {
 		time.Sleep(2 * time.Minute)
 		for {
 			ctx, cancel := contextWithTimeout(5 * time.Minute)
-			stats, err := rdStore.RecomputeCalibrationRuleStats(ctx)
+			out, err := recomputeCalibration(ctx)
 			if err != nil {
 				logger.Debugf("calibration background job: %v", err)
 			} else {
-				recs, _ := rdStore.GenerateCalibrationRecommendations(ctx, config.CalibrationMinFindingsForRecommendation)
-				logger.Infof("Calibration job: updated %d rule stats, %d recommendations", stats, recs)
+				logger.Infof("Calibration job: updated %v rule stats, %v global recommendations, %v repo recommendations",
+					out["rules_updated"], out["recommendations_generated"], out["repo_recommendations_generated"])
 			}
 			cancel()
 			time.Sleep(interval)
@@ -171,4 +182,19 @@ func startCalibrationBackgroundJob() {
 
 func contextWithTimeout(d time.Duration) (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.Background(), d)
+}
+
+// calibrationUIBridge exposes accept/reject/recompute to the operator UI.
+type calibrationUIBridge struct{}
+
+func (calibrationUIBridge) AcceptRecommendation(ctx context.Context, id int64) error {
+	return acceptCalibrationRecommendation(ctx, id)
+}
+
+func (calibrationUIBridge) RejectRecommendation(ctx context.Context, id int64) error {
+	return rejectCalibrationRecommendation(ctx, id)
+}
+
+func (calibrationUIBridge) Recompute(ctx context.Context) (map[string]any, error) {
+	return recomputeCalibration(ctx)
 }

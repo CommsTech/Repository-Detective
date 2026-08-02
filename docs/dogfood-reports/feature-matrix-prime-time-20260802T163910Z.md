@@ -1,7 +1,7 @@
 # Feature matrix report
 
 Generated: 2026-08-02T16:39:10Z
-Base: http://192.168.255.10:8081
+Base: http://127.0.0.1:8081
 Repo: 1
 
 | Check | Result | Notes |

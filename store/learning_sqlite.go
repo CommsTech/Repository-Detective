@@ -298,33 +298,50 @@ func (s *SQLiteStore) GenerateRepoScopedRecommendations(ctx context.Context, rep
 	if err != nil {
 		return 0, err
 	}
-	defer rows.Close()
-	count := 0
+	type candidate struct {
+		source, ruleID string
+		fp, total      int
+		fpRate         float64
+	}
+	var candidates []candidate
 	for rows.Next() {
 		var source, ruleID string
 		var fp, tp, total int
 		if err := rows.Scan(&source, &ruleID, &fp, &tp, &total); err != nil {
-			return count, err
+			rows.Close()
+			return 0, err
 		}
 		fpRate := float64(fp) / float64(total)
 		if fpRate < 0.5 {
 			continue
 		}
+		candidates = append(candidates, candidate{source: source, ruleID: ruleID, fp: fp, total: total, fpRate: fpRate})
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return 0, err
+	}
+	rows.Close()
+
+	count := 0
+	for _, c := range candidates {
 		var exists int
-		_ = s.db.QueryRowContext(ctx, `
+		if err := s.db.QueryRowContext(ctx, `
 			SELECT COUNT(1) FROM calibration_recommendations
 			WHERE scope = 'repo' AND repository_id = ? AND rule_id = ? AND source = ? AND status = 'proposed'
-		`, repositoryID, ruleID, source).Scan(&exists)
+		`, repositoryID, c.ruleID, c.source).Scan(&exists); err != nil {
+			return count, err
+		}
 		if exists > 0 {
 			continue
 		}
-		reason := fmt.Sprintf("Repo %d: %d events, %.0f%% marked false positive (deterministic learning)", repositoryID, total, fpRate*100)
+		reason := fmt.Sprintf("Repo %d: %d events, %.0f%% marked false positive (deterministic learning)", repositoryID, c.total, c.fpRate*100)
 		if _, err := s.db.ExecContext(ctx, `
 			INSERT INTO calibration_recommendations (
 				scope, repository_id, recommendation_type, source, rule_id, category,
 				current_action, recommended_action, reason, confidence, status, created_at, updated_at
 			) VALUES ('repo', ?, 'downgrade_confidence', ?, ?, '', 'auto_issue', 'report_only', ?, ?, 'proposed', ?, ?)
-		`, repositoryID, source, ruleID, reason, fpRate, now, now); err != nil {
+		`, repositoryID, c.source, c.ruleID, reason, c.fpRate, now, now); err != nil {
 			return count, err
 		}
 		count++

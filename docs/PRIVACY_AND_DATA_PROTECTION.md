@@ -2,6 +2,21 @@
 
 Repository Detective is designed for **privacy-aware** operation in homelab and team environments. It is **not** certified HIPAA-compliant or GDPR-compliant out of the box. Administrators must configure access controls, retention, network boundaries, and legal basis for processing.
 
+## What the public Gitea repo contains (and does not)
+
+The published source tree is a **clean install base** for any operator. It includes application code, Compose files, examples, and setup docs.
+
+| Included | Not included (local only — gitignored) |
+|----------|----------------------------------------|
+| Source, templates, scripts, `.env.example` | Your `.env` (API keys, forge tokens, AI keys) |
+| `config/*.example.yaml`, scanner configs | Your `config/config.yaml` |
+| Docs and issue templates | Your SQLite DB (`data/repository-detective.db`) |
+| | Cloned scan workspaces, runner artifacts, local dogfood dumps |
+
+**Never commit** a live database or `.env`. The DB holds private repo names, findings, code snippets, and forge mappings from *your* fleet — publishing it would expose that data to anyone who can clone the Gitea repo.
+
+Fresh installs create an empty local DB on first start. See [SETUP.md](SETUP.md) and [CONFIGURATION.md](CONFIGURATION.md).
+
 ## Data collected
 
 | Source | Examples |

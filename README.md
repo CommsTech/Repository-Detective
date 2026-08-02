@@ -23,9 +23,9 @@
 
 > **Naming:** The product is **Repository Detective**. Use `REPOSITORY_DETECTIVE_*` env vars and `X-Repository-Detective-API-Key`. See [docs/NAMING.md](docs/NAMING.md).
 
-Repo: https://git.commsnet.org/commstech/repository-detective.git
+Repo: https://git.commsnet.org/commstech/Repository-Detective.git
 
-**Beta feedback:** use [Gitea issue templates](https://git.commsnet.org/commstech/repository-detective/issues/new) (`.gitea/ISSUE_TEMPLATE/`) — include scan ID and finding fingerprint; never paste secrets.
+**Beta feedback:** use [Gitea issue templates](https://git.commsnet.org/commstech/Repository-Detective/issues/new) (`.gitea/ISSUE_TEMPLATE/`) — include scan ID and finding fingerprint; never paste secrets.
 
 ## Setup
 
@@ -33,10 +33,12 @@ Repo: https://git.commsnet.org/commstech/repository-detective.git
 
 **Operator docs:** [docs/README.md](docs/README.md) · [Dashboard](docs/DASHBOARD_GUIDE.md) · [Auth (local)](docs/AUTH_LOCAL.md) · [Privacy](docs/PRIVACY_AND_DATA_PROTECTION.md)
 
+The Gitea tree is a sanitized install base. Operator secrets (`.env`), local config (`config/config.yaml`), and the SQLite database under `data/` are gitignored and must stay private on your host.
+
 Quick local trial:
 
 ```bash
-git clone https://git.commsnet.org/commstech/repository-detective.git && cd repository-detective
+git clone https://git.commsnet.org/commstech/Repository-Detective.git && cd Repository-Detective
 docker compose -f docker-compose.minimal.yml up -d --build
 curl http://localhost:8080/health
 ```

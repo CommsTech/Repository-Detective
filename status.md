@@ -1,7 +1,16 @@
 # Repository Detective - Implementation Status
 
 **Last updated:** 2026-08-02  
-**Repository:** https://git.commsnet.org/commstech/repository-detective.git
+**Repository:** https://git.commsnet.org/commstech/Repository-Detective.git
+
+## Live deploy (2026-08-02) — Sanitized install base + learning completeness
+
+| Item | Value |
+|------|-------|
+| Focus | Confirm Gitea is a clean install base; operator DB never published; learning accept path fixed |
+| Shipped | Accept bugfix; background job repo-scoped parity; Learning UI actions; LAN IP redaction in tracked docs; privacy/setup clarity |
+| Not in git | `.env`, `config/config.yaml`, `data/*.db` (gitignored) |
+| Learning | Deterministic loop complete for FP→repo recommendation→accept/reject; global accept blocked; secrets categories blocked |
 
 ## Live deploy (2026-08-02) — Prime-time readiness evaluation
 

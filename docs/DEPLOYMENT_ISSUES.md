@@ -8,7 +8,7 @@ Repository: https://git.commsnet.org/commstech/repository-detective
 
 ## 1. ERR_TOO_MANY_REDIRECTS on `/` and `/onboard`
 
-**Symptom:** Browser shows `ERR_TOO_MANY_REDIRECTS` at `http://192.168.255.10:8081/`.
+**Symptom:** Browser shows `ERR_TOO_MANY_REDIRECTS` at `http://127.0.0.1:8081/`.
 
 **Cause:** Gin `RedirectTrailingSlash` plus `StaticFS` mounted at `/onboard/static` created a loop:
 - `/` → 302 `/onboard`
@@ -91,7 +91,7 @@ Repository: https://git.commsnet.org/commstech/repository-detective
 
 ## 7. OpenClaw / self-signed TLS from container
 
-**Symptom:** `AI provider connection check failed: context deadline exceeded` for `https://192.168.255.11:18789`.
+**Symptom:** `AI provider connection check failed: context deadline exceeded` for `https://ai.example.local:18789`.
 
 **Cause:** Go HTTP client does not read `REQUESTS_CA_BUNDLE`; custom CA must be in system trust store.
 
@@ -117,9 +117,9 @@ Repository: https://git.commsnet.org/commstech/repository-detective
 
 | URL | Purpose |
 |-----|---------|
-| `http://192.168.255.10:8081/health` | Health check (no auth) |
-| `http://192.168.255.10:8081/onboard/` | Setup wizard |
-| `http://192.168.255.10:8081/ui?api_key=…` | Operator dashboard |
-| `http://192.168.255.10:8081/api/v1/status` | API (header `X-Repository-Detective-API-Key`; legacy `X-Repository-Detective-API-Key` accepted) |
+| `http://127.0.0.1:8081/health` | Health check (no auth) |
+| `http://127.0.0.1:8081/onboard/` | Setup wizard |
+| `http://127.0.0.1:8081/ui?api_key=…` | Operator dashboard |
+| `http://127.0.0.1:8081/api/v1/status` | API (header `X-Repository-Detective-API-Key`; legacy `X-Repository-Detective-API-Key` accepted) |
 
 **Note:** Repository Detective listens on port **8081**, not 80. Include `:8081` unless a reverse proxy maps 443/80 → 8081.

@@ -30,10 +30,14 @@ var protectedCategories = map[string]bool{
 
 // IsProtectedFromAutoDowngrade reports whether automatic calibration must not apply.
 func IsProtectedFromAutoDowngrade(severity, category string) bool {
-	if protectedSeverities[strings.ToLower(severity)] {
+	sev := strings.ToLower(strings.TrimSpace(severity))
+	if sev != "" && protectedSeverities[sev] {
 		return true
 	}
-	cat := strings.ToLower(category)
+	cat := strings.ToLower(strings.TrimSpace(category))
+	if cat == "" {
+		return false
+	}
 	for k := range protectedCategories {
 		if strings.Contains(cat, k) {
 			return true

@@ -1,7 +1,7 @@
 # Live UI route verification
 
 Date: 2026-06-02  
-Instance: `http://192.168.255.10:8081`  
+Instance: `http://127.0.0.1:8081`  
 Image revision: `46cf4bf` (post-redeploy)
 
 Auth modes tested:
@@ -75,7 +75,7 @@ Layout includes inline theme bootstrap script in `<head>` (sets `color-scheme` b
 
 ```bash
 source .env
-BASE=http://192.168.255.10:8081
+BASE=http://127.0.0.1:8081
 HDR="X-Repository-Detective-API-Key: $REPOSITORY_DETECTIVE_API_KEY"
 
 curl -s -o /dev/null -w "%{http_code}" -H "$HDR" "$BASE/ui/configure"

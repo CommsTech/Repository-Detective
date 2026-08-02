@@ -20,6 +20,20 @@ Dashboard/health treat scan `.error` text via `store.ClassifyScanFailure`:
 **Unhealthy repos** = repositories whose **latest** scan failed (excluding restart noise).  
 Lifetime `FailedScansCount` remains for historical totals. Parse failures are windowed to 14 days.
 
+## Learning / calibration
+
+Deterministic learning records lifecycle events (`learning_events`), builds per-rule stats, and proposes **repo-scoped** calibration recommendations (false-positive heavy rules → `report_only`).
+
+- Accept (UI `/ui/learning` or API) creates a repo suppression + `repo_calibration_rules` entry; refreshes the suppression matcher.
+- Global recommendation accepts are blocked in community beta.
+- Secrets/security categories cannot be accepted via calibration; high/critical are never auto-downgraded at persist time.
+- Background calibration job mirrors manual recompute (global + per-repo recommendation generation).
+- Optional LLM sanity gate remains advisory / off by default — not required for the core learning loop.
+
+## Install base vs operator data
+
+Published Gitea content is application + docs. Operator `.env`, `config/config.yaml`, and `data/*.db` are gitignored and must not be pushed.
+
 
 ## Core Components
 

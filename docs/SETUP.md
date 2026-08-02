@@ -2,15 +2,17 @@
 
 Follow these steps in order.
 
-Repository: https://git.commsnet.org/commstech/repository-detective.git
+Repository: https://git.commsnet.org/commstech/Repository-Detective.git
+
+**Privacy:** Clone gives you source and install docs only. Your `.env`, `config/config.yaml`, and SQLite database stay on the machine that runs Repository Detective and are gitignored — they are never part of the shared Gitea tree. See [PRIVACY_AND_DATA_PROTECTION.md](PRIVACY_AND_DATA_PROTECTION.md).
 
 ---
 
 ## Step 1 — Clone and configure
 
 ```bash
-git clone https://git.commsnet.org/commstech/repository-detective.git
-cd repository-detective
+git clone https://git.commsnet.org/commstech/Repository-Detective.git
+cd Repository-Detective
 cp .env.example .env
 ```
 

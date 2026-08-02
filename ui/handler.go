@@ -46,12 +46,21 @@ type Handler struct {
 	closure              ClosureBackend
 	suppressionEnabled   bool
 	suppression          SuppressionBackend
+	calibrationEnabled   bool
+	calibration          CalibrationBackend
 	reconcileEnabled     bool
 	reconciler           IssueReconciler
 	scanTrigger          ScanTrigger
 	readinessFn          func() operator.Readiness
 	platform             PlatformContext
 	applyPlatformSettings PlatformSettingsApplier
+}
+
+// CalibrationBackend applies learning calibration actions from the UI.
+type CalibrationBackend interface {
+	AcceptRecommendation(ctx context.Context, id int64) error
+	RejectRecommendation(ctx context.Context, id int64) error
+	Recompute(ctx context.Context) (map[string]any, error)
 }
 
 // IssueReconciler previews and applies existing issue reconciliation.
@@ -138,6 +147,14 @@ func (h *Handler) SetSuppressionBackend(enabled bool, backend SuppressionBackend
 	if h != nil {
 		h.suppressionEnabled = enabled
 		h.suppression = backend
+	}
+}
+
+// SetCalibrationBackend wires learning recommendation accept/reject/recompute for the UI.
+func (h *Handler) SetCalibrationBackend(enabled bool, backend CalibrationBackend) {
+	if h != nil {
+		h.calibrationEnabled = enabled
+		h.calibration = backend
 	}
 }
 
@@ -240,6 +257,9 @@ func (h *Handler) RegisterRoutes(g *gin.RouterGroup) {
 	g.GET("/projects", h.ProjectGroups)
 	g.POST("/projects", h.CreateProjectGroup)
 	g.GET("/learning", h.Learning)
+	g.POST("/learning/recommendations/:id/accept", h.AcceptCalibrationRecommendation)
+	g.POST("/learning/recommendations/:id/reject", h.RejectCalibrationRecommendation)
+	g.POST("/learning/recompute", h.RecomputeCalibration)
 	h.registerScanRoutes(g)
 	h.registerRepoControlRoutes(g)
 }
@@ -1492,6 +1512,7 @@ func (h *Handler) Learning(c *gin.Context) {
 	aiRecs, _ := h.store.ListPendingAIAdvisoryRecommendations(ctx, 50)
 	byType, _ := h.store.CountLearningEventsByType(ctx)
 	noisy, _ := h.store.ListCalibrationRuleStats(ctx, 12)
+	notice := strings.TrimSpace(c.Query("notice"))
 	h.renderNav(c, "learning.html", "Learning & Calibration", "learning", map[string]any{
 		"Health":                      health,
 		"Recommendations":             recs,
@@ -1502,6 +1523,96 @@ func (h *Handler) Learning(c *gin.Context) {
 		"OpenClawConfigured":          h.platform.OpenClawEndpointConfigured,
 		"ChartJSON":                   buildLearningChartJSON(health, byType, noisy),
 		"NoisyRules":                  noisy,
+		"CalibrationEnabled":          h.calibrationEnabled && h.calibration != nil,
+		"ActionNotice":                notice,
+	})
+}
+
+func (h *Handler) AcceptCalibrationRecommendation(c *gin.Context) {
+	if !h.requireStore(c) || !h.requireCSRF(c) {
+		return
+	}
+	if !h.calibrationEnabled || h.calibration == nil {
+		c.String(http.StatusServiceUnavailable, "calibration actions disabled")
+		return
+	}
+	id, ok := parseID(c, "id")
+	if !ok {
+		return
+	}
+	if err := h.calibration.AcceptRecommendation(c.Request.Context(), id); err != nil {
+		h.renderLearningNotice(c, "Accept failed: "+err.Error())
+		return
+	}
+	c.Redirect(http.StatusSeeOther, h.learningRedirect(c, "Recommendation accepted"))
+}
+
+func (h *Handler) RejectCalibrationRecommendation(c *gin.Context) {
+	if !h.requireStore(c) || !h.requireCSRF(c) {
+		return
+	}
+	if !h.calibrationEnabled || h.calibration == nil {
+		c.String(http.StatusServiceUnavailable, "calibration actions disabled")
+		return
+	}
+	id, ok := parseID(c, "id")
+	if !ok {
+		return
+	}
+	if err := h.calibration.RejectRecommendation(c.Request.Context(), id); err != nil {
+		h.renderLearningNotice(c, "Reject failed: "+err.Error())
+		return
+	}
+	c.Redirect(http.StatusSeeOther, h.learningRedirect(c, "Recommendation rejected"))
+}
+
+func (h *Handler) RecomputeCalibration(c *gin.Context) {
+	if !h.requireStore(c) || !h.requireCSRF(c) {
+		return
+	}
+	if !h.calibrationEnabled || h.calibration == nil {
+		c.String(http.StatusServiceUnavailable, "calibration actions disabled")
+		return
+	}
+	out, err := h.calibration.Recompute(c.Request.Context())
+	if err != nil {
+		h.renderLearningNotice(c, "Recompute failed: "+err.Error())
+		return
+	}
+	msg := fmt.Sprintf("Recompute complete: %v rule stats, %v global recs, %v repo recs",
+		out["rules_updated"], out["recommendations_generated"], out["repo_recommendations_generated"])
+	c.Redirect(http.StatusSeeOther, h.learningRedirect(c, msg))
+}
+
+func (h *Handler) learningRedirect(c *gin.Context, notice string) string {
+	redirect := h.basePath + "/learning" + apiKeyQuery(c)
+	if strings.Contains(redirect, "?") {
+		redirect += "&"
+	} else {
+		redirect += "?"
+	}
+	return redirect + "notice=" + url.QueryEscape(notice)
+}
+
+func (h *Handler) renderLearningNotice(c *gin.Context, notice string) {
+	ctx := c.Request.Context()
+	health, _ := h.store.LearningHealthSummary(ctx)
+	recs, _ := h.store.ListCalibrationRecommendations(ctx, "proposed", 50)
+	aiRecs, _ := h.store.ListPendingAIAdvisoryRecommendations(ctx, 50)
+	byType, _ := h.store.CountLearningEventsByType(ctx)
+	noisy, _ := h.store.ListCalibrationRuleStats(ctx, 12)
+	h.renderNav(c, "learning.html", "Learning & Calibration", "learning", map[string]any{
+		"Health":                      health,
+		"Recommendations":             recs,
+		"AIRecommendations":           aiRecs,
+		"AIRecommendationsEnabled":    h.platform.OpenClawAIReviewEnabled,
+		"AIRecommendationsConfigured": h.platform.OpenClawEndpointConfigured,
+		"OpenClawEnabled":             h.platform.OpenClawAIReviewEnabled,
+		"OpenClawConfigured":          h.platform.OpenClawEndpointConfigured,
+		"ChartJSON":                   buildLearningChartJSON(health, byType, noisy),
+		"NoisyRules":                  noisy,
+		"CalibrationEnabled":          h.calibrationEnabled && h.calibration != nil,
+		"ActionNotice":                notice,
 	})
 }
 

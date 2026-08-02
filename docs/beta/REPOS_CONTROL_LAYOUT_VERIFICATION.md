@@ -2,7 +2,7 @@
 
 Date: 2026-06-02  
 Commit: `c9dc996`  
-Live URL: `http://192.168.255.10:8081/ui/repos`
+Live URL: `http://127.0.0.1:8081/ui/repos`
 
 ## Before (problems)
 

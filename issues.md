@@ -1,5 +1,16 @@
 # Development Issues Log
 
+## Fixed (2026-08-02) — Gitea base sanitization + learning accept path
+
+| Priority | Issue | Resolution |
+|----------|-------|------------|
+| HIGH | Calibration Accept always blocked (`IsProtectedFromAutoDowngrade("high", ...)`) | Accept validates by category/scope only; severity re-checked at scan persist |
+| HIGH | Background calibration skipped repo-scoped generation | Job + recompute share `recomputeCalibration` (global + repo) |
+| HIGH | Repo-scoped recommendation generation deadlocked under `SetMaxOpenConns(1)` | Collect candidates then insert after closing the SELECT cursor |
+| MEDIUM | Learning UI read-only | Accept / Reject / Recompute forms on `/ui/learning` |
+| MEDIUM | Operator LAN IPs in tracked reports | Redacted to localhost / example hosts |
+| LOW | Setup clone path casing drift | Canonical `Repository-Detective` clone URL + privacy note |
+
 ## Fixed (2026-08-02) — Product rename to Repository Detective + Gitea sync
 
 | Priority | Issue | Resolution |

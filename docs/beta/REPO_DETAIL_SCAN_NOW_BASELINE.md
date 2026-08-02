@@ -8,7 +8,7 @@ Generated: 2026-06-02
 
 ## Live route tested
 
-`http://192.168.255.10:8081/ui/repos/31`
+`http://127.0.0.1:8081/ui/repos/31`
 
 ## Current behavior (pre-fix)
 

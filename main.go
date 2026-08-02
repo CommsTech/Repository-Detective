@@ -1100,6 +1100,7 @@ func initializeComponents() error {
 		}
 		if rdStore != nil {
 			uiHandler.SetSuppressionBackend(true, suppressionUIBridge{})
+			uiHandler.SetCalibrationBackend(true, calibrationUIBridge{})
 		}
 		uiHandler.SetReadinessFn(func() operator.Readiness { return buildReadiness("running") })
 		uiHandler.SetPlatformSettingsApplier(func(settings store.PlatformSettings) error {

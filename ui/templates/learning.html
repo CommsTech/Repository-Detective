@@ -139,7 +139,16 @@
     <h2 id="cal-recs-title">Calibration recommendations</h2>
     <span class="rd-chip">Repo-scoped default</span>
   </div>
-  <p class="rd-muted">Approve via API <code>POST /api/v1/calibration/recommendations/:id/accept</code> or the recompute job.</p>
+  <p class="rd-muted">Accept creates a repo-scoped suppression + calibration rule. Global recommendations stay informational until multi-repo review exists. High/critical findings are never auto-downgraded at scan time.</p>
+  {{if .Data.ActionNotice}}
+  <p class="rd-chip" role="status">{{.Data.ActionNotice}}</p>
+  {{end}}
+  {{if .Data.CalibrationEnabled}}
+  <form method="post" action="{{.BasePath}}/learning/recompute{{if .APIKey}}?api_key={{.APIKey}}{{end}}" class="rd-form-inline" style="margin-bottom:1rem">
+    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+    <button type="submit" class="rd-btn rd-btn-secondary">Recompute recommendations</button>
+  </form>
+  {{end}}
   {{if .Data.Recommendations}}
   <div class="rd-rec-grid">
     {{range .Data.Recommendations}}
@@ -152,11 +161,25 @@
       <code>{{.Source}}/{{.RuleID}}</code>
       <p class="rd-muted">{{.Reason}}</p>
       {{if .RepositoryID}}<p class="rd-muted">Repo #{{.RepositoryID}}</p>{{end}}
+      {{if and $.Data.CalibrationEnabled (eq .Scope "repo")}}
+      <div class="rd-actions" style="margin-top:0.75rem;display:flex;gap:0.5rem;flex-wrap:wrap">
+        <form method="post" action="{{$.BasePath}}/learning/recommendations/{{.ID}}/accept{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}">
+          <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+          <button type="submit" class="rd-btn rd-btn-secondary">Accept</button>
+        </form>
+        <form method="post" action="{{$.BasePath}}/learning/recommendations/{{.ID}}/reject{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}">
+          <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+          <button type="submit" class="rd-btn rd-btn-ghost">Reject</button>
+        </form>
+      </div>
+      {{else if eq .Scope "global"}}
+      <p class="rd-muted" style="margin-top:0.5rem">Global accepts are blocked in beta — prefer repo-scoped rules.</p>
+      {{end}}
     </article>
     {{end}}
   </div>
   {{else}}
-  <p class="rd-muted">No pending recommendations — run recompute or complete more dry-runs.</p>
+  <p class="rd-muted">No pending recommendations — run recompute or complete more dry-runs / false-positive marks.</p>
   {{end}}
 </section>
 

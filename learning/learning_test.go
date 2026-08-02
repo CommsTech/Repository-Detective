@@ -29,7 +29,29 @@ func TestProtectedSecurityNotAutoDowngrade(t *testing.T) {
 	if !learning.IsProtectedFromAutoDowngrade("medium", "hardcoded_secret") {
 		t.Fatal("secret category protected")
 	}
+	if learning.IsProtectedFromAutoDowngrade("", "maintainability") {
+		t.Fatal("empty severity + non-security category should allow calibration")
+	}
+	if learning.IsProtectedFromAutoDowngrade("", "") {
+		t.Fatal("empty inputs should allow calibration")
+	}
 }
+
+func TestValidateCalibrationAccept(t *testing.T) {
+	if err := learning.ValidateCalibrationAccept("maintainability", "repo"); err != nil {
+		t.Fatalf("repo quality accept should be allowed: %v", err)
+	}
+	if err := learning.ValidateCalibrationAccept("", "repo"); err != nil {
+		t.Fatalf("empty category repo accept should be allowed: %v", err)
+	}
+	if err := learning.ValidateCalibrationAccept("hardcoded_secret", "repo"); err == nil {
+		t.Fatal("secret category accept should be blocked")
+	}
+	if err := learning.ValidateCalibrationAccept("quality", "global"); err == nil {
+		t.Fatal("global accept should be blocked")
+	}
+}
+
 
 func TestReachabilityTestPathDowngrade(t *testing.T) {
 	in := learning.ClassifyPath("pkg/foo_test.go")

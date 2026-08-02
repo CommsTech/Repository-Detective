@@ -1,7 +1,7 @@
 # Live homelab beta deployment report
 
 Date: 2026-06-02  
-Operator instance: `http://192.168.255.10:8081`
+Operator instance: `http://127.0.0.1:8081`
 
 ## Goal
 
@@ -66,9 +66,9 @@ docker run -d --name repository-detective \
 ## Post-deploy verification
 
 ```bash
-curl -sS http://192.168.255.10:8081/health
+curl -sS http://127.0.0.1:8081/health
 curl -sS -H "X-Repository-Detective-API-Key: $REPOSITORY_DETECTIVE_API_KEY" \
-  http://192.168.255.10:8081/api/v1/status
+  http://127.0.0.1:8081/api/v1/status
 ```
 
 | Check | Result |

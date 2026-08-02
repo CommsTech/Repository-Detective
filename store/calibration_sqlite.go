@@ -219,21 +219,39 @@ func (s *SQLiteStore) GenerateCalibrationRecommendations(ctx context.Context, mi
 	if err != nil {
 		return 0, err
 	}
-	defer rows.Close()
-	count := 0
+	type candidate struct {
+		source, ruleID, category, recAction string
+		total                               int
+		fpRate                              float64
+	}
+	var candidates []candidate
 	for rows.Next() {
 		var source, ruleID, category, recAction string
 		var total int
 		var fpRate float64
 		if err := rows.Scan(&source, &ruleID, &category, &total, &fpRate, &recAction); err != nil {
-			return count, err
+			rows.Close()
+			return 0, err
 		}
-		reason := fmt.Sprintf("%d findings, %.0f%% false-positive/suppression rate", total, fpRate*100)
+		candidates = append(candidates, candidate{
+			source: source, ruleID: ruleID, category: category, recAction: recAction,
+			total: total, fpRate: fpRate,
+		})
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return 0, err
+	}
+	rows.Close()
+
+	count := 0
+	for _, c := range candidates {
+		reason := fmt.Sprintf("%d findings, %.0f%% false-positive/suppression rate", c.total, c.fpRate*100)
 		var exists int
 		if err := s.db.QueryRowContext(ctx, `
 			SELECT COUNT(1) FROM calibration_recommendations
 			WHERE scope = 'global' AND rule_id = ? AND source = ? AND status = 'proposed'
-		`, ruleID, source).Scan(&exists); err != nil {
+		`, c.ruleID, c.source).Scan(&exists); err != nil {
 			return count, fmt.Errorf("check existing recommendation: %w", err)
 		}
 		if exists > 0 {
@@ -244,7 +262,7 @@ func (s *SQLiteStore) GenerateCalibrationRecommendations(ctx context.Context, mi
 				scope, repository_id, recommendation_type, source, rule_id, category,
 				current_action, recommended_action, reason, confidence, status, created_at, updated_at
 			) VALUES ('global', NULL, 'report_only', ?, ?, ?, 'auto_issue', ?, ?, ?, 'proposed', ?, ?)
-		`, source, ruleID, category, recAction, reason, fpRate, now, now); err != nil {
+		`, c.source, c.ruleID, c.category, c.recAction, reason, c.fpRate, now, now); err != nil {
 			return count, err
 		}
 		count++

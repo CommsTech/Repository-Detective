@@ -16,7 +16,7 @@ Latest git commit: `effee25`
 | Item | Value |
 |---|---|
 | `ai_provider` | `openclaw` |
-| `ai_base_url` | configured (`https://192.168.255.11:18789/v1`) |
+| `ai_base_url` | configured (`https://ai.example.local:18789/v1`) |
 | `ai_model` | `openclaw/software-engineer` |
 | `enable_llm_auditors` | false (beta_standard / depth 2) |
 | `llm_sanity_gate_enabled` | false |

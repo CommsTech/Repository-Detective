@@ -2,7 +2,7 @@
 
 Date: 2026-06-02  
 Commit: `c528dbc`  
-Live URL: `http://192.168.255.10:8081/ui/repos/31`  
+Live URL: `http://127.0.0.1:8081/ui/repos/31`  
 Repository: `commstech/AMMBER` (repo ID 31)
 
 ## Deploy

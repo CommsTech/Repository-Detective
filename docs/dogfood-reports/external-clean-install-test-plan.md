@@ -27,7 +27,7 @@
 
 | # | Step | Pass criteria |
 |---|------|---------------|
-| 1 | Clone `https://git.commsnet.org/commstech/repository-detective.git` at `6d011cf+` | Clone succeeds |
+| 1 | Clone `https://git.commsnet.org/commstech/Repository-Detective.git` at `6d011cf+` | Clone succeeds |
 | 2 | `cp .env.example .env` — set API key, Gitea URL/token | No secrets in git |
 | 3 | `docker build --target all-in-one -t repository-detective:all-in-one .` | Image builds |
 | 4 | `docker compose -f docker-compose.beta.yml up -d` | Container healthy |
