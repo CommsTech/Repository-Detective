@@ -161,28 +161,44 @@ func (s *SQLiteStore) batchReportOnlyFindingCounts(ctx context.Context, repoIDs 
 }
 
 func (s *SQLiteStore) batchActivePresentCounts(ctx context.Context, repoIDs []int64, out map[int64]repoControlMetrics) error {
-	placeholders, args := inClauseInt64(repoIDs)
+	scanIDs := make([]string, 0, len(repoIDs))
+	scanToRepo := make(map[string]int64, len(repoIDs))
+	for _, id := range repoIDs {
+		sid := out[id].LastScanID
+		if sid == "" {
+			continue
+		}
+		scanIDs = append(scanIDs, sid)
+		scanToRepo[sid] = id
+	}
+	if len(scanIDs) == 0 {
+		return nil
+	}
+	placeholders, args := inClauseStrings(scanIDs)
+	// Prefer EXISTS over joining findings — the join plan was ~10x slower on large instance tables.
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT f.repository_id, COUNT(DISTINCT f.id)
-		FROM findings f
-		INNER JOIN finding_instances fi ON fi.finding_id = f.id
-		INNER JOIN scans s ON s.id = fi.scan_id
-		INNER JOIN (
-			SELECT repository_id, MAX(started_at) AS max_started FROM scans
-			WHERE repository_id IN (`+placeholders+`) GROUP BY repository_id
-		) lm ON s.repository_id = lm.repository_id AND s.started_at = lm.max_started
-		WHERE f.status = ?
-		GROUP BY f.repository_id
+		SELECT fi.scan_id, COUNT(1)
+		FROM finding_instances fi
+		WHERE fi.scan_id IN (`+placeholders+`)
+		  AND EXISTS (
+			SELECT 1 FROM findings f
+			WHERE f.id = fi.finding_id AND f.status = ?
+		  )
+		GROUP BY fi.scan_id
 	`, append(args, FindingStatusOpen)...)
 	if err != nil {
 		return err
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var repoID int64
+		var scanID string
 		var n int
-		if err := rows.Scan(&repoID, &n); err != nil {
+		if err := rows.Scan(&scanID, &n); err != nil {
 			return err
+		}
+		repoID, ok := scanToRepo[scanID]
+		if !ok {
+			continue
 		}
 		m := out[repoID]
 		m.ActivePresentOpen = n
@@ -242,22 +258,32 @@ func (s *SQLiteStore) batchDuplicateCounts(ctx context.Context, repoIDs []int64,
 }
 
 func (s *SQLiteStore) batchUnmappedIssueCounts(ctx context.Context, repoIDs []int64, out map[int64]repoControlMetrics) error {
+	scanIDs := make([]string, 0, len(repoIDs))
+	for _, id := range repoIDs {
+		if sid := out[id].LastScanID; sid != "" {
+			scanIDs = append(scanIDs, sid)
+		}
+	}
 	placeholders, args := inClauseInt64(repoIDs)
-	rows, err := s.db.QueryContext(ctx, `
+	query := `
 		SELECT f.repository_id, COUNT(1)
 		FROM external_issues e
 		INNER JOIN findings f ON f.id = e.finding_id
-		WHERE f.repository_id IN (`+placeholders+`) AND e.state = 'open'
+		WHERE f.repository_id IN (` + placeholders + `) AND e.state = 'open'
+	`
+	if len(scanIDs) == 0 {
+		query += ` GROUP BY f.repository_id`
+	} else {
+		scanPH, scanArgs := inClauseStrings(scanIDs)
+		query += `
 		AND NOT EXISTS (
 			SELECT 1 FROM finding_instances fi
-			INNER JOIN scans s ON s.id = fi.scan_id
-			INNER JOIN (
-				SELECT repository_id, MAX(started_at) AS max_started FROM scans GROUP BY repository_id
-			) lm ON s.repository_id = lm.repository_id AND s.started_at = lm.max_started
-			WHERE fi.finding_id = f.id AND fi.scan_id = s.id
+			WHERE fi.finding_id = f.id AND fi.scan_id IN (` + scanPH + `)
 		)
-		GROUP BY f.repository_id
-	`, args...)
+		GROUP BY f.repository_id`
+		args = append(args, scanArgs...)
+	}
+	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return err
 	}
@@ -281,6 +307,16 @@ func inClauseInt64(ids []int64) (string, []any) {
 	for i, id := range ids {
 		parts[i] = "?"
 		args[i] = id
+	}
+	return strings.Join(parts, ","), args
+}
+
+func inClauseStrings(values []string) (string, []any) {
+	parts := make([]string, len(values))
+	args := make([]any, len(values))
+	for i, v := range values {
+		parts[i] = "?"
+		args[i] = v
 	}
 	return strings.Join(parts, ","), args
 }

@@ -60,6 +60,7 @@ func (s *SQLiteStore) loadScannerPlatformRollups(ctx context.Context, summary *D
 			COUNT(DISTINCT CASE WHEN sr.status IN ('failed', 'timed_out', 'parse_failed', 'error') THEN s.repository_id END)
 		FROM scanner_results sr
 		JOIN scans s ON s.id = sr.scan_id
+		WHERE s.started_at >= datetime('now', '-30 days')
 		GROUP BY sr.scanner_name
 	`)
 	if err != nil {
@@ -82,13 +83,18 @@ func (s *SQLiteStore) loadScannerPlatformRollups(ctx context.Context, summary *D
 	summary.platformRollups = rollups
 
 	if err := s.db.QueryRowContext(ctx, `
-		SELECT COUNT(DISTINCT scanner_name) FROM scanner_results WHERE status = 'binary_missing'
+		SELECT COUNT(DISTINCT scanner_name) FROM scanner_results sr
+		JOIN scans s ON s.id = sr.scan_id
+		WHERE sr.status = 'binary_missing'
+		  AND s.started_at >= datetime('now', '-30 days')
 	`).Scan(&summary.ScannerToolsMissingCount); err != nil {
 		return fmt.Errorf("unique missing tools: %w", err)
 	}
 	if err := s.db.QueryRowContext(ctx, `
-		SELECT COUNT(DISTINCT scanner_name) FROM scanner_results
-		WHERE status IN ('failed', 'timed_out', 'parse_failed', 'error')
+		SELECT COUNT(DISTINCT scanner_name) FROM scanner_results sr
+		JOIN scans s ON s.id = sr.scan_id
+		WHERE sr.status IN ('failed', 'timed_out', 'parse_failed', 'error')
+		  AND s.started_at >= datetime('now', '-30 days')
 	`).Scan(&summary.ScannerFailuresCount); err != nil {
 		return fmt.Errorf("unique failed scanners: %w", err)
 	}

@@ -375,6 +375,47 @@ func (s *SQLiteStore) LearningHealthSummary(ctx context.Context) (LearningHealth
 	return out, nil
 }
 
+// ListRepositoryIDsAffectedByRule returns repos that have findings or learning events for a rule.
+// Used when expanding a global calibration recommendation into repo-scoped accepts.
+func (s *SQLiteStore) ListRepositoryIDsAffectedByRule(ctx context.Context, source, ruleID string, limit int) ([]int64, error) {
+	if limit <= 0 {
+		limit = 100
+	}
+	source = strings.TrimSpace(source)
+	ruleID = strings.TrimSpace(ruleID)
+	if source == "" && ruleID == "" {
+		return nil, nil
+	}
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT repository_id FROM (
+			SELECT DISTINCT repository_id AS repository_id FROM findings
+			WHERE repository_id > 0
+			  AND (? = '' OR source = ?)
+			  AND (? = '' OR rule_id = ?)
+			UNION
+			SELECT DISTINCT repository_id AS repository_id FROM learning_events
+			WHERE repository_id > 0
+			  AND (? = '' OR source = ?)
+			  AND (? = '' OR rule_id = ?)
+		)
+		ORDER BY repository_id
+		LIMIT ?
+	`, source, source, ruleID, ruleID, source, source, ruleID, ruleID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list repos affected by rule: %w", err)
+	}
+	defer rows.Close()
+	var out []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		out = append(out, id)
+	}
+	return out, rows.Err()
+}
+
 // AssignStructuralGroup links findings sharing a structural hash to a canonical finding.
 func (s *SQLiteStore) AssignStructuralGroup(ctx context.Context, repositoryID int64, structuralHash string, findingID int64) error {
 	if structuralHash == "" || repositoryID <= 0 || findingID <= 0 {

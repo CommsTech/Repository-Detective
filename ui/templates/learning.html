@@ -139,7 +139,7 @@
     <h2 id="cal-recs-title">Calibration recommendations</h2>
     <span class="rd-chip">Repo-scoped default</span>
   </div>
-  <p class="rd-muted">Accept creates a repo-scoped suppression + calibration rule. Global recommendations stay informational until multi-repo review exists. High/critical findings are never auto-downgraded at scan time.</p>
+  <p class="rd-muted">Accept applies <strong>repo-scoped</strong> suppressions (global tiles expand to every repository that already has that rule). Security/secret categories stay blocked. High/critical findings are never auto-downgraded at scan time.</p>
   {{if .Data.ActionNotice}}
   <p class="rd-chip" role="status">{{.Data.ActionNotice}}</p>
   {{end}}
@@ -161,19 +161,23 @@
       <code>{{.Source}}/{{.RuleID}}</code>
       <p class="rd-muted">{{.Reason}}</p>
       {{if .RepositoryID}}<p class="rd-muted">Repo #{{.RepositoryID}}</p>{{end}}
-      {{if and $.Data.CalibrationEnabled (eq .Scope "repo")}}
+      {{if $.Data.CalibrationEnabled}}
+      {{if .AcceptHint}}<p class="rd-muted" style="margin-top:0.5rem">{{.AcceptHint}}</p>{{end}}
+      {{if .BlockReason}}<p class="rd-muted" style="margin-top:0.5rem">{{.BlockReason}}</p>{{end}}
       <div class="rd-actions" style="margin-top:0.75rem;display:flex;gap:0.5rem;flex-wrap:wrap">
+        {{if .CanAccept}}
         <form method="post" action="{{$.BasePath}}/learning/recommendations/{{.ID}}/accept{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}">
           <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
-          <button type="submit" class="rd-btn rd-btn-secondary">Accept</button>
+          <button type="submit" class="rd-btn rd-btn-secondary">{{.AcceptLabel}}</button>
         </form>
+        {{end}}
         <form method="post" action="{{$.BasePath}}/learning/recommendations/{{.ID}}/reject{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}">
           <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
           <button type="submit" class="rd-btn rd-btn-ghost">Reject</button>
         </form>
       </div>
-      {{else if eq .Scope "global"}}
-      <p class="rd-muted" style="margin-top:0.5rem">Global accepts are blocked in beta — prefer repo-scoped rules.</p>
+      {{else}}
+      <p class="rd-muted" style="margin-top:0.5rem">Calibration actions are disabled in this deployment.</p>
       {{end}}
     </article>
     {{end}}

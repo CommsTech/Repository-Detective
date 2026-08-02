@@ -88,6 +88,16 @@ func buildDashboardChartJSONWithStore(ctx context.Context, qs store.QueryStore, 
 	if len(repos) > limit {
 		repos = repos[:limit]
 	}
+	repoIDs := make([]int64, 0, len(repos))
+	for _, r := range repos {
+		repoIDs = append(repoIDs, r.ID)
+	}
+	var categoryByRepo map[int64]map[string]int
+	if qs != nil && ctx != nil && len(repoIDs) > 0 {
+		if byRepo, err := qs.OpenFindingsByCategoryForRepositories(ctx, repoIDs); err == nil {
+			categoryByRepo = byRepo
+		}
+	}
 	for _, r := range repos {
 		short := r.FullName
 		if idx := strings.LastIndex(short, "/"); idx >= 0 {
@@ -96,15 +106,12 @@ func buildDashboardChartJSONWithStore(ctx context.Context, qs store.QueryStore, 
 		payload.RepoMapLabels = append(payload.RepoMapLabels, short)
 		payload.RepoMapValues = append(payload.RepoMapValues, r.OpenFindingsCount)
 		payload.RepoMapFailed = append(payload.RepoMapFailed, strings.EqualFold(r.LastScanStatus, "failed"))
-		if qs != nil && ctx != nil {
-			cats, err := qs.OpenFindingsByCategoryForRepository(ctx, r.ID)
-			if err == nil {
-				stack := make([]int, len(riskStackOrder))
-				for cat, n := range cats {
-					stack[riskStackIndex(cat)] += n
-				}
-				payload.RepoMapStacks = append(payload.RepoMapStacks, stack)
+		if cats := categoryByRepo[r.ID]; cats != nil {
+			stack := make([]int, len(riskStackOrder))
+			for cat, n := range cats {
+				stack[riskStackIndex(cat)] += n
 			}
+			payload.RepoMapStacks = append(payload.RepoMapStacks, stack)
 		}
 	}
 	if len(payload.RepoMapStackLabels) == 0 {

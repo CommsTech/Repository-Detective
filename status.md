@@ -3,6 +3,16 @@
 **Last updated:** 2026-08-02  
 **Repository:** https://git.commsnet.org/commstech/Repository-Detective.git
 
+## Live deploy (2026-08-02) — UI responsiveness
+
+| Item | Value |
+|------|-------|
+| Focus | Benchmark all UI pages; keep only net-faster changes |
+| Shipped | Migration 24 indexes; repo-control query rewrites; batched dashboard charts; 2s dashboard summary cache; 30d scanner rollups |
+| Evidence | [docs/dogfood-reports/ui-responsiveness-bench-2026-08-02.md](docs/dogfood-reports/ui-responsiveness-bench-2026-08-02.md) |
+| Live | Hotpatched `/app/repository-detective` (schema v24 applied on data volume) |
+| Gains (cold p50) | `/ui` −58%, `/ui/repos` −73%, `/ui/health` −67%, `/ui/reports` −62%, dashboard API −68% |
+
 ## Live deploy (2026-08-02) — Scanner reliability + SBOM + triage export
 
 | Item | Value |

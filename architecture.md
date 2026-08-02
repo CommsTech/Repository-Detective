@@ -34,6 +34,10 @@ Deterministic learning records lifecycle events (`learning_events`), builds per-
 
 External scanners run **concurrently** via `scanners.Registry.RunAll` (results keep registry order). Each scanner still has its own timeout (`scanner_timeout_seconds` default 180s; analysis envelope default 900s). Command capture prefers **stdout** for JSON parsers so stderr progress logs no longer cause `parse_failed`.
 
+## UI / dashboard performance
+
+SQLite stays single-writer (`SetMaxOpenConns(1)`), so page latency is dominated by query plans on large tables (`finding_instances`, `findings`, `scanner_results`). Migration **24** adds hot-path indexes. `DashboardSummary` uses a **2s** in-process TTL cache (shared by dashboard, health, reports, API). Repo control metrics reuse latest scan IDs instead of re-aggregating the full `scans` table per count. Scanner platform rollups are windowed to **30 days**.
+
 ## SBOM
 
 Go modules prefer `cyclonedx-gomod`; other ecosystems use **Syft**. Both are installed in all-in-one/runner images when `INSTALL_EXTERNAL_TOOLS=true`.

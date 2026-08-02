@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"git.commsnet.org/commstech/repository-detective/learning"
@@ -37,7 +38,8 @@ func (calibrationBridge) ListRecommendations(c *gin.Context, status string) ([]s
 }
 
 func (calibrationBridge) AcceptRecommendation(c *gin.Context, id int64) error {
-	return acceptCalibrationRecommendation(c.Request.Context(), id)
+	_, err := acceptCalibrationRecommendation(c.Request.Context(), id)
+	return err
 }
 
 func (calibrationBridge) RejectRecommendation(c *gin.Context, id int64) error {
@@ -64,27 +66,72 @@ func findCalibrationRecommendation(ctx context.Context, id int64) (*store.Calibr
 	return nil, fmt.Errorf("recommendation not found")
 }
 
-func acceptCalibrationRecommendation(ctx context.Context, id int64) error {
+func acceptCalibrationRecommendation(ctx context.Context, id int64) (int, error) {
 	rec, err := findCalibrationRecommendation(ctx, id)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	if err := learning.ValidateCalibrationAccept(rec.Category, rec.Scope); err != nil {
-		return err
+		return 0, err
 	}
-	scope := store.SuppressionScopeGlobal
-	var repoIDPtr *int64
-	if rec.Scope == "repo" && rec.RepositoryID != nil && *rec.RepositoryID > 0 {
-		scope = store.SuppressionScopeRepo
-		repoIDPtr = rec.RepositoryID
+	if rec.RecommendedAction != "report_only" || strings.TrimSpace(rec.RuleID) == "" {
+		emitRecommendationLearning(ctx, repoIDFromRec(rec), rec.ID, true, rec.Source, rec.RuleID)
+		if err := rdStore.UpdateCalibrationRecommendationStatus(ctx, id, "accepted"); err != nil {
+			return 0, err
+		}
+		return 0, nil
 	}
-	if rec.RecommendedAction == "report_only" && rec.RuleID != "" {
-		_, err = rdStore.CreateFindingSuppression(ctx, store.FindingSuppression{
-			RepositoryID: repoIDPtr,
+
+	repoIDs := make([]int64, 0, 1)
+	if strings.EqualFold(rec.Scope, "repo") {
+		if rec.RepositoryID == nil || *rec.RepositoryID <= 0 {
+			return 0, fmt.Errorf("repo-scoped recommendation is missing repository_id")
+		}
+		repoIDs = append(repoIDs, *rec.RepositoryID)
+	} else {
+		// Global tiles expand into repo-scoped suppressions — never a fleet-wide global rule.
+		repoIDs, err = rdStore.ListRepositoryIDsAffectedByRule(ctx, rec.Source, rec.RuleID, 100)
+		if err != nil {
+			return 0, err
+		}
+		if len(repoIDs) == 0 {
+			return 0, fmt.Errorf("no repositories currently have this rule — nothing to apply; reject the recommendation or mark false positives on a repo first")
+		}
+	}
+
+	applied := 0
+	for _, repoID := range repoIDs {
+		repoID := repoID
+		if err := applyRepoCalibrationAccept(ctx, rec, repoID); err != nil {
+			return applied, fmt.Errorf("apply to repository %d: %w", repoID, err)
+		}
+		applied++
+	}
+	emitRecommendationLearning(ctx, repoIDFromRec(rec), rec.ID, true, rec.Source, rec.RuleID)
+	if err := rdStore.UpdateCalibrationRecommendationStatus(ctx, id, "accepted"); err != nil {
+		return applied, err
+	}
+	return applied, nil
+}
+
+func repoIDFromRec(rec *store.CalibrationRecommendation) int64 {
+	if rec != nil && rec.RepositoryID != nil {
+		return *rec.RepositoryID
+	}
+	return 0
+}
+
+func applyRepoCalibrationAccept(ctx context.Context, rec *store.CalibrationRecommendation, repoID int64) error {
+	repoIDCopy := repoID
+	if alreadyHasRuleSuppression(ctx, repoID, rec.Source, rec.RuleID) {
+		// Still refresh matcher / ensure calibration rule row exists.
+	} else {
+		_, err := rdStore.CreateFindingSuppression(ctx, store.FindingSuppression{
+			RepositoryID: &repoIDCopy,
 			Source:       rec.Source,
 			RuleID:       rec.RuleID,
 			Category:     rec.Category,
-			Scope:        scope,
+			Scope:        store.SuppressionScopeRepo,
 			Reason:       rec.Reason,
 			CreatedBy:    "calibration-accept",
 			Active:       true,
@@ -92,26 +139,35 @@ func acceptCalibrationRecommendation(ctx context.Context, id int64) error {
 		if err != nil {
 			return err
 		}
-		if repoIDPtr != nil {
-			expires := time.Now().UTC().Add(90 * 24 * time.Hour)
-			_, _ = rdStore.CreateRepoCalibrationRule(ctx, store.RepoCalibrationRule{
-				RepositoryID: repoIDPtr, Scope: "repo", Source: rec.Source, RuleID: rec.RuleID,
-				FindingCategory: rec.Category, Action: "downgrade_confidence", Reason: rec.Reason,
-				EvidenceCount: int(rec.Confidence * 100), FalsePositiveRate: rec.Confidence,
-				Active: true, ExpiresAt: &expires, RecommendationID: &rec.ID,
-			})
-			if suppressionMatcher != nil {
-				suppressionMatcher.Invalidate(*repoIDPtr)
-				_ = suppressionMatcher.LoadRepository(ctx, *repoIDPtr)
-			}
+	}
+	expires := time.Now().UTC().Add(90 * 24 * time.Hour)
+	_, _ = rdStore.CreateRepoCalibrationRule(ctx, store.RepoCalibrationRule{
+		RepositoryID: &repoIDCopy, Scope: "repo", Source: rec.Source, RuleID: rec.RuleID,
+		FindingCategory: rec.Category, Action: "downgrade_confidence", Reason: rec.Reason,
+		EvidenceCount: int(rec.Confidence * 100), FalsePositiveRate: rec.Confidence,
+		Active: true, ExpiresAt: &expires, RecommendationID: &rec.ID,
+	})
+	if suppressionMatcher != nil {
+		suppressionMatcher.Invalidate(repoID)
+		_ = suppressionMatcher.LoadRepository(ctx, repoID)
+	}
+	return nil
+}
+
+func alreadyHasRuleSuppression(ctx context.Context, repoID int64, source, ruleID string) bool {
+	if rdStore == nil {
+		return false
+	}
+	active, err := rdStore.ListActiveSuppressionsForRepository(ctx, repoID)
+	if err != nil {
+		return false
+	}
+	for _, s := range active {
+		if strings.EqualFold(s.Source, source) && strings.EqualFold(s.RuleID, ruleID) {
+			return true
 		}
 	}
-	repoID := int64(0)
-	if rec.RepositoryID != nil {
-		repoID = *rec.RepositoryID
-	}
-	emitRecommendationLearning(ctx, repoID, rec.ID, true, rec.Source, rec.RuleID)
-	return rdStore.UpdateCalibrationRecommendationStatus(ctx, id, "accepted")
+	return false
 }
 
 func rejectCalibrationRecommendation(ctx context.Context, id int64) error {
@@ -122,11 +178,7 @@ func rejectCalibrationRecommendation(ctx context.Context, id int64) error {
 	if err != nil {
 		return err
 	}
-	repoID := int64(0)
-	if rec.RepositoryID != nil {
-		repoID = *rec.RepositoryID
-	}
-	emitRecommendationLearning(ctx, repoID, id, false, rec.Source, rec.RuleID)
+	emitRecommendationLearning(ctx, repoIDFromRec(rec), id, false, rec.Source, rec.RuleID)
 	return rdStore.UpdateCalibrationRecommendationStatus(ctx, id, "rejected")
 }
 
@@ -187,7 +239,7 @@ func contextWithTimeout(d time.Duration) (context.Context, context.CancelFunc) {
 // calibrationUIBridge exposes accept/reject/recompute to the operator UI.
 type calibrationUIBridge struct{}
 
-func (calibrationUIBridge) AcceptRecommendation(ctx context.Context, id int64) error {
+func (calibrationUIBridge) AcceptRecommendation(ctx context.Context, id int64) (int, error) {
 	return acceptCalibrationRecommendation(ctx, id)
 }
 

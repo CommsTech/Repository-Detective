@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-const currentSchemaVersion = 23
+const currentSchemaVersion = 24
 
 var migrationStatements = map[int][]string{
 	1: {
@@ -720,6 +720,18 @@ var migrationStatements = map[int][]string{
 			updated_at TEXT NOT NULL,
 			updated_by TEXT NOT NULL DEFAULT ''
 		)`,
+	},
+	// UI responsiveness: indexes for dashboard + repo-control hot paths on large operator DBs.
+	24: {
+		`CREATE INDEX IF NOT EXISTS idx_finding_instances_created_at ON finding_instances(created_at)`,
+		`CREATE INDEX IF NOT EXISTS idx_findings_status ON findings(status)`,
+		`CREATE INDEX IF NOT EXISTS idx_findings_status_severity ON findings(status, severity)`,
+		`CREATE INDEX IF NOT EXISTS idx_findings_status_repo ON findings(status, repository_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_scans_status_started ON scans(status, started_at)`,
+		`CREATE INDEX IF NOT EXISTS idx_scans_trigger_started ON scans(trigger_type, started_at)`,
+		`CREATE INDEX IF NOT EXISTS idx_scanner_results_status ON scanner_results(status)`,
+		`CREATE INDEX IF NOT EXISTS idx_scanner_results_scan_status ON scanner_results(scan_id, status)`,
+		`CREATE INDEX IF NOT EXISTS idx_external_issues_state_finding ON external_issues(state, finding_id)`,
 	},
 }
 

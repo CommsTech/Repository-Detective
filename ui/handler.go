@@ -58,7 +58,7 @@ type Handler struct {
 
 // CalibrationBackend applies learning calibration actions from the UI.
 type CalibrationBackend interface {
-	AcceptRecommendation(ctx context.Context, id int64) error
+	AcceptRecommendation(ctx context.Context, id int64) (reposApplied int, err error)
 	RejectRecommendation(ctx context.Context, id int64) error
 	Recompute(ctx context.Context) (map[string]any, error)
 }
@@ -451,7 +451,7 @@ func (h *Handler) Dashboard(c *gin.Context) {
 		summary.ScannerParseFailedCount,
 	)
 
-	repos, _ := h.store.ListRepositoriesWithSummary(c.Request.Context(), store.ListOptions{Limit: 200})
+	repos, _ := h.store.ListRepositoriesWithSummary(c.Request.Context(), store.ListOptions{Limit: 20})
 	sort.Slice(repos, func(i, j int) bool {
 		return repos[i].OpenFindingsCount > repos[j].OpenFindingsCount
 	})
@@ -472,7 +472,6 @@ func (h *Handler) Dashboard(c *gin.Context) {
 		"Readiness":            readiness,
 		"ActiveScans":          activeScans,
 		"TopRiskyRepos":        topRisk,
-		"AllRepos":             repos,
 		"RecentSevereFindings": severe,
 		"Actions":              actions,
 		"Calibration":          calibration,
@@ -1615,7 +1614,7 @@ func (h *Handler) Learning(c *gin.Context) {
 	notice := strings.TrimSpace(c.Query("notice"))
 	h.renderNav(c, "learning.html", "Learning & Calibration", "learning", map[string]any{
 		"Health":                      health,
-		"Recommendations":             recs,
+		"Recommendations":             enrichCalibrationRecommendationViews(recs),
 		"AIRecommendations":           aiRecs,
 		"AIRecommendationsEnabled":    h.platform.OpenClawAIReviewEnabled,
 		"AIRecommendationsConfigured": h.platform.OpenClawEndpointConfigured,
@@ -1640,11 +1639,16 @@ func (h *Handler) AcceptCalibrationRecommendation(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if err := h.calibration.AcceptRecommendation(c.Request.Context(), id); err != nil {
+	applied, err := h.calibration.AcceptRecommendation(c.Request.Context(), id)
+	if err != nil {
 		h.renderLearningNotice(c, "Accept failed: "+err.Error())
 		return
 	}
-	c.Redirect(http.StatusSeeOther, h.learningRedirect(c, "Recommendation accepted"))
+	notice := "Recommendation accepted"
+	if applied > 0 {
+		notice = fmt.Sprintf("Accepted — applied repo-scoped rules to %d repositories", applied)
+	}
+	c.Redirect(http.StatusSeeOther, h.learningRedirect(c, notice))
 }
 
 func (h *Handler) RejectCalibrationRecommendation(c *gin.Context) {
@@ -1703,7 +1707,7 @@ func (h *Handler) renderLearningNotice(c *gin.Context, notice string) {
 	noisy, _ := h.store.ListCalibrationRuleStats(ctx, 12)
 	h.renderNav(c, "learning.html", "Learning & Calibration", "learning", map[string]any{
 		"Health":                      health,
-		"Recommendations":             recs,
+		"Recommendations":             enrichCalibrationRecommendationViews(recs),
 		"AIRecommendations":           aiRecs,
 		"AIRecommendationsEnabled":    h.platform.OpenClawAIReviewEnabled,
 		"AIRecommendationsConfigured": h.platform.OpenClawEndpointConfigured,

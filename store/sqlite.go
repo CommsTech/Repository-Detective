@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -20,7 +21,19 @@ func isNoRows(err error) bool {
 // SQLiteStore implements Store with SQLite.
 type SQLiteStore struct {
 	db *sql.DB
+
+	// Short TTL cache for DashboardSummary — shared by /ui, /ui/health, /ui/reports,
+	// and the API. Keeps navigating between those pages snappy without long-lived staleness.
+	dashboardSummaryMu    sync.Mutex
+	dashboardSummaryCache map[int]dashboardSummaryCacheEntry
 }
+
+type dashboardSummaryCacheEntry struct {
+	summary   DashboardSummary
+	expiresAt time.Time
+}
+
+const dashboardSummaryCacheTTL = 2 * time.Second
 
 // OpenSQLite opens (or creates) a SQLite database and runs migrations.
 func OpenSQLite(path string) (*SQLiteStore, error) {

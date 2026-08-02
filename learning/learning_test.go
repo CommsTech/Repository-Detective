@@ -47,8 +47,11 @@ func TestValidateCalibrationAccept(t *testing.T) {
 	if err := learning.ValidateCalibrationAccept("hardcoded_secret", "repo"); err == nil {
 		t.Fatal("secret category accept should be blocked")
 	}
-	if err := learning.ValidateCalibrationAccept("quality", "global"); err == nil {
-		t.Fatal("global accept should be blocked")
+	if err := learning.ValidateCalibrationAccept("quality", "global"); err != nil {
+		t.Fatalf("global accept should be allowed (expands to repo-scoped rules): %v", err)
+	}
+	if err := learning.ValidateCalibrationAccept("security", "global"); err == nil {
+		t.Fatal("protected global category should still be blocked")
 	}
 }
 

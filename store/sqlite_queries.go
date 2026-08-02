@@ -280,24 +280,47 @@ func (s *SQLiteStore) OpenFindingsBySeverityForRepository(ctx context.Context, r
 }
 
 func (s *SQLiteStore) OpenFindingsByCategoryForRepository(ctx context.Context, repositoryID int64) (map[string]int, error) {
-	rows, err := s.db.QueryContext(ctx, `
-		SELECT LOWER(COALESCE(category, 'unknown')), COUNT(1) FROM findings
-		WHERE repository_id = ? AND status = 'open'
-		GROUP BY LOWER(COALESCE(category, 'unknown'))
-	`, repositoryID)
+	byRepo, err := s.OpenFindingsByCategoryForRepositories(ctx, []int64{repositoryID})
 	if err != nil {
-		return nil, fmt.Errorf("open findings by category: %w", err)
+		return nil, err
+	}
+	out := byRepo[repositoryID]
+	if out == nil {
+		out = map[string]int{}
+	}
+	return out, nil
+}
+
+// OpenFindingsByCategoryForRepositories returns open finding counts by category for many repos in one query.
+func (s *SQLiteStore) OpenFindingsByCategoryForRepositories(ctx context.Context, repositoryIDs []int64) (map[int64]map[string]int, error) {
+	out := make(map[int64]map[string]int, len(repositoryIDs))
+	if len(repositoryIDs) == 0 {
+		return out, nil
+	}
+	placeholders, args := inClauseInt64(repositoryIDs)
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT repository_id, LOWER(COALESCE(category, 'unknown')), COUNT(1) FROM findings
+		WHERE repository_id IN (`+placeholders+`) AND status = 'open'
+		GROUP BY repository_id, LOWER(COALESCE(category, 'unknown'))
+	`, args...)
+	if err != nil {
+		return nil, fmt.Errorf("open findings by category batch: %w", err)
 	}
 	defer rows.Close()
 
-	out := map[string]int{}
 	for rows.Next() {
+		var repoID int64
 		var cat string
 		var count int
-		if err := rows.Scan(&cat, &count); err != nil {
+		if err := rows.Scan(&repoID, &cat, &count); err != nil {
 			return nil, err
 		}
-		out[cat] = count
+		m := out[repoID]
+		if m == nil {
+			m = map[string]int{}
+			out[repoID] = m
+		}
+		m[cat] = count
 	}
 	return out, rows.Err()
 }
@@ -530,6 +553,44 @@ func (s *SQLiteStore) DashboardSummary(ctx context.Context, recentLimit int) (Da
 		recentLimit = 50
 	}
 
+	if cached, ok := s.getCachedDashboardSummary(recentLimit); ok {
+		return cached, nil
+	}
+
+	summary, err := s.buildDashboardSummary(ctx, recentLimit)
+	if err != nil {
+		return summary, err
+	}
+	s.putCachedDashboardSummary(recentLimit, summary)
+	return summary, nil
+}
+
+func (s *SQLiteStore) getCachedDashboardSummary(recentLimit int) (DashboardSummary, bool) {
+	s.dashboardSummaryMu.Lock()
+	defer s.dashboardSummaryMu.Unlock()
+	if s.dashboardSummaryCache == nil {
+		return DashboardSummary{}, false
+	}
+	entry, ok := s.dashboardSummaryCache[recentLimit]
+	if !ok || time.Now().After(entry.expiresAt) {
+		return DashboardSummary{}, false
+	}
+	return entry.summary, true
+}
+
+func (s *SQLiteStore) putCachedDashboardSummary(recentLimit int, summary DashboardSummary) {
+	s.dashboardSummaryMu.Lock()
+	defer s.dashboardSummaryMu.Unlock()
+	if s.dashboardSummaryCache == nil {
+		s.dashboardSummaryCache = make(map[int]dashboardSummaryCacheEntry)
+	}
+	s.dashboardSummaryCache[recentLimit] = dashboardSummaryCacheEntry{
+		summary:   summary,
+		expiresAt: time.Now().Add(dashboardSummaryCacheTTL),
+	}
+}
+
+func (s *SQLiteStore) buildDashboardSummary(ctx context.Context, recentLimit int) (DashboardSummary, error) {
 	var summary DashboardSummary
 	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(1) FROM repositories`).Scan(&summary.TotalRepositories); err != nil {
 		return summary, fmt.Errorf("count repositories: %w", err)

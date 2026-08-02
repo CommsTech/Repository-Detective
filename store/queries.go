@@ -120,6 +120,7 @@ type QueryStore interface {
 	CountFindings(ctx context.Context, filter FindingFilter) (int, error)
 	OpenFindingsBySeverityForRepository(ctx context.Context, repositoryID int64) (map[string]int, error)
 	OpenFindingsByCategoryForRepository(ctx context.Context, repositoryID int64) (map[string]int, error)
+	OpenFindingsByCategoryForRepositories(ctx context.Context, repositoryIDs []int64) (map[int64]map[string]int, error)
 	OpenFindingsConfidenceBandsForRepository(ctx context.Context, repositoryID int64, confidenceGate float64) (map[string]int, error)
 	GetFindingDetail(ctx context.Context, id int64) (FindingDetail, error)
 	ListFindingsByIDs(ctx context.Context, ids []int64) (map[int64]Finding, error)
@@ -220,6 +221,7 @@ type QueryStore interface {
 	ListRepoCalibrationRules(ctx context.Context, repositoryID int64, activeOnly bool) ([]RepoCalibrationRule, error)
 	ExpireRepoCalibrationRule(ctx context.Context, ruleID int64) error
 	GenerateRepoScopedRecommendations(ctx context.Context, repositoryID int64, minFindings int) (int, error)
+	ListRepositoryIDsAffectedByRule(ctx context.Context, source, ruleID string, limit int) ([]int64, error)
 	LearningHealthSummary(ctx context.Context) (LearningHealthSummary, error)
 	AssignStructuralGroup(ctx context.Context, repositoryID int64, structuralHash string, findingID int64) error
 

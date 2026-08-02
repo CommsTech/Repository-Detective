@@ -1,5 +1,20 @@
 # Development Issues Log
 
+## Fixed (2026-08-02) — Learning page missing Accept on recommendation tiles
+
+| Priority | Issue | Resolution |
+|----------|-------|------------|
+| HIGH | Global calibration tiles showed only “accepts blocked” with no Accept/Reject | Show **Accept for affected repos** + Reject; accept expands into repo-scoped suppressions (never fleet-wide). Security/secret categories stay Reject-only with explanation. |
+
+## Fixed (2026-08-02) — Dashboard / UI responsiveness
+
+| Priority | Issue | Resolution |
+|----------|-------|------------|
+| HIGH | `/ui`, `/ui/health`, `/ui/reports` ~1.0–1.3s (warm) | Indexes on finding_instances/findings/scans/scanner_results; 2s DashboardSummary cache; windowed scanner rollups |
+| HIGH | `/ui/repos` ~1.1s | Rewrote unmapped + active-present counts to use latest scan IDs / EXISTS (was full-table correlated aggregates) |
+| MEDIUM | Dashboard chart N+1 category queries | `OpenFindingsByCategoryForRepositories` batch; load 20 repos not 200 |
+| LOW | No repeatable page timing harness | `scripts/ui-responsiveness-bench.sh` + dogfood report |
+
 ## Fixed (2026-08-02) — External review: scanner reliability + SBOM + triage/export
 
 | Priority | Issue | Resolution |
@@ -180,7 +195,7 @@
 
 | Priority | Issue | Notes |
 |----------|-------|-------|
-| LOW | Gitea #48 Ops: homelab AI/Qdrant connectivity from Docker | Ops/infra — not a code defect; document runbook or soft-fail already covers |
+| LOW | Gitea #48 Ops: homelab AI/Qdrant connectivity from Docker | **Closed 2026-08-02** — Qdrant removed from product; fingerprint + SQLite dedup only |
 | LOW | `WebhookHandler` still allows empty secret (logs warning only) | Consider failing closed in production mode |
 | LOW | Full `./scanners` suite can timeout when live `grype db` warmup runs | Unit subset passes; consider skipping network warmup under `testing.Short()` |
 | LOW | Integration tests with mocked Gitea/OpenWebUI | Unit tests added for core logic |
