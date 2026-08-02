@@ -42,8 +42,9 @@ func TestRunStaticAnalysisSkipsDecryptionFailedPlaceholder(t *testing.T) {
 }
 
 func TestRunStaticAnalysisFindsHighEntropySecret(t *testing.T) {
-	// Split Stripe-shaped prefix so gitleaks does not treat this test source as a live secret.
-	secret := "sk_" + "live_abcdefghijklmnopqrstuvwxyz12"
+	// Build a high-entropy token at runtime. Avoid Stripe/AWS-shaped literals in
+	// source so forge secret scanning does not block public mirrors.
+	secret := "rd_test_" + "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6"
 	findings := RunStaticAnalysis([]FileContent{{
 		Path:    "config.go",
 		Content: `api_key := "` + secret + `"`,
