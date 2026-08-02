@@ -12,6 +12,14 @@
   <span>{{.FullName}}</span>
 </nav>
 
+<div class="rd-report-toolbar rd-no-print">
+  <div>
+    <p class="rd-report-toolbar-title">Repository report</p>
+    <p class="rd-muted">Print or save a PDF of this audit report (sidebar and controls are hidden in the print layout).</p>
+  </div>
+  <button type="button" class="rd-btn" data-rd-print>Print / Save PDF</button>
+</div>
+
 {{template "executive_summary.html" (dict "Executive" $.Data.Executive)}}
 
 <div class="rd-report rd-print-block">
@@ -166,9 +174,6 @@
   </table>
 </div>
 
-<div class="rd-actions rd-no-print">
-  <button type="button" class="rd-btn" onclick="window.print()">Print / Save PDF</button>
-</div>
 {{end}}
 
 <script type="application/json" id="rd-report-chart-data">{{jsonScript .Data.ChartJSON}}</script>

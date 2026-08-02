@@ -355,6 +355,15 @@
     });
   }
 
+  function initPrintButtons() {
+    document.querySelectorAll("[data-rd-print]").forEach(function (btn) {
+      btn.addEventListener("click", function (e) {
+        e.preventDefault();
+        window.print();
+      });
+    });
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     initTableSearch();
     initConfirmForms();
@@ -363,5 +372,6 @@
     initScanNowModal();
     initScanAutoRefresh();
     initCopyButtons();
+    initPrintButtons();
   });
 })();
