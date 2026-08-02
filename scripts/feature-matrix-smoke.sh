@@ -69,8 +69,8 @@ PY
 
 echo "==> Health"
 check_http "health" "${BASE}/health"
-ready=$(curl -sf "${auth[@]}" "${BASE}/health" 2>/dev/null | json_field ready || true)
-tools=$(curl -sf "${auth[@]}" "${BASE}/health" 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('tools_summary',{}).get('available_count',0))" || echo 0)
+ready=$(python3 -c "import json; d=json.load(open('/tmp/rd-matrix-body')); print(d.get('ready',''))" 2>/dev/null || true)
+tools=$(python3 -c "import json; d=json.load(open('/tmp/rd-matrix-body')); print(d.get('tools_summary',{}).get('available_count',0))" 2>/dev/null || echo 0)
 if [[ "$ready" == "True" || "$ready" == "true" ]]; then
   ((pass++)) || true; record "ready" "pass" "ready=$ready tools=$tools"
 else
