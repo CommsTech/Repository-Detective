@@ -3,7 +3,7 @@
 <div class="rd-card rd-reconciliation-panel" id="issue-finding-reconciliation">
   <div class="rd-card-head">
     <h2>Issue / finding reconciliation</h2>
-    {{if .CountsDifferExpected}}<span class="rd-badge monitor">counts may differ — expected</span>{{else}}<span class="rd-badge enforce">aligned</span>{{end}}
+    {{if .CountsDifferExpected}}<span class="rd-badge monitor">counts may differ — expected</span>{{else}}<span class="rd-badge success">aligned</span>{{end}}
   </div>
   <p class="rd-muted rd-recon-explainer">Scan findings and forge issues may differ. Report-only scans persist findings without filing Gitea issues. Open Gitea issues are mapped by fingerprint when available.</p>
   <p class="rd-muted rd-recon-detail">{{.ReportOnlyExplanation}}</p>

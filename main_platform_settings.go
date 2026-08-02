@@ -168,6 +168,7 @@ func uhPlatformContextFromConfig() ui.PlatformContext {
 		GiteaURLConfigured:                 strings.TrimSpace(config.GiteaURL) != "",
 		GiteaTokenConfigured:               strings.TrimSpace(config.GiteaToken) != "",
 		APIKeyConfigured:                   strings.TrimSpace(config.APIKey) != "",
+		WebhookSecretConfigured:            strings.TrimSpace(config.WebhookSecret) != "",
 		RunnerSharedSecretSet:              strings.TrimSpace(config.RunnerSharedSecret) != "",
 		RunnerCallbackBaseURL:              config.RunnerCallbackBaseURL,
 		PublicURL:                          config.PublicURL,

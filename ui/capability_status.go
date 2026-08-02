@@ -24,6 +24,7 @@ type PlatformContext struct {
 	GiteaURLConfigured           bool
 	GiteaTokenConfigured         bool
 	APIKeyConfigured             bool
+	WebhookSecretConfigured      bool
 	RunnerSharedSecretSet        bool
 	RunnerCallbackBaseURL        string
 	PublicURL                    string

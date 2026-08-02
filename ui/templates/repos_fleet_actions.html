@@ -20,7 +20,7 @@
         <button type="submit" class="rd-menu-item rd-menu-item-warn" role="menuitem">Disable scanning</button>
       </form>
       {{else}}
-      <form method="post" action="{{$page.BasePath}}/repos/{{$row.ID}}/enable-scanning{{if $page.APIKey}}?api_key={{$page.APIKey}}{{end}}" class="rd-inline-form" role="none" data-confirm="Enable scanning for {{$row.FullName}}?">
+      <form method="post" action="{{$page.BasePath}}/repos/{{$row.ID}}/enable-scanning{{if $page.APIKey}}?api_key={{$page.APIKey}}{{end}}" class="rd-inline-form" role="none" data-confirm="{{if $page.Data.ControlPage.WebhookSetup.Ready}}Enable scanning for {{$row.FullName}}?{{else}}Enable scanning for {{$row.FullName}}? Push webhooks are not fully configured yet — manual Scan now will work, but Gitea push scans will not until PUBLIC_URL, webhook secret, and forge registration are fixed (see Setup guide).{{end}}">
         <input type="hidden" name="csrf_token" value="{{$page.CSRFToken}}">
         <button type="submit" class="rd-menu-item" role="menuitem">Enable scanning</button>
       </form>

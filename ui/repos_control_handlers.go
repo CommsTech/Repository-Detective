@@ -79,7 +79,11 @@ func (h *Handler) setRepoScanEnabled(c *gin.Context, enabled bool) {
 		redirect += "?"
 	}
 	if enabled {
-		redirect += "notice=" + url.QueryEscape(fmt.Sprintf("Scanning enabled for %s", repo.FullName))
+		msg := fmt.Sprintf("Scanning enabled for %s", repo.FullName)
+		if setup := h.webhookSetupStatus(); !setup.Ready {
+			msg += ". Push webhooks are not fully configured yet — manual Scan now works; fix PUBLIC_URL, webhook secret, and Gitea registration (see Setup guide / Onboard)."
+		}
+		redirect += "notice=" + url.QueryEscape(msg)
 	} else {
 		redirect += "notice=" + url.QueryEscape(fmt.Sprintf("Scanning disabled for %s", repo.FullName))
 	}

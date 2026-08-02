@@ -32,6 +32,24 @@
   </div>
   {{end}}
 
+  {{with .Data.ControlPage.WebhookSetup}}
+  {{if not .Ready}}
+  <div class="rd-alert warn rd-fleet-warning" role="status">
+    <strong>Push webhooks are not ready.</strong>
+    You can still enable repos for <em>manual</em> Scan now; Gitea push scans will not work until these are fixed:
+    <ul class="rd-fleet-webhook-issues">
+      {{range .Issues}}<li>{{.}}</li>{{end}}
+    </ul>
+    <div class="rd-fleet-warning-actions">
+      <a class="rd-link" href="{{.OnboardURL}}" target="_blank" rel="noopener">Open Onboard wizard</a>
+      · <a class="rd-link" href="{{$.BasePath}}/configure{{apiKeyQS $.APIKey}}">Configure</a>
+      · <a class="rd-link" href="{{.DocsURL}}" target="_blank" rel="noopener">Setup guide (webhooks)</a>
+      · <a class="rd-link" href="https://git.commsnet.org/commstech/Repository-Detective/src/branch/main/docs/NETWORKING.md" target="_blank" rel="noopener">Networking guide</a>
+    </div>
+  </div>
+  {{end}}
+  {{end}}
+
   <div class="rd-toolbar rd-fleet-toolbar">
     <div class="rd-search">
       <label for="rd-table-search" class="rd-muted">Search</label>
@@ -58,7 +76,8 @@
       </div>
 
       <div class="rd-fleet-cell rd-fleet-state">
-        <div class="rd-fleet-kv" title="Repo allowed for webhook/manual scans"><span class="rd-fleet-k">Webhook/manual</span>{{if .ScanEnabled}}<span class="rd-badge enforce rd-badge-xs">enabled</span>{{else}}<span class="rd-badge skipped rd-badge-xs">disabled</span>{{end}}</div>
+        <div class="rd-fleet-kv" title="Repo allowed for webhook and manual scans (not an error state)"><span class="rd-fleet-k">Webhook/manual</span>{{if .ScanEnabled}}<span class="rd-badge success rd-badge-xs">enabled</span>{{else}}<span class="rd-badge skipped rd-badge-xs">disabled</span>{{end}}</div>
+        {{if .WebhookHint}}<p class="rd-fleet-webhook-hint rd-muted" title="{{.WebhookHint}}">{{.WebhookHint}} {{if not $.Data.ControlPage.WebhookSetup.Ready}}<a class="rd-link rd-link-sm" href="{{$.Data.ControlPage.WebhookSetup.DocsURL}}" target="_blank" rel="noopener">Fix guide</a>{{else}}<a class="rd-link rd-link-sm" href="{{$.Data.ControlPage.WebhookSetup.OnboardURL}}" target="_blank" rel="noopener">Register webhook</a>{{end}}</p>{{end}}
         <div class="rd-fleet-kv" title="In-process nightly scheduler"><span class="rd-fleet-k">Nightly sched</span>{{if .ScheduleEnabled}}<span class="rd-badge info rd-badge-xs">on</span>{{else}}<span class="rd-muted" title="Nightly schedule off — no cron fleet scan">off</span>{{end}}</div>
         <div class="rd-fleet-kv" title="Forge issue filing policy"><span class="rd-fleet-k">Filing</span><span class="rd-badge {{if .IssueFilingOn}}warn{{else}}monitor{{end}} rd-badge-xs">{{if .IssueFilingOn}}on{{else}}off{{end}}</span></div>
         <div class="rd-fleet-kv"><span class="rd-fleet-k">Profile</span><code class="rd-fleet-code">{{profileLabel .ScanProfile}}</code></div>
