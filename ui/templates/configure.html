@@ -201,7 +201,7 @@
       {{range .Settings}}
       <tr>
         <td><code>{{.Key}}</code></td>
-        <td>{{if .Secret}}{{if .Present}}present (redacted){{else}}<strong>missing</strong>{{end}}{{else}}{{.DisplayValue}}{{end}}</td>
+        <td>{{if .Secret}}{{if .Present}}<span class="rd-badge completed">present (redacted)</span>{{else}}<span class="rd-badge warn">missing</span>{{end}}{{else}}{{.DisplayValue}}{{end}}</td>
         <td class="rd-muted">{{.Source}}{{if .Hint}} — {{.Hint}}{{end}}</td>
       </tr>
       {{end}}

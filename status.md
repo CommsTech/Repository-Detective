@@ -3,6 +3,16 @@
 **Last updated:** 2026-08-02  
 **Repository:** https://git.commsnet.org/commstech/Repository-Detective.git
 
+## Live deploy (2026-08-02) — Full UI eval clean pass
+
+| Item | Value |
+|------|-------|
+| Verdict | **36/36 OK** (light/dark/system) |
+| Evidence | [docs/dogfood-reports/ui-flow-eval-2026-08-02.md](docs/dogfood-reports/ui-flow-eval-2026-08-02.md) |
+| Harness | `scripts/ui-flow-eval.js` |
+| Live | `rc-ui-eval-clean` |
+| Follow-up fixed | Configure “missing” secret contrast; table/`details` solid surfaces |
+
 ## Live deploy (2026-08-02) — SBOM tools in base image
 
 | Item | Value |

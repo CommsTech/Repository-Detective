@@ -163,6 +163,7 @@ reports/nightly-rd-evolution/
 !docs/dogfood-reports/sbom-end-to-end-verification.md
 !docs/dogfood-reports/ui-route-smoke-report.md
 !docs/dogfood-reports/ui-responsiveness-bench-2026-08-02.md
+!docs/dogfood-reports/ui-flow-eval-2026-08-02.md
 !docs/dogfood-reports/container-log-health-report.md
 !docs/dogfood-reports/full-application-acceptance-report.md
 !docs/dogfood-reports/live-rc-redeploy-baseline.md

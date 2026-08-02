@@ -986,7 +986,7 @@ table.rd-table th {
   color: var(--rd-gray-muted);
   font-weight: 600;
   border-bottom: 1px solid var(--rd-border);
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--rd-surface-2);
 }
 
 table.rd-table td {
@@ -994,6 +994,7 @@ table.rd-table td {
   border-bottom: 1px solid var(--rd-border);
   vertical-align: middle;
   color: var(--rd-text);
+  background: transparent;
 }
 
 table.rd-table-compact td,
@@ -1004,11 +1005,11 @@ table.rd-table tbody tr {
 }
 
 table.rd-table tbody tr:hover td {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--rd-overlay-hover);
 }
 
 table.rd-table tbody tr:focus-within td {
-  background: rgba(14, 165, 164, 0.06);
+  background: color-mix(in srgb, var(--rd-teal) 10%, transparent);
 }
 
 /* ── Badges ── */
@@ -1174,7 +1175,7 @@ select option { background: var(--rd-surface); color: var(--rd-text); }
 details {
   margin-top: 16px;
   padding: 12px;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--rd-surface-2);
   border-radius: var(--rd-radius-sm);
   border: 1px solid var(--rd-border);
 }

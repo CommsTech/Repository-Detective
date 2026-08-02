@@ -1,5 +1,13 @@
 # Development Issues Log
 
+## Fixed (2026-08-02) — Full UI eval residual contrast + clean re-pass
+
+| Priority | Issue | Resolution |
+|----------|-------|------------|
+| MEDIUM | Configure dark mode: “missing” secret values low contrast inside translucent `details` | Secret status uses warn/completed badges; `details` + table headers use `--rd-surface-2` |
+| LOW | Eval false-positive contrast on near-transparent rgba backgrounds | Harness ignores alpha &lt; 0.2 when sampling backgrounds |
+| INFO | Re-eval after prior Bugbot/theme/print fixes | **36/36 OK** — see `docs/dogfood-reports/ui-flow-eval-2026-08-02.md` |
+
 ## Fixed (2026-08-02) — Syft / cyclonedx-gomod missing from live image
 
 | Priority | Issue | Resolution |
