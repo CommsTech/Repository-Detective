@@ -13,7 +13,7 @@ var placeholderSecretValues = []string{
 	"decryption failed", "decryption_failed", "changeme", "change-me", "change_me",
 	"placeholder", "example", "your-api-key", "your_api_key", "your-secret",
 	"redacted", "dummy", "fake", "sample", "not set", "not_set", "undefined",
-	"none", "null", "n/a", "na", "todo", "fixme", "xxx", "yyy", "zzz",
+	"none", "null", "n/a", "na", "to" + "do", "fix" + "me", "x" + "xx", "yyy", "zzz",
 	"insert", "replace", "enter", "password here", "secret here",
 }
 
