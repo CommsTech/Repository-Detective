@@ -5,7 +5,7 @@
 Configuration merges three layers (highest wins where applicable):
 
 ```text
-1. Environment variables (REPOSITORY_DETECTIVE_* preferred; BUGBOT_* legacy)
+1. Environment variables (REPOSITORY_DETECTIVE_* only)
 2. config/config.yaml (non-secret settings)
 3. Built-in defaults in config/config.yaml.example
 ```

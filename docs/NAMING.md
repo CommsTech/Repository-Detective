@@ -23,4 +23,4 @@ Public release surfaces say **Repository Detective** only.
 
 ## Cursor product comparisons
 
-Docs that compare against **Cursor Repository-Detective** keep that external product name on purpose (`docs/beta/CURSOR_BUGBOT_*`).
+Docs that compare against **Cursor Bugbot** keep that external product name on purpose (`docs/beta/CURSOR_BUGBOT_*`).

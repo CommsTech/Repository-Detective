@@ -264,3 +264,4 @@ vendor/
 docker-compose.prod.yml
 docker-compose.override.yml
 .env
+bugbot-build

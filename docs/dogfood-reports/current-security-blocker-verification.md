@@ -192,7 +192,7 @@ files_checked:
 evidence:
   - Required forge tokens validated at startup
   - auth_mode=local requires session_secret and database_enabled
-  - envcompat merges REPOSITORY_DETECTIVE_* over BUGBOT_*
+  - envcompat merges REPOSITORY_DETECTIVE_* (legacy prefixes removed)
 tests:
   - TestValidateAuthLocalRequiresSessionSecret
   - TestValidateAuthDefaultsAPIKeyOnly

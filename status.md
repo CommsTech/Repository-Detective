@@ -3,11 +3,11 @@
 **Last updated:** 2026-08-02  
 **Repository:** https://git.commsnet.org/commstech/repository-detective.git
 
-## Live deploy (2026-08-02) — Full Bugbot brand purge
+## Live deploy (2026-08-02) — Full brand purge
 
 | Item | Value |
 |------|-------|
-| Focus | Zero Bugbot legacy for public release |
+| Focus | Zero legacy product-name aliases for public release |
 | Shipped | REPOSITORY_DETECTIVE_* only; X-Repository-Detective-API-Key only; rd- fingerprints; repository-detective labels; DB `repository-detective.db` |
 | Gitea | https://git.commsnet.org/commstech/Repository-Detective.git |
 | Live | `rc-rd-brand-purge` |
