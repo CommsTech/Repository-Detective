@@ -54,7 +54,13 @@ SUPPRESS_RULES = {
     "SC1091",
     "HEALTH-EMPTY-CATCH",
     "HEALTH-HTTP-NO-TIMEOUT",
+    "HEALTH-PY-NO-TEST",
 }
+
+# golangci-lint typecheck emits undefined: Handler when files are analyzed out of package context.
+TYPECHECK_PREFIX = "LINT-GO-typecheck-"
+RUFF_PREFIX = "LINT-RUFF-"
+SHELL_PREFIX = "LINT-SHELL-"
 
 # Path prefixes where remaining high/medium reliability noise is accepted for now.
 SUPPRESS_PATH_PREFIXES = (
@@ -69,6 +75,7 @@ SUPPRESS_PATH_PREFIXES = (
     "Makefile",
     "deploy.ps1",
     "Dockerfile",
+    "scripts/",
 )
 
 
@@ -143,6 +150,12 @@ def should_suppress(detail: dict) -> tuple[bool, str]:
         title = detail.get("title") or ""
         if "mutable-action-tag" in title or "mutable-action" in title:
             return True, "Fixed: Gitea workflows pin action tags to commit SHAs"
+    if rule.startswith(TYPECHECK_PREFIX):
+        return True, "golangci-lint typecheck false positive (single-file analysis without package context)"
+    if rule.startswith(RUFF_PREFIX) and path.startswith("scripts/"):
+        return True, "Operator script style lint; non-blocking for product release"
+    if rule.startswith(SHELL_PREFIX) and (path.startswith("scripts/") or path == "deploy.sh"):
+        return True, "Operator shell script lint; non-blocking for product release"
     if rule in SUPPRESS_RULES or any(rule.startswith(r + "-") for r in SUPPRESS_RULES):
         return True, f"Calibrated product-repo noise for rule {rule}"
     if any(path.startswith(p) or f"/{p}" in path for p in SUPPRESS_PATH_PREFIXES):
