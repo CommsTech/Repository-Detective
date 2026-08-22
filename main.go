@@ -826,6 +826,7 @@ func setupRoutes(router *gin.Engine) {
 	onboardingHandler = handlers.NewOnboardingHandler(logger, handlers.OnboardingConfig{
 		GiteaURL:  config.GiteaURL,
 		PublicURL: config.PublicURL,
+		GiteaScanOrgs: parseCommaSeparatedOrgs(os.Getenv("GITEA_SCAN_ORGS")),
 		AIConfig: ai.Config{
 			Provider: ai.ProviderType(config.AIProvider),
 			BaseURL:  firstNonEmpty(config.AIBaseURL, config.OpenWebUIURL),
@@ -2459,6 +2460,20 @@ func firstNonEmpty(values ...string) string {
 		}
 	}
 	return ""
+}
+
+func parseCommaSeparatedOrgs(raw string) []string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil
+	}
+	var out []string
+	for _, part := range strings.Split(raw, ",") {
+		if org := strings.TrimSpace(part); org != "" {
+			out = append(out, org)
+		}
+	}
+	return out
 }
 
 func mainHealthConfig() health.Config {

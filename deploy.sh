@@ -22,7 +22,6 @@ COMPOSE=(docker-compose -f "$COMPOSE_FILE")
 CONTAINER="repository-detective"
 HEALTH_URL="http://127.0.0.1:8081/health"
 LEGACY_DIR="${REPOSITORY_DETECTIVE_LEGACY_DIR:-$HOME/repository-detective}"
-BINARY="$ROOT/build/repository-detective"
 
 log() { printf '==> %s\n' "$*"; }
 warn() { printf 'warning: %s\n' "$*" >&2; }

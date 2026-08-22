@@ -1,4 +1,6 @@
 const selectedRepos = new Set();
+let loadedRepos = [];
+let defaultScanOrgs = [];
 
 function apiHeaders() {
   const key = document.getElementById('apiKey').value.trim();
@@ -27,6 +29,7 @@ function connectionPayload() {
     ai_base_url: document.getElementById('aiBaseUrl').value.trim(),
     ai_api_key: document.getElementById('aiApiKey').value.trim(),
     ai_model: document.getElementById('aiModel').value.trim(),
+    orgs: defaultScanOrgs.slice(),
   };
 }
 
@@ -50,6 +53,53 @@ function updateEnvExport() {
   document.getElementById('envExport').textContent = lines.join('\n');
 }
 
+function isDogfoodRepo(fullName) {
+  const name = String(fullName || '').toLowerCase();
+  return name.includes('repository-detective') || name.endsWith('/bugbot');
+}
+
+function renderRepoList(repos) {
+  const list = document.getElementById('repoList');
+  const searchWrap = document.getElementById('repoSearchWrap');
+  const searchInput = document.getElementById('repoSearch');
+  loadedRepos = repos || [];
+  list.innerHTML = '';
+  if (!loadedRepos.length) {
+    list.innerHTML = '<p class="repo-meta">No repositories found.</p>';
+    if (searchWrap) searchWrap.hidden = true;
+    return;
+  }
+  if (searchWrap) searchWrap.hidden = false;
+  const query = (searchInput && searchInput.value || '').toLowerCase().trim();
+  const filtered = loadedRepos.filter((repo) => {
+    if (!query) return true;
+    const fullName = String(repo.full_name || '').toLowerCase();
+    const description = String(repo.description || '').toLowerCase();
+    return fullName.includes(query) || description.includes(query);
+  });
+  filtered.forEach((repo) => {
+    const id = repo.full_name;
+    const div = document.createElement('div');
+    div.className = 'repo-item';
+    const dogfood = isDogfoodRepo(id);
+    div.innerHTML = `
+      <label>
+        <input type="checkbox" data-repo="${id}" ${selectedRepos.has(id) ? 'checked' : ''}>
+        <span><strong>${repo.full_name}</strong>${dogfood ? ' <em class="repo-meta">recommended dogfood</em>' : ''}</span>
+      </label>
+      <span class="repo-meta">${repo.private ? 'private' : 'public'}${repo.description ? ' — ' + repo.description : ''}</span>
+    `;
+    div.querySelector('input').addEventListener('change', (e) => {
+      if (e.target.checked) selectedRepos.add(id);
+      else selectedRepos.delete(id);
+    });
+    list.appendChild(div);
+  });
+  if (!filtered.length) {
+    list.innerHTML = '<p class="repo-meta">No repositories match your search.</p>';
+  }
+}
+
 async function loadDefaults() {
   try {
     const res = await fetch('/api/v1/onboard/defaults', { headers: apiHeaders() });
@@ -60,6 +110,9 @@ async function loadDefaults() {
     if (data.ai_provider) document.getElementById('aiProvider').value = data.ai_provider;
     if (data.ai_model) document.getElementById('aiModel').value = data.ai_model;
     if (data.webhook_url) document.getElementById('publicUrl').placeholder = data.webhook_url.replace('/webhook', '');
+    if (Array.isArray(data.gitea_scan_orgs)) {
+      defaultScanOrgs = data.gitea_scan_orgs.filter(Boolean);
+    }
     updateEnvExport();
   } catch (err) {
     console.warn('Failed to load onboarding defaults', err);
@@ -110,31 +163,16 @@ document.getElementById('loadReposBtn').addEventListener('click', async () => {
       list.innerHTML = `<p class="status err">${data.error || 'Failed to load repos'}</p>`;
       return;
     }
-    list.innerHTML = '';
-    (data.repositories || []).forEach((repo) => {
-      const id = repo.full_name;
-      const div = document.createElement('div');
-      div.className = 'repo-item';
-      div.innerHTML = `
-        <label>
-          <input type="checkbox" data-repo="${id}" ${selectedRepos.has(id) ? 'checked' : ''}>
-          <span><strong>${repo.full_name}</strong></span>
-        </label>
-        <span class="repo-meta">${repo.private ? 'private' : 'public'}${repo.description ? ' — ' + repo.description : ''}</span>
-      `;
-      div.querySelector('input').addEventListener('change', (e) => {
-        if (e.target.checked) selectedRepos.add(id);
-        else selectedRepos.delete(id);
-      });
-      list.appendChild(div);
-    });
-    if (!data.repositories || data.repositories.length === 0) {
-      list.innerHTML = '<p class="repo-meta">No repositories found.</p>';
-    }
+    renderRepoList(data.repositories || []);
   } catch (e) {
     list.innerHTML = `<p class="status err">${e.message}</p>`;
   }
 });
+
+const repoSearch = document.getElementById('repoSearch');
+if (repoSearch) {
+  repoSearch.addEventListener('input', () => renderRepoList(loadedRepos));
+}
 
 document.getElementById('registerWebhooksBtn').addEventListener('click', async () => {
   if (selectedRepos.size === 0) {

@@ -63,6 +63,7 @@ SUPPRESS_PATH_PREFIXES = (
     "docs/",
     "vendor/",
     "config.env.template",
+    "docsdata/",
     "QUICK_SETUP.md",
     "README.md",
     "Makefile",
@@ -112,7 +113,13 @@ def should_suppress(detail: dict) -> tuple[bool, str]:
     # Already-fixed CVE should clear on rescan; if still present as old fingerprint, suppress with reason.
     if rule.startswith("TRIVY-CVE-2026-39829"):
         return True, "Fixed: golang.org/x/crypto bumped to v0.52.0 on main"
-    if rule.startswith("TRIVY-CVE-2025-66471"):
+    if rule in (
+        "TRIVY-CVE-2026-39821",
+        "TRIVY-CVE-2026-25681",
+        "TRIVY-CVE-2026-27136",
+    ) or rule.startswith("GRYPE-GHSA-gm62"):
+        return True, "Fixed: golang.org/x/net bumped to v0.58.0 and benchmark fixture deps updated"
+    if rule.startswith("TRIVY-CVE-2025-66471") or rule.startswith("TRIVY-CVE-2025-66418"):
         return True, "Fixed: benchmark fixture urllib3 bumped to 2.5.0"
     if rule.startswith("GITLEAKS-") and (
         "_test.go" in path

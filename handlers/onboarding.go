@@ -17,26 +17,29 @@ import (
 
 // OnboardingHandler serves the setup UI and onboarding API.
 type OnboardingHandler struct {
-	logger    *logrus.Logger
-	giteaURL  string
-	publicURL string
-	aiConfig  ai.Config
+	logger        *logrus.Logger
+	giteaURL      string
+	publicURL     string
+	giteaScanOrgs []string
+	aiConfig      ai.Config
 }
 
 // OnboardingConfig holds server-side defaults for the onboarding UI.
 type OnboardingConfig struct {
-	GiteaURL  string
-	PublicURL string
-	AIConfig  ai.Config
+	GiteaURL      string
+	PublicURL     string
+	GiteaScanOrgs []string
+	AIConfig      ai.Config
 }
 
 // NewOnboardingHandler creates an onboarding handler.
 func NewOnboardingHandler(logger *logrus.Logger, cfg OnboardingConfig) *OnboardingHandler {
 	return &OnboardingHandler{
-		logger:    logger,
-		giteaURL:  cfg.GiteaURL,
-		publicURL: cfg.PublicURL,
-		aiConfig:  cfg.AIConfig,
+		logger:        logger,
+		giteaURL:      cfg.GiteaURL,
+		publicURL:     cfg.PublicURL,
+		giteaScanOrgs: append([]string(nil), cfg.GiteaScanOrgs...),
+		aiConfig:      cfg.AIConfig,
 	}
 }
 
@@ -74,12 +77,13 @@ func (h *OnboardingHandler) RegisterRoutes(router *gin.Engine, onboardAPI *gin.R
 func (h *OnboardingHandler) handleDefaults(c *gin.Context) {
 	webhookURL := strings.TrimSuffix(h.publicURL, "/") + "/webhook"
 	c.JSON(http.StatusOK, gin.H{
-		"gitea_url":   h.giteaURL,
-		"public_url":  h.publicURL,
-		"webhook_url": webhookURL,
-		"ai_provider": h.aiConfig.Provider,
-		"ai_model":    h.aiConfig.Model,
-		"ai_base_url": h.aiConfig.BaseURL,
+		"gitea_url":       h.giteaURL,
+		"public_url":      h.publicURL,
+		"webhook_url":     webhookURL,
+		"gitea_scan_orgs": h.giteaScanOrgs,
+		"ai_provider":     h.aiConfig.Provider,
+		"ai_model":        h.aiConfig.Model,
+		"ai_base_url":     h.aiConfig.BaseURL,
 	})
 }
 
@@ -92,6 +96,7 @@ type onboardConnectionRequest struct {
 	AIBaseURL     string   `json:"ai_base_url"`
 	AIAPIKey      string   `json:"ai_api_key"`
 	AIModel       string   `json:"ai_model"`
+	Orgs          []string `json:"orgs"`
 	Repositories  []string `json:"repositories"`
 }
 
@@ -167,16 +172,19 @@ func (h *OnboardingHandler) handleListRepos(c *gin.Context) {
 	}
 
 	client := gitea.NewClient(url, req.GiteaToken, h.logger)
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 90*time.Second)
 	defer cancel()
 
-	repos, err := client.ListUserRepositories(ctx, 100)
+	repos, err := h.listOnboardRepositories(ctx, client, req.Orgs)
 	if err != nil {
 		c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"repositories": repos})
+	c.JSON(http.StatusOK, gin.H{
+		"repositories": repos,
+		"count":        len(repos),
+	})
 }
 
 func (h *OnboardingHandler) handleRegisterWebhooks(c *gin.Context) {

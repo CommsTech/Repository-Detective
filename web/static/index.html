@@ -82,9 +82,14 @@
 
     <section class="card">
       <h2>3. Select repositories</h2>
+      <p class="repo-meta">Load every repository your token can see (personal + org). Search for <strong>repository-detective</strong> — Gitea may show the slug in lowercase even when the display name is <strong>Repository-Detective</strong>.</p>
       <div class="actions">
-        <button id="loadReposBtn" type="button">Load my repositories</button>
+        <button id="loadReposBtn" type="button">Load available repositories</button>
       </div>
+      <label id="repoSearchWrap" class="repo-search" hidden>
+        Search
+        <input id="repoSearch" type="search" placeholder="repository-detective, commstech/…">
+      </label>
       <div id="repoList" class="repo-list"></div>
     </section>
 
