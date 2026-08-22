@@ -500,19 +500,22 @@ func (s *SQLiteStore) ListRecentScans(ctx context.Context, opts ListOptions) ([]
 }
 
 // CountCompletedScansByDay returns completed scan counts keyed by UTC day (YYYY-MM-DD)
-// for scans started on or after since.
+// for scans started on or after since (inclusive, UTC calendar day).
 func (s *SQLiteStore) CountCompletedScansByDay(ctx context.Context, since time.Time) (map[string]int, error) {
 	if since.IsZero() {
 		since = time.Now().UTC().AddDate(0, 0, -13)
 	}
-	sinceDay := since.UTC().Format("2006-01-02")
+	sinceUTC := since.UTC()
+	sinceDay := time.Date(sinceUTC.Year(), sinceUTC.Month(), sinceUTC.Day(), 0, 0, 0, 0, time.UTC)
+	sinceStr := formatTime(sinceDay)
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT substr(started_at, 1, 10) AS day, COUNT(1)
 		FROM scans
 		WHERE lower(status) = 'completed'
-		  AND substr(started_at, 1, 10) >= ?
+		  AND started_at >= ?
 		GROUP BY substr(started_at, 1, 10)
-	`, sinceDay)
+		ORDER BY day
+	`, sinceStr)
 	if err != nil {
 		return nil, fmt.Errorf("count completed scans by day: %w", err)
 	}

@@ -70,12 +70,7 @@ func buildDashboardChartJSONWithStore(ctx context.Context, qs store.QueryStore, 
 		payload.CategoryValues = append(payload.CategoryValues, c.count)
 	}
 
-	trend := scanTrendFromRecent(summary.RecentScans, 14)
-	if qs != nil && ctx != nil {
-		if byDay, err := qs.CountCompletedScansByDay(ctx, time.Now().UTC().AddDate(0, 0, -13)); err == nil {
-			trend = scanTrendFromDayCounts(byDay, 14)
-		}
-	}
+	trend := buildScanActivityTrend(ctx, qs, summary.RecentScans, 14)
 	for _, t := range trend {
 		payload.ScanTrendLabels = append(payload.ScanTrendLabels, t.label)
 		payload.ScanTrendValues = append(payload.ScanTrendValues, t.value)
@@ -147,6 +142,24 @@ func riskStackIndex(category string) int {
 type trendPoint struct {
 	label string
 	value int
+}
+
+const scanActivityWindowDays = 14
+
+// buildScanActivityTrend prefers SQLite aggregation across the full window.
+// Falling back to RecentScans alone caused a regression: only ~10 recent rows
+// were counted and (on older builds) issues_found was summed — spiking one day.
+func buildScanActivityTrend(ctx context.Context, qs store.QueryStore, recent []store.ScanWithRepo, days int) []trendPoint {
+	if days <= 0 {
+		days = scanActivityWindowDays
+	}
+	if qs != nil && ctx != nil {
+		since := time.Now().UTC().AddDate(0, 0, -(days - 1))
+		if byDay, err := qs.CountCompletedScansByDay(ctx, since); err == nil {
+			return scanTrendFromDayCounts(byDay, days)
+		}
+	}
+	return scanTrendFromRecent(recent, days)
 }
 
 func scanTrendFromRecent(scans []store.ScanWithRepo, days int) []trendPoint {

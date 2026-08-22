@@ -3,6 +3,7 @@ package ui
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"path/filepath"
 	"testing"
 	"time"
@@ -122,5 +123,88 @@ func TestBuildDashboardChartJSONUsesStoreActivity(t *testing.T) {
 	}
 	if payload.ScanTrendValues[len(payload.ScanTrendValues)-3] != 2 {
 		t.Fatalf("day-2=%d", payload.ScanTrendValues[len(payload.ScanTrendValues)-3])
+	}
+}
+
+func TestBuildDashboardChartJSONUsesFullWindowNotRecentFindingTotals(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	s, err := store.Open(store.Config{Enabled: true, Path: filepath.Join(dir, "chart-regression.db")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+
+	repo, err := s.UpsertRepository(ctx, store.Repository{
+		Owner: "o", Name: "r", FullName: "o/r", ForgeType: store.ForgeTypeGitea, ConnectedRepo: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	now := time.Now().UTC()
+	// Historical completed scans spread across days (what the chart should show).
+	for _, off := range []int{-9, -6, -3} {
+		_, err := s.CreateScan(ctx, store.Scan{
+			ID:           fmt.Sprintf("hist-%d", -off),
+			RepositoryID: repo.ID,
+			TriggerType:  store.TriggerManual,
+			Ref:          "main",
+			Status:       store.ScanStatusCompleted,
+			StartedAt:    now.AddDate(0, 0, off),
+			SummaryJSON:  []byte(`{"issues_found":50}`),
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// DB also has two completed scans today (chart must count scans, not issues_found).
+	for _, id := range []string{"recent-a", "recent-b"} {
+		_, err := s.CreateScan(ctx, store.Scan{
+			ID:           id,
+			RepositoryID: repo.ID,
+			TriggerType:  store.TriggerManual,
+			Ref:          "main",
+			Status:       store.ScanStatusCompleted,
+			StartedAt:    now,
+			SummaryJSON:  []byte(`{"issues_found":9999}`),
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// RecentScans mirror (old bug summed issues_found from this short list only).
+	recent := []store.ScanWithRepo{
+		{
+			Scan: store.Scan{
+				ID: "recent-a", RepositoryID: repo.ID, Status: store.ScanStatusCompleted,
+				StartedAt: now, SummaryJSON: []byte(`{"issues_found":9999}`),
+			},
+		},
+		{
+			Scan: store.Scan{
+				ID: "recent-b", RepositoryID: repo.ID, Status: store.ScanStatusCompleted,
+				StartedAt: now, SummaryJSON: []byte(`{"issues_found":8888}`),
+			},
+		},
+	}
+
+	raw := buildDashboardChartJSONWithStore(ctx, s, store.DashboardSummary{RecentScans: recent}, nil)
+	var payload dashboardChartPayload
+	if err := json.Unmarshal([]byte(raw), &payload); err != nil {
+		t.Fatal(err)
+	}
+	var sum int
+	for _, n := range payload.ScanTrendValues {
+		sum += n
+	}
+	// 3 historical + 2 recent today = 5 completed scans in window, not 18887 findings.
+	if sum != 5 {
+		t.Fatalf("expected 5 completed scans across window, got sum=%d values=%v", sum, payload.ScanTrendValues)
+	}
+	if payload.ScanTrendValues[len(payload.ScanTrendValues)-1] != 2 {
+		t.Fatalf("today should be 2 scans not findings spike, got %d", payload.ScanTrendValues[len(payload.ScanTrendValues)-1])
 	}
 }
