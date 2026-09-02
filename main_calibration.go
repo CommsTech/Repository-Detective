@@ -244,19 +244,31 @@ func autoApplySafeCalibrationRecommendations(ctx context.Context) (int, error) {
 	return applied, nil
 }
 
+// ruleIDProtectedFromAutoApply keeps security findings out of unattended
+// downgrades. It matches on the rule ID rather than the category because
+// generated recommendations frequently carry an empty category, which makes
+// learning.IsProtectedFromAutoDowngrade pass everything through.
 func ruleIDProtectedFromAutoApply(source, ruleID string) bool {
 	rule := strings.ToUpper(strings.TrimSpace(ruleID))
+	rule = strings.Trim(rule, "`\"' ")
 	src := strings.ToLower(strings.TrimSpace(source))
-	switch src {
-	case "gitleaks", "trivy", "grype", "govulncheck":
-		return true
+
+	for _, protectedSource := range []string{"gitleaks", "trivy", "grype", "govulncheck", "semgrep"} {
+		if strings.Contains(src, protectedSource) {
+			return true
+		}
 	}
-	for _, prefix := range []string{"CVE-", "TRIVY-", "GRYPE-", "GITLEAKS-"} {
+	for _, prefix := range []string{"CVE-", "GHSA-", "TRIVY-", "GRYPE-", "GITLEAKS-", "SEC-", "CKV_SECRET"} {
 		if strings.HasPrefix(rule, prefix) {
 			return true
 		}
 	}
-	return rule == "SEC-HARDCODED-SECRET"
+	for _, marker := range []string{"SECRET", "CREDENTIAL", "PASSWORD", "TOKEN", "PRIVATE-KEY", "PRIVATE_KEY"} {
+		if strings.Contains(rule, marker) {
+			return true
+		}
+	}
+	return false
 }
 
 func startCalibrationBackgroundJob() {
