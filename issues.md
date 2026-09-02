@@ -1,5 +1,20 @@
 # Development Issues Log
 
+## Fixed (2026-09-01) — Month-end audit: secret scanning, learning loop, disk
+
+| Priority | Issue | Resolution |
+|----------|-------|------------|
+| CRITICAL | Root filesystem at **99%** (4.7 GB free); same condition that caused the 2026-07-22 scan/API outage at 96% | Pruned 50 dangling images, 4 redundant ~4 GB publish image copies, 86 dangling volumes, 25 stale `data/tmp` scratch dirs and the Go build cache. Now **74% / 63 GB free**. Legacy `bugbot.db` volumes archived to `data/legacy-volume-backups/` first |
+| CRITICAL | **Secret scanning silently disabled on most repos.** `gitleaks_config` is the relative path `config/gitleaks.toml`, but gitleaks runs with the scan workspace as cwd, so it looked for the allowlist inside the repo under scan, aborted with "unable to load gitleaks config", exited 1 and wrote no report | Allowlist path resolved against the process working directory; an unusable path is dropped so scans fall back to default rules instead of failing. Hidden from dogfood because this repo *does* ship `config/gitleaks.toml` |
+| HIGH | Clean gitleaks scans recorded as `parse_failed` (~1,100). gitleaks writes no report and logs only "no leaks found" to stderr | Output containing no JSON is an empty result; malformed JSON still fails. A command error is only a failure when no report was written, since gitleaks exits non-zero on real findings |
+| HIGH | `scanner_failed` was the largest learning event type (9,434 / 14,305 = 66%), so calibration trained on failures that never happened | Root-caused to the two gitleaks bugs above. gitleaks went from 151 failures / 154 runs to 4 clean / 4 runs after the fix |
+| HIGH | `gitleaks-history` failed on every private repo (~2,300) with `Authentication failed` | History clone now reuses the forge token like the remediation patcher; `sanitizeHistoryGitError` redacts it |
+| HIGH | `sanitizeHistoryGitError` was `_ = out; return fmt.Errorf("git operation failed")`, discarding the diagnosis and leaving ~2,300 failures indistinguishable | Preserves git's message while redacting credentials in URLs and scratch workspace paths |
+| HIGH | Calibration auto-apply could downgrade security findings: `IsProtectedFromAutoDowngrade` returns false on an empty category, and generated recommendations almost always have one. `SEC-EVAL`, `SEC-XSS-INNERHTML`, `CKV_SECRET_6` were all eligible | Protection matched on rule ID and source: `SEC-`/`CVE-`/`GHSA-`/`CKV_SECRET` prefixes, semgrep, and any rule naming a secret, credential, password or token |
+| MEDIUM | 78 calibration recommendations at confidence 1.0 unapplied since 2026-08-02; 12,510 manual suppressions vs 188 learned rules | `calibration_auto_apply: true`; recompute applied **58** repo-scoped `report_only` rules and held the 5 security-sensitive ones for manual review. Accepted recommendations 22 → 92, active rules 188 → 203 |
+| MEDIUM | A month of work uncommitted (22 modified + 7 new files), branch behind origin | Committed as 6 reviewable changesets, rebased onto the upstream CVE patch, pushed to Gitea and mirrored to GitHub |
+| INFO | Compose binds `0.0.0.0:8081` for LAN access | Intentional for homelab; the API key is the only control on the LAN |
+
 ## Open (2026-08-02) — External architecture review + our audit merge
 
 | Priority | Issue | Plan |
