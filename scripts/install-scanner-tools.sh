@@ -26,8 +26,20 @@ install_grype() {
     install -m 0755 /tmp/deploy-bin/grype /usr/local/bin/grype
     return
   fi
-  curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh \
-    | sh -s -- -b /usr/local/bin "v${GRYPE_VERSION}"
+  # Direct release tarball — the upstream install.sh can hang on slow networks.
+  grype_tgz="grype_${GRYPE_VERSION}_linux_amd64.tar.gz"
+  for attempt in 1 2 3 4 5; do
+    if curl -sfL --connect-timeout 30 --max-time 300 \
+      "https://github.com/anchore/grype/releases/download/v${GRYPE_VERSION}/${grype_tgz}" \
+      | tar xz -C /usr/local/bin grype 2>/dev/null; then
+      chmod 0755 /usr/local/bin/grype
+      return
+    fi
+    echo "grype download attempt $attempt failed; retrying..." >&2
+    sleep $((attempt * 5))
+  done
+  echo "grype install failed after retries" >&2
+  return 1
 }
 
 install_syft() {
@@ -35,8 +47,19 @@ install_syft() {
     install -m 0755 /tmp/deploy-bin/syft /usr/local/bin/syft
     return
   fi
-  curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh \
-    | sh -s -- -b /usr/local/bin "v${SYFT_VERSION}"
+  syft_tgz="syft_${SYFT_VERSION}_linux_amd64.tar.gz"
+  for attempt in 1 2 3 4 5; do
+    if curl -sfL --connect-timeout 30 --max-time 300 \
+      "https://github.com/anchore/syft/releases/download/v${SYFT_VERSION}/${syft_tgz}" \
+      | tar xz -C /usr/local/bin syft 2>/dev/null; then
+      chmod 0755 /usr/local/bin/syft
+      return
+    fi
+    echo "syft download attempt $attempt failed; retrying..." >&2
+    sleep $((attempt * 5))
+  done
+  echo "syft install failed after retries" >&2
+  return 1
 }
 
 install_gitleaks() {
