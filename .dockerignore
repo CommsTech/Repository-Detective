@@ -20,3 +20,9 @@ status.md
 *.md
 !DEPLOYMENT.md
 Repository Detective Theme and Logo.png
+# Never bake live operator config / backups into published images
+config/config.yaml
+config/config.yaml.bak*
+config/*.local.yaml
+config/*secret*
+config/*credential*

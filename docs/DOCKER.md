@@ -39,6 +39,56 @@ Includes everything in **core** plus **runner** binary and the full scanner tool
 
 ## Build commands
 
+### Prefer published images (operators)
+
+All-in-one builds take **~30–60 minutes** and produce a **~4 GB** image. Releases publish to **Gitea Package Registry** (canonical); **GHCR** is an optional public mirror.
+
+```bash
+docker login git.commsnet.org   # Gitea username + token (package read)
+docker pull git.commsnet.org/commstech/repository-detective:all-in-one
+# or pin: git.commsnet.org/commstech/repository-detective:v0.1.0-beta.1
+
+export RD_IMAGE=git.commsnet.org/commstech/repository-detective:all-in-one
+docker compose pull
+docker compose up -d
+```
+
+Public mirror (after sync):
+
+```bash
+docker pull ghcr.io/commstech/repository-detective:all-in-one
+```
+
+Publish from CI: tag `v*` on Gitea (`.gitea/workflows/docker-publish.yml` / `release.yml`).  
+Publish a local sanitized build: `./scripts/publish-docker-image.sh --tag v0.1.0 --mirror-ghcr`.
+
+| Registry | Role | Example tag |
+|----------|------|-------------|
+| `git.commsnet.org/commstech/repository-detective` | **Canonical** | `:all-in-one`, `:vX.Y.Z` |
+| `ghcr.io/commstech/repository-detective` | Public mirror | same tags |
+
+Set Gitea package visibility as needed for your beta testers. GHCR mirror packages should be Public for discovery.
+
+**Sanitize before any manual publish:** if a local image was built with a live `config/config.yaml` bind-copied in, strip it first (parent layers can still contain secrets after a simple `rm`):
+
+```bash
+docker build -f Dockerfile.sanitize-publish -t repository-detective:all-in-one-publish .
+# Flatten so deleted layers are not pushed:
+cid=$(docker create repository-detective:all-in-one-publish)
+docker export "$cid" | docker import \
+  --change 'ENV PATH=/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin' \
+  --change 'WORKDIR /app' --change 'USER repositorydetective' \
+  --change 'ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]' \
+  --change 'CMD ["/app/repository-detective"]' \
+  - repository-detective:ghcr-publish
+docker rm "$cid"
+./scripts/publish-docker-image.sh --source repository-detective:ghcr-publish --tag v0.1.0
+```
+
+`.dockerignore` excludes `config/config.yaml` and backups; the main `Dockerfile` only copies example configs into images.
+
+### Build from source (developers)
+
 ```bash
 # From repository root
 export RD_VERSION=0.1.0 RD_COMMIT=$(git rev-parse --short HEAD) RD_BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)

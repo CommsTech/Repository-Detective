@@ -2,6 +2,13 @@
 
 Repository Detective’s **canonical** git host is Gitea; **GitHub** is the public discovery mirror.
 
+The same policy applies to **container images**:
+
+| Artifact | Canonical | Public mirror |
+|----------|-----------|---------------|
+| Git | https://git.commsnet.org/commstech/repository-detective | https://github.com/CommsTech/Repository-Detective |
+| Container | `git.commsnet.org/commstech/repository-detective` | `ghcr.io/commstech/repository-detective` |
+
 - Gitea: https://git.commsnet.org/commstech/repository-detective  
 - GitHub: https://github.com/CommsTech/Repository-Detective  
 
@@ -9,10 +16,18 @@ Repository Detective’s **canonical** git host is Gitea; **GitHub** is the publ
 
 | Host | Role | When to push |
 |------|------|--------------|
-| **Gitea** | Canonical — day-to-day commits, Issues, Actions, wiki | Keep `main` updated continuously |
-| **GitHub** | Public community mirror | After each publish-ready `main` update (or batch with `--github`) |
+| **Gitea** | Canonical — day-to-day commits, Issues, Actions, wiki, **container packages** | Keep `main` / packages updated continuously |
+| **GitHub** | Public community mirror (git + optional GHCR) | After each publish-ready `main` update (or batch with `--github`) |
 
 Day-to-day development stays on Gitea. GitHub is for testers and discovery — not a second active development remote.
+
+### Container publish order
+
+1. Build/sanitize on an operator host or Gitea Actions  
+2. `./scripts/publish-docker-image.sh --tag vX.Y.Z` → **Gitea packages**  
+3. Optional: add `--mirror-ghcr` (or run the GitHub **Docker publish (GHCR mirror)** workflow)  
+
+See [DOCKER.md](DOCKER.md).
 
 ## Everyday: keep Gitea updated
 

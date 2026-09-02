@@ -51,7 +51,52 @@ jobs:
           (cd dist && sha256sum * > SHA256SUMS)
 
       - name: Build Docker image
-        run: docker build --target all-in-one -t repository-detective:${GITHUB_REF_NAME} .
+        run: |
+          docker build --target all-in-one \
+            --build-arg INSTALL_EXTERNAL_TOOLS=true \
+            --build-arg VERSION="${GITHUB_REF_NAME}" \
+            --build-arg COMMIT="${GITHUB_SHA}" \
+            --build-arg BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            -t repository-detective:${GITHUB_REF_NAME} \
+            -t repository-detective:all-in-one .
+
+      - name: Push image to Gitea Package Registry (canonical)
+        env:
+          GITEA_TOKEN: ${{ secrets.GITEA_PACKAGE_TOKEN || secrets.GITEA_TOKEN }}
+          GITEA_USER: ${{ secrets.GITEA_PACKAGE_USER }}
+        run: |
+          if [ -z "${GITEA_TOKEN:-}" ]; then
+            echo "GITEA_TOKEN not set — skipping container push (binaries still released)."
+            exit 0
+          fi
+          USER_NAME="${GITEA_USER:-${GITHUB_ACTOR:-commstech}}"
+          echo "$GITEA_TOKEN" | docker login git.commsnet.org -u "$USER_NAME" --password-stdin
+          DEST="git.commsnet.org/commstech/repository-detective"
+          DEST="$(echo "$DEST" | tr '[:upper:]' '[:lower:]')"
+          for t in "${GITHUB_REF_NAME}" "${GITHUB_REF_NAME}-all-in-one" all-in-one latest; do
+            docker tag "repository-detective:${GITHUB_REF_NAME}" "${DEST}:${t}"
+            docker push "${DEST}:${t}"
+          done
+          echo "Pushed ${DEST}:${GITHUB_REF_NAME} (Gitea canonical)"
+
+      - name: Mirror image to GHCR (optional public mirror)
+        env:
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          GHCR_USER: ${{ secrets.GHCR_USER }}
+        run: |
+          if [ -z "${GHCR_TOKEN:-}" ]; then
+            echo "GHCR_TOKEN not set — skipping GHCR mirror."
+            exit 0
+          fi
+          USER_NAME="${GHCR_USER:-${GITHUB_ACTOR:-CommsTech}}"
+          echo "$GHCR_TOKEN" | docker login ghcr.io -u "$USER_NAME" --password-stdin
+          DEST="ghcr.io/commstech/repository-detective"
+          DEST="$(echo "$DEST" | tr '[:upper:]' '[:lower:]')"
+          for t in "${GITHUB_REF_NAME}" "${GITHUB_REF_NAME}-all-in-one" all-in-one latest; do
+            docker tag "repository-detective:${GITHUB_REF_NAME}" "${DEST}:${t}"
+            docker push "${DEST}:${t}"
+          done
+          echo "Mirrored ${DEST}:${GITHUB_REF_NAME}"
 
       - name: Generate release notes
         run: |

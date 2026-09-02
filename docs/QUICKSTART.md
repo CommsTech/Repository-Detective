@@ -35,11 +35,31 @@ Legacy `REPOSITORY_DETECTIVE_*` variables work if you prefer.
 
 ## 3. Start (all-in-one Docker)
 
+**Recommended — pull a published image** (minutes, not a ~40 minute build):
+
 ```bash
-docker compose up -d --build
+docker login git.commsnet.org   # Gitea user + token with package read
+# Optional pin: export RD_IMAGE=git.commsnet.org/commstech/repository-detective:v0.1.0-beta.1
+docker compose pull
+docker compose up -d
 ```
 
-Production compose listens on **port 8081** (`network_mode: host`).
+Images publish to **Gitea Package Registry** on version tags (`v*`). GitHub Container Registry is an optional public mirror.
+
+| Tag | Use |
+|-----|-----|
+| `git.commsnet.org/commstech/repository-detective:all-in-one` | Homelab default (canonical) |
+| `git.commsnet.org/commstech/repository-detective:vX.Y.Z` | Pin a release |
+| `ghcr.io/commstech/repository-detective:all-in-one` | Public mirror (after sync) |
+
+**Build from source** only when developing or the registry is unavailable:
+
+```bash
+docker compose build
+docker compose up -d
+```
+
+Production compose listens on **port 8081**.
 
 ## 4. Confirm health
 

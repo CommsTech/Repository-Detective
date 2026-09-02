@@ -22,8 +22,11 @@
   <a href="docs/DOCKER.md">
     <img src="https://img.shields.io/badge/platforms-linux%2Famd64-lightgrey?style=flat&logo=linux&logoColor=white" alt="Platforms: linux/amd64">
   </a>
-  <a href="docs/DOCKER.md">
-    <img src="https://img.shields.io/badge/docker-all--in--one-2496ED?style=flat&logo=docker&logoColor=white" alt="Docker">
+  <a href="https://git.commsnet.org/commstech/-/packages">
+    <img src="https://img.shields.io/badge/gitea-packages-609926?style=flat&logo=gitea&logoColor=white" alt="Gitea packages">
+  </a>
+  <a href="https://github.com/CommsTech/Repository-Detective/pkgs/container/repository-detective">
+    <img src="https://img.shields.io/badge/ghcr-mirror-2496ED?style=flat&logo=docker&logoColor=white" alt="GHCR mirror">
   </a>
   <a href="docs/PUBLIC_BETA.md">
     <img src="https://img.shields.io/badge/edition-public%20community%20beta-brightgreen?style=flat" alt="Public community beta">
@@ -63,17 +66,18 @@ Sync policy: [docs/GITHUB_MIRROR.md](docs/GITHUB_MIRROR.md).
 
 The published tree is a sanitized install base. **Only examples ship** (`.env.example`, `config/*.example.yaml`). Operator secrets (`.env`), local config (`config/config.yaml`), and the SQLite database under `data/` are gitignored and must stay private on your host. Gate: `./scripts/check-public-release-secrets.sh`.
 
-Quick local trial (minimal compose uses port **8080**):
+Quick local trial (prefer pull — avoids a long local build):
 
 ```bash
 git clone https://github.com/CommsTech/Repository-Detective.git && cd Repository-Detective
-docker compose -f docker-compose.minimal.yml up -d --build
-curl http://localhost:8080/health
+cp .env.example .env   # set REPOSITORY_DETECTIVE_API_KEY at minimum
+docker compose pull && docker compose up -d
+curl http://127.0.0.1:8081/health
 ```
 
-Then open http://localhost:8080/onboard
+Then open http://127.0.0.1:8081/onboard — published image: `git.commsnet.org/commstech/repository-detective:all-in-one` ([DOCKER.md](docs/DOCKER.md); GHCR is a public mirror).
 
-Default `docker-compose.yml` / homelab installs use port **8081** (`http://127.0.0.1:8081`).
+Minimal compose (port **8080**, build from source): `docker compose -f docker-compose.minimal.yml up -d --build`.
 
 **AI agents (OpenClaw, Cursor, etc.):** [docs/AGENT_QUICKSTART.md](docs/AGENT_QUICKSTART.md) · [docs/MCP.md](docs/MCP.md) · [docs/OPENCLAW_INTEGRATION.md](docs/OPENCLAW_INTEGRATION.md) · [docs/openapi.yaml](docs/openapi.yaml)
 ## What it does

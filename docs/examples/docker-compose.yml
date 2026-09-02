@@ -2,16 +2,18 @@
 #
 # Usage:
 #   cp ../../.env.example ../../.env   # edit secrets on host, never bake into images
-#   docker compose -f docs/examples/docker-compose.yml --profile all-in-one up -d --build
-#   docker compose -f docs/examples/docker-compose.yml --profile core up -d --build
+#   docker compose -f docs/examples/docker-compose.yml --profile all-in-one pull
+#   docker compose -f docs/examples/docker-compose.yml --profile all-in-one up -d
+#   # or build from source: ... up -d --build
 #
-# See docs/DOCKER.md for image targets, volumes, and rollback.
+# See docs/DOCKER.md for image targets, volumes, registry tags, and rollback.
 
 name: repository-detective
 
 services:
   repository-detective:
     profiles: ["all-in-one", "default"]
+    image: ${RD_IMAGE:-git.commsnet.org/commstech/repository-detective:all-in-one}
     build:
       context: ../..
       dockerfile: Dockerfile
@@ -21,7 +23,6 @@ services:
         VERSION: ${RD_VERSION:-dev}
         COMMIT: ${RD_COMMIT:-local}
         BUILD_DATE: ${RD_BUILD_DATE:-unknown}
-    image: repository-detective:all-in-one
     container_name: repository-detective
     ports:
       - "${REPOSITORY_DETECTIVE_PORT:-8081}:8081"
@@ -49,6 +50,7 @@ services:
 
   repository-detective-core:
     profiles: ["core"]
+    image: ${RD_CORE_IMAGE:-git.commsnet.org/commstech/repository-detective:core}
     build:
       context: ../..
       dockerfile: Dockerfile
@@ -57,7 +59,6 @@ services:
         VERSION: ${RD_VERSION:-dev}
         COMMIT: ${RD_COMMIT:-local}
         BUILD_DATE: ${RD_BUILD_DATE:-unknown}
-    image: repository-detective:core
     container_name: repository-detective-core
     ports:
       - "${REPOSITORY_DETECTIVE_PORT:-8081}:8081"

@@ -41,8 +41,8 @@ RUN if [ -f vendor/modules.txt ]; then \
 RUN set -eu; \
     go install golang.org/x/vuln/cmd/govulncheck@latest; \
     go install github.com/securego/gosec/v2/cmd/gosec@latest; \
-    go install honnef.co/go/tools/cmd/staticcheck@latest; \
-    go install github.com/CycloneDX/cyclonedx-gomod/cmd/cyclonedx-gomod@latest; \
+    go install honnef.co/go/tools/cmd/staticcheck@v0.6.1; \
+    go install github.com/CycloneDX/cyclonedx-gomod/cmd/cyclonedx-gomod@v1.9.0; \
     test -x /go/bin/govulncheck; \
     test -x /go/bin/gosec; \
     test -x /go/bin/staticcheck; \
@@ -120,7 +120,12 @@ RUN chmod +x /usr/local/lib/rd/apk-retry.sh /usr/local/lib/rd/docker-alpine-runt
 WORKDIR /app
 
 COPY --from=builder /app/repository-detective .
-COPY --from=builder /app/config ./config
+COPY config/config.yaml.example \
+     config/gitleaks.toml \
+     config/private-beta.example.yaml \
+     config/runner.example.yaml \
+     config/runner-delegation-test.yaml.example \
+     ./config/
 COPY scripts/docker-entrypoint.sh scripts/docker-healthcheck.sh /usr/local/bin/
 
 RUN chmod +x repository-detective /usr/local/bin/docker-entrypoint.sh /usr/local/bin/docker-healthcheck.sh && \
@@ -202,7 +207,13 @@ WORKDIR /app
 
 COPY --from=builder /app/repository-detective .
 COPY --from=builder /app/repository-detective-runner /usr/local/bin/repository-detective-runner
-COPY --from=builder /app/config ./config
+# Examples + allowlists only — never live config.yaml (see .dockerignore)
+COPY config/config.yaml.example \
+     config/gitleaks.toml \
+     config/private-beta.example.yaml \
+     config/runner.example.yaml \
+     config/runner-delegation-test.yaml.example \
+     ./config/
 COPY scripts/docker-entrypoint.sh scripts/docker-healthcheck.sh /usr/local/bin/
 
 RUN chmod +x repository-detective /usr/local/bin/repository-detective-runner \
