@@ -1,9 +1,12 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"time"
 
 	"git.commsnet.org/commstech/repository-detective/ai"
+	"git.commsnet.org/commstech/repository-detective/analyzers"
 	"git.commsnet.org/commstech/repository-detective/openclaw"
 	"git.commsnet.org/commstech/repository-detective/store"
 	"github.com/gin-gonic/gin"
@@ -18,39 +21,7 @@ func (openclawReviewBridge) Config() openclaw.Config {
 }
 
 func (openclawReviewBridge) RunReview(c *gin.Context, scanID string) (openclaw.ReviewResult, error) {
-	if openclawReviewService == nil {
-		return openclaw.ReviewResult{}, fmt.Errorf("openclaw review service unavailable")
-	}
-	ctx := c.Request.Context()
-	scan, err := rdStore.GetScan(ctx, scanID)
-	if err != nil {
-		return openclaw.ReviewResult{}, err
-	}
-	repo, err := rdStore.GetRepository(ctx, scan.RepositoryID)
-	if err != nil {
-		return openclaw.ReviewResult{}, err
-	}
-	cfg := config.OpenClawAIReview.Normalized()
-	limit := cfg.MaxFindingsPerScan
-	findings, err := rdStore.ListFindingsForScan(ctx, scanID, limit)
-	if err != nil {
-		return openclaw.ReviewResult{}, err
-	}
-	instances, _ := rdStore.ListFindingInstancesByScan(ctx, scanID)
-	scannerResults, _ := rdStore.ListScannerResultsByScan(ctx, scanID)
-	var coverage []string
-	for _, sr := range scannerResults {
-		coverage = append(coverage, sr.ScannerName+":"+sr.Status)
-	}
-	return openclawReviewService.RunReview(ctx, openclaw.PacketInput{
-		ScanID: scanID, Repository: repo,
-		ScanType:        openclaw.FormatScanType(scan.TriggerType),
-		IssueFiling:     issueFilingMode(),
-		RemediationPR:   remediationPRMode(),
-		ScannerCoverage: coverage,
-		Findings:        findings,
-		Instances:       instances,
-	})
+	return runOpenClawReview(c.Request.Context(), scanID)
 }
 
 func (openclawReviewBridge) GetReview(c *gin.Context, scanID string) (store.AIAdvisoryReview, []store.AIAdvisoryRecommendation, error) {
@@ -79,6 +50,93 @@ func (openclawReviewBridge) ListPendingRecommendations(c *gin.Context, limit int
 	return rdStore.ListPendingAIAdvisoryRecommendations(c.Request.Context(), limit)
 }
 
+func openClawFindingPoolLimit(cfg openclaw.Config) int {
+	limit := cfg.MaxFindingsPerScan
+	if limit <= 0 {
+		limit = 25
+	}
+	pool := limit * 10
+	if pool < 100 {
+		pool = 100
+	}
+	if pool > 500 {
+		pool = 500
+	}
+	return pool
+}
+
+func runOpenClawReview(ctx context.Context, scanID string) (openclaw.ReviewResult, error) {
+	if openclawReviewService == nil {
+		return openclaw.ReviewResult{}, fmt.Errorf("openclaw review service unavailable")
+	}
+	scan, err := rdStore.GetScan(ctx, scanID)
+	if err != nil {
+		return openclaw.ReviewResult{}, err
+	}
+	repo, err := rdStore.GetRepository(ctx, scan.RepositoryID)
+	if err != nil {
+		return openclaw.ReviewResult{}, err
+	}
+	cfg := config.OpenClawAIReview.Normalized()
+	findings, err := rdStore.ListFindingsForScan(ctx, scanID, openClawFindingPoolLimit(cfg))
+	if err != nil {
+		return openclaw.ReviewResult{}, err
+	}
+	instances, _ := rdStore.ListFindingInstancesByScan(ctx, scanID)
+	scannerResults, _ := rdStore.ListScannerResultsByScan(ctx, scanID)
+	var coverage []string
+	for _, sr := range scannerResults {
+		coverage = append(coverage, sr.ScannerName+":"+sr.Status)
+	}
+	return openclawReviewService.RunReview(ctx, openclaw.PacketInput{
+		ScanID: scanID, Repository: repo,
+		ScanType:        openclaw.FormatScanType(scan.TriggerType),
+		IssueFiling:     issueFilingMode(),
+		RemediationPR:   remediationPRMode(),
+		ScannerCoverage: coverage,
+		Findings:        findings,
+		Instances:       instances,
+	})
+}
+
+func maybeEnqueueOpenClawReview(ctx context.Context, scanCtx *store.ScanContext, repositoryID int64, result *analyzers.AnalysisResult, analysisErr error) {
+	if openclawReviewService == nil || scanCtx == nil || scanCtx.ScanID == "" || analysisErr != nil || result == nil {
+		return
+	}
+	cfg := config.OpenClawAIReview.Normalized()
+	if !cfg.AutoAfterScan || !cfg.CanInvoke() || !cfg.AllowsScanType(scanCtx.TriggerType) {
+		return
+	}
+	if len(result.Issues) == 0 {
+		return
+	}
+	if reportOnlyDryRunFromContext(ctx) {
+		return
+	}
+	scanID := scanCtx.ScanID
+	timeout := time.Duration(cfg.TimeoutSeconds+15) * time.Second
+	if timeout < 90*time.Second {
+		timeout = 90 * time.Second
+	}
+	go func() {
+		bg, cancel := context.WithTimeout(context.WithoutCancel(ctx), timeout)
+		defer cancel()
+		if _, err := rdStore.GetAIAdvisoryReviewByScanID(bg, scanID); err == nil {
+			return
+		}
+		review, err := runOpenClawReview(bg, scanID)
+		if err != nil {
+			logger.Warnf("auto ai review for scan %s failed: %v", scanID, err)
+			return
+		}
+		if review.Status == "failed" || review.Status == "timeout" {
+			logger.Warnf("auto ai review for scan %s ended with status=%s error=%s", scanID, review.Status, review.Error)
+			return
+		}
+		logger.Infof("auto ai review for scan %s status=%s recommendations=%d", scanID, review.Status, review.RecommendationsCount)
+	}()
+}
+
 func initOpenClawReview() {
 	cfg := config.OpenClawAIReview.Normalized()
 	cfg.FallbackEndpoint = firstNonEmpty(config.AIBaseURL, config.OpenWebUIURL)
@@ -104,7 +162,11 @@ func initOpenClawReview() {
 	}
 	openclawReviewService = openclaw.NewService(cfg, rdStore, transport)
 	if cfg.Enabled {
-		logger.Info("OpenClaw advisory review enabled (advisory-only, redacted packets)")
+		if cfg.AutoAfterScan {
+			logger.Info("OpenClaw advisory review enabled (auto after scan, advisory-only, redacted packets)")
+		} else {
+			logger.Info("OpenClaw advisory review enabled (manual trigger, advisory-only, redacted packets)")
+		}
 	} else {
 		logger.Info("OpenClaw advisory review transport ready (disabled by default)")
 	}

@@ -24,6 +24,7 @@ type Config struct {
 	StoreResponses          bool   `mapstructure:"ai_recommendations_store_responses"`
 	AdvisoryOnly            bool   `mapstructure:"ai_recommendations_advisory_only"`
 	UseCAHHarness           bool   `mapstructure:"ai_recommendations_use_cah_harness"`
+	AutoAfterScan           bool   `mapstructure:"ai_recommendations_auto_after_scan"`
 
 	LegacyEnabled                 bool   `mapstructure:"openclaw_ai_review_enabled"`
 	LegacyEndpoint                string `mapstructure:"openclaw_ai_endpoint"`
@@ -70,6 +71,7 @@ func DefaultConfig() Config {
 		StoreResponses:          true,
 		AdvisoryOnly:            true,
 		UseCAHHarness:           true,
+		AutoAfterScan:           true,
 		CAH:                     DefaultCAHConfig(),
 	}
 }

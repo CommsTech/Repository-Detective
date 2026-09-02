@@ -618,6 +618,7 @@ func loadConfig() error {
 	viper.SetDefault("ai_recommendations_advisory_only", defOpenClaw.AdvisoryOnly)
 	viper.SetDefault("ai_recommendations_require_operator_approval", defOpenClaw.RequireOperatorApproval)
 	viper.SetDefault("ai_recommendations_use_cah_harness", defOpenClaw.UseCAHHarness)
+	viper.SetDefault("ai_recommendations_auto_after_scan", defOpenClaw.AutoAfterScan)
 	defCAH := openclaw.DefaultCAHConfig()
 	viper.SetDefault("ai_recommendations_cah_enabled", defCAH.Enabled)
 	viper.SetDefault("ai_recommendations_cah_max_candidates", defCAH.MaxCandidates)
@@ -1848,6 +1849,7 @@ func finishPersistedScan(ctx context.Context, scanCtx *store.ScanContext, reposi
 		}
 	}
 	notifyScanFinish(ctx, scanCtx, repositoryID, result, analysisErr)
+	maybeEnqueueOpenClawReview(ctx, scanCtx, repositoryID, result, analysisErr)
 }
 
 func postAnalysisContext(parent context.Context) (context.Context, context.CancelFunc) {

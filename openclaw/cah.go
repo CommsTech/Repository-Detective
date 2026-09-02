@@ -147,7 +147,47 @@ func SelectCAHCandidates(findings []store.Finding, instances map[int64]store.Fin
 		scores = append(scores, sc)
 		selected = append(selected, f)
 	}
+	if len(selected) == 0 && len(findings) > 0 && onlyUncertaintySkips(scores) {
+		selected = fallbackCAHCandidates(findings, cah, cfg)
+	}
 	return selected, scores
+}
+
+func onlyUncertaintySkips(scores []CAHScore) bool {
+	if len(scores) == 0 {
+		return true
+	}
+	for _, sc := range scores {
+		switch sc.SkipReason {
+		case "", "below uncertainty threshold", "protected severity/category":
+			continue
+		default:
+			return false
+		}
+	}
+	return true
+}
+
+// fallbackCAHCandidates picks a small advisory set when CAH filters everything (e.g. all high-confidence).
+func fallbackCAHCandidates(findings []store.Finding, cah CAHConfig, cfg Config) []store.Finding {
+	limit := cah.MaxCandidates
+	if limit <= 0 {
+		limit = cfg.MaxFindingsPerScan
+	}
+	if limit <= 0 {
+		limit = 25
+	}
+	var out []store.Finding
+	for _, f := range findings {
+		if learning.IsProtectedFromAutoDowngrade(f.Severity, f.Category) {
+			continue
+		}
+		out = append(out, f)
+		if len(out) >= limit {
+			break
+		}
+	}
+	return out
 }
 
 func normalizeCAH(cah CAHConfig, cfg Config) CAHConfig {

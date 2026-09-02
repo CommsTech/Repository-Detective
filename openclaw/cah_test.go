@@ -39,6 +39,29 @@ func TestCAHSelectsLowConfidence(t *testing.T) {
 	}
 }
 
+func TestCAHFallbackWhenAllFiltered(t *testing.T) {
+	findings := make([]store.Finding, 3)
+	instances := map[int64]store.FindingInstance{}
+	for i := range findings {
+		id := int64(i + 1)
+		findings[i] = store.Finding{
+			ID: id, Fingerprint: "fp-medium", Severity: "medium",
+			Confidence: 0.95, Title: "high confidence medium issue",
+		}
+		instances[id] = store.FindingInstance{EvidenceRedacted: "evidence " + repeat("x", 40)}
+	}
+	cfg := openclaw.DefaultConfig()
+	cfg.MaxTokensPerScan = 2000
+	cah := openclaw.DefaultCAHConfig()
+	selected, _ := openclaw.SelectCAHCandidates(findings, instances, nil, cfg, cah)
+	if len(selected) == 0 {
+		t.Fatal("expected CAH fallback to select findings when uncertainty filter removes all")
+	}
+	if len(selected) > cah.MaxCandidates {
+		t.Fatalf("expected at most %d selected, got %d", cah.MaxCandidates, len(selected))
+	}
+}
+
 func TestTokenBudgetEnforced(t *testing.T) {
 	findings := make([]store.Finding, 5)
 	instances := map[int64]store.FindingInstance{}
@@ -51,6 +74,7 @@ func TestTokenBudgetEnforced(t *testing.T) {
 	cfg.MaxTokensPerScan = 200
 	cah := openclaw.DefaultCAHConfig()
 	cah.TokenBudgetPerScan = 200
+	cah.MinUncertaintyScore = 0.2
 	selected, _ := openclaw.SelectCAHCandidates(findings, instances, nil, cfg, cah)
 	if len(selected) > 2 {
 		t.Fatalf("expected token budget to limit selection, got %d", len(selected))

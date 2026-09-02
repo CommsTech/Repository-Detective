@@ -81,6 +81,7 @@ ai_recommendations_cah_enabled: true
 ai_recommendations_cah_max_candidates: 8
 ai_recommendations_cah_min_uncertainty_score: 0.5
 ai_recommendations_use_cah_harness: true
+ai_recommendations_auto_after_scan: true
 ai_recommendations_send_source_snippets: false
 ai_recommendations_send_full_files: false
 ai_recommendations_redact_secrets: true
@@ -243,6 +244,7 @@ ai_recommendations_redact_pii: true
 ai_recommendations_advisory_only: true
 ai_recommendations_require_operator_approval: true
 ai_recommendations_use_cah_harness: true
+ai_recommendations_auto_after_scan: true
 ai_recommendations_cah_enabled: true
 ai_recommendations_cah_max_candidates: 10
 ai_recommendations_cah_min_uncertainty_score: 0.45

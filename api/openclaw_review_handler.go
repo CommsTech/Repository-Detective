@@ -72,6 +72,7 @@ func (h *OpenClawReviewHandler) GetConfig(c *gin.Context) {
 		"redact_pii":                   cfg.RedactPII,
 		"advisory_only":                cfg.AdvisoryOnly,
 		"require_operator_approval":    cfg.RequireOperatorApproval,
+		"auto_after_scan":              cfg.AutoAfterScan,
 		"allow_preinstall":             cfg.AllowPreinstall,
 		"allow_container_scans":        cfg.AllowContainerScans,
 		"allow_repo_scans":             cfg.AllowRepoScans,

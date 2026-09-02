@@ -38,6 +38,8 @@ services:
       REPOSITORY_DETECTIVE_STARTUP_CHECK_TIMEOUT: "10"
       REPOSITORY_DETECTIVE_DATABASE_PATH: /app/data/repository-detective.db
       REPOSITORY_DETECTIVE_API_KEY: ${REPOSITORY_DETECTIVE_API_KEY}
+      # Homelab OpenClaw with private CA / self-signed gateway:
+      REPOSITORY_DETECTIVE_AI_INSECURE_SKIP_TLS_VERIFY: ${REPOSITORY_DETECTIVE_AI_INSECURE_SKIP_TLS_VERIFY:-false}
     volumes:
       - ./config:/app/config:ro
       - ./data:/app/data
