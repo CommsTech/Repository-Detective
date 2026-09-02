@@ -12,6 +12,8 @@ if [ -d /app/data ] && [ "$(id -u)" -eq 0 ]; then
   # scratch (that breaks host tooling walking the repo tree).
   chown repositorydetective:repositorydetective /app/data 2>/dev/null || true
   chown -R repositorydetective:repositorydetective /app/data/cache 2>/dev/null || true
+  # Keep scanner caches traversable for host-side `go test ./...` on the bind mount.
+  chmod -R a+rX /app/data/cache 2>/dev/null || true
   if [ -e /app/data/repository-detective.db ]; then
     chown repositorydetective:repositorydetective /app/data/repository-detective.db 2>/dev/null || true
   fi

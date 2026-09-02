@@ -56,8 +56,11 @@ func TestBenchmarkFixtureExpectations(t *testing.T) {
 	}
 
 	reqs := read("requirements.txt")
-	if !strings.Contains(reqs, "requests==2.25.0") {
-		t.Fatal("expected outdated dependency fixture")
+	if !strings.Contains(reqs, "requests==2.32.3") {
+		t.Fatal("expected pinned requests dependency fixture")
+	}
+	if !strings.Contains(reqs, "urllib3>=2.6.0") {
+		t.Fatal("expected urllib3 floor in dependency fixture")
 	}
 
 	vendor := read("vendor/minified.js")

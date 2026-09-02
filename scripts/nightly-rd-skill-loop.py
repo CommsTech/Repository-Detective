@@ -62,6 +62,38 @@ TEMPLATE_PATH_MARKERS = ("config.env.template", "docsdata/", ".template")
 
 DOCKER_GO_IMAGE = "golang:1.25-bookworm"
 
+# Top-level dirs excluded from go list patterns (not Go packages; may be root-owned caches).
+GO_LIST_SKIP_DIRS = frozenset({
+    "data",
+    ".git",
+    "node_modules",
+    "state",
+    "reports",
+    "dist",
+    "build",
+    "deployment-backups",
+    "restore-drill-test",
+    "certs",
+    "bin",
+    "vendor",
+    "docsdata",
+})
+
+MODULE_PATH = "git.commsnet.org/commstech/repository-detective"
+
+
+def go_list_patterns() -> list[str]:
+    """Build go list patterns that avoid walking container-owned data/cache."""
+    patterns = ["."]
+    for entry in sorted(ROOT.iterdir()):
+        if not entry.is_dir():
+            continue
+        name = entry.name
+        if name in GO_LIST_SKIP_DIRS or name.startswith("."):
+            continue
+        patterns.append(f"./{name}/...")
+    return patterns
+
 
 def is_executable(path: str | None) -> bool:
     return bool(path) and Path(path).is_file() and os.access(path, os.X_OK)
@@ -101,8 +133,6 @@ class GoTestRunner:
             self.go_bin = None
 
     def ensure_caches(self) -> None:
-        if self.test_runner != "docker":
-            return
         self.cache_build.mkdir(parents=True, exist_ok=True)
         self.cache_mod.mkdir(parents=True, exist_ok=True)
 
@@ -123,9 +153,52 @@ class GoTestRunner:
             return run_cmd(self._docker_cmd(["version"]), timeout=60)
         return {"ok": False, "error": "no host go or docker available", "cmd": []}
 
+    def host_env(self) -> dict[str, str]:
+        env = os.environ.copy()
+        env["GOCACHE"] = str(self.cache_build)
+        env["GOMODCACHE"] = str(self.cache_mod)
+        return env
+
+    def list_packages(self, timeout: int = 120) -> tuple[list[str], dict[str, Any]]:
+        """List import paths without traversing data/cache (root-owned scanner caches break ./...)."""
+        fmt = "{{if not .Error}}{{.ImportPath}}{{end}}"
+        patterns = go_list_patterns()
+        if self.test_runner == "host-go" and self.go_bin:
+            self.ensure_caches()
+            meta = run_cmd(
+                [self.go_bin, "list", "-e", "-f", fmt, *patterns],
+                timeout=timeout,
+                env=self.host_env(),
+                stdout_limit=None,
+            )
+        elif self.test_runner == "docker":
+            self.ensure_caches()
+            meta = run_cmd(
+                self._docker_cmd(["list", "-e", "-f", fmt, *patterns]),
+                timeout=timeout,
+                stdout_limit=None,
+            )
+        else:
+            return [], {"ok": False, "error": "no host go or docker available", "cmd": []}
+        meta["test_runner"] = self.test_runner
+        if not meta.get("ok"):
+            return [], meta
+        pkgs = [
+            line.strip()
+            for line in (meta.get("stdout") or "").splitlines()
+            if line.strip().startswith(MODULE_PATH)
+        ]
+        meta["package_count"] = len(pkgs)
+        return pkgs, meta
+
     def run_test(self, test_args: list[str], timeout: int) -> dict[str, Any]:
         if self.test_runner == "host-go" and self.go_bin:
-            result = run_cmd([self.go_bin, "test", *test_args], timeout=timeout)
+            self.ensure_caches()
+            result = run_cmd(
+                [self.go_bin, "test", *test_args],
+                timeout=timeout,
+                env=self.host_env(),
+            )
             result["test_runner"] = "host-go"
             return result
         if self.test_runner == "docker":
@@ -208,7 +281,13 @@ def file_sha256(path: Path) -> str:
     return h.hexdigest()
 
 
-def run_cmd(cmd: list[str], timeout: int, cwd: Path | None = None) -> dict[str, Any]:
+def run_cmd(
+    cmd: list[str],
+    timeout: int,
+    cwd: Path | None = None,
+    env: dict[str, str] | None = None,
+    stdout_limit: int | None = 4000,
+) -> dict[str, Any]:
     start = time.time()
     try:
         proc = subprocess.run(
@@ -217,12 +296,15 @@ def run_cmd(cmd: list[str], timeout: int, cwd: Path | None = None) -> dict[str, 
             capture_output=True,
             text=True,
             timeout=timeout,
+            env=env,
         )
+        stdout = proc.stdout or ""
         return {
             "cmd": cmd,
             "exit_code": proc.returncode,
             "duration_s": round(time.time() - start, 2),
-            "stdout_tail": proc.stdout[-4000:] if proc.stdout else "",
+            "stdout": stdout if stdout_limit is None else None,
+            "stdout_tail": stdout[-stdout_limit:] if stdout_limit is not None and stdout else stdout,
             "stderr_tail": proc.stderr[-4000:] if proc.stderr else "",
             "ok": proc.returncode == 0,
         }
@@ -402,10 +484,20 @@ class NightlySkillLoop:
             self.state.phases["test_gate"] = {"ok": False, "error": "go and docker unavailable"}
             self.digest_lines.append("- **Test gate failed:** need host `go` (or `$GO`) or Docker")
             return False
+        all_pkgs, list_meta = self.go_runner.list_packages()
+        if not all_pkgs:
+            self.state.phases["test_gate"] = {
+                "ok": False,
+                "error": "go list failed",
+                "list": list_meta,
+            }
+            self.digest_lines.append("- **Test gate failed:** could not enumerate Go packages (see list meta)")
+            return False
         tests = [
             # Full suite can exceed 5m when live scanners (grype) participate;
             # keep the gate meaningful but allow enough wall time to finish.
-            (["./...", "-count=1", "-timeout=600s"], 720),
+            # Use explicit package list: `./...` fails when data/cache is root-owned on the bind mount.
+            (all_pkgs + ["-count=1", "-timeout=600s"], 720),
             (["./benchmark/...", "-count=1", "-v"], 120),
             (["./calibration/...", "./graph/...", "-count=1"], 180),
             (["./analyzers/...", "-run", "Hardcoded|Install|Homelab|Decryption", "-count=1"], 120),
