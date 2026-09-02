@@ -436,6 +436,47 @@ func (s *SQLiteStore) BackfillFalsePositiveLearningEvents(ctx context.Context, l
 	return count, nil
 }
 
+// PurgePoisonedScannerFailureLearningEvents removes historical scanner_failed events
+// recorded when a scanner bug misclassified successful runs as failures (e.g. gitleaks
+// parse_failed before 2026-09-02). Poisoned events skew calibration toward noise.
+func (s *SQLiteStore) PurgePoisonedScannerFailureLearningEvents(ctx context.Context, scannerNames []string, before time.Time) (int, error) {
+	if len(scannerNames) == 0 {
+		scannerNames = []string{"gitleaks", "gitleaks-history"}
+	}
+	if before.IsZero() {
+		before = time.Date(2026, 9, 2, 4, 46, 0, 0, time.UTC)
+	}
+	cutoff := before.UTC().Format(time.RFC3339)
+	placeholders := make([]string, len(scannerNames))
+	args := make([]any, 0, len(scannerNames)*2+1)
+	for i, name := range scannerNames {
+		placeholders[i] = "?"
+		args = append(args, name)
+	}
+	in := strings.Join(placeholders, ",")
+	args = append(args, args[:len(scannerNames)]...)
+	args = append(args, cutoff)
+	query := fmt.Sprintf(`
+		DELETE FROM learning_events
+		WHERE event_type = 'scanner_failed'
+		  AND (source IN (%s) OR rule_id IN (%s))
+		  AND created_at < ?
+	`, in, in)
+	res, err := s.db.ExecContext(ctx, query, args...)
+	if err != nil {
+		return 0, fmt.Errorf("purge poisoned scanner_failed events: %w", err)
+	}
+	n, _ := res.RowsAffected()
+	if n > 0 {
+		_, _ = s.db.ExecContext(ctx, fmt.Sprintf(`
+			UPDATE rule_reliability_stats
+			SET scanner_failure_count = 0
+			WHERE source IN (%s) OR rule_id IN (%s)
+		`, in, in), args[:len(scannerNames)*2]...)
+	}
+	return int(n), nil
+}
+
 // LearningHealthSummary aggregates learning metrics for dashboard.
 func (s *SQLiteStore) LearningHealthSummary(ctx context.Context) (LearningHealthSummary, error) {
 	var out LearningHealthSummary

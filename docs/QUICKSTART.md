@@ -28,8 +28,10 @@ REPOSITORY_DETECTIVE_API_KEY=generate-a-long-random-string
 REPOSITORY_DETECTIVE_GITEA_URL=https://git.example.com
 REPOSITORY_DETECTIVE_GITEA_TOKEN=your-gitea-personal-access-token
 REPOSITORY_DETECTIVE_WEBHOOK_SECRET=another-random-string
-REPOSITORY_DETECTIVE_SKIP_STARTUP_CHECKS=true
+REPOSITORY_DETECTIVE_SKIP_STARTUP_CHECKS=false
 ```
+
+**Note:** Docker Compose loads `.env` via `env_file`, and `REPOSITORY_DETECTIVE_*` values **override** `config/config.yaml`. The example files are aligned so a fresh copy enables the full scanner fleet (gitleaks, semgrep, Go tools) with LLM auditors off.
 
 Legacy `REPOSITORY_DETECTIVE_*` variables work if you prefer.
 
@@ -39,7 +41,7 @@ Legacy `REPOSITORY_DETECTIVE_*` variables work if you prefer.
 
 ```bash
 docker login git.commsnet.org   # Gitea user + token with package read
-# Optional pin: export RD_IMAGE=git.commsnet.org/commstech/repository-detective:v0.1.0-beta.1
+# Optional pin: export RD_IMAGE=git.commsnet.org/commstech/repository-detective:v0.1.0-beta.2
 docker compose pull
 docker compose up -d
 ```

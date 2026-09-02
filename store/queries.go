@@ -223,6 +223,7 @@ type QueryStore interface {
 	ListRepoCalibrationRules(ctx context.Context, repositoryID int64, activeOnly bool) ([]RepoCalibrationRule, error)
 	ExpireRepoCalibrationRule(ctx context.Context, ruleID int64) error
 	BackfillFalsePositiveLearningEvents(ctx context.Context, limit int) (int, error)
+	PurgePoisonedScannerFailureLearningEvents(ctx context.Context, scannerNames []string, before time.Time) (int, error)
 	GenerateRepoScopedRecommendations(ctx context.Context, repositoryID int64, minFindings int) (int, error)
 	ListRepositoryIDsAffectedByRule(ctx context.Context, source, ruleID string, limit int) ([]int64, error)
 	LearningHealthSummary(ctx context.Context) (LearningHealthSummary, error)

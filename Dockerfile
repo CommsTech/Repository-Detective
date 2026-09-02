@@ -134,7 +134,7 @@ RUN chmod +x repository-detective /usr/local/bin/docker-entrypoint.sh /usr/local
     chown -R repositorydetective:repositorydetective /app
 
 VOLUME ["/app/data"]
-EXPOSE 8080
+EXPOSE 8081
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=25s --retries=3 \
     CMD ["/usr/local/bin/docker-healthcheck.sh"]
@@ -222,7 +222,7 @@ RUN chmod +x repository-detective /usr/local/bin/repository-detective-runner \
     mkdir -p /app/data && chown -R repositorydetective:repositorydetective /app
 
 VOLUME ["/app/data"]
-EXPOSE 8080
+EXPOSE 8081
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=45s --retries=3 \
     CMD ["/usr/local/bin/docker-healthcheck.sh"]

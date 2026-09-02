@@ -30,7 +30,8 @@ ai_model: "gpt-4o-mini"
 ai_insecure_skip_tls_verify: false
 
 # beta_standard = private beta default (low issue noise). maintainer_deep = LLM + depth 3.
-scan_profile: beta_standard
+# Canonical profiles: light | standard | deep | custom (beta_standard maps to standard).
+scan_profile: standard
 analysis_depth: 2
 max_file_size: 1048576
 enable_security: true
@@ -62,6 +63,14 @@ enable_performance_checks: false
 scanner_timeout_seconds: 180
 min_issue_confidence: 0.75
 health_max_findings: 80
+
+# Learning / calibration — trains false positives into repo-scoped report_only rules.
+# calibration_auto_apply: when true, safe repo-scoped recommendations apply without
+# manual Accept. Security/secret/CVE rules are never auto-applied.
+calibration_enabled: true
+calibration_interval_hours: 24
+calibration_min_findings_for_recommendation: 20
+calibration_auto_apply: false
 
 # AI recommendations — disabled by default; token-efficient when enabled.
 ai_recommendations_enabled: false
@@ -104,7 +113,7 @@ group_similar_issues: true
 max_concurrent_analyses: 2
 analysis_timeout: 900
 rate_limit_per_minute: 60
-skip_startup_checks: true
+skip_startup_checks: false
 
 reporting:
   mode: high_signal

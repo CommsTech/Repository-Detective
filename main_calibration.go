@@ -182,6 +182,10 @@ func recomputeCalibration(ctx context.Context) (map[string]any, error) {
 	if err != nil {
 		logger.Warnf("calibration backfill learning events: %v", err)
 	}
+	purged, err := rdStore.PurgePoisonedScannerFailureLearningEvents(ctx, nil, time.Time{})
+	if err != nil {
+		logger.Warnf("calibration purge poisoned scanner_failed: %v", err)
+	}
 	stats, err := rdStore.RecomputeCalibrationRuleStats(ctx)
 	if err != nil {
 		return nil, err
@@ -191,10 +195,9 @@ func recomputeCalibration(ctx context.Context) (map[string]any, error) {
 		return nil, err
 	}
 	repoRecs := 0
-	repos, _ := rdStore.ListRepositoriesWithSummary(ctx, store.ListOptions{Limit: 50})
-	for _, r := range repos {
-		n, _ := rdStore.GenerateRepoScopedRecommendations(ctx, r.ID, 5)
-		repoRecs += n
+	repoRecs, err = recomputeRepoScopedRecommendations(ctx, config.CalibrationMinFindingsForRecommendation)
+	if err != nil {
+		logger.Warnf("calibration repo recommendations: %v", err)
 	}
 	autoApplied := 0
 	if config.CalibrationAutoApply {
@@ -205,11 +208,46 @@ func recomputeCalibration(ctx context.Context) (map[string]any, error) {
 	}
 	return map[string]any{
 		"learning_events_backfilled":     backfilled,
+		"learning_events_purged":       purged,
 		"rules_updated":                  stats,
 		"recommendations_generated":      recs,
 		"repo_recommendations_generated": repoRecs,
 		"recommendations_auto_applied":   autoApplied,
 	}, nil
+}
+
+func recomputeRepoScopedRecommendations(ctx context.Context, minFindings int) (int, error) {
+	if rdStore == nil {
+		return 0, nil
+	}
+	if minFindings <= 0 {
+		minFindings = 5
+	}
+	total := 0
+	offset := 0
+	const pageSize = 100
+	for {
+		repos, err := rdStore.ListRepositoriesWithSummary(ctx, store.ListOptions{Limit: pageSize, Offset: offset})
+		if err != nil {
+			return total, err
+		}
+		if len(repos) == 0 {
+			break
+		}
+		for _, r := range repos {
+			n, err := rdStore.GenerateRepoScopedRecommendations(ctx, r.ID, minFindings)
+			if err != nil {
+				logger.Warnf("repo calibration recommendations repo=%d: %v", r.ID, err)
+				continue
+			}
+			total += n
+		}
+		offset += len(repos)
+		if len(repos) < pageSize {
+			break
+		}
+	}
+	return total, nil
 }
 
 func autoApplySafeCalibrationRecommendations(ctx context.Context) (int, error) {

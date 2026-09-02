@@ -8,6 +8,13 @@ bin/
 dist/
 state/
 reports/
+tmp/
+restore-drill-test/
+repository-detective-build/
+# Stale locally built binaries; the builder stage compiles its own.
+/bugbot
+/repository-detective
+/repository-detective-runner
 .cargo-home/
 *.db
 coverage.out

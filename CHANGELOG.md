@@ -2,6 +2,23 @@
 
 All notable changes to Repository Detective (formerly an internal prototype) are documented here.
 
+## [v0.1.0-beta.2] — 2026-09-02
+
+### Fixed
+- **Secret scanning** — gitleaks config path resolved against process cwd; clean scans no longer recorded as `parse_failed`; private-repo history clones authenticate with the forge token
+- **Learning / calibration** — false positives train through `mark-false-positive` + backfill; auto-apply guarded by rule ID (never downgrades SEC-/CVE/secret rules); poisoned pre-fix `scanner_failed` events purged on recompute
+- **Operator defaults** — `.env.example` enables the full scanner fleet; LLM auditors off; `min_issue_confidence` 0.75; startup checks on by default
+
+### Added
+- Dashboard scan trend chart: remediation plans + auto-remediated findings series
+- Gitea-first container publish (`git.commsnet.org/commstech/repository-detective`) with optional GHCR mirror
+- `calibration/matcher_test.go` and expanded gitleaks/history-clone regression tests
+- Calibration repo pagination (all repos, not only first 50)
+
+### Changed
+- Docker image `EXPOSE` documents port **8081** (homelab default)
+- `config.yaml.example`: `scan_profile: standard`, calibration section documented
+
 ## [Unreleased] — Public community beta
 
 ### Added
