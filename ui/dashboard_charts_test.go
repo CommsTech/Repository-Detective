@@ -124,6 +124,10 @@ func TestBuildDashboardChartJSONUsesStoreActivity(t *testing.T) {
 	if payload.ScanTrendValues[len(payload.ScanTrendValues)-3] != 2 {
 		t.Fatalf("day-2=%d", payload.ScanTrendValues[len(payload.ScanTrendValues)-3])
 	}
+	if len(payload.RemediationTrendValues) != 14 || len(payload.PlanTrendValues) != 14 {
+		t.Fatalf("expected remediation/plan series length 14, got rem=%d plans=%d",
+			len(payload.RemediationTrendValues), len(payload.PlanTrendValues))
+	}
 }
 
 func TestBuildDashboardChartJSONUsesFullWindowNotRecentFindingTotals(t *testing.T) {

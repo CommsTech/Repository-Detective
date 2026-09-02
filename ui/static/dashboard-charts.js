@@ -173,22 +173,65 @@
   }
 
   function initTrendChart(ctx, data) {
+    var remediation = data.remediationTrendValues || [];
+    var plans = data.planTrendValues || [];
+    var datasets = [{
+      label: "Completed scans",
+      data: data.scanTrendValues,
+      borderColor: palette.teal,
+      backgroundColor: "rgba(14, 165, 164, 0.15)",
+      fill: true,
+      tension: 0.35,
+      pointRadius: 3,
+      pointHoverRadius: 6,
+      yAxisID: "y",
+    }];
+    if (plans.length) {
+      datasets.push({
+        label: "Remediation plans",
+        data: plans,
+        borderColor: palette.blue,
+        backgroundColor: "rgba(37, 99, 235, 0.08)",
+        fill: false,
+        tension: 0.35,
+        pointRadius: 2,
+        pointHoverRadius: 5,
+        borderDash: [5, 4],
+        yAxisID: "yRemediation",
+      });
+    }
+    if (remediation.length) {
+      datasets.push({
+        label: "Auto-remediated findings",
+        data: remediation,
+        borderColor: "#22c55e",
+        backgroundColor: "rgba(34, 197, 94, 0.12)",
+        fill: false,
+        tension: 0.35,
+        pointRadius: 3,
+        pointHoverRadius: 6,
+        yAxisID: "yRemediation",
+      });
+    }
+    var opts = baseOptions();
+    opts.plugins.legend = {
+      display: true,
+      position: "bottom",
+      labels: { color: palette.text, boxWidth: 12, font: { size: 11 } },
+    };
+    opts.scales.yRemediation = {
+      position: "right",
+      ticks: { color: palette.text, precision: 0 },
+      grid: { drawOnChartArea: false },
+      beginAtZero: true,
+    };
     trackChart(new Chart(ctx, {
       type: "line",
       data: {
         labels: data.scanTrendLabels,
-        datasets: [{
-          label: "Completed scans",
-          data: data.scanTrendValues,
-          borderColor: palette.teal,
-          backgroundColor: "rgba(14, 165, 164, 0.15)",
-          fill: true,
-          tension: 0.35,
-          pointRadius: 3,
-          pointHoverRadius: 6,
-        }],
+        datasets: datasets,
       },
-      options: baseOptions(),
+      options: opts,
     }));
   }
 

@@ -16,9 +16,11 @@ type dashboardChartPayload struct {
 	SeverityValues  []int    `json:"severityValues"`
 	CategoryLabels  []string `json:"categoryLabels"`
 	CategoryValues  []int    `json:"categoryValues"`
-	ScanTrendLabels []string `json:"scanTrendLabels"`
-	ScanTrendValues []int    `json:"scanTrendValues"`
-	RepoMapLabels      []string `json:"repoMapLabels"`
+	ScanTrendLabels           []string `json:"scanTrendLabels"`
+	ScanTrendValues           []int    `json:"scanTrendValues"`
+	RemediationTrendValues    []int    `json:"remediationTrendValues"`
+	PlanTrendValues           []int    `json:"planTrendValues"`
+	RepoMapLabels             []string `json:"repoMapLabels"`
 	RepoMapValues      []int    `json:"repoMapValues"`
 	RepoMapFailed      []bool   `json:"repoMapFailed"`
 	RepoMapStackLabels []string `json:"repoMapStackLabels"`
@@ -75,6 +77,8 @@ func buildDashboardChartJSONWithStore(ctx context.Context, qs store.QueryStore, 
 		payload.ScanTrendLabels = append(payload.ScanTrendLabels, t.label)
 		payload.ScanTrendValues = append(payload.ScanTrendValues, t.value)
 	}
+	payload.RemediationTrendValues = dayCountsAligned(trend, buildActivityDayCounts(ctx, qs, 14, countAutoRemediatedByDay))
+	payload.PlanTrendValues = dayCountsAligned(trend, buildActivityDayCounts(ctx, qs, 14, countRemediationPlansByDay))
 
 	sort.Slice(repos, func(i, j int) bool {
 		return repos[i].OpenFindingsCount > repos[j].OpenFindingsCount
@@ -160,6 +164,43 @@ func buildScanActivityTrend(ctx context.Context, qs store.QueryStore, recent []s
 		}
 	}
 	return scanTrendFromRecent(recent, days)
+}
+
+type dayCountFn func(ctx context.Context, qs store.QueryStore, since time.Time) (map[string]int, error)
+
+func countAutoRemediatedByDay(ctx context.Context, qs store.QueryStore, since time.Time) (map[string]int, error) {
+	return qs.CountAutoRemediatedFindingsByDay(ctx, since)
+}
+
+func countRemediationPlansByDay(ctx context.Context, qs store.QueryStore, since time.Time) (map[string]int, error) {
+	return qs.CountRemediationPlansByDay(ctx, since)
+}
+
+func buildActivityDayCounts(ctx context.Context, qs store.QueryStore, days int, fn dayCountFn) map[string]int {
+	if qs == nil || ctx == nil || fn == nil {
+		return map[string]int{}
+	}
+	if days <= 0 {
+		days = scanActivityWindowDays
+	}
+	since := time.Now().UTC().AddDate(0, 0, -(days - 1))
+	byDay, err := fn(ctx, qs, since)
+	if err != nil || byDay == nil {
+		return map[string]int{}
+	}
+	return byDay
+}
+
+// dayCountsAligned maps YYYY-MM-DD counts onto the same label order as the scan trend.
+func dayCountsAligned(trend []trendPoint, byDay map[string]int) []int {
+	now := time.Now().UTC()
+	out := make([]int, len(trend))
+	start := len(trend) - 1
+	for i := range trend {
+		key := now.AddDate(0, 0, -(start - i)).Format("2006-01-02")
+		out[i] = byDay[key]
+	}
+	return out
 }
 
 func scanTrendFromRecent(scans []store.ScanWithRepo, days int) []trendPoint {
