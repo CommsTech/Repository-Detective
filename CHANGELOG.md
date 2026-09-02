@@ -2,6 +2,19 @@
 
 All notable changes to Repository Detective (formerly an internal prototype) are documented here.
 
+## [Unreleased]
+
+### Fixed
+- **Gitea #355–#357** — patcher writes use `scanners.WriteWorkspaceBytes` with workspace containment checks (G703 path traversal)
+- **Gitea #358** — pre-install audit goroutine inherits detached request context via `context.WithoutCancel`
+- Finding detail suppression forms include CSRF tokens (UI verification finding)
+- Operator smoke test no longer SIGPIPEs under `pipefail` when truncating JSON output
+
+### Added
+- `scanners.WriteWorkspaceBytes` + regression tests
+- `/ui/learning` in UI route smoke tests
+- `scripts/ui-full-verification.sh` Playwright full-object audit harness
+
 ## [v0.1.0-beta.2] — 2026-09-02
 
 ### Fixed

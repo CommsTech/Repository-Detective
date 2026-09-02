@@ -167,6 +167,26 @@ func CreateWorkspace(files []FileEntry) (dir string, cleanup func(), err error) 
 	return dir, cleanup, nil
 }
 
+// WriteWorkspaceBytes writes content to relPath inside workspaceRoot after containment checks.
+func WriteWorkspaceBytes(workspaceRoot, relPath string, content []byte, perm os.FileMode) error {
+	safeRel, err := ValidateWorkspacePath(workspaceRoot, relPath)
+	if err != nil {
+		return err
+	}
+	absRoot, err := filepath.Abs(workspaceRoot)
+	if err != nil {
+		return fmt.Errorf("workspace root: %w", err)
+	}
+	target := filepath.Join(absRoot, filepath.FromSlash(safeRel))
+	if !pathWithinRoot(absRoot, target) {
+		return fmt.Errorf("%w: path escape %q", ErrUnsafeWorkspacePath, relPath)
+	}
+	if err := os.MkdirAll(filepath.Dir(target), 0o750); err != nil {
+		return err
+	}
+	return os.WriteFile(target, content, perm)
+}
+
 func writeFile(path, content string) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 		return err

@@ -2,6 +2,8 @@ package scanners_test
 
 import (
 	"errors"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"git.commsnet.org/commstech/repository-detective/scanners"
@@ -63,5 +65,29 @@ func TestCreateWorkspaceWritesNormalPaths(t *testing.T) {
 
 	if dir == "" {
 		t.Fatal("expected workspace dir")
+	}
+}
+
+func TestWriteWorkspaceBytesRejectsTraversal(t *testing.T) {
+	root := t.TempDir()
+	if err := scanners.WriteWorkspaceBytes(root, "../escape.txt", []byte("x"), 0o600); err == nil {
+		t.Fatal("expected traversal write to be rejected")
+	} else if !errors.Is(err, scanners.ErrUnsafeWorkspacePath) {
+		t.Fatalf("expected ErrUnsafeWorkspacePath, got %v", err)
+	}
+}
+
+func TestWriteWorkspaceBytesWritesInsideRoot(t *testing.T) {
+	root := t.TempDir()
+	content := []byte("package main\n")
+	if err := scanners.WriteWorkspaceBytes(root, "src/main.go", content, 0o600); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+	data, err := os.ReadFile(filepath.Join(root, "src", "main.go"))
+	if err != nil {
+		t.Fatalf("read back: %v", err)
+	}
+	if string(data) != string(content) {
+		t.Fatalf("content mismatch: %q", data)
 	}
 }

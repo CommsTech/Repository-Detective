@@ -87,12 +87,15 @@ func (r *Runner) StartAudit(ctx context.Context, repoURL, auditDepth string) (st
 		return "", err
 	}
 
-	go r.runAudit(auditID, parsed, depth)
+	go r.runAudit(context.WithoutCancel(ctx), auditID, parsed, depth)
 	return auditID, nil
 }
 
-func (r *Runner) runAudit(auditID string, parsed ParsedRepoURL, depth string) {
-	ctx, cancel := context.WithTimeout(context.Background(), r.cfg.auditTimeout())
+func (r *Runner) runAudit(parent context.Context, auditID string, parsed ParsedRepoURL, depth string) {
+	if parent == nil {
+		parent = context.Background()
+	}
+	ctx, cancel := context.WithTimeout(parent, r.cfg.auditTimeout())
 	defer cancel()
 
 	req, err := r.store.GetAuditRequest(ctx, auditID)

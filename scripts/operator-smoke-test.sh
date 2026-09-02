@@ -22,6 +22,12 @@ log() { printf '==> %s\n' "$*"; }
 warn() { printf 'WARN: %s\n' "$*" >&2; }
 fail() { printf 'FAIL: %s\n' "$*" >&2; exit 1; }
 
+truncate() {
+  local text=$1
+  local max=${2:-400}
+  printf '%s' "${text:0:${max}}"
+}
+
 curl_json() {
   local path=$1
   shift
@@ -40,7 +46,7 @@ check_health() {
   log "GET /health"
   local body
   body=$(curl_json /health) || fail "/health unreachable at ${BASE}"
-  echo "$body" | head -c 400
+  truncate "$body" 400
   echo
   if ! echo "$body" | grep -q '"status"'; then
     fail "/health response missing status field"
@@ -58,7 +64,7 @@ check_about() {
   log "GET /api/v1/about"
   local body
   body=$(curl_auth /api/v1/about) || fail "/api/v1/about failed"
-  echo "$body" | head -c 300
+  truncate "$body" 300
   echo
   if ! echo "$body" | grep -qi 'repository.detective\|Repository Detective'; then
     warn "/api/v1/about may not show product name"
@@ -69,7 +75,7 @@ check_status() {
   log "GET /api/v1/status"
   local body
   body=$(curl_auth /api/v1/status) || fail "/api/v1/status failed"
-  echo "$body" | head -c 500
+  truncate "$body" 500
   echo
   if echo "$body" | grep -qiE 'gitea_token|api_key|password|secret'; then
     fail "/api/v1/status may leak secrets in response"
@@ -80,7 +86,7 @@ check_dashboard() {
   log "GET /api/v1/dashboard/summary"
   local body
   body=$(curl_auth /api/v1/dashboard/summary) || fail "/api/v1/dashboard/summary failed"
-  echo "$body" | head -c 400
+  truncate "$body" 400
   echo
 }
 

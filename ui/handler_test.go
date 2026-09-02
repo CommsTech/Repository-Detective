@@ -166,6 +166,7 @@ func TestUIRoutesSmoke(t *testing.T) {
 		{"/ui/reports", "Executive summary"},
 		{"/ui/health", "System Health"},
 		{"/ui/configure", "Platform configuration"},
+		{"/ui/learning", "Learning"},
 		{"/ui/preinstall", "Pre-install audit"},
 		{"/ui/projects", "Project groups"},
 	}

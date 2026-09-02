@@ -102,20 +102,24 @@
   <p class="rd-muted">Use the Gitea template for structured beta feedback. Do not paste secrets in issue bodies or URLs.</p>
   {{end}}
   <form method="post" action="{{$.BasePath}}/findings/{{$.Data.Finding.ID}}/suppress{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}" class="rd-form-inline">
+    <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
     <label>Reason <input name="reason" required placeholder="e.g. test fixture noise"></label>
     <button type="submit" class="rd-btn rd-btn-secondary">Suppress this fingerprint</button>
   </form>
   {{if eq .Source "graph"}}
   <form method="post" action="{{$.BasePath}}/findings/{{$.Data.Finding.ID}}/suppress-rule{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}" class="rd-form-inline" style="margin-top:0.75rem">
+    <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
     <label>Reason <input name="reason" required placeholder="e.g. graph heuristics too noisy for this repo"></label>
     <button type="submit" class="rd-btn rd-btn-secondary">Suppress graph rule for this repo</button>
   </form>
   <form method="post" action="{{$.BasePath}}/findings/{{$.Data.Finding.ID}}/mark-intentional{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}" class="rd-form-inline" style="margin-top:0.75rem">
+    <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
     <label>Note <input name="reason" placeholder="e.g. CLI entrypoint by design"></label>
     <button type="submit" class="rd-btn rd-btn-ghost">Mark as intentional standalone</button>
   </form>
   {{end}}
   <form method="post" action="{{$.BasePath}}/findings/{{$.Data.Finding.ID}}/mark-false-positive{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}" class="rd-form-inline" style="margin-top:0.75rem">
+    <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
     <label>Reason <input name="reason" required placeholder="e.g. not exploitable in our deployment"></label>
     <button type="submit" class="rd-btn rd-btn-ghost">Mark false positive</button>
   </form>

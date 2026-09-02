@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"git.commsnet.org/commstech/repository-detective/remediation"
+	"git.commsnet.org/commstech/repository-detective/scanners"
 )
 
 var apkAddLinePattern = regexp.MustCompile(`(?i)(apk\s+add(?:\s+--[^\s\\&]+)*\s+)([^\\&]+)`)
@@ -54,7 +55,7 @@ func applyHadolintAptPatch(plan remediation.Plan, workspaceDir string, maxFiles,
 	if diffLines > maxLines {
 		return PatchResult{}, fmt.Errorf("patch exceeds max diff lines")
 	}
-	if err := os.WriteFile(full, []byte(updated), 0o600); err != nil {
+	if err := scanners.WriteWorkspaceBytes(workspaceDir, path, []byte(updated), 0o600); err != nil {
 		return PatchResult{}, fmt.Errorf("write file: %w", err)
 	}
 	return PatchResult{
@@ -100,7 +101,7 @@ func applyHadolintApkPinPatch(plan remediation.Plan, workspaceDir string, maxFil
 	if diffLines > maxLines {
 		return PatchResult{}, fmt.Errorf("patch exceeds max diff lines")
 	}
-	if err := os.WriteFile(full, []byte(updated), 0o600); err != nil {
+	if err := scanners.WriteWorkspaceBytes(workspaceDir, path, []byte(updated), 0o600); err != nil {
 		return PatchResult{}, fmt.Errorf("write file: %w", err)
 	}
 	return PatchResult{
