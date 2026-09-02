@@ -152,6 +152,7 @@ type Config struct {
 	StartupCheckTimeout                     int                                  `mapstructure:"startup_check_timeout"`
 	MaxConcurrentAnalyses                   int                                  `mapstructure:"max_concurrent_analyses"`
 	AnalysisTimeout                         int                                  `mapstructure:"analysis_timeout"`
+	ScanCooldownSeconds                     int                                  `mapstructure:"scan_cooldown_seconds"`
 	RateLimitPerMinute                      int                                  `mapstructure:"rate_limit_per_minute"`
 	WorkspaceMode                           string                               `mapstructure:"workspace_mode"`
 	WorkspaceMaxSizeMB                      int                                  `mapstructure:"workspace_max_size_mb"`
@@ -456,6 +457,7 @@ func loadConfig() error {
 	viper.SetDefault("max_issues_per_run", 50)
 	viper.SetDefault("max_concurrent_analyses", 5)
 	viper.SetDefault("analysis_timeout", 900)
+	viper.SetDefault("scan_cooldown_seconds", 1800)
 	viper.SetDefault("rate_limit_per_minute", 60)
 	viper.SetDefault("openwebui_model", "default")
 	viper.SetDefault("ai_provider", "")
@@ -781,6 +783,12 @@ func setupRoutes(router *gin.Engine) {
 	router.MaxMultipartMemory = 8 << 20 // 8 MB max
 
 	// Health check — no auth required
+	router.GET("/health/live", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"status":  "ok",
+			"service": "repository-detective",
+		})
+	})
 	router.GET("/health", func(c *gin.Context) {
 		ready := componentsReady.Load()
 		payload := healthPayload(ready)
@@ -2216,6 +2224,16 @@ func handleManualAnalysis(c *gin.Context) {
 	}
 	if strings.TrimSpace(req.ScanID) == "" {
 		req.ScanID = scanid.New()
+	}
+
+	forgeType := normalizeForgeType(req.ForgeType)
+	if skip, reason := checkScanAdmission(c.Request.Context(), forgeType, req.Owner, req.Repository, store.TriggerManual); skip {
+		c.JSON(http.StatusConflict, gin.H{
+			"error":   reason,
+			"status":  "skipped",
+			"scan_id": req.ScanID,
+		})
+		return
 	}
 
 	enqueueManualAnalysis(c.Request.Context(), req)

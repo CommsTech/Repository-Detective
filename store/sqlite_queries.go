@@ -1035,6 +1035,27 @@ func (s *SQLiteStore) HasRunningScanForRepository(ctx context.Context, repositor
 	return count > 0, nil
 }
 
+func (s *SQLiteStore) GetLastScanStartedAt(ctx context.Context, repositoryID int64) (*time.Time, error) {
+	var startedAt sql.NullString
+	err := s.db.QueryRowContext(ctx, `
+		SELECT started_at FROM scans
+		WHERE repository_id = ?
+		ORDER BY started_at DESC
+		LIMIT 1
+	`, repositoryID).Scan(&startedAt)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("last scan started: %w", err)
+	}
+	if !startedAt.Valid || strings.TrimSpace(startedAt.String) == "" {
+		return nil, nil
+	}
+	t := parseTime(startedAt.String)
+	return &t, nil
+}
+
 func (s *SQLiteStore) GetLastScheduledScanFinishedAt(ctx context.Context, repositoryID int64) (*time.Time, error) {
 	var finishedAt sql.NullString
 	err := s.db.QueryRowContext(ctx, `

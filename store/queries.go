@@ -139,6 +139,7 @@ type QueryStore interface {
 
 	ListScheduledRepositories(ctx context.Context) ([]ScheduledRepository, error)
 	HasRunningScanForRepository(ctx context.Context, repositoryID int64) (bool, error)
+	GetLastScanStartedAt(ctx context.Context, repositoryID int64) (*time.Time, error)
 	GetLastScheduledScanFinishedAt(ctx context.Context, repositoryID int64) (*time.Time, error)
 	ListRecentScheduledScans(ctx context.Context, limit int) ([]ScanWithRepo, error)
 	CountScheduledScansSince(ctx context.Context, since time.Time) (int, error)

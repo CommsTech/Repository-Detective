@@ -523,11 +523,16 @@ func (e *Engine) Scan(ctx context.Context, prepare *PrepareReport) ([]CandidateF
 			}
 			log.Infof("[CAH:SCAN] External scanners found %d candidate(s) (workspace_mode=%s)", len(summary.Candidates()), workspaceMeta.ModeUsed)
 			outDir := filepath.Join(prepared.Dir, ".rd-sbom")
-			sbomCtx, sbomCancel := context.WithTimeout(ctx, sbom.DefaultTimeout())
+			// SBOM runs after scanners; use a deadline independent of the analysis timeout so
+			// a long scanner phase does not leave zero budget for cyclonedx/syft.
+			sbomCtx, sbomCancel := context.WithTimeout(context.WithoutCancel(ctx), sbom.DefaultTimeout())
 			res, sbErr := sbom.GenerateAndCheck(sbomCtx, prepared.Dir, outDir)
 			sbomCancel()
 			if sbErr == nil {
 				copy := res
+				if copy.Status == sbom.StatusCheckFailed && strings.TrimSpace(copy.Detail) == "" {
+					copy.Detail = "SBOM generation or vulnerability check failed (no detail from tool)"
+				}
 				sbomResult = &copy
 				log.Infof("[CAH:SCAN] SBOM status=%s packages=%d vulns=%d", res.Status, res.PackageCount, res.VulnCount)
 			} else {
@@ -537,12 +542,14 @@ func (e *Engine) Scan(ctx context.Context, prepare *PrepareReport) ([]CandidateF
 			scopedScan := len(prepare.TargetFiles) > 0
 			secretModes := scanners.ResolveSecretScanModes(cfg.Scanners, scopedScan, depth)
 			if cfg.EnableSecurity && (secretModes.GitHistory || secretModes.RecentCommits || secretModes.ChangedFiles) {
-				for _, hr := range e.runGitHistorySecretScans(ctx, owner, repo, prepare.Commit, prepared.Dir, secretModes, cfg.Scanners) {
+				historyCtx, historyCancel := context.WithTimeout(context.WithoutCancel(ctx), scanners.GitleaksHistoryBudget(cfg.Scanners))
+				for _, hr := range e.runGitHistorySecretScans(historyCtx, owner, repo, prepare.Commit, prepared.Dir, secretModes, cfg.Scanners) {
 					summary.Results = append(summary.Results, hr)
 					for _, finding := range hr.Findings {
 						allCandidates = append(allCandidates, finding.ToCandidateFinding())
 					}
 				}
+				historyCancel()
 			}
 		}
 	}

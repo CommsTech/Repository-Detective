@@ -55,6 +55,33 @@ func TestHasRunningScanForRepository(t *testing.T) {
 	}
 }
 
+func TestGetLastScanStartedAt(t *testing.T) {
+	ctx := context.Background()
+	s := openTestStore(t)
+	repo, _ := s.UpsertRepository(ctx, store.Repository{Owner: "o", Name: "last", FullName: "o/last"})
+	older := time.Now().UTC().Add(-2 * time.Hour)
+	newer := time.Now().UTC().Add(-30 * time.Minute)
+	_, _ = s.CreateScan(ctx, store.Scan{
+		ID: "older-scan", RepositoryID: repo.ID, TriggerType: store.TriggerManual,
+		Status: store.ScanStatusCompleted, StartedAt: older, FinishedAt: &older,
+	})
+	_, _ = s.CreateScan(ctx, store.Scan{
+		ID: "newer-scan", RepositoryID: repo.ID, TriggerType: store.TriggerManual,
+		Status: store.ScanStatusCompleted, StartedAt: newer, FinishedAt: &newer,
+	})
+
+	last, err := s.GetLastScanStartedAt(ctx, repo.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if last == nil {
+		t.Fatal("expected last scan time")
+	}
+	if last.Sub(newer).Abs() > 2*time.Second {
+		t.Fatalf("expected newer scan start, got %v", last)
+	}
+}
+
 func TestListRecentScheduledScans(t *testing.T) {
 	ctx := context.Background()
 	s := openTestStore(t)

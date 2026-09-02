@@ -130,6 +130,11 @@ func gitleaksHistoryTimeout(cfg Config) time.Duration {
 	return time.Duration(seconds) * time.Second
 }
 
+// GitleaksHistoryBudget returns the context timeout for git history secret scans.
+func GitleaksHistoryBudget(cfg Config) time.Duration {
+	return gitleaksHistoryTimeout(cfg)
+}
+
 func annotateHistoryFindings(findings []Finding, scope, currentTreeDir string, redact bool) []Finding {
 	out := make([]Finding, 0, len(findings))
 	for _, f := range findings {

@@ -7,10 +7,19 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
 )
+
+// Paths under these prefixes are excluded from golangci-lint findings (fixtures, vendored code).
+var linterSkipPathPrefixes = []string{
+	"testdata/",
+	"vendor/",
+	"benchmark/",
+	".cache/",
+}
 
 type linterSpec struct {
 	name     string
@@ -48,7 +57,11 @@ func RunLinters(ctx context.Context, logger *logrus.Logger, dir string, entries 
 		},
 	}
 
-	var results []RunResult
+	type job struct {
+		spec    linterSpec
+		matched []string
+	}
+	var jobs []job
 	for _, spec := range specs {
 		var matched []string
 		for ext, paths := range byExt {
@@ -59,20 +72,38 @@ func RunLinters(ctx context.Context, logger *logrus.Logger, dir string, entries 
 		if len(matched) == 0 {
 			continue
 		}
-
 		if spec.quality && !enableQuality {
-			results = append(results, RunResult{Scanner: spec.name, Status: StatusDisabled, Detail: "quality analysis disabled"})
+			jobs = append(jobs, job{spec: spec})
 			continue
 		}
 		if !spec.quality && !enableSecurity {
-			results = append(results, RunResult{Scanner: spec.name, Status: StatusDisabled, Detail: "security analysis disabled"})
+			jobs = append(jobs, job{spec: spec})
 			continue
 		}
-
-		result := spec.run(ctx, logger, dir, matched, cfg)
-		results = append(results, result)
+		jobs = append(jobs, job{spec: spec, matched: matched})
+	}
+	if len(jobs) == 0 {
+		return nil
 	}
 
+	results := make([]RunResult, len(jobs))
+	var wg sync.WaitGroup
+	for i, j := range jobs {
+		if j.matched == nil {
+			detail := "security analysis disabled"
+			if j.spec.quality {
+				detail = "quality analysis disabled"
+			}
+			results[i] = RunResult{Scanner: j.spec.name, Status: StatusDisabled, Detail: detail}
+			continue
+		}
+		wg.Add(1)
+		go func(idx int, spec linterSpec, matched []string) {
+			defer wg.Done()
+			results[idx] = spec.run(ctx, logger, dir, matched, cfg)
+		}(i, j.spec, j.matched)
+	}
+	wg.Wait()
 	return results
 }
 
@@ -110,62 +141,54 @@ func runGolangciLint(ctx context.Context, logger *logrus.Logger, dir string, fil
 		result.Status = StatusBinaryMissing
 		return result
 	}
+	if !WorkspaceHasGo(dir, fileEntriesFromPaths(files)) {
+		result.Status = StatusClean
+		result.Detail = "no Go module or files"
+		return result
+	}
 
-	var findings []Finding
 	timeout := time.Duration(cfg.TimeoutSeconds) * time.Second
-	hadFailure := false
-	hadParseFailure := false
-
-	for _, relPath := range files {
-		target := filepath.Join(dir, filepath.FromSlash(relPath))
-		if _, err := os.Stat(target); err != nil {
-			continue
-		}
-
-		args := []string{
-			"run",
-			"--out-format", "json",
-			"--issues-exit-code=0",
-			target,
-		}
-		output, err := runCommand(ctx, timeout, dir, "golangci-lint", args...)
-		if err != nil {
-			if len(output) == 0 {
-				if classifyCommandError(err) == StatusTimedOut {
-					result.Status = StatusTimedOut
-					result.Detail = err.Error()
-					return result
-				}
-				hadFailure = true
-				continue
-			}
-		}
-
-		fileFindings, parseErr := parseGolangciOutput(output, dir, relPath, cfg)
-		if parseErr != nil {
-			hadParseFailure = true
-			continue
-		}
-		findings = append(findings, fileFindings...)
+	args := []string{
+		"run",
+		"./...",
+		"--out-format", "json",
+		"--issues-exit-code=0",
 	}
-
-	if result.Status == StatusTimedOut {
+	output, err := runCommand(ctx, timeout, dir, "golangci-lint", args...)
+	if err != nil && len(output) == 0 {
+		result.Status = classifyCommandError(err)
+		result.Detail = err.Error()
 		return result
 	}
-	if hadParseFailure && len(findings) == 0 {
+
+	findings, parseErr := parseGolangciOutput(output, dir, "", cfg)
+	if parseErr != nil && len(findings) == 0 {
 		result.Status = StatusParseFailed
-		result.Detail = "failed to parse golangci-lint output"
-		return result
-	}
-	if hadFailure && len(findings) == 0 {
-		result.Status = StatusFailed
-		result.Detail = "golangci-lint command failed"
+		result.Detail = parseErr.Error()
 		return result
 	}
 
 	result = resultWithFindings("golangci-lint", findings)
 	logger.Infof("[SCANNER:golangci-lint] status=%s findings=%d", result.Status, len(findings))
 	return result
+}
+
+func fileEntriesFromPaths(paths []string) []FileEntry {
+	out := make([]FileEntry, 0, len(paths))
+	for _, p := range paths {
+		out = append(out, FileEntry{Path: p})
+	}
+	return out
+}
+
+func shouldSkipLinterPath(path string) bool {
+	path = strings.TrimPrefix(filepath.ToSlash(strings.TrimSpace(path)), "/")
+	for _, prefix := range linterSkipPathPrefixes {
+		if strings.HasPrefix(path, prefix) {
+			return true
+		}
+	}
+	return false
 }
 
 func parseGolangciOutput(output []byte, dir, relPath string, cfg Config) ([]Finding, error) {
@@ -183,6 +206,12 @@ func parseGolangciOutput(output []byte, dir, relPath string, cfg Config) ([]Find
 
 	var findings []Finding
 	for _, issue := range report.Issues {
+		file := strings.TrimPrefix(issue.Pos.Filename, dir)
+		file = strings.TrimPrefix(file, string(filepath.Separator))
+		file = firstNonEmpty(file, relPath)
+		if shouldSkipLinterPath(file) {
+			continue
+		}
 		severity := normalizeSeverity(issue.Severity)
 		if severity == "medium" && issue.FromLinter != "" {
 			severity = linterSeverityFromName(issue.FromLinter)
@@ -191,8 +220,6 @@ func parseGolangciOutput(output []byte, dir, relPath string, cfg Config) ([]Find
 			continue
 		}
 
-		file := strings.TrimPrefix(issue.Pos.Filename, dir)
-		file = strings.TrimPrefix(file, string(filepath.Separator))
 		findings = append(findings, Finding{
 			ID:          stableLinterRuleID("LINT-GO", issue.FromLinter),
 			Source:      "golangci-lint",
@@ -200,7 +227,7 @@ func parseGolangciOutput(output []byte, dir, relPath string, cfg Config) ([]Find
 			Severity:    severity,
 			Title:       issue.Text,
 			Description: fmt.Sprintf("%s reported by golangci-lint (%s)", issue.Text, issue.FromLinter),
-			File:        firstNonEmpty(file, relPath),
+			File:        file,
 			Line:        issue.Pos.Line,
 			Confidence:  0.9,
 			Reference:   issue.FromLinter,
