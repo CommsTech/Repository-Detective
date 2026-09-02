@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -87,9 +88,28 @@ func runGitHistory(ctx context.Context, args []string) ([]byte, error) {
 	return out, err
 }
 
+var (
+	// Matches credentials embedded in a remote URL, e.g. https://user:token@host/repo.
+	gitCredentialURLPattern = regexp.MustCompile(`(?i)\b([a-z][a-z0-9+.-]*)://[^\s/@]*@`)
+	// Matches local scratch workspaces that must not leak into findings or logs.
+	gitTempWorkspacePattern = regexp.MustCompile(`(?:/[^\s:'"]*)?/(?:rd-gitleaks-history|rd-archive|rd-scan|bugbot-archive)-[A-Za-z0-9_-]+\S*`)
+)
+
+// sanitizeHistoryGitError keeps git's own message so operators can tell auth failures
+// from network or disk failures, while stripping credentials and local scratch paths.
 func sanitizeHistoryGitError(out []byte) error {
-	_ = out
-	return fmt.Errorf("git operation failed")
+	msg := redactScannerDetail(string(out))
+	msg = gitCredentialURLPattern.ReplaceAllString(msg, "$1://***@")
+	msg = gitTempWorkspacePattern.ReplaceAllString(msg, "<workspace>")
+	msg = strings.TrimSpace(msg)
+	if msg == "" {
+		return fmt.Errorf("git operation failed")
+	}
+	const maxMsg = 300
+	if len(msg) > maxMsg {
+		msg = msg[:maxMsg-3] + "..."
+	}
+	return fmt.Errorf("git operation failed: %s", msg)
 }
 
 func looksLikeCommitSHA(ref string) bool {

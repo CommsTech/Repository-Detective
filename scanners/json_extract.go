@@ -3,9 +3,15 @@ package scanners
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 )
+
+// errNoJSONValue reports that scanner output held only log lines and no JSON at all.
+// Scanners that stay silent on a clean run can treat this as an empty result
+// instead of a parse failure.
+var errNoJSONValue = errors.New("no JSON value in output")
 
 // extractJSONArray returns the first JSON array found in scanner output (stdout+stderr).
 func extractJSONArray(output []byte) ([]byte, error) {
@@ -49,7 +55,7 @@ func extractFirstJSONValue(output []byte) ([]byte, error) {
 		}
 	}
 	if start < 0 {
-		return nil, fmt.Errorf("no JSON value in output")
+		return nil, errNoJSONValue
 	}
 	dec := json.NewDecoder(bytes.NewReader(s[start:]))
 	var raw json.RawMessage

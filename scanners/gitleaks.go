@@ -3,6 +3,7 @@ package scanners
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -60,11 +61,9 @@ func runGitleaksWithCommand(ctx context.Context, logger *logrus.Logger, dir stri
 	if readErr != nil {
 		reportBytes = nil
 	}
-	parseInput := reportBytes
-	if strings.TrimSpace(string(reportBytes)) == "" {
-		parseInput = output
-	}
-	if err != nil && len(parseInput) == 0 {
+	// gitleaks exits non-zero when it finds leaks, so a command error only means the
+	// scan failed when it also produced no report to parse.
+	if err != nil && strings.TrimSpace(string(stripANSI(reportBytes))) == "" {
 		result.Status = classifyCommandError(err)
 		result.Detail = err.Error()
 		logger.Warnf("[SCANNER:gitleaks] scan failed: status=%s err=%v", result.Status, err)
@@ -114,7 +113,13 @@ func parseGitleaksScanOutput(reportBytes, commandOutput []byte, dir string) ([]F
 	if strings.TrimSpace(string(stripANSI(reportBytes))) != "" {
 		return parseGitleaksOutput(reportBytes, dir)
 	}
-	return parseGitleaksOutput(commandOutput, dir)
+	findings, err := parseGitleaksOutput(commandOutput, dir)
+	// A clean run writes no report and logs only "no leaks found" to stderr. Output
+	// with no JSON at all therefore means zero findings, not an unparsable report.
+	if errors.Is(err, errNoJSONValue) {
+		return nil, nil
+	}
+	return findings, err
 }
 
 func parseGitleaksOutput(output []byte, dir string) ([]Finding, error) {
