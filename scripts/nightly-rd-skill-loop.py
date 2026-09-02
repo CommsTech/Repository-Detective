@@ -57,6 +57,8 @@ MAINTAINABILITY_RULES = {
     "HEALTH-TECH-MARKER", "HEALTH-TECH-PHRASE", "HEALTH-COMMENT-BLOCK",
 }
 QUALITY_RULES = {"QUAL-DEBUG", "OPT-NESTED-LOOP", "OPT-HTTP-CLIENT-PER-CALL"}
+LINT_NOISE_RULES = {"LINT-GO-typecheck"}
+TEMPLATE_PATH_MARKERS = ("config.env.template", "docsdata/", ".template")
 
 DOCKER_GO_IMAGE = "golang:1.25-bookworm"
 
@@ -534,12 +536,12 @@ class NightlySkillLoop:
             """
             SELECT f.repository_id, r.full_name, f.source, f.rule_id, f.severity,
                 COUNT(1) AS finding_count,
-                SUM(CASE WHEN f.status = 'false_positive' THEN 1 ELSE 0 END) AS fp_marked,
+                SUM(CASE WHEN f.status IN ('false_positive','suppressed') THEN 1 ELSE 0 END) AS fp_marked,
                 MIN(f.file_path) AS sample_path,
                 GROUP_CONCAT(f.fingerprint) AS sample_fps
             FROM findings f
             JOIN repositories r ON r.id = f.repository_id
-            WHERE f.rule_id != '' AND f.status IN ('open','false_positive')
+            WHERE f.rule_id != '' AND f.status IN ('open','false_positive','suppressed')
             GROUP BY f.repository_id, r.full_name, f.source, f.rule_id, f.severity
             HAVING finding_count >= 3
             ORDER BY fp_marked DESC, finding_count DESC
@@ -583,6 +585,12 @@ class NightlySkillLoop:
             return 3
         if rule in GRAPH_RULES or rule in QUALITY_RULES:
             return 1
+        if rule in LINT_NOISE_RULES or rule.startswith("LINT-GO-typecheck"):
+            return 1
+        if rule.startswith("LINT-RUFF-") or rule.startswith("LINT-SHELL-"):
+            return 1
+        if path_pattern and any(x in path_pattern.lower() for x in TEMPLATE_PATH_MARKERS):
+            return 1
         if rule in MAINTAINABILITY_RULES and path_pattern:
             return 1
         if path_pattern and any(x in path_pattern.lower() for x in ("_test.", "/test/", "/testdata/", "/vendor/", "/fixtures/")):
@@ -602,10 +610,12 @@ class NightlySkillLoop:
             finding_count = int(row.get("finding_count") or 0)
             fp_rate = fp_marked / finding_count if finding_count else 0
             path_pattern = ""
-            if rule_id in GRAPH_RULES:
+            sample = row.get("sample_path") or ""
+            if rule_id.startswith("LINT-"):
+                path_pattern = sample
+            elif rule_id in GRAPH_RULES:
                 path_pattern = ""
             elif rule_id in MAINTAINABILITY_RULES:
-                sample = row.get("sample_path") or ""
                 if sample:
                     path_pattern = sample.split("/")[-1] if "/" in sample else sample
             key = (repo_id, source, rule_id, path_pattern)

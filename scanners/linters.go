@@ -194,7 +194,7 @@ func parseGolangciOutput(output []byte, dir, relPath string, cfg Config) ([]Find
 		file := strings.TrimPrefix(issue.Pos.Filename, dir)
 		file = strings.TrimPrefix(file, string(filepath.Separator))
 		findings = append(findings, Finding{
-			ID:          fmt.Sprintf("LINT-GO-%s-%d", issue.FromLinter, issue.Pos.Line),
+			ID:          stableLinterRuleID("LINT-GO", issue.FromLinter),
 			Source:      "golangci-lint",
 			Category:    "lint",
 			Severity:    severity,
@@ -275,7 +275,7 @@ func parseRuffOutput(output []byte, dir string, cfg Config) ([]Finding, error) {
 		file := strings.TrimPrefix(issue.Filename, dir)
 		file = strings.TrimPrefix(file, string(filepath.Separator))
 		findings = append(findings, Finding{
-			ID:          fmt.Sprintf("LINT-RUFF-%s-%d", issue.Code, issue.Location.Row),
+			ID:          stableLinterRuleID("LINT-RUFF", issue.Code),
 			Source:      "ruff",
 			Category:    "lint",
 			Severity:    severity,
@@ -382,7 +382,7 @@ func shellcheckIssuesToFindings(reports [][]shellcheckIssue, dir string, cfg Con
 			file := strings.TrimPrefix(issue.File, dir)
 			file = strings.TrimPrefix(file, string(filepath.Separator))
 			findings = append(findings, Finding{
-				ID:          fmt.Sprintf("LINT-SHELL-%d-%d", issue.Code, issue.Line),
+				ID:          stableLinterRuleID("LINT-SHELL", fmt.Sprintf("%d", issue.Code)),
 				Source:      "shellcheck",
 				Category:    "lint",
 				Severity:    severity,
@@ -427,4 +427,14 @@ func linterSeverityFromName(name string) string {
 	default:
 		return "medium"
 	}
+}
+
+// stableLinterRuleID returns a source+rule key suitable for calibration learning.
+// Line numbers stay on Finding.Line; rule_id must aggregate across occurrences.
+func stableLinterRuleID(prefix, ruleKey string) string {
+	ruleKey = strings.TrimSpace(ruleKey)
+	if ruleKey == "" {
+		ruleKey = "unknown"
+	}
+	return prefix + "-" + ruleKey
 }

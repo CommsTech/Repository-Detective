@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """Suppress remaining calibrated / fixed open findings for product repo (id=1).
 
-After code fixes + rescan, fingerprints that still appear as intentional noise
-(docs localhost, GRAPH-DISCONNECTED, test_gap under testdata, etc.) are marked
-suppressed via the API so the operator open queue reflects real work.
+Feeds the learning pipeline: marks false positives (not silent suppress) so
+learning_events and repo-scoped calibration recommendations can train out noise.
 """
 
 from __future__ import annotations
@@ -58,7 +57,7 @@ SUPPRESS_RULES = {
 }
 
 # golangci-lint typecheck emits undefined: Handler when files are analyzed out of package context.
-TYPECHECK_PREFIX = "LINT-GO-typecheck-"
+TYPECHECK_PREFIX = "LINT-GO-typecheck"
 RUFF_PREFIX = "LINT-RUFF-"
 SHELL_PREFIX = "LINT-SHELL-"
 
@@ -197,7 +196,7 @@ def main() -> int:
         try:
             api(
                 "POST",
-                f"/findings/{f['id']}/suppress",
+                f"/findings/{f['id']}/mark-false-positive",
                 {
                     "reason": reason,
                     "created_by": "closeout-repo1-findings.py",
@@ -205,12 +204,12 @@ def main() -> int:
                 },
             )
             suppressed += 1
-            counts["suppress:" + (detail.get("rule_id") or "?")[:40]] += 1
+            counts["mark_fp:" + (detail.get("rule_id") or "?")[:40]] += 1
         except urllib.error.HTTPError as exc:
             errors += 1
             body = exc.read().decode(errors="replace")[:200]
             print(f"suppress fail id={f['id']}: {exc.code} {body}")
-    print(f"suppressed={suppressed} kept={skipped} errors={errors}")
+    print(f"marked_false_positive={suppressed} kept={skipped} errors={errors}")
     for k, v in counts.most_common(40):
         print(f"  {v:4d}  {k}")
     return 0 if errors == 0 else 2

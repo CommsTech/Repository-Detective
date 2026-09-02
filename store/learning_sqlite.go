@@ -17,6 +17,7 @@ func (s *SQLiteStore) RecordLearningEvent(ctx context.Context, ev LearningEvent)
 	if strings.TrimSpace(ev.EventType) == "" {
 		return LearningEvent{}, fmt.Errorf("event_type required")
 	}
+	ev.RuleID = NormalizeLearningRuleID(ev.Source, ev.RuleID)
 	if ev.IdempotencyKey == "" {
 		ev.IdempotencyKey = fmt.Sprintf("%d:%s:%s:%v", ev.RepositoryID, ev.EventType, ev.ScanID, ev.FindingID)
 	}
@@ -293,8 +294,8 @@ func (s *SQLiteStore) GenerateRepoScopedRecommendations(ctx context.Context, rep
 		FROM learning_events
 		WHERE repository_id = ? AND (source != '' OR rule_id != '')
 		GROUP BY source, rule_id
-		HAVING total >= ?
-	`, repositoryID, minFindings)
+		HAVING total >= 3
+	`, repositoryID)
 	if err != nil {
 		return 0, err
 	}
@@ -313,6 +314,9 @@ func (s *SQLiteStore) GenerateRepoScopedRecommendations(ctx context.Context, rep
 		}
 		fpRate := float64(fp) / float64(total)
 		if fpRate < 0.5 {
+			continue
+		}
+		if total < repoScopedMinEvents(source, minFindings) {
 			continue
 		}
 		candidates = append(candidates, candidate{source: source, ruleID: ruleID, fp: fp, total: total, fpRate: fpRate})
@@ -343,6 +347,89 @@ func (s *SQLiteStore) GenerateRepoScopedRecommendations(ctx context.Context, rep
 			) VALUES ('repo', ?, 'downgrade_confidence', ?, ?, '', 'auto_issue', 'report_only', ?, ?, 'proposed', ?, ?)
 		`, repositoryID, c.source, c.ruleID, reason, c.fpRate, now, now); err != nil {
 			return count, err
+		}
+		count++
+	}
+	return count, nil
+}
+
+func repoScopedMinEvents(source string, configuredMin int) int {
+	if configuredMin <= 0 {
+		configuredMin = 5
+	}
+	switch strings.ToLower(strings.TrimSpace(source)) {
+	case "golangci-lint", "ruff", "shellcheck", "graph", "health", "static", "architecture", "semgrep":
+		if configuredMin > 3 {
+			return 3
+		}
+	}
+	return configuredMin
+}
+
+// BackfillFalsePositiveLearningEvents records user_marked_false_positive events for findings
+// already marked false_positive or suppressed that never fed the learning pipeline.
+func (s *SQLiteStore) BackfillFalsePositiveLearningEvents(ctx context.Context, limit int) (int, error) {
+	if limit <= 0 {
+		limit = 5000
+	}
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT f.id, f.repository_id,
+			COALESCE(NULLIF(f.last_seen_scan_id, ''), NULLIF(f.first_seen_scan_id, ''), ''),
+			f.fingerprint, f.source, f.rule_id, f.status
+		FROM findings f
+		WHERE f.status IN ('false_positive', 'suppressed')
+		  AND f.repository_id > 0
+		  AND NOT EXISTS (
+			SELECT 1 FROM learning_events le
+			WHERE le.finding_id = f.id AND le.event_type = 'user_marked_false_positive'
+		  )
+		ORDER BY f.id
+		LIMIT ?
+	`, limit)
+	if err != nil {
+		return 0, fmt.Errorf("query findings for backfill: %w", err)
+	}
+	defer rows.Close()
+
+	type backfillRow struct {
+		findingID, repoID int64
+		scanID, fingerprint, source, ruleID, status string
+	}
+	var batch []backfillRow
+	for rows.Next() {
+		var row backfillRow
+		if err := rows.Scan(&row.findingID, &row.repoID, &row.scanID, &row.fingerprint, &row.source, &row.ruleID, &row.status); err != nil {
+			return 0, err
+		}
+		batch = append(batch, row)
+	}
+	if err := rows.Err(); err != nil {
+		return 0, err
+	}
+	rows.Close()
+
+	count := 0
+	for _, row := range batch {
+		fid := row.findingID
+		evidence, _ := json.Marshal(map[string]any{
+			"backfill":    true,
+			"from_status": row.status,
+			"finding_id":  row.findingID,
+		})
+		_, err := s.RecordLearningEvent(ctx, LearningEvent{
+			RepositoryID:   row.repoID,
+			ScanID:         row.scanID,
+			FindingID:      &fid,
+			Fingerprint:    row.fingerprint,
+			Source:         row.source,
+			RuleID:         row.ruleID,
+			EventType:      "user_marked_false_positive",
+			EvidenceJSON:   evidence,
+			CreatedBy:      "backfill:learning_pipeline",
+			IdempotencyKey: fmt.Sprintf("backfill:fp:finding:%d", row.findingID),
+		})
+		if err != nil {
+			return count, fmt.Errorf("backfill finding %d: %w", row.findingID, err)
 		}
 		count++
 	}

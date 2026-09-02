@@ -175,3 +175,56 @@ func TestValidateSettingsUpdate(t *testing.T) {
 		t.Fatal("expected validation error")
 	}
 }
+
+func TestCountAutoRemediatedAndPlansByDay(t *testing.T) {
+	s := openTestStore(t)
+	ctx := context.Background()
+	now := time.Now().UTC()
+
+	repo, err := s.UpsertRepository(ctx, store.Repository{
+		Owner: "o", Name: "r", FullName: "o/r", ForgeType: store.ForgeTypeGitea, ConnectedRepo: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	finding, err := s.UpsertFinding(ctx, store.Finding{
+		RepositoryID: repo.ID, Fingerprint: "fp-auto-rem", Source: "hadolint", RuleID: "DL3018",
+		Status: store.FindingStatusOpen, LastSeenScanID: "s1",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	fid := finding.ID
+	planDay := now.AddDate(0, 0, -2)
+	_, err = s.SaveRemediationPlan(ctx, store.RemediationPlanRecord{
+		PlanID: "plan-chart-1", FindingID: &fid, RepositoryID: &repo.ID, Fingerprint: "fp-auto-rem",
+		Status: store.RemediationStatusApproved, CreatedAt: planDay, UpdatedAt: planDay,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	mergedAt := now.AddDate(0, 0, -1)
+	_, err = s.SavePatchAttempt(ctx, store.PatchAttemptRecord{
+		AttemptID: "attempt-chart-1", PlanID: "plan-chart-1", RepositoryID: repo.ID, FindingID: &fid,
+		Status: store.PatchAttemptStatusPRMerged, CreatedAt: mergedAt, UpdatedAt: mergedAt, MergedAt: &mergedAt,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	since := now.AddDate(0, 0, -13)
+	plans, err := s.CountRemediationPlansByDay(ctx, since)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plans[planDay.Format("2006-01-02")] != 1 {
+		t.Fatalf("plans by day=%v", plans)
+	}
+	remediated, err := s.CountAutoRemediatedFindingsByDay(ctx, since)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if remediated[mergedAt.Format("2006-01-02")] != 1 {
+		t.Fatalf("auto-remediated by day=%v", remediated)
+	}
+}

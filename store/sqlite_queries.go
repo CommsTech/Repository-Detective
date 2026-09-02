@@ -537,6 +537,88 @@ func (s *SQLiteStore) CountCompletedScansByDay(ctx context.Context, since time.T
 	return out, rows.Err()
 }
 
+// CountAutoRemediatedFindingsByDay returns distinct findings that landed an auto-remediation
+// PR (opened or merged), keyed by UTC day of merge/update/create.
+func (s *SQLiteStore) CountAutoRemediatedFindingsByDay(ctx context.Context, since time.Time) (map[string]int, error) {
+	if since.IsZero() {
+		since = time.Now().UTC().AddDate(0, 0, -13)
+	}
+	sinceUTC := since.UTC()
+	sinceDay := time.Date(sinceUTC.Year(), sinceUTC.Month(), sinceUTC.Day(), 0, 0, 0, 0, time.UTC)
+	sinceStr := formatTime(sinceDay)
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT substr(
+			CASE
+				WHEN lower(status) = 'pr_merged' AND COALESCE(merged_at, '') != '' THEN merged_at
+				ELSE created_at
+			END, 1, 10) AS day,
+			COUNT(DISTINCT COALESCE(finding_id, id))
+		FROM patch_attempts
+		WHERE lower(status) IN ('pr_opened', 'pr_merged')
+		  AND CASE
+				WHEN lower(status) = 'pr_merged' AND COALESCE(merged_at, '') != '' THEN merged_at
+				ELSE created_at
+			  END >= ?
+		GROUP BY day
+		ORDER BY day
+	`, sinceStr)
+	if err != nil {
+		return nil, fmt.Errorf("count auto-remediated findings by day: %w", err)
+	}
+	defer rows.Close()
+
+	out := map[string]int{}
+	for rows.Next() {
+		var day string
+		var n int
+		if err := rows.Scan(&day, &n); err != nil {
+			return nil, fmt.Errorf("scan auto-remediated-by-day row: %w", err)
+		}
+		day = strings.TrimSpace(day)
+		if day == "" {
+			continue
+		}
+		out[day] = n
+	}
+	return out, rows.Err()
+}
+
+// CountRemediationPlansByDay returns remediation plans created per UTC day.
+func (s *SQLiteStore) CountRemediationPlansByDay(ctx context.Context, since time.Time) (map[string]int, error) {
+	if since.IsZero() {
+		since = time.Now().UTC().AddDate(0, 0, -13)
+	}
+	sinceUTC := since.UTC()
+	sinceDay := time.Date(sinceUTC.Year(), sinceUTC.Month(), sinceUTC.Day(), 0, 0, 0, 0, time.UTC)
+	sinceStr := formatTime(sinceDay)
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT substr(created_at, 1, 10) AS day, COUNT(1)
+		FROM remediation_plans
+		WHERE created_at >= ?
+		GROUP BY substr(created_at, 1, 10)
+		ORDER BY day
+	`, sinceStr)
+	if err != nil {
+		return nil, fmt.Errorf("count remediation plans by day: %w", err)
+	}
+	defer rows.Close()
+
+	out := map[string]int{}
+	for rows.Next() {
+		var day string
+		var n int
+		if err := rows.Scan(&day, &n); err != nil {
+			return nil, fmt.Errorf("scan remediation-plans-by-day row: %w", err)
+		}
+		day = strings.TrimSpace(day)
+		if day == "" {
+			continue
+		}
+		out[day] = n
+	}
+	return out, rows.Err()
+}
+
 func (s *SQLiteStore) CountActiveScans(ctx context.Context) (int, error) {
 	var count int
 	err := s.db.QueryRowContext(ctx, `

@@ -178,6 +178,10 @@ func recomputeCalibration(ctx context.Context) (map[string]any, error) {
 	if rdStore == nil {
 		return nil, fmt.Errorf("database disabled")
 	}
+	backfilled, err := rdStore.BackfillFalsePositiveLearningEvents(ctx, 10000)
+	if err != nil {
+		logger.Warnf("calibration backfill learning events: %v", err)
+	}
 	stats, err := rdStore.RecomputeCalibrationRuleStats(ctx)
 	if err != nil {
 		return nil, err
@@ -192,11 +196,67 @@ func recomputeCalibration(ctx context.Context) (map[string]any, error) {
 		n, _ := rdStore.GenerateRepoScopedRecommendations(ctx, r.ID, 5)
 		repoRecs += n
 	}
+	autoApplied := 0
+	if config.CalibrationAutoApply {
+		autoApplied, err = autoApplySafeCalibrationRecommendations(ctx)
+		if err != nil {
+			logger.Warnf("calibration auto-apply: %v", err)
+		}
+	}
 	return map[string]any{
+		"learning_events_backfilled":     backfilled,
 		"rules_updated":                  stats,
 		"recommendations_generated":      recs,
 		"repo_recommendations_generated": repoRecs,
+		"recommendations_auto_applied":   autoApplied,
 	}, nil
+}
+
+func autoApplySafeCalibrationRecommendations(ctx context.Context) (int, error) {
+	recs, err := rdStore.ListCalibrationRecommendations(ctx, "proposed", 200)
+	if err != nil {
+		return 0, err
+	}
+	applied := 0
+	for _, rec := range recs {
+		if rec.RecommendedAction != "report_only" || strings.TrimSpace(rec.RuleID) == "" {
+			continue
+		}
+		if !strings.EqualFold(rec.Scope, "repo") {
+			continue
+		}
+		if rec.Confidence < 0.5 {
+			continue
+		}
+		if ruleIDProtectedFromAutoApply(rec.Source, rec.RuleID) {
+			continue
+		}
+		if err := learning.ValidateCalibrationAccept(rec.Category, rec.Scope); err != nil {
+			continue
+		}
+		n, err := acceptCalibrationRecommendation(ctx, rec.ID)
+		if err != nil {
+			logger.Warnf("auto-apply recommendation %d (%s/%s): %v", rec.ID, rec.Source, rec.RuleID, err)
+			continue
+		}
+		applied += n
+	}
+	return applied, nil
+}
+
+func ruleIDProtectedFromAutoApply(source, ruleID string) bool {
+	rule := strings.ToUpper(strings.TrimSpace(ruleID))
+	src := strings.ToLower(strings.TrimSpace(source))
+	switch src {
+	case "gitleaks", "trivy", "grype", "govulncheck":
+		return true
+	}
+	for _, prefix := range []string{"CVE-", "TRIVY-", "GRYPE-", "GITLEAKS-"} {
+		if strings.HasPrefix(rule, prefix) {
+			return true
+		}
+	}
+	return rule == "SEC-HARDCODED-SECRET"
 }
 
 func startCalibrationBackgroundJob() {

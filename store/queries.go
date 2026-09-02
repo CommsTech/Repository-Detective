@@ -129,6 +129,8 @@ type QueryStore interface {
 	DashboardSummary(ctx context.Context, recentLimit int) (DashboardSummary, error)
 	ListRecentScans(ctx context.Context, opts ListOptions) ([]ScanWithRepo, error)
 	CountCompletedScansByDay(ctx context.Context, since time.Time) (map[string]int, error)
+	CountAutoRemediatedFindingsByDay(ctx context.Context, since time.Time) (map[string]int, error)
+	CountRemediationPlansByDay(ctx context.Context, since time.Time) (map[string]int, error)
 	CountActiveScans(ctx context.Context) (int, error)
 	ListExternalIssuesByRepository(ctx context.Context, repositoryID int64, opts ListOptions) ([]ExternalIssue, error)
 	ListExternalIssuesByFinding(ctx context.Context, findingID int64) ([]ExternalIssue, error)
@@ -220,6 +222,7 @@ type QueryStore interface {
 	CreateRepoCalibrationRule(ctx context.Context, rule RepoCalibrationRule) (RepoCalibrationRule, error)
 	ListRepoCalibrationRules(ctx context.Context, repositoryID int64, activeOnly bool) ([]RepoCalibrationRule, error)
 	ExpireRepoCalibrationRule(ctx context.Context, ruleID int64) error
+	BackfillFalsePositiveLearningEvents(ctx context.Context, limit int) (int, error)
 	GenerateRepoScopedRecommendations(ctx context.Context, repositoryID int64, minFindings int) (int, error)
 	ListRepositoryIDsAffectedByRule(ctx context.Context, source, ruleID string, limit int) ([]int64, error)
 	LearningHealthSummary(ctx context.Context) (LearningHealthSummary, error)
