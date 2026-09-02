@@ -12,7 +12,7 @@ services:
   repository-detective:
     # Prefer published image (pull) so operators skip ~40 min local builds.
     # Canonical: Gitea Package Registry. Override for pins or GHCR mirror:
-    #   RD_IMAGE=git.commsnet.org/commstech/repository-detective:v0.1.0-beta.1
+    #   RD_IMAGE=git.commsnet.org/commstech/repository-detective:v0.1.0-beta.2
     #   RD_IMAGE=ghcr.io/commstech/repository-detective:all-in-one
     image: ${RD_IMAGE:-git.commsnet.org/commstech/repository-detective:all-in-one}
     build:
