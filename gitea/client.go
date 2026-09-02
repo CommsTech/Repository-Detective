@@ -27,6 +27,15 @@ type Client struct {
 	logger     *logrus.Logger
 }
 
+// Token returns the configured API token so callers that must authenticate
+// outside the HTTP client (such as git clone over HTTPS) can reuse it.
+func (c *Client) Token() string {
+	if c == nil {
+		return ""
+	}
+	return c.token
+}
+
 // RepositoryContent represents a file or directory in a repository
 type RepositoryContent struct {
 	Name        string `json:"name"`

@@ -65,8 +65,8 @@ func runGitleaksWithCommand(ctx context.Context, logger *logrus.Logger, dir stri
 	// scan failed when it also produced no report to parse.
 	if err != nil && strings.TrimSpace(string(stripANSI(reportBytes))) == "" {
 		result.Status = classifyCommandError(err)
-		result.Detail = err.Error()
-		logger.Warnf("[SCANNER:gitleaks] scan failed: status=%s err=%v", result.Status, err)
+		result.Detail = gitleaksFailureDetail(err, output)
+		logger.Warnf("[SCANNER:gitleaks] scan failed: status=%s detail=%s", result.Status, result.Detail)
 		return result
 	}
 
@@ -94,10 +94,43 @@ func gitleaksArgs(dir string, cfg Config, reportPath string) []string {
 		"--redact",
 		"--log-level", "error",
 	}
-	if strings.TrimSpace(cfg.GitleaksConfig) != "" {
-		args = append(args, "--config", cfg.GitleaksConfig)
+	if cfgPath := resolveGitleaksConfig(cfg.GitleaksConfig); cfgPath != "" {
+		args = append(args, "--config", cfgPath)
 	}
 	return args
+}
+
+// resolveGitleaksConfig makes the allowlist path absolute before it reaches gitleaks.
+// The scanner runs with the scan workspace as its working directory, so a relative
+// path like "config/gitleaks.toml" resolves inside the repository under scan, and
+// gitleaks aborts the whole run when it cannot load it. An unusable path is dropped
+// so the scan falls back to the default rules instead of failing.
+func resolveGitleaksConfig(path string) string {
+	path = strings.TrimSpace(path)
+	if path == "" {
+		return ""
+	}
+	if !filepath.IsAbs(path) {
+		abs, err := filepath.Abs(path)
+		if err != nil {
+			return ""
+		}
+		path = abs
+	}
+	if _, err := os.Stat(path); err != nil {
+		return ""
+	}
+	return path
+}
+
+// gitleaksFailureDetail keeps the tool's own output next to the exit status so a
+// config load failure is distinguishable from a timeout or a crash.
+func gitleaksFailureDetail(err error, output []byte) string {
+	detail := err.Error()
+	if msg := redactScannerDetail(string(output)); msg != "" {
+		detail = fmt.Sprintf("%s: %s", detail, msg)
+	}
+	return detail
 }
 
 func gitleaksTimeout(cfg Config) time.Duration {

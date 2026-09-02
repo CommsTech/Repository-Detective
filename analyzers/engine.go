@@ -1508,7 +1508,7 @@ func (e *Engine) runGitHistorySecretScans(
 		maxCommits = 50
 	}
 
-	gitWS, err := scanners.PrepareGitHistoryWorkspace(ctx, cloneURL, ref, maxCommits, cfg.SecretScanHistoryTimeoutSeconds)
+	gitWS, err := scanners.PrepareGitHistoryWorkspace(ctx, cloneURL, e.cloneToken(ctx), ref, maxCommits, cfg.SecretScanHistoryTimeoutSeconds)
 	if err != nil {
 		e.logger.Warnf("[CAH:SCAN] git history workspace: %v", err)
 		return []scanners.RunResult{{
@@ -1521,6 +1521,19 @@ func (e *Engine) runGitHistorySecretScans(
 
 	hr := scanners.RunGitleaksGitHistory(ctx, e.logger, gitWS.Dir, cfg, scope, currentTreeDir)
 	return []scanners.RunResult{hr}
+}
+
+// cloneToken returns the forge credential for the active context so private
+// repositories can be cloned for history secret scanning. It returns an empty
+// string when the forge client cannot supply one, leaving the clone anonymous.
+func (e *Engine) cloneToken(ctx context.Context) string {
+	if ForgeTypeFrom(ctx) == store.ForgeTypeGitHub {
+		if provider, ok := e.githubClient.(interface{ Token() string }); ok {
+			return provider.Token()
+		}
+		return ""
+	}
+	return e.giteaClient.Token()
 }
 
 func (e *Engine) resolveCloneURL(ctx context.Context, owner, repo string) (string, error) {

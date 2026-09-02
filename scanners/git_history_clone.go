@@ -3,6 +3,7 @@ package scanners
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -21,18 +22,24 @@ type GitHistoryWorkspace struct {
 
 // PrepareGitHistoryWorkspace shallow- or full-clones cloneURL for gitleaks detect mode.
 // maxCommits 0 means full history (no --depth limit on clone).
-func PrepareGitHistoryWorkspace(ctx context.Context, cloneURL, ref string, maxCommits int, timeoutSeconds int) (GitHistoryWorkspace, error) {
+// token authenticates the clone; without it private repositories fail with
+// "Authentication failed" and their history is never scanned for secrets.
+func PrepareGitHistoryWorkspace(ctx context.Context, cloneURL, token, ref string, maxCommits int, timeoutSeconds int) (GitHistoryWorkspace, error) {
 	cloneURL = strings.TrimSpace(cloneURL)
 	if cloneURL == "" {
 		return GitHistoryWorkspace{}, fmt.Errorf("clone URL is required for git history secret scan")
+	}
+	authURL, err := authenticatedCloneURL(cloneURL, token)
+	if err != nil {
+		return GitHistoryWorkspace{}, err
 	}
 	if security.SubprocessEnvExposesSecrets() {
 		return GitHistoryWorkspace{}, fmt.Errorf("unsafe subprocess environment for git clone")
 	}
 
-	parent, err := os.MkdirTemp("", "rd-gitleaks-history-*")
-	if err != nil {
-		return GitHistoryWorkspace{}, fmt.Errorf("create temp dir: %w", err)
+	parent, mkErr := os.MkdirTemp("", "rd-gitleaks-history-*")
+	if mkErr != nil {
+		return GitHistoryWorkspace{}, fmt.Errorf("create temp dir: %w", mkErr)
 	}
 	dest := filepath.Join(parent, "repo")
 	cleanup := func() { _ = os.RemoveAll(parent) }
@@ -48,7 +55,7 @@ func PrepareGitHistoryWorkspace(ctx context.Context, cloneURL, ref string, maxCo
 	if maxCommits > 0 {
 		cloneArgs = append(cloneArgs, fmt.Sprintf("--depth=%d", maxCommits))
 	}
-	cloneArgs = append(cloneArgs, cloneURL, dest)
+	cloneArgs = append(cloneArgs, authURL, dest)
 
 	if out, err := runGitHistory(cloneCtx, cloneArgs); err != nil {
 		cleanup()
@@ -110,6 +117,25 @@ func sanitizeHistoryGitError(out []byte) error {
 		msg = msg[:maxMsg-3] + "..."
 	}
 	return fmt.Errorf("git operation failed: %s", msg)
+}
+
+// authenticatedCloneURL embeds token as HTTP basic credentials, matching how the
+// remediation patcher clones. The token never reaches argv logs because clone
+// output is redacted by sanitizeHistoryGitError before it is surfaced.
+func authenticatedCloneURL(cloneURL, token string) (string, error) {
+	token = strings.TrimSpace(token)
+	if token == "" {
+		return cloneURL, nil
+	}
+	// Only HTTP(S) remotes take basic credentials. scp-style remotes such as
+	// git@host:owner/repo.git are not parseable as URLs and rely on SSH keys, so
+	// they are handed back untouched rather than failing the scan.
+	parsed, err := url.Parse(cloneURL)
+	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") {
+		return cloneURL, nil
+	}
+	parsed.User = url.UserPassword("oauth2", token)
+	return parsed.String(), nil
 }
 
 func looksLikeCommitSHA(ref string) bool {
