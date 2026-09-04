@@ -40,6 +40,13 @@ echo "REPOSITORY_DETECTIVE_ENABLE_LLM_AUDITORS=false" >>.env
 echo "REPOSITORY_DETECTIVE_REJECT_QUERY_STRING_API_KEY=true" >>.env
 echo "REPOSITORY_DETECTIVE_REMEDIATION_PR_ENABLED=false" >>.env
 
+export RD_IMAGE="$IMAGE"
+export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-rd-clean-install}"
+export COMPOSE_HTTP_TIMEOUT="${COMPOSE_HTTP_TIMEOUT:-600}"
+# Avoid colliding with a host's long-lived repository-detective container_name.
+if grep -q 'container_name: repository-detective' docker-compose.yml; then
+  sed -i 's/container_name: repository-detective/container_name: rd-clean-install-detective/' docker-compose.yml
+fi
 # Point clean install at a disposable host port to avoid colliding with other RD instances.
 export RD_HOST_PORT="${RD_E2E_CLEAN_PORT:-18082}"
 # Rewrite compose published port if needed
@@ -47,22 +54,34 @@ if grep -q '8081:8081' docker-compose.yml; then
   sed -i "s/\"8081:8081\"/\"${RD_HOST_PORT}:8081\"/" docker-compose.yml || true
   sed -i "s/- 8081:8081/- ${RD_HOST_PORT}:8081/" docker-compose.yml || true
 fi
+# Also map ${REPOSITORY_DETECTIVE_PORT:-8081}:8081 style
+if grep -q 'REPOSITORY_DETECTIVE_PORT:-8081' docker-compose.yml; then
+  export REPOSITORY_DETECTIVE_PORT="$RD_HOST_PORT"
+fi
 
-export RD_IMAGE="$IMAGE"
-docker-compose -f docker-compose.yml down -v >/dev/null 2>&1 || true
+docker compose -f docker-compose.yml down -v >/dev/null 2>&1 || docker-compose -f docker-compose.yml down -v >/dev/null 2>&1 || true
 # Use published image without rebuild when possible
-RD_IMAGE="$IMAGE" docker-compose -f docker-compose.yml up -d
+RD_IMAGE="$IMAGE" docker compose -f docker-compose.yml up -d 2>"$OUT/compose.err" \
+  || RD_IMAGE="$IMAGE" docker-compose -f docker-compose.yml up -d
 for i in $(seq 1 40); do
   if curl -fsS "http://127.0.0.1:${RD_HOST_PORT}/health" >/dev/null 2>&1; then break; fi
   sleep 3
 done
 curl -fsS "http://127.0.0.1:${RD_HOST_PORT}/health" | tee "$OUT/health.json"
 curl -fsS -o /dev/null -w '%{http_code}\n' "http://127.0.0.1:${RD_HOST_PORT}/onboard/" | tee "$OUT/onboard-status.txt"
+# Doctor may 404 until components ready
+for i in $(seq 1 30); do
+  CODE="$(curl -s -o /dev/null -w '%{http_code}' -H "X-Repository-Detective-API-Key: $API_KEY" "http://127.0.0.1:${RD_HOST_PORT}/api/v1/doctor" || true)"
+  if [[ "$CODE" == "200" ]]; then break; fi
+  sleep 2
+done
 curl -fsS -H "X-Repository-Detective-API-Key: $API_KEY" "http://127.0.0.1:${RD_HOST_PORT}/api/v1/doctor" | tee "$OUT/doctor.json"
 
 # Scanner inventory inside the running recommended container
-CID="$(docker-compose -f docker-compose.yml ps -q repository-detective)"
+CID="$(docker compose -f docker-compose.yml ps -q repository-detective 2>/dev/null || docker-compose -f docker-compose.yml ps -q repository-detective)"
 docker exec "$CID" sh -c 'for b in gitleaks trivy grype semgrep; do echo -n "$b: "; command -v $b || echo MISSING; done' | tee "$OUT/scanners.txt"
+# Full standard-profile inventory
+docker exec "$CID" sh -c 'for b in gitleaks trivy grype semgrep gosec govulncheck staticcheck hadolint checkov; do echo -n "$b: "; command -v $b >/dev/null && ($b --version 2>/dev/null | head -1 || $b version 2>/dev/null | head -1) || echo MISSING; done' | tee "$OUT/scanners-full.txt"
 
 python3 - <<PY
 import json
@@ -71,13 +90,15 @@ out={
  "digest":open("$OUT/image-digest.txt").read().strip(),
  "health_ok": True,
  "onboard_status": open("$OUT/onboard-status.txt").read().strip(),
+ "host_port":"$RD_HOST_PORT",
  "scanners": open("$OUT/scanners.txt").read(),
+ "scanners_full": open("$OUT/scanners-full.txt").read(),
  "upgrade_e2e": "NOT_PROVEN",
- "notes": "Clean install used published/local all-in-one on port 8081 from .env.example-derived config. Live forge onboarding is covered by e2e-gitea-acceptance.sh."
+ "notes": "Clean install used published/local all-in-one from .env.example-derived config on disposable port. Live forge onboarding is covered by e2e-gitea-acceptance.sh."
 }
 json.dump(out, open("$OUT/clean-install.json","w"), indent=2)
 print("wrote clean-install.json")
 PY
 
-docker-compose -f docker-compose.yml down -v >/dev/null 2>&1 || true
+docker compose -f docker-compose.yml down -v >/dev/null 2>&1 || docker-compose -f docker-compose.yml down -v >/dev/null 2>&1 || true
 log "RD-018 clean-install artifact at $OUT"
