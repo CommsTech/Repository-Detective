@@ -12,7 +12,7 @@ enable_staticcheck: true
 enable_hadolint: false
 enable_checkov: false
 enable_linters: true
-enable_llm_auditors: true
+enable_llm_auditors: false
 
 database_enabled: true
 scheduler_enabled: true

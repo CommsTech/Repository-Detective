@@ -41,15 +41,22 @@ function updateEnvExport() {
     `REPOSITORY_DETECTIVE_WEBHOOK_SECRET=${p.webhook_secret || 'your-webhook-secret'}`,
     `REPOSITORY_DETECTIVE_API_KEY=${document.getElementById('apiKey').value.trim() || '<set-api-key>'}`,
     `REPOSITORY_DETECTIVE_PUBLIC_URL=${p.public_url}`,
-    `REPOSITORY_DETECTIVE_AI_PROVIDER=${p.ai_provider}`,
-    `REPOSITORY_DETECTIVE_AI_BASE_URL=${p.ai_base_url}`,
-    `REPOSITORY_DETECTIVE_AI_API_KEY=${p.ai_api_key || 'your-ai-key'}`,
-    `REPOSITORY_DETECTIVE_AI_MODEL=${p.ai_model}`,
+    `REPOSITORY_DETECTIVE_ENABLE_LLM_AUDITORS=${p.ai_provider ? 'true' : 'false'}`,
     `REPOSITORY_DETECTIVE_ENABLE_SECURITY=true`,
     `REPOSITORY_DETECTIVE_ENABLE_QUALITY=true`,
     `REPOSITORY_DETECTIVE_AUTO_CREATE_ISSUES=true`,
     `REPOSITORY_DETECTIVE_LABEL_COMPAT_MODE=new_only`,
   ];
+  if (p.ai_provider) {
+    lines.splice(5, 0,
+      `REPOSITORY_DETECTIVE_AI_PROVIDER=${p.ai_provider}`,
+      `REPOSITORY_DETECTIVE_AI_BASE_URL=${p.ai_base_url}`,
+      `REPOSITORY_DETECTIVE_AI_API_KEY=${p.ai_api_key || ''}`,
+      `REPOSITORY_DETECTIVE_AI_MODEL=${p.ai_model}`,
+    );
+  } else {
+    lines.splice(5, 0, '# AI optional — leave ENABLE_LLM_AUDITORS=false for deterministic-only');
+  }
   document.getElementById('envExport').textContent = lines.join('\n');
 }
 
@@ -135,6 +142,11 @@ document.getElementById('testGiteaBtn').addEventListener('click', async () => {
 });
 
 document.getElementById('testAiBtn').addEventListener('click', async () => {
+  const provider = document.getElementById('aiProvider').value;
+  if (!provider) {
+    setStatus('aiStatus', 'AI Analysis: Disabled — skip is OK for deterministic-only installs', true);
+    return;
+  }
   setStatus('aiStatus', 'Testing…', true);
   try {
     const res = await fetch('/api/v1/onboard/test-ai', {

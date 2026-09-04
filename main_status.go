@@ -56,8 +56,10 @@ func buildReadiness(status string) operator.Readiness {
 	if aiClient != nil {
 		r.AIProvider = string(aiClient.Provider())
 		r.AIModel = aiClient.Model()
+		r.AIAnalysis = "Enabled"
 	} else {
 		r.AIProvider = "disabled"
+		r.AIAnalysis = "Disabled"
 	}
 	return r
 }

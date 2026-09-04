@@ -46,7 +46,7 @@
     <tr><td>Operator UI</td><td>{{if .Features.UIEnabled}}<span class="rd-badge completed">enabled</span>{{else}}<span class="rd-badge skipped">disabled</span>{{end}}</td></tr>
     <tr><td>Scan profile</td><td><span class="rd-badge medium">{{profileLabel .Features.ScanProfile}}</span></td></tr>
   </table>
-  {{if .AIProvider}}<p class="rd-muted">AI provider: {{.AIProvider}}{{if .AIModel}} · model {{.AIModel}}{{end}}</p>{{end}}
+  <p class="rd-muted"><strong>AI Analysis: {{if .AIAnalysis}}{{.AIAnalysis}}{{else if eq .AIProvider "disabled"}}Disabled{{else if .AIProvider}}Enabled{{else}}Disabled{{end}}</strong>{{if and .AIProvider (ne .AIProvider "disabled")}} · provider {{.AIProvider}}{{if .AIModel}} · model {{.AIModel}}{{end}}{{end}}</p>
 </div>
 {{else}}
 <div class="rd-alert info">Readiness telemetry is not available from this instance. Check <code>/health</code> API for basic status.</div>

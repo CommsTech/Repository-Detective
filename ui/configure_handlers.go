@@ -127,7 +127,7 @@ func (h *Handler) renderConfigurePage(c *gin.Context, errMsg string, draft store
 	notice := "Change options below, then click Save settings at the top or bottom. Changes apply immediately to new scans. Secrets stay in .env only."
 	savedOK := c.Query("saved") == "1" && errMsg == ""
 	if savedOK {
-		notice = "Settings saved and applied live. Checkboxes and section badges below now match what you saved. Features that need secrets (notifications channels, forge token, AI endpoint) stay degraded until those are set in .env."
+		notice = "Settings saved and applied live. Checkboxes and section badges below now match what you saved. Features that need secrets (notification channels, forge token) stay degraded until those are set in .env. AI stays optional unless LLM auditors are enabled."
 	}
 
 	h.renderNav(c, "configure.html", "Configure", "settings", map[string]any{

@@ -76,10 +76,9 @@
 
     <h3 id="scan_profile">Scan profile &amp; gates</h3>
     <div class="rd-alert info" role="note">
-      <strong>AI cross-checks are opt-in.</strong>
-      Light and Standard stay deterministic-only (privacy-first).
-      Choose <strong>Deep</strong> to enable LLM auditors on flagged files, or leave Standard and turn AI on later per-repo.
-      AI provider must be configured in <code>.env</code> (<code>REPOSITORY_DETECTIVE_AI_*</code>).
+      <strong>AI Analysis is optional.</strong>
+      Light and Standard stay deterministic-only (privacy-first). Missing AI configuration is normal — not a broken install.
+      Choose <strong>Deep</strong> only when you have configured an AI endpoint in <code>.env</code> (<code>REPOSITORY_DETECTIVE_AI_*</code>); prefer a local Ollama / OpenAI-compatible URL for privacy.
     </div>
     <label for="scan_profile">Scan profile</label>
     <select id="scan_profile" name="scan_profile">
@@ -183,7 +182,7 @@
 
 <section id="status-reference" class="rd-card rd-config-section">
   <div class="rd-card-head"><h2>Status reference</h2><span class="rd-chip">read-only</span></div>
-  <p class="rd-muted">These tables show effective status after save. Enabling a feature still needs any required secrets in <code>.env</code> (webhooks, forge token, AI endpoint) before it is fully healthy.</p>
+  <p class="rd-muted">These tables show effective status after save. Forge/webhook features need forge token and webhook secret in <code>.env</code>. AI remains optional unless you enable LLM auditors or Deep AI cross-checks.</p>
 </section>
 
 {{range .Data.Sections}}

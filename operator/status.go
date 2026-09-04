@@ -28,4 +28,6 @@ type Readiness struct {
 	Tools       []ToolStatus `json:"tools"`
 	AIProvider  string       `json:"ai_provider,omitempty"`
 	AIModel     string       `json:"ai_model,omitempty"`
+	// AIAnalysis is operator-facing: "Disabled" | "Enabled" (never implies security assurance).
+	AIAnalysis string `json:"ai_analysis,omitempty"`
 }

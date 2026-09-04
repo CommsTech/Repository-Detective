@@ -48,34 +48,36 @@
     </section>
 
     <section class="card">
-      <h2>2. AI provider</h2>
+      <h2>2. AI provider <span class="optional">(optional)</span></h2>
+      <p class="repo-meta"><strong>AI Analysis: Disabled</strong> by default. Deterministic scanners work without an AI provider. Skip this step unless you want LLM auditors or advisory recommendations. Prefer a local Ollama / OpenAI-compatible endpoint for privacy.</p>
       <div class="grid">
         <label>
           Provider
           <select id="aiProvider">
+            <option value="">— skip (deterministic only) —</option>
             <option value="openai">OpenAI</option>
             <option value="anthropic">Anthropic</option>
             <option value="openrouter">OpenRouter</option>
-            <option value="ollama">Ollama</option>
+            <option value="ollama">Ollama (local recommended)</option>
             <option value="openwebui">OpenWebUI</option>
             <option value="openclaw">OpenClaw</option>
           </select>
         </label>
         <label>
           Base URL
-          <input id="aiBaseUrl" type="url" placeholder="Optional — provider default">
+          <input id="aiBaseUrl" type="url" placeholder="Optional — e.g. http://10.x.x.x:11434">
         </label>
         <label>
           API key
-          <input id="aiApiKey" type="password" placeholder="Provider API key">
+          <input id="aiApiKey" type="password" placeholder="Only if the provider needs one">
         </label>
         <label>
           Model
-          <input id="aiModel" type="text" placeholder="gpt-4o-mini">
+          <input id="aiModel" type="text" placeholder="e.g. qwen2.5-coder">
         </label>
       </div>
       <div class="actions">
-        <button id="testAiBtn" type="button">Test AI connection</button>
+        <button id="testAiBtn" type="button">Test AI connection (optional)</button>
         <span id="aiStatus" class="status"></span>
       </div>
     </section>

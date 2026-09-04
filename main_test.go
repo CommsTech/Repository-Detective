@@ -30,6 +30,25 @@ func TestNeedsAIProvider(t *testing.T) {
 	}
 }
 
+func TestBuildReadinessAIAnalysisDisabledWithoutClient(t *testing.T) {
+	prevClient := aiClient
+	prevConfig := config
+	aiClient = nil
+	config = &Config{}
+	t.Cleanup(func() {
+		aiClient = prevClient
+		config = prevConfig
+	})
+
+	r := buildReadiness("healthy")
+	if r.AIAnalysis != "Disabled" {
+		t.Fatalf("AIAnalysis=%q want Disabled", r.AIAnalysis)
+	}
+	if r.AIProvider != "disabled" {
+		t.Fatalf("AIProvider=%q want disabled", r.AIProvider)
+	}
+}
+
 func TestGiteaStatusConfigDefaults(t *testing.T) {
 	v := viper.New()
 	v.SetDefault("enable_gitea_status", false)

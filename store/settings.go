@@ -7,7 +7,8 @@ func ResolveRepoSettings(global GlobalSettingsSnapshot, repoSettings RepoSetting
 	return effective
 }
 
-// DefaultGlobalSettings returns conservative defaults matching config.yaml defaults.
+// DefaultGlobalSettings returns conservative defaults matching beta/runtime defaults
+// (viper enable_llm_auditors=false). Deep profile and explicit operator settings can re-enable AI.
 func DefaultGlobalSettings() GlobalSettingsSnapshot {
 	return GlobalSettingsSnapshot{
 		ScanProfile:       ScanProfileCustom,
@@ -15,7 +16,7 @@ func DefaultGlobalSettings() GlobalSettingsSnapshot {
 		PolicyLevel:       "issue_only",
 		WorkspaceMode:     "api",
 		AnalysisDepth:     3,
-		EnableLLMAuditors: true,
+		EnableLLMAuditors: false,
 		EnableTrivy:       true,
 		EnableGrype:       true,
 		EnableGitleaks:    false,
@@ -33,7 +34,7 @@ func DefaultGlobalSettings() GlobalSettingsSnapshot {
 		RunnerPolicy:      "core",
 		ScheduleEnabled:   false,
 		ScheduleCron:      "",
-		AIPolicy:          "allowed",
+		AIPolicy:          AIPolicyDisabled,
 		EnableHealthChecks:          true,
 		EnableTechDebtChecks:        true,
 		EnableReliabilityChecks:     true,

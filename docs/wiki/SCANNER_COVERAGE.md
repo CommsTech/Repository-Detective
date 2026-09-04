@@ -73,7 +73,7 @@ hadolint_timeout_seconds: 0
 checkov_timeout_seconds: 0
 iac_scanner_max_findings: 100       # cap per IaC scanner
 enable_linters: true
-enable_llm_auditors: true    # set false for deterministic-only mode
+enable_llm_auditors: false   # deterministic-only default; set true only with AI configured
 scanner_timeout_seconds: 120
 ```
 
