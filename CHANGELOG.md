@@ -2,6 +2,23 @@
 
 All notable changes to Repository Detective (formerly an internal prototype) are documented here.
 
+## [v0.1.0-beta.3] — 2026-09-04
+
+### Added
+- Doctor commit/build metadata on `/health`, `/about`, and Doctor (`version` + `commit` + `build_date` via image ldflags)
+- Disposable Gitea 1.22.3 E2E harness + clean-install proof against published digests (Phase 6A/6B)
+- `docs/FINDING_RESOLUTION_SEMANTICS.md` — intentional non-auto-close on partial scans (RD-017D)
+- Minimal public validation badges (CI, beta.3, container, license, E2E tested Gitea 1.22.3)
+- Sanitized release acceptance evidence under `docs/release/`
+
+### Fixed
+- Public installable image alignment: beta.3 includes Doctor and current accepted tree (docs/source vs beta.2 digest drift)
+- DOC_TRUTH_AUDIT capability rows updated to Phase 6B evidence (not collapsed “E2E passed”)
+
+### Changed
+- Recommended image pin → `v0.1.0-beta.3`
+- Secret resolve-after-fix remains **PARTIAL** by design until full-scope reconcile/evidence
+
 ## [Unreleased]
 
 ### Fixed

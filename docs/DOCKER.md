@@ -46,7 +46,7 @@ All-in-one builds take **~30–60 minutes** and produce a **~4 GB** image. Relea
 ```bash
 docker login git.commsnet.org   # Gitea username + token (package read)
 docker pull git.commsnet.org/commstech/repository-detective:all-in-one
-# or pin: git.commsnet.org/commstech/repository-detective:v0.1.0-beta.1
+# or pin: git.commsnet.org/commstech/repository-detective:v0.1.0-beta.3
 
 export RD_IMAGE=git.commsnet.org/commstech/repository-detective:all-in-one
 docker compose pull

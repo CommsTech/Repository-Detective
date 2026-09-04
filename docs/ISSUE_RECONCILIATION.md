@@ -7,6 +7,7 @@ Repository Detective inspects **already-filed Gitea issues** it created and reco
 - **Never delete** issues
 - **Never close** without evidence (unless `issue_reconciliation_close_verified: true` and fingerprint absent + scanner ran)
 - **Never close** just because an issue is old
+- **Never close** solely because a later **partial** (PR/diff/changed-files) scan did not observe the fingerprint — see [FINDING_RESOLUTION_SEMANTICS.md](FINDING_RESOLUTION_SEMANTICS.md)
 - Label, comment, enrich, suppress — preserve audit history
 
 ## Detected states

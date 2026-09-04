@@ -407,9 +407,10 @@ record_scenario "secret_fixed_push" "PASS" "pushed_fix"
 if [[ "$RESOLVED" == "1" ]]; then
   record_scenario "secret_resolve_lifecycle" "PASS" "finding_resolved_or_no_longer_open fp=${FP:-unknown}"
 else
-  # Honest product note: without auto-reconcile applying, open status may persist; reopen identity still proven below.
+  # RD-017D: absence from a later (often partial) scan must NOT auto-close.
+  # Reconcile Apply / evidence-closure owns verified close — see docs/FINDING_RESOLUTION_SEMANTICS.md.
   if [[ -n "$FP" ]] && jq -e --arg fp "$FP" '[.findings[]? | select(.fingerprint==$fp)] | length == 1' "$OUT_DIR/findings-after-fix.json" >/dev/null 2>&1; then
-    record_scenario "secret_resolve_lifecycle" "PASS" "single_fingerprint_retained_pending_reconcile fp=$FP (auto-close may require reconcile apply)"
+    record_scenario "secret_resolve_lifecycle" "PARTIAL" "fingerprint_retained_pending_reconcile fp=$FP (intentional; no naive absence-close)"
   else
     record_scenario "secret_resolve_lifecycle" "FAIL" "finding identity lost or unresolved unexpectedly"
   fi
@@ -588,6 +589,129 @@ case "$POLICY_OUT" in
     ;;
 esac
 # EVALUATION_INCOMPLETE is also proven via required-scanner fail-closed scenario below.
+
+# --- RD-017C: controlled live-forge policy outcomes (Gitea 1.22.3) ---
+# Use light profile so required set is {gitleaks,trivy} — avoids OPTIONAL noise collapsing to EVALUATION_INCOMPLETE.
+wait_pr_policy() {
+  local pr_num="$1" want="$2" label="$3" tries="${4:-72}"
+  local body out=""
+  for i in $(seq 1 "$tries"); do
+    body="$(curl -fsS "${GITEA_URL}/api/v1/repos/$GITEA_USER/$REPO_NAME/issues/${pr_num}/comments" \
+      -H "Authorization: token $GITEA_TOKEN" || echo '[]')"
+    echo "$body" >"$OUT_DIR/pr-policy-${label}.json"
+    out="$(jq -r '[.[] | select(.body|contains("repository-detective-policy-summary")) | .body] | .[0] // empty' <<<"$body" \
+      | sed -n 's/.*\*\*Policy:\*\* `\([^`]*\)`.*/\1/p' | head -1)"
+    if [[ "$out" == "$want" ]]; then
+      echo "$out"
+      return 0
+    fi
+    if (( i % 12 == 0 )); then log "wait policy $label want=$want got=${out:-none} ($i/$tries)"; fi
+    sleep 5
+  done
+  echo "${out:-none}"
+  return 1
+}
+
+REPO_ID="$(jq -r '.findings[0].repository_id // empty' "$OUT_DIR/findings.json" 2>/dev/null || true)"
+if [[ -z "$REPO_ID" ]]; then
+  REPOS_JSON="$(rd_api GET '/api/v1/repos?limit=20' 2>/dev/null || echo '{}')"
+  echo "$REPOS_JSON" >"$OUT_DIR/repos-list.json"
+  REPO_ID="$(jq -r --arg n "$REPO_NAME" '.repositories[]? | select(.name==$n) | .id' <<<"$REPOS_JSON" 2>/dev/null | head -1)"
+  REPO_ID="${REPO_ID:-$(jq -r '.repositories[0].id // .repos[0].id // empty' <<<"$REPOS_JSON" 2>/dev/null || true)}"
+fi
+echo "repo_id=${REPO_ID:-unknown}" >"$OUT_DIR/repo-id.txt"
+
+if [[ -n "$REPO_ID" ]]; then
+  # Minimal custom profile: only gitleaks+trivy enabled (required = enabled for custom).
+  # Avoid OPTIONAL/health noise collapsing outcomes to EVALUATION_INCOMPLETE / spurious ACTION_REQUIRED.
+  SETTINGS_WARN_MIN='{"scan_profile":"custom","policy_level":"issue_only","severity_gate":"high","issue_policy":"all","enable_gitleaks":true,"enable_trivy":true,"enable_grype":false,"enable_semgrep":false,"enable_govulncheck":false,"enable_gosec":false,"enable_staticcheck":false,"enable_hadolint":false,"enable_checkov":false,"enable_linters":false,"enable_health_checks":false,"enable_tech_debt_checks":false,"enable_reliability_checks":false,"enable_maintainability_checks":false,"enable_test_gap_checks":false,"enable_performance_checks":false,"enable_ai_risk_checks":false,"enable_code_graph":false,"enable_llm_auditors":false}'
+  SETTINGS_MET="$SETTINGS_WARN_MIN"
+  SETTINGS_OBS='{"scan_profile":"custom","policy_level":"monitor_only","severity_gate":"high","issue_policy":"off","enable_gitleaks":true,"enable_trivy":true,"enable_grype":false,"enable_semgrep":false,"enable_govulncheck":false,"enable_gosec":false,"enable_staticcheck":false,"enable_hadolint":false,"enable_checkov":false,"enable_linters":false,"enable_health_checks":false,"enable_tech_debt_checks":false,"enable_reliability_checks":false,"enable_maintainability_checks":false,"enable_test_gap_checks":false,"enable_performance_checks":false,"enable_ai_risk_checks":false,"enable_code_graph":false,"enable_llm_auditors":false}'
+  SETTINGS_RESTORE='{"scan_profile":"standard"}'
+
+  # ACTION_REQUIRED: Warn mode + deterministic secret fixture
+  rd_api PUT "/api/v1/repos/${REPO_ID}/settings" -d "$SETTINGS_WARN_MIN" \
+    >"$OUT_DIR/settings-action-required.json" || true
+  cd "$WORKDIR"
+  git checkout main >/dev/null 2>&1 || true
+  git checkout -B e2e/policy-action
+  python3 - <<'PY'
+prefix = "xoxb-"
+mid = "123456789012-123456789012-"
+suffix = "zzpolicyactionrequirezz"
+open("policy_action.go","w").write("package main\nvar k = %r\n" % (prefix + mid + suffix))
+PY
+  git add policy_action.go && git commit -m "policy ACTION_REQUIRED fixture" && git push -u origin e2e/policy-action
+  PR_AR="$(curl -fsS -X POST "${GITEA_URL}/api/v1/repos/$GITEA_USER/$REPO_NAME/pulls" \
+    -H "Authorization: token $GITEA_TOKEN" -H "Content-Type: application/json" \
+    -d '{"title":"E2E ACTION_REQUIRED","head":"e2e/policy-action","base":"main","body":"policy"}')"
+  echo "$PR_AR" >"$OUT_DIR/pr-action-required.json"
+  PR_AR_NUM="$(jq -r .number <<<"$PR_AR")"
+  cd "$ROOT"
+  if GOT_AR="$(wait_pr_policy "$PR_AR_NUM" "ACTION_REQUIRED" "action-required")"; then
+    record_scenario "policy_action_required_e2e" "PASS" "ACTION_REQUIRED on PR #$PR_AR_NUM"
+  else
+    record_scenario "policy_action_required_e2e" "FAIL" "want=ACTION_REQUIRED got=$GOT_AR pr=$PR_AR_NUM"
+  fi
+  FIND_AR="$(rd_api GET '/api/v1/findings?limit=50' 2>/dev/null || echo '{}')"
+  echo "$FIND_AR" >"$OUT_DIR/findings-action-required.json"
+  if jq -e '[.findings[]? | select((.source|ascii_downcase)=="gitleaks" or (.category|ascii_downcase)=="secret")] | length > 0' <<<"$FIND_AR" >/dev/null 2>&1; then
+    record_scenario "policy_action_required_finding" "PASS" "secret finding present"
+  else
+    record_scenario "policy_action_required_finding" "FAIL" "no secret finding with ACTION_REQUIRED fixture"
+  fi
+
+  # POLICY_MET: same analyzers, clean file only. Never equals "secure".
+  rd_api PUT "/api/v1/repos/${REPO_ID}/settings" -d "$SETTINGS_MET" \
+    >"$OUT_DIR/settings-policy-met.json" || true
+  cd "$WORKDIR"
+  git checkout main >/dev/null 2>&1 || true
+  git checkout -B e2e/policy-met
+  echo "# policy-met clean fixture $(date -u +%s)" > POLICY_MET.md
+  git add POLICY_MET.md && git commit -m "policy POLICY_MET clean fixture" && git push -u origin e2e/policy-met
+  PR_MET="$(curl -fsS -X POST "${GITEA_URL}/api/v1/repos/$GITEA_USER/$REPO_NAME/pulls" \
+    -H "Authorization: token $GITEA_TOKEN" -H "Content-Type: application/json" \
+    -d '{"title":"E2E POLICY_MET","head":"e2e/policy-met","base":"main","body":"clean"}')"
+  echo "$PR_MET" >"$OUT_DIR/pr-policy-met.json"
+  PR_MET_NUM="$(jq -r .number <<<"$PR_MET")"
+  cd "$ROOT"
+  if GOT_MET="$(wait_pr_policy "$PR_MET_NUM" "POLICY_MET" "policy-met" 90)"; then
+    record_scenario "policy_met_e2e" "PASS" "POLICY_MET on PR #$PR_MET_NUM (not a security assurance claim)"
+  else
+    record_scenario "policy_met_e2e" "FAIL" "want=POLICY_MET got=$GOT_MET pr=$PR_MET_NUM"
+  fi
+
+  # OBSERVATION_ONLY: Observe mode + finding present; workflow not blocked by RD policy
+  rd_api PUT "/api/v1/repos/${REPO_ID}/settings" -d "$SETTINGS_OBS" \
+    >"$OUT_DIR/settings-observation.json" || true
+  cd "$WORKDIR"
+  git checkout main >/dev/null 2>&1 || true
+  git checkout -B e2e/policy-observe
+  python3 - <<'PY'
+prefix = "xoxb-"
+mid = "123456789012-123456789012-"
+suffix = "zzpolicyobserveonlyzz"
+open("policy_observe.go","w").write("package main\nvar k = %r\n" % (prefix + mid + suffix))
+PY
+  git add policy_observe.go && git commit -m "policy OBSERVATION_ONLY fixture" && git push -u origin e2e/policy-observe
+  PR_OBS="$(curl -fsS -X POST "${GITEA_URL}/api/v1/repos/$GITEA_USER/$REPO_NAME/pulls" \
+    -H "Authorization: token $GITEA_TOKEN" -H "Content-Type: application/json" \
+    -d '{"title":"E2E OBSERVATION_ONLY","head":"e2e/policy-observe","base":"main","body":"observe"}')"
+  echo "$PR_OBS" >"$OUT_DIR/pr-observation.json"
+  PR_OBS_NUM="$(jq -r .number <<<"$PR_OBS")"
+  cd "$ROOT"
+  if GOT_OBS="$(wait_pr_policy "$PR_OBS_NUM" "OBSERVATION_ONLY" "observation" 90)"; then
+    record_scenario "policy_observation_only_e2e" "PASS" "OBSERVATION_ONLY on PR #$PR_OBS_NUM"
+  else
+    record_scenario "policy_observation_only_e2e" "FAIL" "want=OBSERVATION_ONLY got=$GOT_OBS pr=$PR_OBS_NUM"
+  fi
+  rd_api PUT "/api/v1/repos/${REPO_ID}/settings" -d "$SETTINGS_RESTORE" \
+    >"$OUT_DIR/settings-restored.json" || true
+else
+  record_scenario "policy_action_required_e2e" "FAIL" "repo_id unavailable"
+  record_scenario "policy_met_e2e" "FAIL" "repo_id unavailable"
+  record_scenario "policy_observation_only_e2e" "FAIL" "repo_id unavailable"
+fi
 
 # prohibited claims in PR summary bodies (context-aware: allow explicit non-assurance wording)
 if python3 - "$OUT_DIR/pr-comments-2.json" <<'PY'

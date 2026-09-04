@@ -45,7 +45,7 @@ Leave `REPOSITORY_DETECTIVE_ENABLE_LLM_AUDITORS=false` for deterministic-only op
 
 ```bash
 docker login git.commsnet.org   # Gitea user + token with package read
-# Optional pin: export RD_IMAGE=git.commsnet.org/commstech/repository-detective:v0.1.0-beta.2
+# Optional pin: export RD_IMAGE=git.commsnet.org/commstech/repository-detective:v0.1.0-beta.3
 docker compose pull
 docker compose up -d
 ```

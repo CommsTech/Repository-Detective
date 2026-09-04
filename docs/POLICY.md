@@ -166,6 +166,8 @@ UI copy: *Repository Detective creates PRs only for approved low-risk plans. It 
 
 See [EVIDENCE_CLOSURE.md](EVIDENCE_CLOSURE.md). **Enabled by default** for evidence tracking; **auto-close disabled by default**. Closes or marks resolved only after PR merge + rescan + fingerprint gone + scanner success.
 
+Finding auto-resolution after a fix push is **not** implied by webhook scans alone — see [FINDING_RESOLUTION_SEMANTICS.md](FINDING_RESOLUTION_SEMANTICS.md).
+
 ## Issue reconciliation (Phase 19)
 
 See [ISSUE_RECONCILIATION.md](ISSUE_RECONCILIATION.md). Inspects already-filed Gitea issues against latest scans. Never deletes issues; closes only when `issue_reconciliation_close_verified: true` and verification evidence exists.

@@ -29,10 +29,10 @@ RUN if [ -f vendor/modules.txt ]; then \
     fi
 
 RUN if [ -f vendor/modules.txt ]; then \
-      CGO_ENABLED=0 GOOS=linux go build -mod=vendor -ldflags="-s -w -X main.version=${VERSION}" -o repository-detective . && \
+      CGO_ENABLED=0 GOOS=linux go build -mod=vendor -ldflags="-s -w -X main.version=${VERSION} -X main.commit=${COMMIT} -X main.buildDate=${BUILD_DATE}" -o repository-detective . && \
       CGO_ENABLED=0 GOOS=linux go build -mod=vendor -ldflags="-s -w" -o repository-detective-runner ./cmd/repository-detective-runner; \
     else \
-      CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w -X main.version=${VERSION}" -o repository-detective . && \
+      CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w -X main.version=${VERSION} -X main.commit=${COMMIT} -X main.buildDate=${BUILD_DATE}" -o repository-detective . && \
       CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o repository-detective-runner ./cmd/repository-detective-runner; \
     fi
 

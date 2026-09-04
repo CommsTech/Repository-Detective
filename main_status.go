@@ -48,6 +48,8 @@ func buildReadiness(status string) operator.Readiness {
 		ProductName: "Repository Detective",
 		Tagline:     "Inspect. Analyze. Improve.",
 		Version:     version,
+		Commit:      commit,
+		BuildDate:   buildDate,
 		Service:     "repository-detective",
 		Status:      status,
 		Timestamp:   time.Now().UTC().Format(time.RFC3339),

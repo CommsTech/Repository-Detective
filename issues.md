@@ -1,5 +1,14 @@
 # Development Issues Log
 
+## Open / in progress (2026-09-04) — Phase 6B release alignment
+
+| Priority | Issue | Plan |
+|----------|-------|------|
+| P0 | Published beta.2 lacked Doctor / current tree | Publish `v0.1.0-beta.3`; prove clean-install + core E2E on exact digest |
+| P0 | DOC_TRUTH on GitHub lagged Phase 6A evidence | Snapshot lag root cause; refresh DOC_TRUTH + re-sync |
+| P1 | Live-forge POLICY_MET / ACTION_REQUIRED / OBSERVATION_ONLY | Controlled harness scenarios (RD-017C) |
+| P1 | Secret auto-close after fix looked incomplete | Document intentional PARTIAL semantics (RD-017D); no naive absence-close |
+
 ## Fixed (2026-09-04) — Phase 6A real Gitea E2E (RD-017A / RD-018)
 
 | Priority | Issue | Resolution |

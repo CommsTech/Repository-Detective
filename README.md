@@ -13,20 +13,26 @@
   <a href="https://git.commsnet.org/commstech/repository-detective/actions?workflow=ci.yml&amp;actor=0&amp;status=0">
     <img src="https://git.commsnet.org/commstech/repository-detective/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI Status">
   </a>
-  <a href="https://pkg.go.dev/git.commsnet.org/commstech/repository-detective">
-    <img src="https://img.shields.io/badge/go-1.25-00ADD8?style=flat&logo=go&logoColor=white" alt="Go 1.25">
+  <a href="https://git.commsnet.org/commstech/-/packages/container/repository-detective/v0.1.0-beta.3">
+    <img src="https://img.shields.io/badge/release-v0.1.0--beta.3-brightgreen?style=flat" alt="Current beta release">
+  </a>
+  <a href="https://git.commsnet.org/commstech/-/packages">
+    <img src="https://img.shields.io/badge/container-gitea%20packages-609926?style=flat&logo=gitea&logoColor=white" alt="Gitea packages">
+  </a>
+  <a href="https://github.com/CommsTech/Repository-Detective/pkgs/container/repository-detective">
+    <img src="https://img.shields.io/badge/ghcr-mirror-2496ED?style=flat&logo=docker&logoColor=white" alt="GHCR mirror">
   </a>
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/license-AGPL--3.0--or--later-blue?style=flat" alt="License: AGPL-3.0-or-later">
   </a>
+  <a href="docs/E2E_GITEA_ACCEPTANCE.md">
+    <img src="https://img.shields.io/badge/E2E%20tested-Gitea%201.22.3-0E7C86?style=flat&logo=gitea&logoColor=white" alt="E2E tested: Gitea 1.22.3">
+  </a>
+  <a href="https://pkg.go.dev/git.commsnet.org/commstech/repository-detective">
+    <img src="https://img.shields.io/badge/go-1.25-00ADD8?style=flat&logo=go&logoColor=white" alt="Go 1.25">
+  </a>
   <a href="docs/DOCKER.md">
     <img src="https://img.shields.io/badge/platforms-linux%2Famd64-lightgrey?style=flat&logo=linux&logoColor=white" alt="Platforms: linux/amd64">
-  </a>
-  <a href="https://git.commsnet.org/commstech/-/packages">
-    <img src="https://img.shields.io/badge/gitea-packages-609926?style=flat&logo=gitea&logoColor=white" alt="Gitea packages">
-  </a>
-  <a href="https://github.com/CommsTech/Repository-Detective/pkgs/container/repository-detective">
-    <img src="https://img.shields.io/badge/ghcr-mirror-2496ED?style=flat&logo=docker&logoColor=white" alt="GHCR mirror">
   </a>
   <a href="docs/PUBLIC_BETA.md">
     <img src="https://img.shields.io/badge/edition-public%20community%20beta-brightgreen?style=flat" alt="Public community beta">

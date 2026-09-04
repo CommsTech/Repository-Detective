@@ -48,6 +48,8 @@ import (
 )
 
 var version = "dev"
+var commit = "unknown"
+var buildDate = "unknown"
 
 var componentsReady atomic.Bool
 
@@ -2498,6 +2500,8 @@ func handleAbout(c *gin.Context) {
 		"product_name":        "Repository Detective",
 		"tagline":             "Inspect. Analyze. Improve.",
 		"version":             version,
+		"commit":              commit,
+		"build_date":          buildDate,
 		"api_base_path":       "/api/v1",
 		"openapi_url":         "/api/v1/openapi.yaml",
 		"documentation_index": projectURL + "/src/branch/main/docs/README.md",

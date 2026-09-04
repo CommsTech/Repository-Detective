@@ -89,7 +89,7 @@ func sanitizedDoctorConfig() map[string]string {
 func runDoctorReport(ctx context.Context, owner, repo string) doctor.Report {
 	in := doctor.Input{
 		Version:                   version,
-		Commit:                    "",
+		Commit:                    commit,
 		Edition:                   "community",
 		ConfigValid:               true,
 		AuthMode:                  config.AuthMode,
