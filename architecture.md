@@ -1,12 +1,22 @@
 # Repository Detective Architecture
 
+## Privacy / security (Phase 3)
+
+- `privacy_mode`: `local_only` | `hybrid` (default) | `external_ai_enabled` — see `internal/privacy` and [docs/PRIVACY_MODES.md](docs/PRIVACY_MODES.md).
+- Threat model honesty: [docs/SECURITY_MODEL.md](docs/SECURITY_MODEL.md) (PROVEN / PARTIAL / NOT_PROVEN / NOT_IMPLEMENTED).
+- Auth: runtime default `api_key_only`; recommended new install `auth_mode=local` ([docs/AUTH_LOCAL.md](docs/AUTH_LOCAL.md)).
+- PR policy summaries: idempotent upsert via `<!-- repository-detective-policy-summary -->` ([docs/PR_SUMMARY_IDEMPOTENCY.md](docs/PR_SUMMARY_IDEMPOTENCY.md)).
+
 ## Scan profiles
 
 Operator-facing profiles are **Light**, **Standard**, **Deep**, and **Custom** (`store/profiles.go`). Legacy IDs (`beta_standard`, `fast`, `maintainer_deep`, …) normalize to these. UI pickers show Label — Summary; display helpers use `profileLabel` / `profileDesc`.
 
+Profile-required scanners cannot be removed by disabling the scanner (RD-012A); see [docs/SCAN_PROFILES.md](docs/SCAN_PROFILES.md).
+
 ## Issue deduplication
 
 Forge issue filing dedups via **finding fingerprints** and local SQLite `external_issues` mappings (plus forge issue search). There is no external vector / Qdrant integration.
+
 
 ## Scan failure classification
 

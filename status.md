@@ -7,29 +7,35 @@
 
 | Task | Status | Notes |
 |------|--------|-------|
-| RD-001 Public feedback path | **Done** | GitHub Issues = public feedback (verified enabled); templates expanded; SECURITY.md + private advisories; Gitea remains canonical forge |
-| RD-002 Recommended Installation | **Done** | Compose pull :8081 labeled Recommended; advanced options demoted; AI removed from required env |
-| RD-003 AI explicitly optional | **Done** | Defaults/UI/onboarding/API aligned; `AI Analysis: Disabled`; startup gate unchanged |
-| RD-029 Doc truth audit | **Done** | [docs/DOC_TRUTH_AUDIT.md](docs/DOC_TRUTH_AUDIT.md) |
+| RD-001 Public feedback path | **Done** | GitHub Issues = public feedback; Gitea canonical forge |
+| RD-002 Recommended Installation | **Done** | Compose pull :8081 |
+| RD-003 AI explicitly optional | **Done** | Deterministic-first defaults |
+| RD-029 Doc truth audit | **Done** | Updated through Phase 3 |
 
-**Tests:** `go test ./api/ ./store/` + main AI readiness tests via `golang:1.25-bookworm` — pass.  
-**Not run:** full `./...` suite (long); live E2E install (RD-017/018).
-
-**Next:** Phase 3 privacy/security — RD-007, RD-008, RD-009, RD-010.
-
-### Phase 2 (2026-09-04) — Product semantics
+### Phase 2 (2026-09-04) — Product semantics — CLOSED (unit/integration)
 
 | Task | Status | Notes |
 |------|--------|-------|
-| RD-004 Policy outcomes | **Done** | `POLICY_MET` / `ACTION_REQUIRED` / `EVALUATION_INCOMPLETE` / `OBSERVATION_ONLY` — never “secure/safe” |
-| RD-005 Observe/Warn/Enforce | **Done** | UI labels over `monitor_only` / `issue_only` / `gate_pr` |
-| RD-006 Compact PR summary | **Done** | One PR comment; issues remain canonical |
-| RD-011 Scanner coverage | **Done** | Required incomplete blocks `POLICY_MET` |
-| RD-012 Profile required sets | **Done** | Light/Standard/Deep required scanner sets |
+| RD-004 Policy outcomes | **Done** | Never “secure/safe” |
+| RD-005 Observe/Warn/Enforce | **Done** | UI labels over monitor/issue/gate |
+| RD-006 Compact PR summary | **Done** | One PR comment; issues canonical |
+| RD-006A Idempotent PR summary | **Done** | Marker upsert; fail-closed list; UNIT_TESTED |
+| RD-011 Scanner coverage | **Done** | Required incomplete blocks POLICY_MET |
+| RD-012 / RD-012A Required scanners | **Done** | Disabled REQUIRED → EVALUATION_INCOMPLETE |
 
-**Tests:** `go test ./gitea/ ./store/ ./issues/ .` (targeted) via golang:1.25 — pass.
+**Regression:** `go test ./...` in `golang:1.25-bookworm` — **PASS** (exit 0).  
+**Classification:** `IMPLEMENTED + UNIT/INTEGRATION TESTED; FULL GITEA E2E PENDING RD-017`.
 
-**Fleet remediation:** Critical open findings cleared (20→0); noise backlog reduced via learning suppressions; 6 app repos + SEC-EVAL analyzer fix pushed. Details: `state/fleet-remediation-2026-09-04/`.
+### Phase 3 (2026-09-04) — Privacy / security
+
+| Task | Status | Proof |
+|------|--------|-------|
+| RD-007 Privacy modes | **Done** | CODE_PRESENT + WIRED + UNIT_TESTED |
+| RD-008 Threat model + MinimalSubprocessEnv | **Done** | SECURITY_MODEL.md; Class B sandbox NOT_PROVEN |
+| RD-009 Credential transport | **Done** | Header preferred; query reject optional; redaction UNIT_TESTED |
+| RD-010 UI session vs API auth | **Done** | Recommend local for new installs; runtime default api_key_only unchanged |
+
+**Next:** Phase 4+ / RD-017 Gitea E2E.
 
 **Repository:** https://git.commsnet.org/commstech/Repository-Detective.git
 ## Live deploy (2026-08-02) — Full application audit

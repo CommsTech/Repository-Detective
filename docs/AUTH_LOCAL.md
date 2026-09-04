@@ -8,6 +8,24 @@ Slice 1 adds **optional local admin login** with secure browser sessions while k
 
 ---
 
+## Recommended new installs (RD-010)
+
+For **new** Community installs, prefer:
+
+```yaml
+auth_mode: local
+session_secret: "<long random>"
+database_enabled: true
+csrf_enabled: true
+local_admin_bootstrap_enabled: true
+```
+
+Then open `/ui/bootstrap` to create the first owner account.
+
+**Existing** deployments keep working on `api_key_only` until you opt in. The runtime default remains `api_key_only` so upgrades never lock operators out.
+
+Automation (scripts, MCP, CI) continues to use `X-Repository-Detective-API-Key` in both modes.
+
 ## Auth modes
 
 | Mode | Config | UI | API |

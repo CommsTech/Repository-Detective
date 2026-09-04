@@ -7,6 +7,7 @@ import (
 
 	"git.commsnet.org/commstech/repository-detective/ai"
 	"git.commsnet.org/commstech/repository-detective/analyzers"
+	"git.commsnet.org/commstech/repository-detective/internal/privacy"
 	"git.commsnet.org/commstech/repository-detective/openclaw"
 	"git.commsnet.org/commstech/repository-detective/store"
 	"github.com/gin-gonic/gin"
@@ -137,28 +138,44 @@ func maybeEnqueueOpenClawReview(ctx context.Context, scanCtx *store.ScanContext,
 	}()
 }
 
-func initOpenClawReview() {
+func initOpenClawReview() error {
 	cfg := config.OpenClawAIReview.Normalized()
 	cfg.FallbackEndpoint = firstNonEmpty(config.AIBaseURL, config.OpenWebUIURL)
 	cfg.FallbackModel = firstNonEmpty(config.AIModel, config.OpenWebUIModel)
 	cfg.FallbackAPIKey = firstNonEmpty(config.AIAPIKey, config.OpenWebUIToken)
 	config.OpenClawAIReview = cfg
 	if rdStore == nil {
-		return
+		return nil
 	}
 	if !cfg.EndpointConfigured() {
-		return
+		return nil
+	}
+	endpoint := cfg.EffectiveEndpoint()
+	// Treat advisory AI like an AI egress path even when LLM auditors are off.
+	privacyDecision := privacy.EvaluateAIEgress(
+		config.PrivacyMode,
+		config.effectiveAIProvider(),
+		endpoint,
+		true,
+	)
+	if !privacyDecision.Allowed {
+		if cfg.Enabled || cfg.CanInvoke() {
+			return fmt.Errorf("privacy_mode=%s blocks OpenClaw/advisory AI endpoint %s: %s",
+				privacy.NormalizeMode(config.PrivacyMode), endpoint, privacyDecision.Reason)
+		}
+		logger.Warnf("OpenClaw advisory endpoint blocked by privacy policy (%s); transport not started", privacyDecision.Reason)
+		return nil
 	}
 	transport, err := ai.NewTransport(ai.Config{
 		Provider:              ai.ProviderType(config.effectiveAIProvider()),
-		BaseURL:               cfg.EffectiveEndpoint(),
+		BaseURL:               endpoint,
 		APIKey:                cfg.FallbackAPIKey,
 		Model:                 cfg.EffectiveModel(),
 		InsecureSkipTLSVerify: config.AIInsecureSkipTLSVerify,
 	}, logger)
 	if err != nil {
 		logger.Warnf("OpenClaw advisory review transport not configured: %v", err)
-		return
+		return nil
 	}
 	openclawReviewService = openclaw.NewService(cfg, rdStore, transport)
 	if cfg.Enabled {
@@ -170,6 +187,7 @@ func initOpenClawReview() {
 	} else {
 		logger.Info("OpenClaw advisory review transport ready (disabled by default)")
 	}
+	return nil
 }
 
 func applyOpenClawDefaults(cfg *Config) {

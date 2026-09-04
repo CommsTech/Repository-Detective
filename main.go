@@ -29,6 +29,7 @@ import (
 	"git.commsnet.org/commstech/repository-detective/health"
 	"git.commsnet.org/commstech/repository-detective/internal/config/envcompat"
 	"git.commsnet.org/commstech/repository-detective/internal/middleware"
+	"git.commsnet.org/commstech/repository-detective/internal/privacy"
 	"git.commsnet.org/commstech/repository-detective/internal/scanid"
 	"git.commsnet.org/commstech/repository-detective/internal/security"
 	"git.commsnet.org/commstech/repository-detective/issues"
@@ -288,6 +289,7 @@ type Config struct {
 	LocalAdminBootstrapEnabled              bool                                 `mapstructure:"local_admin_bootstrap_enabled"`
 	RejectQueryStringAPIKey                 bool                                 `mapstructure:"reject_query_string_api_key"`
 	WarnQueryStringAPIKey                   bool                                 `mapstructure:"warn_query_string_api_key"`
+	PrivacyMode                             string                               `mapstructure:"privacy_mode"`
 }
 
 func main() {
@@ -634,6 +636,7 @@ func loadConfig() error {
 	viper.SetDefault("local_admin_bootstrap_enabled", true)
 	viper.SetDefault("reject_query_string_api_key", false)
 	viper.SetDefault("warn_query_string_api_key", true)
+	viper.SetDefault("privacy_mode", "hybrid")
 
 	reportingDefaults := profile.DefaultReportingConfig()
 	viper.SetDefault("reporting.mode", reportingDefaults.Mode)
@@ -748,7 +751,19 @@ func loadConfig() error {
 	if err := config.validateAuth(); err != nil {
 		return err
 	}
+	if err := config.validatePrivacy(); err != nil {
+		return err
+	}
 
+	return nil
+}
+
+func (c *Config) validatePrivacy() error {
+	mode := privacy.NormalizeMode(c.PrivacyMode)
+	if !privacy.ValidMode(mode) {
+		return fmt.Errorf("invalid privacy_mode %q (use local_only, hybrid, or external_ai_enabled)", c.PrivacyMode)
+	}
+	c.PrivacyMode = mode
 	return nil
 }
 
@@ -1180,7 +1195,18 @@ func initializeComponents() error {
 
 	// Initialize AI client (multi-provider) when LLM auditors are required
 	initAIStatus()
+	privacyDecision := privacy.EvaluateAIEgress(
+		config.PrivacyMode,
+		config.effectiveAIProvider(),
+		firstNonEmpty(config.AIBaseURL, config.OpenWebUIURL),
+		config.EnableLLMAuditors,
+	)
+	logger.Infof("Privacy mode=%s AI egress: allowed=%v class=%s (%s)",
+		privacy.NormalizeMode(config.PrivacyMode), privacyDecision.Allowed, privacyDecision.EndpointClass, privacyDecision.Reason)
 	if config.needsAIProvider() {
+		if !privacyDecision.Allowed {
+			return fmt.Errorf("privacy_mode=%s blocks AI configuration: %s", privacy.NormalizeMode(config.PrivacyMode), privacyDecision.Reason)
+		}
 		var err error
 		aiClient, err = ai.NewClient(ai.Config{
 			Provider:              ai.ProviderType(config.AIProvider),
@@ -1222,7 +1248,9 @@ func initializeComponents() error {
 		logger.Info("AI provider not required — deterministic-only mode (no LLM auditors)")
 		aiClient = nil
 	}
-	initOpenClawReview()
+	if err := initOpenClawReview(); err != nil {
+		return err
+	}
 	initRemediationPlanner()
 	initClosureEngine()
 
@@ -1471,14 +1499,39 @@ func scannerSummariesForPolicy(result *analyzers.AnalysisResult, effective store
 	for _, name := range store.RequiredScannersForProfile(effective.ScanProfile, effective) {
 		requiredSet[strings.ToLower(name)] = struct{}{}
 	}
-	summaries := make([]gitea.ScannerResultSummary, 0, len(result.ScannerResults))
+	seen := map[string]bool{}
+	summaries := make([]gitea.ScannerResultSummary, 0, len(result.ScannerResults)+len(requiredSet))
 	for _, scannerResult := range result.ScannerResults {
 		name := strings.ToLower(scannerResult.Scanner)
+		seen[name] = true
 		_, req := requiredSet[name]
 		summaries = append(summaries, gitea.ScannerResultSummary{
 			Scanner:  scannerResult.Scanner,
 			Status:   string(scannerResult.Status),
 			Required: req,
+		})
+	}
+	// RD-012A: required scanners with no result still participate in policy evaluation.
+	for name := range requiredSet {
+		if seen[name] {
+			continue
+		}
+		status := "scanner_unavailable"
+		if !store.ScannerEnabledInSettings(name, effective) {
+			status = "disabled"
+		}
+		summaries = append(summaries, gitea.ScannerResultSummary{
+			Scanner:  name,
+			Status:   status,
+			Required: true,
+		})
+	}
+	// RD-012A: never allow silent 0/0 POLICY_MET for an empty required set.
+	if len(requiredSet) == 0 {
+		summaries = append(summaries, gitea.ScannerResultSummary{
+			Scanner:  "required-analysis",
+			Status:   "scanner_unavailable",
+			Required: true,
 		})
 	}
 	return summaries

@@ -1,5 +1,15 @@
 # Development Issues Log
 
+## Fixed (2026-09-04) — Phase 2 closure + Phase 3 privacy/security
+
+| Priority | Issue | Resolution |
+|----------|-------|------------|
+| P0 | PR summary could duplicate on re-scan (RD-006A) | Idempotent upsert by marker; fail-closed on list failure; dedupe RD-owned duplicates |
+| P0 | Disabled REQUIRED scanners could shrink evidence set → false POLICY_MET (RD-012A) | Profile-declared required set immutable; SKIPPED_BY_POLICY incomplete for REQUIRED |
+| P1 | Privacy modes were badges only | `internal/privacy` LOCAL_ONLY/HYBRID/EXTERNAL_AI; AI + OpenClaw + notify gates |
+| P1 | Threat model honesty | `docs/SECURITY_MODEL.md` with PROVEN/PARTIAL/NOT_* |
+| P1 | Query API keys / auth migration | Prefer header; reject optional; recommend local session for new installs without silent flip |
+
 ## Fixed (2026-09-04) — Phase 1 public-beta blockers (RD-001/002/003/029)
 
 | Priority | Issue | Resolution |

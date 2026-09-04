@@ -30,4 +30,7 @@ type Readiness struct {
 	AIModel     string       `json:"ai_model,omitempty"`
 	// AIAnalysis is operator-facing: "Disabled" | "Enabled" (never implies security assurance).
 	AIAnalysis string `json:"ai_analysis,omitempty"`
+	PrivacyMode string `json:"privacy_mode,omitempty"`
+	AIEndpointClass string `json:"ai_endpoint_class,omitempty"`
+	CodeEgressPolicy string `json:"code_egress_policy,omitempty"`
 }

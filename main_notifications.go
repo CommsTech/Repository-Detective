@@ -7,6 +7,7 @@ import (
 	"git.commsnet.org/commstech/repository-detective/ai"
 	"git.commsnet.org/commstech/repository-detective/analyzers"
 	"git.commsnet.org/commstech/repository-detective/gitea"
+	"git.commsnet.org/commstech/repository-detective/internal/privacy"
 	"git.commsnet.org/commstech/repository-detective/notify"
 	"git.commsnet.org/commstech/repository-detective/preinstall"
 	"git.commsnet.org/commstech/repository-detective/store"
@@ -14,7 +15,33 @@ import (
 
 var notifyManager *notify.Manager
 
+func applyPrivacyToNotificationChannels() {
+	mode := privacy.NormalizeMode(config.PrivacyMode)
+	if mode != privacy.ModeLocalOnly {
+		return
+	}
+	gate := func(name, rawURL string, enabled *bool) {
+		if rawURL == "" || enabled == nil || !*enabled {
+			return
+		}
+		d := privacy.EvaluateURLEgress(mode, rawURL)
+		if !d.Allowed {
+			logger.Warnf("privacy_mode=local_only disabled %s notifications: %s", name, d.Reason)
+			*enabled = false
+		}
+	}
+	gate("slack", config.SlackWebhookURL, &config.SlackEnabled)
+	gate("discord", config.DiscordWebhookURL, &config.DiscordEnabled)
+	gate("webhook", config.WebhookNotificationURL, &config.WebhookNotificationsEnabled)
+	// Telegram Bot API is always an external cloud destination.
+	if config.TelegramEnabled {
+		logger.Warn("privacy_mode=local_only disabled telegram notifications (Telegram Bot API is EXTERNAL)")
+		config.TelegramEnabled = false
+	}
+}
+
 func initNotifyManager() {
+	applyPrivacyToNotificationChannels()
 	cfg := notify.GlobalNotificationConfigFromMain(
 		config.NotificationsEnabled,
 		config.NotificationMinSeverity,

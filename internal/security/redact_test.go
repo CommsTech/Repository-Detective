@@ -13,6 +13,22 @@ func TestRedactSecrets(t *testing.T) {
 	}
 }
 
+func TestRedactAccessLogQueryAPIKey(t *testing.T) {
+	raw := `/ui/scans/abc?api_key=should-not-appear-in-logs`
+	out := RedactAccessLogLine(raw)
+	if contains(out, "should-not-appear") {
+		t.Fatalf("query api_key leaked: %q", out)
+	}
+}
+
+func TestRedactBearerToken(t *testing.T) {
+	raw := "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.aaa.bbb"
+	out := RedactSecrets(raw)
+	if contains(out, "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9") {
+		t.Fatalf("bearer token leaked: %q", out)
+	}
+}
+
 func contains(s, sub string) bool {
 	return len(s) >= len(sub) && (s == sub || indexOf(s, sub) >= 0)
 }

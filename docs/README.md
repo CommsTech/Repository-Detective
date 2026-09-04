@@ -48,6 +48,7 @@ Scripts: `./scripts/release-test.sh` · `./scripts/operator-smoke-test.sh` · `g
 | [DASHBOARD_GUIDE.md](DASHBOARD_GUIDE.md) | Operator dashboard and charts |
 | [SCANNER_HEALTH.md](SCANNER_HEALTH.md) | Scanner availability and degraded coverage |
 | [PRIVACY_AND_DATA_PROTECTION.md](PRIVACY_AND_DATA_PROTECTION.md) | Privacy-aware handling (not compliance certification) |
+| [PRIVACY_MODES.md](PRIVACY_MODES.md) | LOCAL_ONLY / HYBRID / EXTERNAL_AI operating modes (RD-007) |
 | [ADMIN_HARDENING.md](ADMIN_HARDENING.md) | Operator security checklist |
 | [DATA_RETENTION.md](DATA_RETENTION.md) | Retention and deletion responsibilities |
 | [ACCESSIBILITY.md](ACCESSIBILITY.md) | WCAG-aligned UI practices (not certification) |
@@ -55,7 +56,9 @@ Scripts: `./scripts/release-test.sh` · `./scripts/operator-smoke-test.sh` · `g
 | [RELEASE_READINESS.md](RELEASE_READINESS.md) | Pre-release checklist |
 | [COMPLIANCE_READINESS.md](COMPLIANCE_READINESS.md) | Compliance evidence index |
 | [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) | Honest product limits |
-| [SECURITY_MODEL.md](SECURITY_MODEL.md) | Trust boundaries overview |
+| [SECURITY_MODEL.md](SECURITY_MODEL.md) | Trust boundaries + threat model honesty (RD-008) |
+| [PR_SUMMARY_IDEMPOTENCY.md](PR_SUMMARY_IDEMPOTENCY.md) | Idempotent PR policy summary comments (RD-006A) |
+| [DOC_TRUTH_AUDIT.md](DOC_TRUTH_AUDIT.md) | Claims vs runtime proof levels |
 | [SECURITY_CHECK_MATRIX.md](SECURITY_CHECK_MATRIX.md) | Ten minimum checks vs shipped tools |
 | [PRE_PUBLISH_CHECKS.md](PRE_PUBLISH_CHECKS.md) | Pre-public release checklist |
 | [PIPELINE_GOVERNANCE.md](PIPELINE_GOVERNANCE.md) | CI/workflow and runner governance |

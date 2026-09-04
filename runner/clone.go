@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"git.commsnet.org/commstech/repository-detective/internal/security"
 )
 
 // CloneRepository performs a shallow single-branch clone into dest.
@@ -37,7 +39,7 @@ func CloneRepository(ctx context.Context, cloneURL, ref, dest string, timeout ti
 	args = append(args, cloneURL, dest)
 
 	cmd := exec.CommandContext(ctx, "git", args...)
-	cmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0")
+	cmd.Env = security.MinimalSubprocessEnv()
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("git clone failed: %s", RedactLogLine(string(out)))

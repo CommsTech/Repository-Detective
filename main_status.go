@@ -3,6 +3,7 @@ package main
 import (
 	"time"
 
+	"git.commsnet.org/commstech/repository-detective/internal/privacy"
 	"git.commsnet.org/commstech/repository-detective/operator"
 	"github.com/gin-gonic/gin"
 )
@@ -60,6 +61,17 @@ func buildReadiness(status string) operator.Readiness {
 	} else {
 		r.AIProvider = "disabled"
 		r.AIAnalysis = "Disabled"
+	}
+	r.PrivacyMode = privacy.NormalizeMode(config.PrivacyMode)
+	d := privacy.EvaluateAIEgress(config.PrivacyMode, config.effectiveAIProvider(), firstNonEmpty(config.AIBaseURL, config.OpenWebUIURL), config.EnableLLMAuditors)
+	r.AIEndpointClass = d.EndpointClass
+	switch r.PrivacyMode {
+	case privacy.ModeLocalOnly:
+		r.CodeEgressPolicy = "BLOCKED_BY_POLICY"
+	case privacy.ModeExternalAIEnabled:
+		r.CodeEgressPolicy = "EXTERNAL_AI_ENABLED"
+	default:
+		r.CodeEgressPolicy = "HYBRID"
 	}
 	return r
 }

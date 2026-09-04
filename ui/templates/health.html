@@ -47,6 +47,7 @@
     <tr><td>Scan profile</td><td><span class="rd-badge medium">{{profileLabel .Features.ScanProfile}}</span></td></tr>
   </table>
   <p class="rd-muted"><strong>AI Analysis: {{if .AIAnalysis}}{{.AIAnalysis}}{{else if eq .AIProvider "disabled"}}Disabled{{else if .AIProvider}}Enabled{{else}}Disabled{{end}}</strong>{{if and .AIProvider (ne .AIProvider "disabled")}} · provider {{.AIProvider}}{{if .AIModel}} · model {{.AIModel}}{{end}}{{end}}</p>
+  {{if .PrivacyMode}}<p class="rd-muted"><strong>Privacy mode:</strong> {{.PrivacyMode}} · <strong>Code-content egress:</strong> {{.CodeEgressPolicy}}{{if .AIEndpointClass}} · AI endpoint {{.AIEndpointClass}}{{end}}</p>{{end}}
 </div>
 {{else}}
 <div class="rd-alert info">Readiness telemetry is not available from this instance. Check <code>/health</code> API for basic status.</div>

@@ -33,6 +33,8 @@ REPOSITORY_DETECTIVE_SKIP_STARTUP_CHECKS=false
 
 **Note:** Docker Compose loads `.env` via `env_file`, and `REPOSITORY_DETECTIVE_*` values **override** `config/config.yaml`. The example files are aligned so a fresh copy enables the full scanner fleet (gitleaks, semgrep, Go tools) with LLM auditors **off** (AI optional).
 
+**Note:** Prefer the API key **header** or local session login. Do not put API keys in browser URLs. New installs should set `REPOSITORY_DETECTIVE_REJECT_QUERY_STRING_API_KEY=true`.
+
 ## Optional AI
 
 Leave `REPOSITORY_DETECTIVE_ENABLE_LLM_AUDITORS=false` for deterministic-only operation. To enable privacy-preserving AI later, configure a local Ollama / OpenAI-compatible endpoint — see [AI_PROVIDERS.md](AI_PROVIDERS.md).

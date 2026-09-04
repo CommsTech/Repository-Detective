@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"git.commsnet.org/commstech/repository-detective/internal/security"
 )
 
 // Status describes SBOM generation and vulnerability check outcomes.
@@ -73,7 +75,7 @@ func generateGoModuleSBOM(ctx context.Context, dir, outDir string) (Result, erro
 	}
 	cmd := exec.CommandContext(ctx, "cyclonedx-gomod", "mod", "-json", "-output", outPath)
 	cmd.Dir = dir
-	cmd.Env = append(os.Environ(), "GOTOOLCHAIN=auto")
+	cmd.Env = append(security.MinimalSubprocessEnv(), "GOTOOLCHAIN=auto")
 	if out, err := cmd.CombinedOutput(); err != nil {
 		// Prefer Syft when the Go toolchain cannot satisfy module requirements
 		// (common when the container Go is older than go.mod).
@@ -162,7 +164,7 @@ func checkWithGrype(ctx context.Context, sbomPath, format string, pkgCount ...in
 	}
 	grypeArgs := []string{"sbom:" + cleanSBOM, "-o", "json", "--quiet"}
 	cmd := exec.CommandContext(ctx, "grype", grypeArgs...)
-	cmd.Env = append(os.Environ(), "GOTOOLCHAIN=auto")
+	cmd.Env = append(security.MinimalSubprocessEnv(), "GOTOOLCHAIN=auto")
 	if os.Getenv("HOME") == "" {
 		cmd.Env = append(cmd.Env, "HOME=/home/repositorydetective", "XDG_CACHE_HOME=/home/repositorydetective/.cache")
 	}
