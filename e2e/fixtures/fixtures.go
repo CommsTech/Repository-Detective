@@ -1,4 +1,4 @@
-# e2e acceptance fixtures — synthetic only, never real credentials.
+// e2e acceptance fixtures — synthetic only, never real credentials.
 package e2efixtures
 
 // SyntheticGitleaksSecret is a deliberately fake AWS-shaped token for Gitleaks.
