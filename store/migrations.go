@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-const currentSchemaVersion = 24
+const currentSchemaVersion = 25
 
 var migrationStatements = map[int][]string{
 	1: {
@@ -732,6 +732,14 @@ var migrationStatements = map[int][]string{
 		`CREATE INDEX IF NOT EXISTS idx_scanner_results_status ON scanner_results(status)`,
 		`CREATE INDEX IF NOT EXISTS idx_scanner_results_scan_status ON scanner_results(scan_id, status)`,
 		`CREATE INDEX IF NOT EXISTS idx_external_issues_state_finding ON external_issues(state, finding_id)`,
+	},
+	// Operator acceptance evidence (webhook delivery, first-scan proofs) — RD-017A.
+	25: {
+		`CREATE TABLE IF NOT EXISTS operator_evidence (
+			key TEXT PRIMARY KEY,
+			value_json TEXT NOT NULL DEFAULT '{}',
+			updated_at TEXT NOT NULL
+		)`,
 	},
 }
 

@@ -27,6 +27,7 @@ func Run(in Input) Report {
 	checks = append(checks, checkForge(in)...)
 	checks = append(checks, checkPermissions(in)...)
 	checks = append(checks, checkWebhook(in)...)
+	checks = append(checks, checkProofs(in)...)
 	checks = append(checks, checkPolicy(in)...)
 	checks = append(checks, checkScanners(in)...)
 	checks = append(checks, checkAI(in)...)
@@ -370,6 +371,30 @@ func checkWebhook(in Input) []Check {
 		out = append(out, Check{
 			ID: "webhook.delivery", Category: "webhook", State: StateNotProven,
 			Summary: "Webhook delivery not E2E proven", Detail: detail, Proof: ProofNotProven,
+		})
+	}
+	return out
+}
+
+func checkProofs(in Input) []Check {
+	var out []Check
+	if in.FirstScanProven {
+		out = append(out, Check{
+			ID: "proof.first_scan", Category: "proof", State: StatePass,
+			Summary: "FIRST_SCAN_PROVEN", Detail: sanitizeDetail(in.FirstScanDetail), Proof: ProofIntegration,
+		})
+	} else {
+		out = append(out, Check{
+			ID: "proof.first_scan", Category: "proof", State: StateNotProven,
+			Summary: "FIRST_SCAN_PROVEN not recorded",
+			Detail:  "A terminal production-path scan has not yet been persisted as proof.",
+			Proof:   ProofNotProven,
+		})
+	}
+	if in.WebhookDeliveryProven {
+		out = append(out, Check{
+			ID: "proof.webhook_delivery", Category: "proof", State: StatePass,
+			Summary: "WEBHOOK_DELIVERY_E2E_PROVEN", Detail: sanitizeDetail(in.WebhookLastDelivery), Proof: ProofE2E,
 		})
 	}
 	return out

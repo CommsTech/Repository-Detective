@@ -1,5 +1,17 @@
 # Development Issues Log
 
+## Fixed (2026-09-04) — Phase 6A real Gitea E2E (RD-017A / RD-018)
+
+| Priority | Issue | Resolution |
+|----------|-------|------------|
+| P0 | No disposable real-Gitea acceptance path | `docker-compose.e2e.yml` + `scripts/e2e-gitea-acceptance.sh` (Gitea 1.22.3) |
+| P0 | Webhook delivery / FIRST_SCAN not durable | migration 25 `operator_evidence`; Doctor proofs |
+| P0 | Required-scanner fail-closed only unit-tested | Live gitleaks stub → EVALUATION_INCOMPLETE E2E |
+| P1 | Gitea cold SQLite init exceeded short waits | Readiness polling up to ~7m; healthcheck start_period raised |
+| P1 | Safe/secure disclaimer false-failed harness | Context-aware claim check allows product non-assurance wording |
+| P1 | Fail-closed stub Permission denied | Install stub as root inside disposable container only |
+| P2 | Upgrade E2E | NOT_PROVEN — no prior public-beta baseline |
+
 ## Fixed (2026-09-04) — Phase 4 onboarding + doctor (RD-013/014) + RD-008B
 
 | Priority | Issue | Resolution |

@@ -54,33 +54,33 @@ type FindingDetail struct {
 
 // DashboardSummary powers the operator dashboard.
 type DashboardSummary struct {
-	TotalRepositories        int
-	RecentScans              []ScanWithRepo
-	FailedScansCount         int
+	TotalRepositories          int
+	RecentScans                []ScanWithRepo
+	FailedScansCount           int
 	ActionableFailedScansCount int
-	StaleReapedScansCount    int
-	UnhealthyReposCount     int
-	ScannerFailuresCount     int
-	ScannerParseFailedCount  int
-	ScannerToolsMissingCount int
-	OpenFindingsCount        int
-	SuppressedFindingsCount  int
-	IssuesDetectedInScans    int
-	OpenFindingsBySeverity   map[string]int
-	OpenFindingsByCategory   map[string]int
-	RecentLifecycleEvents    []LifecycleEvent
-	ScheduledScansCount      int
-	LastScheduledScanAt      *time.Time
-	RecentScheduledScans     []ScanWithRepo
-	RunnerJobsByStatus       map[string]int
-	Remediation              RemediationSummary
-	Closure                  ClosureSummary
-	Lifecycle                LifecycleSummary
-	Backlog                  FindingBacklogSummary
-	Platform                 ScannerPlatformSummary
-	ScanHealth               ScanHealthSummary
-	RemediationInsight       RemediationInsight
-	platformRollups          map[string]scannerDBRollup
+	StaleReapedScansCount      int
+	UnhealthyReposCount        int
+	ScannerFailuresCount       int
+	ScannerParseFailedCount    int
+	ScannerToolsMissingCount   int
+	OpenFindingsCount          int
+	SuppressedFindingsCount    int
+	IssuesDetectedInScans      int
+	OpenFindingsBySeverity     map[string]int
+	OpenFindingsByCategory     map[string]int
+	RecentLifecycleEvents      []LifecycleEvent
+	ScheduledScansCount        int
+	LastScheduledScanAt        *time.Time
+	RecentScheduledScans       []ScanWithRepo
+	RunnerJobsByStatus         map[string]int
+	Remediation                RemediationSummary
+	Closure                    ClosureSummary
+	Lifecycle                  LifecycleSummary
+	Backlog                    FindingBacklogSummary
+	Platform                   ScannerPlatformSummary
+	ScanHealth                 ScanHealthSummary
+	RemediationInsight         RemediationInsight
+	platformRollups            map[string]scannerDBRollup
 }
 
 // ListOptions bounds list query size.
@@ -249,4 +249,11 @@ type QueryStore interface {
 
 	GetPlatformSettings(ctx context.Context) (PlatformSettings, error)
 	SavePlatformSettings(ctx context.Context, settings PlatformSettings) error
+
+	PutOperatorEvidence(ctx context.Context, key string, value any) error
+	GetOperatorEvidenceJSON(ctx context.Context, key string) (string, error)
+	GetWebhookDeliveryEvidence(ctx context.Context) (WebhookDeliveryEvidence, bool, error)
+	GetFirstScanEvidence(ctx context.Context) (FirstScanEvidence, bool, error)
+	RecordWebhookDelivery(ctx context.Context, ev WebhookDeliveryEvidence) error
+	RecordFirstScanProven(ctx context.Context, ev FirstScanEvidence) error
 }

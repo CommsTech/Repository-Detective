@@ -23,11 +23,11 @@ import (
 
 // rateLimiters per IP (bounded map to avoid unbounded growth).
 var (
-	rateLimiterMap   = make(map[string]*rate.Limiter)
-	rateLimiterMu    sync.Mutex
-	defaultRate      = rate.Limit(10) // 10 requests per second
-	defaultBurst     = 20
-	maxRateLimiters  = 4096
+	rateLimiterMap  = make(map[string]*rate.Limiter)
+	rateLimiterMu   sync.Mutex
+	defaultRate     = rate.Limit(10) // 10 requests per second
+	defaultBurst    = 20
+	maxRateLimiters = 4096
 )
 
 func getRateLimiter(ip string) *rate.Limiter {
@@ -144,11 +144,15 @@ type AnalysisProcessor interface {
 	ProcessPullRequest(ctx context.Context, payload *GiteaWebhookPayload)
 }
 
+// DeliveryRecorder records sanitized webhook acceptance (optional).
+type DeliveryRecorder func(eventKind, repository, commitSHA, deliveryID string, prNumber int)
+
 // WebhookHandler handles incoming Gitea webhooks
 type WebhookHandler struct {
 	logger    *logrus.Logger
 	config    *Config
 	processor AnalysisProcessor
+	recorder  DeliveryRecorder
 }
 
 // NewWebhookHandler creates a new webhook handler
@@ -158,6 +162,11 @@ func NewWebhookHandler(logger *logrus.Logger, config *Config, processor Analysis
 		config:    config,
 		processor: processor,
 	}
+}
+
+// SetDeliveryRecorder attaches optional webhook delivery evidence persistence.
+func (h *WebhookHandler) SetDeliveryRecorder(r DeliveryRecorder) {
+	h.recorder = r
 }
 
 // HandleWebhook processes incoming webhook requests
@@ -205,13 +214,30 @@ func (h *WebhookHandler) HandleWebhook(c *gin.Context) {
 
 	switch classifyWebhookEvent(&payload) {
 	case webhookEventPush:
+		h.recordDelivery("push", &payload, c)
 		h.handlePushEvent(c, &payload)
 	case webhookEventPullRequest:
+		h.recordDelivery("pull_request", &payload, c)
 		h.handlePullRequestEvent(c, &payload)
 	default:
 		h.logger.Infof("Unhandled webhook event (action=%q)", security.RedactLogField(payload.Action, 50))
 		c.JSON(http.StatusOK, gin.H{"status": "ignored"})
 	}
+}
+
+func (h *WebhookHandler) recordDelivery(kind string, payload *GiteaWebhookPayload, c *gin.Context) {
+	if h.recorder == nil || payload == nil {
+		return
+	}
+	deliveryID := c.GetHeader("X-Gitea-Delivery")
+	if deliveryID == "" {
+		deliveryID = c.GetHeader("X-GitHub-Delivery")
+	}
+	sha := payload.After
+	if sha == "" && payload.PullRequest.Head.SHA != "" {
+		sha = payload.PullRequest.Head.SHA
+	}
+	h.recorder(kind, payload.Repository.FullName, sha, deliveryID, payload.PullRequest.Number)
 }
 
 type webhookEventKind int

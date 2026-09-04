@@ -1,5 +1,13 @@
 # Repository Detective Architecture
 
+## Gitea E2E acceptance (Phase 6A)
+
+- Disposable topology: `docker-compose.e2e.yml` (Gitea **1.22.3** + RD all-in-one).
+- Harness: `scripts/e2e-gitea-acceptance.sh` → `e2e/results/<run-id>/acceptance.json`.
+- Clean install: `scripts/e2e-clean-install.sh` (git archive + `.env.example`).
+- Operator proofs: `store/operator_evidence` (migration 25) — `webhook.last_delivery`, `proof.first_scan`.
+- Docs: [docs/E2E_GITEA_ACCEPTANCE.md](docs/E2E_GITEA_ACCEPTANCE.md), [docs/DOC_TRUTH_AUDIT.md](docs/DOC_TRUTH_AUDIT.md).
+
 ## Privacy / security (Phase 3)
 
 - `privacy_mode`: `local_only` | `hybrid` (default) | `external_ai_enabled` — see `internal/privacy` and [docs/PRIVACY_MODES.md](docs/PRIVACY_MODES.md).

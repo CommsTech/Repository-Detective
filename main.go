@@ -1321,6 +1321,17 @@ func initializeComponents() error {
 		IncludePatterns:       config.RepositoryIncludePatterns,
 		ExcludePatterns:       config.RepositoryExcludePatterns,
 	}, &webhookProcessor{})
+	if rdStore != nil {
+		webhookHandler.SetDeliveryRecorder(func(eventKind, repository, commitSHA, deliveryID string, prNumber int) {
+			_ = rdStore.RecordWebhookDelivery(context.Background(), store.WebhookDeliveryEvidence{
+				EventKind:  eventKind,
+				Repository: repository,
+				CommitSHA:  commitSHA,
+				DeliveryID: deliveryID,
+				PRNumber:   prNumber,
+			})
+		})
+	}
 
 	analysisLimiter = limiter.New(config.MaxConcurrentAnalyses)
 	logger.Infof("Analysis concurrency limit: %d", config.MaxConcurrentAnalyses)
@@ -1902,6 +1913,7 @@ func finishPersistedScan(ctx context.Context, scanCtx *store.ScanContext, reposi
 	if err := scanRecorder.FinishScan(ctx, scanID, data, analysisErr); err != nil {
 		logger.Warnf("Failed to finish scan persistence: %v", err)
 	}
+	maybeRecordFirstScanEvidence(ctx, scanCtx, repositoryID, result, analysisErr)
 	persistScanSBOM(ctx, scanID, repositoryID, result)
 	if data != nil && repositoryID > 0 {
 		recordScannerHealthFromScan(ctx, repositoryID, scanID, data.ScannerResults)

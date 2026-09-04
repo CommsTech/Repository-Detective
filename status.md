@@ -3,6 +3,19 @@
 **Last updated:** 2026-09-04  
 **Program:** Product Hardening & Public Beta Improvement Backlog (RD-001…RD-030)
 
+### Phase 6A (2026-09-04) — Real Gitea E2E (RD-017A / RD-018) — COMPLETE (stop before Phase 5)
+
+| Task | Status | Notes |
+|------|--------|-------|
+| Disposable Gitea 1.22.3 + RD compose | **Done** | `docker-compose.e2e.yml`; host ports 13000/18081 |
+| Webhook delivery + FIRST_SCAN evidence | **E2E_PROVEN** | migration 25 `operator_evidence`; Doctor proofs |
+| E2E harness scenarios | **PASS** | `e2e/results/20260904T182636Z-2505621/` — zero FAIL |
+| Required-scanner fail-closed | **E2E_PROVEN** | Controlled gitleaks stub |
+| PR summary idempotency | **E2E_PROVEN** | RD-006A at Gitea 1.22.3 |
+| Clean install RD-018 | **Pending script** | `scripts/e2e-clean-install.sh` |
+| Upgrade E2E | **NOT_PROVEN** | No prior public-beta baseline |
+| Class-B remediation / RD-015–016 | **Excluded** | RD-008B Option C unchanged |
+
 ### Phase 1 (2026-09-04) — Public-beta contradictions
 
 | Task | Status | Notes |
@@ -24,7 +37,7 @@
 | RD-012 / RD-012A Required scanners | **Done** | Disabled REQUIRED → EVALUATION_INCOMPLETE |
 
 **Regression:** `go test ./...` in `golang:1.25-bookworm` — **PASS** (exit 0).  
-**Classification:** `IMPLEMENTED + UNIT/INTEGRATION TESTED; FULL GITEA E2E PENDING RD-017`.
+**Classification:** `IMPLEMENTED + UNIT/INTEGRATION TESTED; Gitea 1.22.3 E2E advanced in Phase 6A (RD-017A)`.
 
 ### Phase 3 (2026-09-04) — Privacy / security
 

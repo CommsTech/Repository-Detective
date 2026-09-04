@@ -128,6 +128,9 @@ type Input struct {
 	WebhookDeliveryProven     bool
 	WebhookLastDelivery       string
 	WebhookLastError          string
+	FirstScanProven           bool
+	FirstScanDetail           string
+	WebhookScanProven         bool
 
 	// Policy / profile
 	ScanProfile     string

@@ -108,7 +108,7 @@ func runDoctorReport(ctx context.Context, owner, repo string) doctor.Report {
 		WebhookSecretSet:          strings.TrimSpace(config.WebhookSecret) != "",
 		ScanProfile:               config.ScanProfile,
 		DatabaseEnabled:           config.DatabaseEnabled,
-		SchemaVersion:             24,
+		SchemaVersion:             25,
 		RemediationPlannerEnabled: config.RemediationPlannerEnabled,
 		RemediationPREnabled:      config.RemediationPREnabled,
 		RemediationUseRunner:      config.RemediationPRUseRunnerVerification,
@@ -136,6 +136,16 @@ func runDoctorReport(ctx context.Context, owner, repo string) doctor.Report {
 
 	if config.DatabaseEnabled && rdStore != nil {
 		in.DatabaseOK = true
+		if ev, ok, _ := rdStore.GetWebhookDeliveryEvidence(ctx); ok {
+			in.WebhookDeliveryProven = true
+			in.WebhookLastDelivery = ev.ReceivedAt + " event=" + ev.EventKind + " repo=" + ev.Repository
+		}
+		if fs, ok, _ := rdStore.GetFirstScanEvidence(ctx); ok {
+			in.FirstScanProven = true
+			in.FirstScanDetail = fmt.Sprintf("scan_id=%s trigger=%s via_webhook=%v required=%d/%d",
+				fs.ScanID, fs.TriggerType, fs.ViaWebhook, fs.RequiredOK, fs.RequiredTotal)
+			in.WebhookScanProven = fs.ViaWebhook
+		}
 	} else if config.DatabaseEnabled {
 		if s, err := store.Open(store.Config{Enabled: true, Path: config.DatabasePath}); err == nil {
 			in.DatabaseOK = true
