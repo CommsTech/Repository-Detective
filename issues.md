@@ -1,5 +1,13 @@
 # Development Issues Log
 
+## Fixed (2026-09-04) — Phase 4 onboarding + doctor (RD-013/014) + RD-008B
+
+| Priority | Issue | Resolution |
+|----------|-------|------------|
+| P0 | Onboarding ended at env export without proving operation | Connect→Select→Protect→Verify→Ready wizard; shared doctor Verify |
+| P0 | No reusable operator diagnostics | `doctor` package + CLI `repository-detective doctor` + `/api/v1/doctor` + `/ui/doctor` |
+| P1 | Class-B remediation isolation unclear before Phase 5 | RD-008B Option C — disabled by default; NOT_PROVEN disclosure; startup warn |
+
 ## Fixed (2026-09-04) — Phase 2 closure + Phase 3 privacy/security
 
 | Priority | Issue | Resolution |

@@ -1,87 +1,33 @@
 # Documentation truth audit (RD-029)
 
-**Date:** 2026-09-04 (updated Phase 2 closure + Phase 3)  
-**Scope:** Claims vs reachable runtime behavior.  
-**Method:** Source inspection + unit/integration tests in `golang:1.25-bookworm`. Full Gitea E2E remains RD-017.
-
-Legend:
-
-| Class | Meaning |
-|-------|---------|
-| STABLE | Documented, wired, and routinely used |
-| BETA | Works for intended path; edge cases expected |
-| EXPERIMENTAL | Code present; limited proof |
-| DISABLED_BY_DEFAULT | Implemented but off until operator enables |
-| PLANNED | Roadmap only |
-| NOT_SUPPORTED | Must not be advertised as available |
+**Date:** 2026-09-04 (Phase 4 RD-013/RD-014 + RD-008B)  
+**Method:** Source inspection + unit tests in `golang:1.25-bookworm`. Full Gitea E2E remains RD-017.
 
 Proof levels: `CODE_PRESENT` / `WIRED` / `UNIT_TESTED` / `INTEGRATION_TESTED` / `E2E_PROVEN`.
 
----
-
-## Product posture
-
-| Claim | Classification | Evidence |
-|-------|----------------|----------|
-| Public feedback via GitHub Issues | STABLE | Issues enabled; templates under `.github/ISSUE_TEMPLATE/` |
-| Gitea = canonical forge (CI/wiki/dev) | STABLE | remotes + CONTRIBUTING / GITHUB_MIRROR |
-| Security via private advisory / SECURITY.md | BETA | Private vulnerability reporting enabled |
-| Recommended install = compose pull :8081 | STABLE | README, QUICKSTART, SETUP, docker-compose.yml |
-| AI optional / LLM auditors off by default | STABLE | `enable_llm_auditors` default false |
-| Local LLM (Ollama) + locality classification | BETA | `internal/privacy` UNIT_TESTED |
-| No auto-merge remediation PRs | STABLE | Intentional non-feature |
-| Policy outcomes ≠ “secure/safe” | STABLE | PR summary + policy docs |
-| Issues canonical for findings | STABLE | Issue manager + fingerprint mapping |
-| GitHub forge issue filing | EXPERIMENTAL | Code path exists |
-| GitLab | NOT_SUPPORTED | Explicitly documented |
-
----
-
-## Policy / scanners (Phase 2)
+## Phase 4
 
 | Capability | Classification | Proof |
 |------------|----------------|-------|
-| POLICY_MET / ACTION_REQUIRED / EVALUATION_INCOMPLETE / OBSERVATION_ONLY | BETA | UNIT_TESTED |
-| Observe / Warn / Enforce | BETA | WIRED + UNIT_TESTED |
-| Compact PR summary (one comment) | BETA | WIRED |
-| PR summary **idempotent upsert** (RD-006A) | BETA | UNIT_TESTED; E2E_PROVEN pending RD-017 |
-| Required scanners cannot shrink when disabled (RD-012A) | BETA | UNIT_TESTED |
-| `SKIPPED_BY_POLICY` incomplete for REQUIRED | BETA | UNIT_TESTED |
-| Silent `0/0` → POLICY_MET | NOT_SUPPORTED | Blocked for Custom empty set |
+| Onboarding Connect→Select→Protect→Verify→Ready | BETA | WIRED (wizard + APIs); UNIT_TESTED (doctor engine / recommend) |
+| Permission matrix (Gitea pull/push/admin proxy) | BETA | WIRED; not full scope enumeration |
+| Privacy egress disclosure in Protect | BETA | WIRED + privacy UNIT_TESTED |
+| Verify uses shared doctor package | BETA | WIRED |
+| READY / READY_WITH_LIMITATIONS / NOT_READY | BETA | UNIT_TESTED (mapping) |
+| FIRST_SCAN_PROVEN | PLANNED/partial | Documented; not yet persisted as store flag |
+| `repository-detective doctor` CLI | BETA | WIRED |
+| `GET /api/v1/doctor` (+ bundle) | BETA | WIRED |
+| `/ui/doctor` | BETA | WIRED |
+| Support bundle redaction | BETA | UNIT_TESTED |
+| Webhook delivery E2E | NOT_PROVEN | Registration vs delivery distinguished |
+| RD-008B Class-B decision | STABLE doc | Option C; control-plane allowlisted validation WIRED; sandbox NOT_PROVEN |
 
-Phase 2 classification: **IMPLEMENTED + UNIT/INTEGRATION TESTED; FULL GITEA E2E PENDING RD-017**.
+## Earlier phases (unchanged)
 
----
+Phase 1–3 remain accepted at documented proof levels. Phase 2: **IMPLEMENTED + UNIT/INTEGRATION TESTED; FULL GITEA E2E PENDING RD-017**.
 
-## Privacy / security (Phase 3)
+## Non-claims
 
-| Capability | Classification | Proof |
-|------------|----------------|-------|
-| Privacy modes local_only / hybrid / external_ai_enabled | BETA | CODE_PRESENT + WIRED + UNIT_TESTED |
-| LOCAL_ONLY AI egress fail-closed | BETA | WIRED + UNIT_TESTED |
-| LOCAL_ONLY notification EXTERNAL channel disable | BETA | WIRED + UNIT_TESTED (classifier) |
-| SECURITY_MODEL.md threat model | STABLE doc | PROVEN/PARTIAL/NOT_* labels |
-| MinimalSubprocessEnv for SBOM + clone | BETA | CODE_PRESENT + WIRED |
-| Query API key reject (optional) | BETA | UNIT_TESTED; default still compat false |
-| Local session auth recommended new install | BETA | Docs + UNIT/INTEGRATION; runtime default unchanged |
-| Class-B ephemeral sandbox default | PLANNED | NOT_IMPLEMENTED |
-| Per-scan seccomp/network ns | PLANNED | NOT_IMPLEMENTED |
-
----
-
-## Remaining doc risks
-
-1. Some historical dogfood notes still mention host-network-as-default — historical only.
-2. Policy outcome persistence on scan UI detail pages still thin.
-3. Do not claim E2E forge behavior until RD-017 closes.
-4. Do not advertise sandboxing stronger than SECURITY_MODEL.md.
-
----
-
-## Phase acceptance
-
-| Phase | Status |
-|-------|--------|
-| Phase 1 RD-001–003, RD-029 | Pass |
-| Phase 2 RD-004–006, RD-011–012 + **006A/012A closure** | Pass (unit/integration); E2E pending |
-| Phase 3 RD-007–010 | Pass at stated proof levels (see above) |
+- Do not claim SAFE/SECURE/SECURITY PASSED
+- Do not claim Class-B sandboxing
+- Do not claim webhook E2E without forge-originated delivery

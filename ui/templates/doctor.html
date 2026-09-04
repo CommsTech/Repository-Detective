@@ -1,0 +1,45 @@
+{{define "doctor.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>{{template "head" .}}</head>
+<body class="rd-app">
+{{template "nav" .}}
+<div class="rd-card">
+  <div class="rd-card-head">
+    <h2>Doctor / Diagnostics</h2>
+    <span class="rd-chip">RD-014</span>
+  </div>
+  <p class="rd-muted">System readiness checks — not repository security. Same engine as <code>repository-detective doctor</code> and onboarding Verify.</p>
+  <p>
+    <button type="button" class="rd-btn" id="rd-doctor-run">Run doctor</button>
+    <a class="rd-btn rd-btn-ghost" href="/api/v1/doctor" target="_blank" rel="noopener">Open JSON</a>
+    <a class="rd-btn rd-btn-ghost" href="/api/v1/doctor/bundle" target="_blank" rel="noopener">Support bundle</a>
+  </p>
+  <pre id="rd-doctor-out" class="rd-code-block" style="white-space:pre-wrap;max-height:70vh;overflow:auto">Click Run doctor.</pre>
+</div>
+{{template "foot" .}}
+<script>
+(function () {
+  var out = document.getElementById('rd-doctor-out');
+  var btn = document.getElementById('rd-doctor-run');
+  if (!btn) return;
+  btn.addEventListener('click', function () {
+    out.textContent = 'Running…';
+    fetch('/api/v1/doctor', { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (x) {
+        var j = x.j;
+        var lines = ['Overall: ' + (j.overall || ''), 'Summary: ' + (j.summary || ''), ''];
+        (j.checks || []).forEach(function (c) {
+          lines.push('[' + c.state + '] ' + c.id + ' — ' + c.summary);
+          if (c.detail) lines.push('    ' + c.detail);
+        });
+        lines.push('', 'These results describe readiness, not whether repositories are safe or secure.');
+        out.textContent = lines.join('\n');
+      })
+      .catch(function (e) { out.textContent = String(e); });
+  });
+})();
+</script>
+</body></html>
+{{end}}

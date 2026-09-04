@@ -155,7 +155,7 @@ button.primary:hover { background: #1d4ed8; }
 }
 .repo-meta { color: var(--rd-grey); font-size: 0.85rem; }
 
-#envExport {
+#envExport, .env-box {
   background: var(--rd-navy);
   color: #e2e8f0;
   padding: 1rem;
@@ -163,5 +163,24 @@ button.primary:hover { background: #1d4ed8; }
   font-family: "JetBrains Mono", ui-monospace, monospace;
   font-size: 0.82rem;
   overflow-x: auto;
-  white-space: pre;
+  white-space: pre-wrap;
+}
+
+.rd-stage-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+.rd-stage-nav span {
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: var(--rd-grey);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.rd-stage-nav span.active {
+  background: var(--rd-navy);
+  color: #fff;
 }

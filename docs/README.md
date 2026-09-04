@@ -40,7 +40,9 @@ Scripts: `./scripts/release-test.sh` · `./scripts/operator-smoke-test.sh` · `g
 | Document | Description |
 |----------|-------------|
 | [SETUP.md](SETUP.md) | Installation and first run |
-| [ONBOARDING.md](ONBOARDING.md) | Repository onboarding workflow |
+| [ONBOARDING.md](ONBOARDING.md) | Connect→Select→Protect→Verify→Ready wizard (RD-013) |
+| [DOCTOR.md](DOCTOR.md) | Doctor CLI/API/UI diagnostics (RD-014) |
+| [RD-008B_CLASS_B_EXECUTION.md](RD-008B_CLASS_B_EXECUTION.md) | Class-B remediation execution decision |
 | [OPERATOR_READINESS.md](OPERATOR_READINESS.md) | Pre-deployment checklist (binaries, config, backups) |
 | [DOGFOODING.md](DOGFOODING.md) | **Track A** — scan Repository Detective itself first |
 | [DOGFOOD_REPORT_TEMPLATE.md](DOGFOOD_REPORT_TEMPLATE.md) | Report template after first self-scan |

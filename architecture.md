@@ -7,6 +7,12 @@
 - Auth: runtime default `api_key_only`; recommended new install `auth_mode=local` ([docs/AUTH_LOCAL.md](docs/AUTH_LOCAL.md)).
 - PR policy summaries: idempotent upsert via `<!-- repository-detective-policy-summary -->` ([docs/PR_SUMMARY_IDEMPOTENCY.md](docs/PR_SUMMARY_IDEMPOTENCY.md)).
 
+## Onboarding + doctor (Phase 4)
+
+- Wizard: Connect→Select→Protect→Verify→Ready (`/onboard/`, `handlers/onboarding*.go`, `web/static`).
+- Shared diagnostics: `doctor` package; CLI `repository-detective doctor`; API `/api/v1/doctor`; UI `/ui/doctor`.
+- Class-B gate: [docs/RD-008B_CLASS_B_EXECUTION.md](docs/RD-008B_CLASS_B_EXECUTION.md) (Option C).
+
 ## Scan profiles
 
 Operator-facing profiles are **Light**, **Standard**, **Deep**, and **Custom** (`store/profiles.go`). Legacy IDs (`beta_standard`, `fast`, `maintainer_deep`, …) normalize to these. UI pickers show Label — Summary; display helpers use `profileLabel` / `profileDesc`.

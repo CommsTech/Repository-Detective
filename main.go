@@ -20,7 +20,6 @@ import (
 	"git.commsnet.org/commstech/repository-detective/api"
 	"git.commsnet.org/commstech/repository-detective/containers"
 	"git.commsnet.org/commstech/repository-detective/docsdata"
-	"git.commsnet.org/commstech/repository-detective/openclaw"
 	"git.commsnet.org/commstech/repository-detective/forge"
 	"git.commsnet.org/commstech/repository-detective/gitea"
 	"git.commsnet.org/commstech/repository-detective/github"
@@ -34,6 +33,7 @@ import (
 	"git.commsnet.org/commstech/repository-detective/internal/security"
 	"git.commsnet.org/commstech/repository-detective/issues"
 	"git.commsnet.org/commstech/repository-detective/limiter"
+	"git.commsnet.org/commstech/repository-detective/openclaw"
 	"git.commsnet.org/commstech/repository-detective/operator"
 	"git.commsnet.org/commstech/repository-detective/orch"
 	"git.commsnet.org/commstech/repository-detective/preinstall"
@@ -67,7 +67,7 @@ var (
 	webhookHandler      *handlers.WebhookHandler
 	onboardingHandler   *handlers.OnboardingHandler
 	analysisLimiter     *limiter.ConcurrencyLimiter
-	rdStore         store.QueryStore
+	rdStore             store.QueryStore
 	scanRecorder        *store.Recorder
 	controlPlaneHandler *api.Handler
 	preinstallHandler   *api.PreinstallHandler
@@ -86,210 +86,210 @@ var (
 
 // Config holds the plugin configuration
 type Config struct {
-	Port                                    string                               `mapstructure:"port"`
-	APIKey                                  string                               `mapstructure:"api_key"` // API key for manual analysis endpoints
-	GiteaURL                                string                               `mapstructure:"gitea_url"`
-	GiteaToken                              string                               `mapstructure:"gitea_token"`
-	GitHubURL                               string                               `mapstructure:"github_url"`
-	GitHubToken                             string                               `mapstructure:"github_token"`
-	WebhookSecret                           string                               `mapstructure:"webhook_secret"`
-	AllowInsecureWebhooks                   bool                                 `mapstructure:"allow_insecure_webhooks"`
-	AIProvider                              string                               `mapstructure:"ai_provider"`
-	AIBaseURL                               string                               `mapstructure:"ai_base_url"`
-	AIAPIKey                                string                               `mapstructure:"ai_api_key"`
-	AIModel                                 string                               `mapstructure:"ai_model"`
-	AIInsecureSkipTLSVerify                 bool                                 `mapstructure:"ai_insecure_skip_tls_verify"`
-	OpenWebUIURL                            string                               `mapstructure:"openwebui_url"`
-	OpenWebUIToken                          string                               `mapstructure:"openwebui_token"`
-	OpenWebUIModel                          string                               `mapstructure:"openwebui_model"`
-	LogLevel                                string                               `mapstructure:"log_level"`
-	AnalysisDepth                           int                                  `mapstructure:"analysis_depth"`
-	MaxFileSize                             int64                                `mapstructure:"max_file_size"`
-	EnableSecurity                          bool                                 `mapstructure:"enable_security"`
-	EnableQuality                           bool                                 `mapstructure:"enable_quality"`
-	EnableLLMAuditors                       bool                                 `mapstructure:"enable_llm_auditors"`
-	EnableTrivy                             bool                                 `mapstructure:"enable_trivy"`
-	EnableGrype                             bool                                 `mapstructure:"enable_grype"`
-	EnableGitleaks                          bool                                 `mapstructure:"enable_gitleaks"`
-	EnableSemgrep                           bool                                 `mapstructure:"enable_semgrep"`
-	EnableGovulncheck                       bool                                 `mapstructure:"enable_govulncheck"`
-	EnableGosec                             bool                                 `mapstructure:"enable_gosec"`
-	EnableStaticcheck                       bool                                 `mapstructure:"enable_staticcheck"`
-	EnableHadolint                          bool                                 `mapstructure:"enable_hadolint"`
-	EnableCheckov                           bool                                 `mapstructure:"enable_checkov"`
-	EnableLinters                           bool                                 `mapstructure:"enable_linters"`
-	ScanProfile                             string                               `mapstructure:"scan_profile"`
-	GitleaksConfig                          string                               `mapstructure:"gitleaks_config"`
-	GitleaksTimeoutSeconds                  int                                  `mapstructure:"gitleaks_timeout_seconds"`
-	SecretScanGitHistoryEnabled             bool                                 `mapstructure:"secret_scan_git_history_enabled"`
-	SecretScanHistoryMaxCommits             int                                  `mapstructure:"secret_scan_history_max_commits"`
-	SecretScanRecentCommitsMax              int                                  `mapstructure:"secret_scan_recent_commits_max"`
-	SecretScanHistoryTimeoutSeconds         int                                  `mapstructure:"secret_scan_history_timeout_seconds"`
-	SecretScanHistoryReportOnlyForPreinstall bool                                `mapstructure:"secret_scan_history_report_only_for_preinstall"`
-	SecretScanRedact                        bool                                 `mapstructure:"secret_scan_redact"`
-	SemgrepConfig                           string                               `mapstructure:"semgrep_config"`
-	SemgrepTimeoutSeconds                   int                                  `mapstructure:"semgrep_timeout_seconds"`
-	SemgrepMaxFindings                      int                                  `mapstructure:"semgrep_max_findings"`
-	SemgrepSeverityThreshold                string                               `mapstructure:"semgrep_severity_threshold"`
-	GovulncheckTimeoutSeconds               int                                  `mapstructure:"govulncheck_timeout_seconds"`
-	GosecTimeoutSeconds                     int                                  `mapstructure:"gosec_timeout_seconds"`
-	StaticcheckTimeoutSeconds               int                                  `mapstructure:"staticcheck_timeout_seconds"`
-	GoScannerMaxFindings                    int                                  `mapstructure:"go_scanner_max_findings"`
-	HadolintTimeoutSeconds                  int                                  `mapstructure:"hadolint_timeout_seconds"`
-	CheckovTimeoutSeconds                   int                                  `mapstructure:"checkov_timeout_seconds"`
-	IACScannerMaxFindings                   int                                  `mapstructure:"iac_scanner_max_findings"`
-	ScannerTimeoutSeconds                   int                                  `mapstructure:"scanner_timeout_seconds"`
-	MinIssueConfidence                      float64                              `mapstructure:"min_issue_confidence"`
-	AutoCreateIssues                        bool                                 `mapstructure:"auto_create_issues"`
-	MaxIssuesPerRun                         int                                  `mapstructure:"max_issues_per_run"`
-	SkipLowSeverity                         bool                                 `mapstructure:"skip_low_severity"`
-	GroupSimilarIssues                      bool                                 `mapstructure:"group_similar_issues"`
-	SkipPatterns                            []string                             `mapstructure:"-"`
-	LanguageMapping                         map[string]string                    `mapstructure:"-"`
-	RepositoryIncludePatterns               []string                             `mapstructure:"-"`
-	RepositoryExcludePatterns               []string                             `mapstructure:"-"`
-	PublicURL                               string                               `mapstructure:"public_url"`
-	ListenHost                              string                               `mapstructure:"listen_host"`
-	StartupCheckTimeout                     int                                  `mapstructure:"startup_check_timeout"`
-	MaxConcurrentAnalyses                   int                                  `mapstructure:"max_concurrent_analyses"`
-	AnalysisTimeout                         int                                  `mapstructure:"analysis_timeout"`
-	ScanCooldownSeconds                     int                                  `mapstructure:"scan_cooldown_seconds"`
-	RateLimitPerMinute                      int                                  `mapstructure:"rate_limit_per_minute"`
-	WorkspaceMode                           string                               `mapstructure:"workspace_mode"`
-	WorkspaceMaxSizeMB                      int                                  `mapstructure:"workspace_max_size_mb"`
-	WorkspaceMaxFiles                       int                                  `mapstructure:"workspace_max_files"`
-	WorkspaceArchiveTimeoutSeconds          int                                  `mapstructure:"workspace_archive_timeout_seconds"`
-	EnableGiteaStatus                       bool                                 `mapstructure:"enable_gitea_status"`
-	GiteaStatusContext                      string                               `mapstructure:"gitea_status_context"`
-	GiteaStatusFailOn                       string                               `mapstructure:"gitea_status_fail_on"`
-	GiteaStatusWarnOn                       string                               `mapstructure:"gitea_status_warn_on"`
-	GiteaStatusIncludeScannerFailures       bool                                 `mapstructure:"gitea_status_include_scanner_failures"`
-	SkipStartupChecks                       bool                                 `mapstructure:"skip_startup_checks"`
-	DatabaseEnabled                         bool                                 `mapstructure:"database_enabled"`
-	DatabaseDriver                          string                               `mapstructure:"database_driver"`
-	DatabasePath                            string                               `mapstructure:"database_path"`
-	DatabaseDSN                             string                               `mapstructure:"database_dsn"`
-	UIEnabled                               bool                                 `mapstructure:"ui_enabled"`
-	UIBasePath                              string                               `mapstructure:"ui_base_path"`
-	SchedulerEnabled                        bool                                 `mapstructure:"scheduler_enabled"`
-	SchedulerPollIntervalSeconds            int                                  `mapstructure:"scheduler_poll_interval_seconds"`
-	SchedulerMaxConcurrentScans             int                                  `mapstructure:"scheduler_max_concurrent_scans"`
-	PreinstallAuditEnabled                  bool                                 `mapstructure:"preinstall_audit_enabled"`
-	PreinstallAllowPrivateNetworks          bool                                 `mapstructure:"preinstall_allow_private_networks"`
-	PreinstallMaxRepoSizeMB                 int                                  `mapstructure:"preinstall_max_repo_size_mb"`
-	PreinstallMaxFiles                      int                                  `mapstructure:"preinstall_max_files"`
-	PreinstallTimeoutSeconds                int                                  `mapstructure:"preinstall_timeout_seconds"`
-	PreinstallMaxFindings                   int                                  `mapstructure:"preinstall_max_findings"`
-	PreinstallAllowGitClone                 bool                                 `mapstructure:"preinstall_allow_git_clone"`
-	PreinstallReportIncludeProjectLink      bool                                 `mapstructure:"preinstall_report_include_project_link"`
-	PreinstallSandboxEnabled                bool                                 `mapstructure:"preinstall_sandbox_enabled"`
-	PreinstallSandboxRetainOnFailure        bool                                 `mapstructure:"preinstall_sandbox_retain_on_failure"`
-	PreinstallSandboxMaxFileSizeMB          int                                  `mapstructure:"preinstall_sandbox_max_file_size_mb"`
-	PreinstallSandboxAllowSubmodules        bool                                 `mapstructure:"preinstall_sandbox_allow_submodules"`
-	PreinstallSandboxNetworkMode            string                               `mapstructure:"preinstall_sandbox_network_mode"`
-	PreinstallSandboxReadonlyWorkspace      bool                                 `mapstructure:"preinstall_sandbox_readonly_workspace"`
-	RepositoryDetectiveProjectURL           string                               `mapstructure:"repository_detective_project_url"`
-	EnableHealthChecks                      bool                                 `mapstructure:"enable_health_checks"`
-	EnableTechDebtChecks                    bool                                 `mapstructure:"enable_tech_debt_checks"`
-	EnableReliabilityChecks                 bool                                 `mapstructure:"enable_reliability_checks"`
-	EnableMaintainabilityChecks             bool                                 `mapstructure:"enable_maintainability_checks"`
-	EnableTestGapChecks                     bool                                 `mapstructure:"enable_test_gap_checks"`
-	EnablePerformanceChecks                 bool                                 `mapstructure:"enable_performance_checks"`
-	EnableAIRiskChecks                      bool                                 `mapstructure:"enable_ai_risk_checks"`
-	HealthMaxFindings                       int                                  `mapstructure:"health_max_findings"`
-	HealthLargeFileLines                    int                                  `mapstructure:"health_large_file_lines"`
-	HealthLargeFunctionLines                int                                  `mapstructure:"health_large_function_lines"`
-	HealthMaxNestingDepth                   int                                  `mapstructure:"health_max_nesting_depth"`
-	HealthMaxFunctionParams                 int                                  `mapstructure:"health_max_function_params"`
-	EnableCodeGraph                         bool                                 `mapstructure:"enable_code_graph"`
-	GraphMaxNodes                           int                                  `mapstructure:"graph_max_nodes"`
-	GraphMaxEdges                           int                                  `mapstructure:"graph_max_edges"`
-	GraphTimeoutSeconds                     int                                  `mapstructure:"graph_timeout_seconds"`
-	GraphIncludeFunctions                   bool                                 `mapstructure:"graph_include_functions"`
-	GraphIncludeFindings                    bool                                 `mapstructure:"graph_include_findings"`
-	RunnerDelegationEnabled                 bool                                 `mapstructure:"runner_delegation_enabled"`
-	RunnerMode                              string                               `mapstructure:"runner_mode"`
-	RunnerSharedSecret                      string                               `mapstructure:"runner_shared_secret"`
-	RunnerJobTimeoutSeconds                 int                                  `mapstructure:"runner_job_timeout_seconds"`
-	RunnerMaxConcurrentJobs                 int                                  `mapstructure:"runner_max_concurrent_jobs"`
-	RunnerResultMaxSizeMB                   int                                  `mapstructure:"runner_result_max_size_mb"`
-	RunnerArtifactRetentionDays             int                                  `mapstructure:"runner_artifact_retention_days"`
-	RunnerCallbackBaseURL                   string                               `mapstructure:"runner_callback_base_url"`
-	RunnerRequireHMAC                       bool                                 `mapstructure:"runner_require_hmac"`
-	RunnerNonceTTLSeconds                   int                                  `mapstructure:"runner_nonce_ttl_seconds"`
-	RunnerAllowedJobTypes                   []string                             `mapstructure:"runner_allowed_job_types"`
-	GiteaActionsTestBackendEnabled          bool                                 `mapstructure:"gitea_actions_test_backend_enabled"`
-	GiteaActionsWorkflowName                string                               `mapstructure:"gitea_actions_workflow_name"`
-	GiteaActionsTriggerMode                 string                               `mapstructure:"gitea_actions_trigger_mode"`
-	GiteaActionsTimeoutSeconds              int                                  `mapstructure:"gitea_actions_timeout_seconds"`
-	GiteaActionsRequireOperatorApproval     bool                                 `mapstructure:"gitea_actions_require_operator_approval"`
-	NotificationsEnabled                    bool                                 `mapstructure:"notifications_enabled"`
-	NotificationMinSeverity                 string                               `mapstructure:"notification_min_severity"`
-	NotificationCooldownSeconds             int                                  `mapstructure:"notification_cooldown_seconds"`
-	TelegramEnabled                         bool                                 `mapstructure:"telegram_enabled"`
-	TelegramBotToken                        string                               `mapstructure:"telegram_bot_token"`
-	TelegramChatID                          string                               `mapstructure:"telegram_chat_id"`
-	SlackEnabled                            bool                                 `mapstructure:"slack_enabled"`
-	SlackWebhookURL                         string                               `mapstructure:"slack_webhook_url"`
-	DiscordEnabled                          bool                                 `mapstructure:"discord_enabled"`
-	DiscordWebhookURL                       string                               `mapstructure:"discord_webhook_url"`
-	WebhookNotificationsEnabled             bool                                 `mapstructure:"webhook_notifications_enabled"`
-	WebhookNotificationURL                  string                               `mapstructure:"webhook_notification_url"`
-	WebhookNotificationSecret               string                               `mapstructure:"webhook_notification_secret"`
-	RemediationPlannerEnabled               bool                                 `mapstructure:"remediation_planner_enabled"`
-	RemediationMinSeverity                  string                               `mapstructure:"remediation_min_severity"`
-	RemediationMinConfidence                float64                              `mapstructure:"remediation_min_confidence"`
-	RemediationUseAI                        bool                                 `mapstructure:"remediation_use_ai"`
-	RemediationCommentOnIssue               bool                                 `mapstructure:"remediation_comment_on_issue"`
-	RemediationPREnabled                    bool                                 `mapstructure:"remediation_pr_enabled"`
-	RemediationPRBranchPrefix               string                               `mapstructure:"remediation_pr_branch_prefix"`
-	RemediationPRRequireApproval            bool                                 `mapstructure:"remediation_pr_require_approval"`
-	RemediationPRMaxFilesChanged            int                                  `mapstructure:"remediation_pr_max_files_changed"`
-	RemediationPRMaxDiffLines               int                                  `mapstructure:"remediation_pr_max_diff_lines"`
-	RemediationPRValidationTimeoutSeconds   int                                  `mapstructure:"remediation_pr_validation_timeout_seconds"`
-	RemediationPRRequireTests               bool                                 `mapstructure:"remediation_pr_require_tests"`
-	RemediationPRUseRunnerVerification      bool                                 `mapstructure:"remediation_pr_use_runner_verification"`
-	RemediationPRBlockHighCritical          bool                                 `mapstructure:"remediation_pr_block_high_critical_without_manual_override"`
-	RemediationPRAllowedSeverities          []string                             `mapstructure:"remediation_pr_allowed_severities"`
-	EvidenceClosureEnabled                  bool                                 `mapstructure:"evidence_closure_enabled"`
-	EvidenceClosureCloseIssues              bool                                 `mapstructure:"evidence_closure_close_issues"`
-	EvidenceClosureComment                  bool                                 `mapstructure:"evidence_closure_comment"`
-	EvidenceClosureRequireScannerSuccess    bool                                 `mapstructure:"evidence_closure_require_scanner_success"`
-	IssueReconciliationEnabled              bool                                 `mapstructure:"issue_reconciliation_enabled"`
-	IssueReconciliationComment              bool                                 `mapstructure:"issue_reconciliation_comment"`
-	IssueReconciliationCloseVerified        bool                                 `mapstructure:"issue_reconciliation_close_verified"`
-	IssueReconciliationMaxCommentsPerIssue  int                                  `mapstructure:"issue_reconciliation_max_comments_per_issue"`
-	IssueReconciliationCloseDuplicates      bool                                 `mapstructure:"issue_reconciliation_close_duplicates"`
-	DogfoodBacklogControlEnabled            bool                                 `mapstructure:"dogfood_backlog_control_enabled"`
-	DogfoodBacklogMaxOpenIssues             int                                  `mapstructure:"dogfood_backlog_max_open_issues"`
-	DogfoodBacklogAllowNewIssueSeverity     []string                             `mapstructure:"dogfood_backlog_allow_new_issue_severity"`
-	DogfoodBacklogAllowNewIssueConfidence   string                               `mapstructure:"dogfood_backlog_allow_new_issue_confidence"`
-	DogfoodBacklogUpdateExistingOnly        bool                                 `mapstructure:"dogfood_backlog_update_existing_only"`
-	AIStartupTestEnabled                    bool                                 `mapstructure:"ai_startup_test_enabled"`
-	AIConnectionTestMode                    string                               `mapstructure:"ai_connection_test_mode"`
-	AIConnectionTestCacheMinutes            int                                  `mapstructure:"ai_connection_test_cache_minutes"`
-	AIMaxTokensPerScan                      int                                  `mapstructure:"ai_max_tokens_per_scan"`
-	CalibrationEnabled                      bool                                 `mapstructure:"calibration_enabled"`
-	CalibrationIntervalHours                int                                  `mapstructure:"calibration_interval_hours"`
-	CalibrationMinFindingsForRecommendation int                                  `mapstructure:"calibration_min_findings_for_recommendation"`
-	CalibrationAutoApply                    bool                                 `mapstructure:"calibration_auto_apply"`
-	LLMSanityGateEnabled                    bool                                 `mapstructure:"llm_sanity_gate_enabled"`
-	LLMSanityGateMaxTokensPerScan           int                                  `mapstructure:"llm_sanity_gate_max_tokens_per_scan"`
-	LLMSanityGateApplyActions               bool                                 `mapstructure:"llm_sanity_gate_apply_actions"`
-	LLMSanityGateLowMediumOnly              bool                                 `mapstructure:"llm_sanity_gate_low_medium_only"`
-	Reporting                               profile.ReportingConfig              `mapstructure:"reporting"`
-	FalsePositiveReduction                  profile.FalsePositiveReductionConfig `mapstructure:"false_positive_reduction"`
-	ContainerScan                           containers.Config                    `mapstructure:",squash"`
-	OpenClawAIReview                        openclaw.Config                      `mapstructure:",squash"`
-	AuthMode                                string                               `mapstructure:"auth_mode"`
-	SessionCookieName                       string                               `mapstructure:"session_cookie_name"`
-	SessionSecret                           string                               `mapstructure:"session_secret"`
-	SessionTTLHours                         int                                  `mapstructure:"session_ttl_hours"`
-	CSRFEnabled                             bool                                 `mapstructure:"csrf_enabled"`
-	LocalAdminBootstrapEnabled              bool                                 `mapstructure:"local_admin_bootstrap_enabled"`
-	RejectQueryStringAPIKey                 bool                                 `mapstructure:"reject_query_string_api_key"`
-	WarnQueryStringAPIKey                   bool                                 `mapstructure:"warn_query_string_api_key"`
-	PrivacyMode                             string                               `mapstructure:"privacy_mode"`
+	Port                                     string                               `mapstructure:"port"`
+	APIKey                                   string                               `mapstructure:"api_key"` // API key for manual analysis endpoints
+	GiteaURL                                 string                               `mapstructure:"gitea_url"`
+	GiteaToken                               string                               `mapstructure:"gitea_token"`
+	GitHubURL                                string                               `mapstructure:"github_url"`
+	GitHubToken                              string                               `mapstructure:"github_token"`
+	WebhookSecret                            string                               `mapstructure:"webhook_secret"`
+	AllowInsecureWebhooks                    bool                                 `mapstructure:"allow_insecure_webhooks"`
+	AIProvider                               string                               `mapstructure:"ai_provider"`
+	AIBaseURL                                string                               `mapstructure:"ai_base_url"`
+	AIAPIKey                                 string                               `mapstructure:"ai_api_key"`
+	AIModel                                  string                               `mapstructure:"ai_model"`
+	AIInsecureSkipTLSVerify                  bool                                 `mapstructure:"ai_insecure_skip_tls_verify"`
+	OpenWebUIURL                             string                               `mapstructure:"openwebui_url"`
+	OpenWebUIToken                           string                               `mapstructure:"openwebui_token"`
+	OpenWebUIModel                           string                               `mapstructure:"openwebui_model"`
+	LogLevel                                 string                               `mapstructure:"log_level"`
+	AnalysisDepth                            int                                  `mapstructure:"analysis_depth"`
+	MaxFileSize                              int64                                `mapstructure:"max_file_size"`
+	EnableSecurity                           bool                                 `mapstructure:"enable_security"`
+	EnableQuality                            bool                                 `mapstructure:"enable_quality"`
+	EnableLLMAuditors                        bool                                 `mapstructure:"enable_llm_auditors"`
+	EnableTrivy                              bool                                 `mapstructure:"enable_trivy"`
+	EnableGrype                              bool                                 `mapstructure:"enable_grype"`
+	EnableGitleaks                           bool                                 `mapstructure:"enable_gitleaks"`
+	EnableSemgrep                            bool                                 `mapstructure:"enable_semgrep"`
+	EnableGovulncheck                        bool                                 `mapstructure:"enable_govulncheck"`
+	EnableGosec                              bool                                 `mapstructure:"enable_gosec"`
+	EnableStaticcheck                        bool                                 `mapstructure:"enable_staticcheck"`
+	EnableHadolint                           bool                                 `mapstructure:"enable_hadolint"`
+	EnableCheckov                            bool                                 `mapstructure:"enable_checkov"`
+	EnableLinters                            bool                                 `mapstructure:"enable_linters"`
+	ScanProfile                              string                               `mapstructure:"scan_profile"`
+	GitleaksConfig                           string                               `mapstructure:"gitleaks_config"`
+	GitleaksTimeoutSeconds                   int                                  `mapstructure:"gitleaks_timeout_seconds"`
+	SecretScanGitHistoryEnabled              bool                                 `mapstructure:"secret_scan_git_history_enabled"`
+	SecretScanHistoryMaxCommits              int                                  `mapstructure:"secret_scan_history_max_commits"`
+	SecretScanRecentCommitsMax               int                                  `mapstructure:"secret_scan_recent_commits_max"`
+	SecretScanHistoryTimeoutSeconds          int                                  `mapstructure:"secret_scan_history_timeout_seconds"`
+	SecretScanHistoryReportOnlyForPreinstall bool                                 `mapstructure:"secret_scan_history_report_only_for_preinstall"`
+	SecretScanRedact                         bool                                 `mapstructure:"secret_scan_redact"`
+	SemgrepConfig                            string                               `mapstructure:"semgrep_config"`
+	SemgrepTimeoutSeconds                    int                                  `mapstructure:"semgrep_timeout_seconds"`
+	SemgrepMaxFindings                       int                                  `mapstructure:"semgrep_max_findings"`
+	SemgrepSeverityThreshold                 string                               `mapstructure:"semgrep_severity_threshold"`
+	GovulncheckTimeoutSeconds                int                                  `mapstructure:"govulncheck_timeout_seconds"`
+	GosecTimeoutSeconds                      int                                  `mapstructure:"gosec_timeout_seconds"`
+	StaticcheckTimeoutSeconds                int                                  `mapstructure:"staticcheck_timeout_seconds"`
+	GoScannerMaxFindings                     int                                  `mapstructure:"go_scanner_max_findings"`
+	HadolintTimeoutSeconds                   int                                  `mapstructure:"hadolint_timeout_seconds"`
+	CheckovTimeoutSeconds                    int                                  `mapstructure:"checkov_timeout_seconds"`
+	IACScannerMaxFindings                    int                                  `mapstructure:"iac_scanner_max_findings"`
+	ScannerTimeoutSeconds                    int                                  `mapstructure:"scanner_timeout_seconds"`
+	MinIssueConfidence                       float64                              `mapstructure:"min_issue_confidence"`
+	AutoCreateIssues                         bool                                 `mapstructure:"auto_create_issues"`
+	MaxIssuesPerRun                          int                                  `mapstructure:"max_issues_per_run"`
+	SkipLowSeverity                          bool                                 `mapstructure:"skip_low_severity"`
+	GroupSimilarIssues                       bool                                 `mapstructure:"group_similar_issues"`
+	SkipPatterns                             []string                             `mapstructure:"-"`
+	LanguageMapping                          map[string]string                    `mapstructure:"-"`
+	RepositoryIncludePatterns                []string                             `mapstructure:"-"`
+	RepositoryExcludePatterns                []string                             `mapstructure:"-"`
+	PublicURL                                string                               `mapstructure:"public_url"`
+	ListenHost                               string                               `mapstructure:"listen_host"`
+	StartupCheckTimeout                      int                                  `mapstructure:"startup_check_timeout"`
+	MaxConcurrentAnalyses                    int                                  `mapstructure:"max_concurrent_analyses"`
+	AnalysisTimeout                          int                                  `mapstructure:"analysis_timeout"`
+	ScanCooldownSeconds                      int                                  `mapstructure:"scan_cooldown_seconds"`
+	RateLimitPerMinute                       int                                  `mapstructure:"rate_limit_per_minute"`
+	WorkspaceMode                            string                               `mapstructure:"workspace_mode"`
+	WorkspaceMaxSizeMB                       int                                  `mapstructure:"workspace_max_size_mb"`
+	WorkspaceMaxFiles                        int                                  `mapstructure:"workspace_max_files"`
+	WorkspaceArchiveTimeoutSeconds           int                                  `mapstructure:"workspace_archive_timeout_seconds"`
+	EnableGiteaStatus                        bool                                 `mapstructure:"enable_gitea_status"`
+	GiteaStatusContext                       string                               `mapstructure:"gitea_status_context"`
+	GiteaStatusFailOn                        string                               `mapstructure:"gitea_status_fail_on"`
+	GiteaStatusWarnOn                        string                               `mapstructure:"gitea_status_warn_on"`
+	GiteaStatusIncludeScannerFailures        bool                                 `mapstructure:"gitea_status_include_scanner_failures"`
+	SkipStartupChecks                        bool                                 `mapstructure:"skip_startup_checks"`
+	DatabaseEnabled                          bool                                 `mapstructure:"database_enabled"`
+	DatabaseDriver                           string                               `mapstructure:"database_driver"`
+	DatabasePath                             string                               `mapstructure:"database_path"`
+	DatabaseDSN                              string                               `mapstructure:"database_dsn"`
+	UIEnabled                                bool                                 `mapstructure:"ui_enabled"`
+	UIBasePath                               string                               `mapstructure:"ui_base_path"`
+	SchedulerEnabled                         bool                                 `mapstructure:"scheduler_enabled"`
+	SchedulerPollIntervalSeconds             int                                  `mapstructure:"scheduler_poll_interval_seconds"`
+	SchedulerMaxConcurrentScans              int                                  `mapstructure:"scheduler_max_concurrent_scans"`
+	PreinstallAuditEnabled                   bool                                 `mapstructure:"preinstall_audit_enabled"`
+	PreinstallAllowPrivateNetworks           bool                                 `mapstructure:"preinstall_allow_private_networks"`
+	PreinstallMaxRepoSizeMB                  int                                  `mapstructure:"preinstall_max_repo_size_mb"`
+	PreinstallMaxFiles                       int                                  `mapstructure:"preinstall_max_files"`
+	PreinstallTimeoutSeconds                 int                                  `mapstructure:"preinstall_timeout_seconds"`
+	PreinstallMaxFindings                    int                                  `mapstructure:"preinstall_max_findings"`
+	PreinstallAllowGitClone                  bool                                 `mapstructure:"preinstall_allow_git_clone"`
+	PreinstallReportIncludeProjectLink       bool                                 `mapstructure:"preinstall_report_include_project_link"`
+	PreinstallSandboxEnabled                 bool                                 `mapstructure:"preinstall_sandbox_enabled"`
+	PreinstallSandboxRetainOnFailure         bool                                 `mapstructure:"preinstall_sandbox_retain_on_failure"`
+	PreinstallSandboxMaxFileSizeMB           int                                  `mapstructure:"preinstall_sandbox_max_file_size_mb"`
+	PreinstallSandboxAllowSubmodules         bool                                 `mapstructure:"preinstall_sandbox_allow_submodules"`
+	PreinstallSandboxNetworkMode             string                               `mapstructure:"preinstall_sandbox_network_mode"`
+	PreinstallSandboxReadonlyWorkspace       bool                                 `mapstructure:"preinstall_sandbox_readonly_workspace"`
+	RepositoryDetectiveProjectURL            string                               `mapstructure:"repository_detective_project_url"`
+	EnableHealthChecks                       bool                                 `mapstructure:"enable_health_checks"`
+	EnableTechDebtChecks                     bool                                 `mapstructure:"enable_tech_debt_checks"`
+	EnableReliabilityChecks                  bool                                 `mapstructure:"enable_reliability_checks"`
+	EnableMaintainabilityChecks              bool                                 `mapstructure:"enable_maintainability_checks"`
+	EnableTestGapChecks                      bool                                 `mapstructure:"enable_test_gap_checks"`
+	EnablePerformanceChecks                  bool                                 `mapstructure:"enable_performance_checks"`
+	EnableAIRiskChecks                       bool                                 `mapstructure:"enable_ai_risk_checks"`
+	HealthMaxFindings                        int                                  `mapstructure:"health_max_findings"`
+	HealthLargeFileLines                     int                                  `mapstructure:"health_large_file_lines"`
+	HealthLargeFunctionLines                 int                                  `mapstructure:"health_large_function_lines"`
+	HealthMaxNestingDepth                    int                                  `mapstructure:"health_max_nesting_depth"`
+	HealthMaxFunctionParams                  int                                  `mapstructure:"health_max_function_params"`
+	EnableCodeGraph                          bool                                 `mapstructure:"enable_code_graph"`
+	GraphMaxNodes                            int                                  `mapstructure:"graph_max_nodes"`
+	GraphMaxEdges                            int                                  `mapstructure:"graph_max_edges"`
+	GraphTimeoutSeconds                      int                                  `mapstructure:"graph_timeout_seconds"`
+	GraphIncludeFunctions                    bool                                 `mapstructure:"graph_include_functions"`
+	GraphIncludeFindings                     bool                                 `mapstructure:"graph_include_findings"`
+	RunnerDelegationEnabled                  bool                                 `mapstructure:"runner_delegation_enabled"`
+	RunnerMode                               string                               `mapstructure:"runner_mode"`
+	RunnerSharedSecret                       string                               `mapstructure:"runner_shared_secret"`
+	RunnerJobTimeoutSeconds                  int                                  `mapstructure:"runner_job_timeout_seconds"`
+	RunnerMaxConcurrentJobs                  int                                  `mapstructure:"runner_max_concurrent_jobs"`
+	RunnerResultMaxSizeMB                    int                                  `mapstructure:"runner_result_max_size_mb"`
+	RunnerArtifactRetentionDays              int                                  `mapstructure:"runner_artifact_retention_days"`
+	RunnerCallbackBaseURL                    string                               `mapstructure:"runner_callback_base_url"`
+	RunnerRequireHMAC                        bool                                 `mapstructure:"runner_require_hmac"`
+	RunnerNonceTTLSeconds                    int                                  `mapstructure:"runner_nonce_ttl_seconds"`
+	RunnerAllowedJobTypes                    []string                             `mapstructure:"runner_allowed_job_types"`
+	GiteaActionsTestBackendEnabled           bool                                 `mapstructure:"gitea_actions_test_backend_enabled"`
+	GiteaActionsWorkflowName                 string                               `mapstructure:"gitea_actions_workflow_name"`
+	GiteaActionsTriggerMode                  string                               `mapstructure:"gitea_actions_trigger_mode"`
+	GiteaActionsTimeoutSeconds               int                                  `mapstructure:"gitea_actions_timeout_seconds"`
+	GiteaActionsRequireOperatorApproval      bool                                 `mapstructure:"gitea_actions_require_operator_approval"`
+	NotificationsEnabled                     bool                                 `mapstructure:"notifications_enabled"`
+	NotificationMinSeverity                  string                               `mapstructure:"notification_min_severity"`
+	NotificationCooldownSeconds              int                                  `mapstructure:"notification_cooldown_seconds"`
+	TelegramEnabled                          bool                                 `mapstructure:"telegram_enabled"`
+	TelegramBotToken                         string                               `mapstructure:"telegram_bot_token"`
+	TelegramChatID                           string                               `mapstructure:"telegram_chat_id"`
+	SlackEnabled                             bool                                 `mapstructure:"slack_enabled"`
+	SlackWebhookURL                          string                               `mapstructure:"slack_webhook_url"`
+	DiscordEnabled                           bool                                 `mapstructure:"discord_enabled"`
+	DiscordWebhookURL                        string                               `mapstructure:"discord_webhook_url"`
+	WebhookNotificationsEnabled              bool                                 `mapstructure:"webhook_notifications_enabled"`
+	WebhookNotificationURL                   string                               `mapstructure:"webhook_notification_url"`
+	WebhookNotificationSecret                string                               `mapstructure:"webhook_notification_secret"`
+	RemediationPlannerEnabled                bool                                 `mapstructure:"remediation_planner_enabled"`
+	RemediationMinSeverity                   string                               `mapstructure:"remediation_min_severity"`
+	RemediationMinConfidence                 float64                              `mapstructure:"remediation_min_confidence"`
+	RemediationUseAI                         bool                                 `mapstructure:"remediation_use_ai"`
+	RemediationCommentOnIssue                bool                                 `mapstructure:"remediation_comment_on_issue"`
+	RemediationPREnabled                     bool                                 `mapstructure:"remediation_pr_enabled"`
+	RemediationPRBranchPrefix                string                               `mapstructure:"remediation_pr_branch_prefix"`
+	RemediationPRRequireApproval             bool                                 `mapstructure:"remediation_pr_require_approval"`
+	RemediationPRMaxFilesChanged             int                                  `mapstructure:"remediation_pr_max_files_changed"`
+	RemediationPRMaxDiffLines                int                                  `mapstructure:"remediation_pr_max_diff_lines"`
+	RemediationPRValidationTimeoutSeconds    int                                  `mapstructure:"remediation_pr_validation_timeout_seconds"`
+	RemediationPRRequireTests                bool                                 `mapstructure:"remediation_pr_require_tests"`
+	RemediationPRUseRunnerVerification       bool                                 `mapstructure:"remediation_pr_use_runner_verification"`
+	RemediationPRBlockHighCritical           bool                                 `mapstructure:"remediation_pr_block_high_critical_without_manual_override"`
+	RemediationPRAllowedSeverities           []string                             `mapstructure:"remediation_pr_allowed_severities"`
+	EvidenceClosureEnabled                   bool                                 `mapstructure:"evidence_closure_enabled"`
+	EvidenceClosureCloseIssues               bool                                 `mapstructure:"evidence_closure_close_issues"`
+	EvidenceClosureComment                   bool                                 `mapstructure:"evidence_closure_comment"`
+	EvidenceClosureRequireScannerSuccess     bool                                 `mapstructure:"evidence_closure_require_scanner_success"`
+	IssueReconciliationEnabled               bool                                 `mapstructure:"issue_reconciliation_enabled"`
+	IssueReconciliationComment               bool                                 `mapstructure:"issue_reconciliation_comment"`
+	IssueReconciliationCloseVerified         bool                                 `mapstructure:"issue_reconciliation_close_verified"`
+	IssueReconciliationMaxCommentsPerIssue   int                                  `mapstructure:"issue_reconciliation_max_comments_per_issue"`
+	IssueReconciliationCloseDuplicates       bool                                 `mapstructure:"issue_reconciliation_close_duplicates"`
+	DogfoodBacklogControlEnabled             bool                                 `mapstructure:"dogfood_backlog_control_enabled"`
+	DogfoodBacklogMaxOpenIssues              int                                  `mapstructure:"dogfood_backlog_max_open_issues"`
+	DogfoodBacklogAllowNewIssueSeverity      []string                             `mapstructure:"dogfood_backlog_allow_new_issue_severity"`
+	DogfoodBacklogAllowNewIssueConfidence    string                               `mapstructure:"dogfood_backlog_allow_new_issue_confidence"`
+	DogfoodBacklogUpdateExistingOnly         bool                                 `mapstructure:"dogfood_backlog_update_existing_only"`
+	AIStartupTestEnabled                     bool                                 `mapstructure:"ai_startup_test_enabled"`
+	AIConnectionTestMode                     string                               `mapstructure:"ai_connection_test_mode"`
+	AIConnectionTestCacheMinutes             int                                  `mapstructure:"ai_connection_test_cache_minutes"`
+	AIMaxTokensPerScan                       int                                  `mapstructure:"ai_max_tokens_per_scan"`
+	CalibrationEnabled                       bool                                 `mapstructure:"calibration_enabled"`
+	CalibrationIntervalHours                 int                                  `mapstructure:"calibration_interval_hours"`
+	CalibrationMinFindingsForRecommendation  int                                  `mapstructure:"calibration_min_findings_for_recommendation"`
+	CalibrationAutoApply                     bool                                 `mapstructure:"calibration_auto_apply"`
+	LLMSanityGateEnabled                     bool                                 `mapstructure:"llm_sanity_gate_enabled"`
+	LLMSanityGateMaxTokensPerScan            int                                  `mapstructure:"llm_sanity_gate_max_tokens_per_scan"`
+	LLMSanityGateApplyActions                bool                                 `mapstructure:"llm_sanity_gate_apply_actions"`
+	LLMSanityGateLowMediumOnly               bool                                 `mapstructure:"llm_sanity_gate_low_medium_only"`
+	Reporting                                profile.ReportingConfig              `mapstructure:"reporting"`
+	FalsePositiveReduction                   profile.FalsePositiveReductionConfig `mapstructure:"false_positive_reduction"`
+	ContainerScan                            containers.Config                    `mapstructure:",squash"`
+	OpenClawAIReview                         openclaw.Config                      `mapstructure:",squash"`
+	AuthMode                                 string                               `mapstructure:"auth_mode"`
+	SessionCookieName                        string                               `mapstructure:"session_cookie_name"`
+	SessionSecret                            string                               `mapstructure:"session_secret"`
+	SessionTTLHours                          int                                  `mapstructure:"session_ttl_hours"`
+	CSRFEnabled                              bool                                 `mapstructure:"csrf_enabled"`
+	LocalAdminBootstrapEnabled               bool                                 `mapstructure:"local_admin_bootstrap_enabled"`
+	RejectQueryStringAPIKey                  bool                                 `mapstructure:"reject_query_string_api_key"`
+	WarnQueryStringAPIKey                    bool                                 `mapstructure:"warn_query_string_api_key"`
+	PrivacyMode                              string                               `mapstructure:"privacy_mode"`
 }
 
 func main() {
@@ -299,6 +299,8 @@ func main() {
 	logger.SetFormatter(&logrus.TextFormatter{
 		FullTimestamp: true,
 	})
+
+	maybeRunDoctorCLI()
 
 	logger.Info("Repository Detective starting...")
 
@@ -848,8 +850,8 @@ func setupRoutes(router *gin.Engine) {
 	onboardAPI.Use(requireAPIKeyAuth())
 
 	onboardingHandler = handlers.NewOnboardingHandler(logger, handlers.OnboardingConfig{
-		GiteaURL:  config.GiteaURL,
-		PublicURL: config.PublicURL,
+		GiteaURL:      config.GiteaURL,
+		PublicURL:     config.PublicURL,
 		GiteaScanOrgs: parseCommaSeparatedOrgs(os.Getenv("GITEA_SCAN_ORGS")),
 		AIConfig: ai.Config{
 			Provider: ai.ProviderType(config.AIProvider),
@@ -1083,27 +1085,27 @@ func initializeComponents() error {
 				WarnQueryStringAPIKey:      config.WarnQueryStringAPIKey,
 			})
 			uiHandler.SetPlatformContext(ui.PlatformContext{
-				GiteaURLConfigured:           strings.TrimSpace(config.GiteaURL) != "",
-				GiteaTokenConfigured:         strings.TrimSpace(config.GiteaToken) != "",
-				APIKeyConfigured:             strings.TrimSpace(config.APIKey) != "",
-				WebhookSecretConfigured:      strings.TrimSpace(config.WebhookSecret) != "",
-				RunnerSharedSecretSet:        strings.TrimSpace(config.RunnerSharedSecret) != "",
-				RunnerCallbackBaseURL:        config.RunnerCallbackBaseURL,
-				PublicURL:                    config.PublicURL,
-				RemediationPRRequireApproval: config.RemediationPRRequireApproval,
-				RemediationPRMaxFiles:        config.RemediationPRMaxFilesChanged,
-				RemediationPRMaxDiffLines:    config.RemediationPRMaxDiffLines,
-				RemediationPRBranchPrefix:    config.RemediationPRBranchPrefix,
-				LLMSanityGateEnabled:         config.LLMSanityGateEnabled,
-				BacklogControlEnabled:        config.DogfoodBacklogControlEnabled,
-				MaxIssuesPerScan:             config.Reporting.MaxIssuesPerScan,
-				ScanPolicyMode:               store.DeploymentScanMode(globalSnapshot),
-				NotificationsEnabled:         config.NotificationsEnabled,
-				SchedulerEnabled:             config.SchedulerEnabled,
-				RunnerDelegationEnabled:      config.RunnerDelegationEnabled,
-				RunnerRequireHMAC:            config.RunnerRequireHMAC,
-				RunnerMode:                   config.RunnerMode,
-				RemediationPRRequireTests:    config.RemediationPRRequireTests,
+				GiteaURLConfigured:                 strings.TrimSpace(config.GiteaURL) != "",
+				GiteaTokenConfigured:               strings.TrimSpace(config.GiteaToken) != "",
+				APIKeyConfigured:                   strings.TrimSpace(config.APIKey) != "",
+				WebhookSecretConfigured:            strings.TrimSpace(config.WebhookSecret) != "",
+				RunnerSharedSecretSet:              strings.TrimSpace(config.RunnerSharedSecret) != "",
+				RunnerCallbackBaseURL:              config.RunnerCallbackBaseURL,
+				PublicURL:                          config.PublicURL,
+				RemediationPRRequireApproval:       config.RemediationPRRequireApproval,
+				RemediationPRMaxFiles:              config.RemediationPRMaxFilesChanged,
+				RemediationPRMaxDiffLines:          config.RemediationPRMaxDiffLines,
+				RemediationPRBranchPrefix:          config.RemediationPRBranchPrefix,
+				LLMSanityGateEnabled:               config.LLMSanityGateEnabled,
+				BacklogControlEnabled:              config.DogfoodBacklogControlEnabled,
+				MaxIssuesPerScan:                   config.Reporting.MaxIssuesPerScan,
+				ScanPolicyMode:                     store.DeploymentScanMode(globalSnapshot),
+				NotificationsEnabled:               config.NotificationsEnabled,
+				SchedulerEnabled:                   config.SchedulerEnabled,
+				RunnerDelegationEnabled:            config.RunnerDelegationEnabled,
+				RunnerRequireHMAC:                  config.RunnerRequireHMAC,
+				RunnerMode:                         config.RunnerMode,
+				RemediationPRRequireTests:          config.RemediationPRRequireTests,
 				RemediationPRUseRunnerVerification: config.RemediationPRUseRunnerVerification,
 				GiteaActionsTestBackendEnabled:     config.GiteaActionsTestBackendEnabled,
 				OpenClawAIReviewEnabled:            config.OpenClawAIReview.Enabled,
@@ -1125,6 +1127,9 @@ func initializeComponents() error {
 		}
 		if config.RemediationPREnabled {
 			uiHandler.SetRemediationPRBackend(true, remediationPRUIBridge{})
+			if !config.RemediationPRUseRunnerVerification {
+				logger.Warn("RD-008B: remediation_pr_enabled without runner verification — Class-B validation may execute allowlisted commands on the control plane (NOT_PROVEN sandbox). See docs/RD-008B_CLASS_B_EXECUTION.md")
+			}
 		}
 		if config.EvidenceClosureEnabled {
 			uiHandler.SetClosureBackend(true, closureUIBridge{})
@@ -2170,15 +2175,15 @@ func runnerNonceMiddleware() gin.HandlerFunc {
 }
 
 type manualAnalysisRequest struct {
-	ForgeType          string `json:"forge_type"` // gitea (default) or github
-	Owner              string `json:"owner" binding:"required"`
-	Repository         string `json:"repository" binding:"required"`
-	Ref                string `json:"ref"`
-	Type               string `json:"type"` // "repository" or "pull_request"
-	PRNumber           int    `json:"pr_number"`
-	ScanProfile        string `json:"scan_profile"`
-	ReportOnlyDryRun   bool   `json:"report_only_dry_run"`
-	ScanID             string `json:"scan_id,omitempty"`
+	ForgeType        string `json:"forge_type"` // gitea (default) or github
+	Owner            string `json:"owner" binding:"required"`
+	Repository       string `json:"repository" binding:"required"`
+	Ref              string `json:"ref"`
+	Type             string `json:"type"` // "repository" or "pull_request"
+	PRNumber         int    `json:"pr_number"`
+	ScanProfile      string `json:"scan_profile"`
+	ReportOnlyDryRun bool   `json:"report_only_dry_run"`
+	ScanID           string `json:"scan_id,omitempty"`
 }
 
 func normalizeForgeType(forgeType string) string {
@@ -2591,39 +2596,39 @@ func mainGraphConfig() graph.Config {
 
 func mainScannerConfig() scanners.Config {
 	cfg := scanners.Config{
-		EnableTrivy:               config.EnableTrivy,
-		EnableGrype:               config.EnableGrype,
-		EnableGitleaks:            config.EnableGitleaks,
-		EnableSemgrep:             config.EnableSemgrep,
-		EnableGovulncheck:         config.EnableGovulncheck,
-		EnableGosec:               config.EnableGosec,
-		EnableStaticcheck:         config.EnableStaticcheck,
-		EnableHadolint:            config.EnableHadolint,
-		EnableCheckov:             config.EnableCheckov,
-		EnableLinters:             config.EnableLinters,
-		GitleaksConfig:                   config.GitleaksConfig,
-		GitleaksTimeoutSeconds:           config.GitleaksTimeoutSeconds,
-		SecretScanGitHistoryEnabled:      config.SecretScanGitHistoryEnabled,
-		SecretScanHistoryMaxCommits:      config.SecretScanHistoryMaxCommits,
-		SecretScanRecentCommitsMax:       config.SecretScanRecentCommitsMax,
-		SecretScanHistoryTimeoutSeconds:  config.SecretScanHistoryTimeoutSeconds,
-		SecretScanHistoryReportOnly:      config.SecretScanHistoryReportOnlyForPreinstall,
-		SecretScanRedact:                 config.SecretScanRedact,
-		SemgrepConfig:             config.SemgrepConfig,
-		SemgrepTimeoutSeconds:     config.SemgrepTimeoutSeconds,
-		SemgrepMaxFindings:        config.SemgrepMaxFindings,
-		SemgrepSeverityThreshold:  config.SemgrepSeverityThreshold,
-		GovulncheckTimeoutSeconds: config.GovulncheckTimeoutSeconds,
-		GosecTimeoutSeconds:       config.GosecTimeoutSeconds,
-		StaticcheckTimeoutSeconds: config.StaticcheckTimeoutSeconds,
-		GoScannerMaxFindings:      config.GoScannerMaxFindings,
-		HadolintTimeoutSeconds:    config.HadolintTimeoutSeconds,
-		CheckovTimeoutSeconds:     config.CheckovTimeoutSeconds,
-		IACScannerMaxFindings:     config.IACScannerMaxFindings,
-		TrivySeverity:             "HIGH,CRITICAL",
-		GrypeFailOn:               "high",
-		LinterMinSeverity:         "warning",
-		TimeoutSeconds:            config.ScannerTimeoutSeconds,
+		EnableTrivy:                     config.EnableTrivy,
+		EnableGrype:                     config.EnableGrype,
+		EnableGitleaks:                  config.EnableGitleaks,
+		EnableSemgrep:                   config.EnableSemgrep,
+		EnableGovulncheck:               config.EnableGovulncheck,
+		EnableGosec:                     config.EnableGosec,
+		EnableStaticcheck:               config.EnableStaticcheck,
+		EnableHadolint:                  config.EnableHadolint,
+		EnableCheckov:                   config.EnableCheckov,
+		EnableLinters:                   config.EnableLinters,
+		GitleaksConfig:                  config.GitleaksConfig,
+		GitleaksTimeoutSeconds:          config.GitleaksTimeoutSeconds,
+		SecretScanGitHistoryEnabled:     config.SecretScanGitHistoryEnabled,
+		SecretScanHistoryMaxCommits:     config.SecretScanHistoryMaxCommits,
+		SecretScanRecentCommitsMax:      config.SecretScanRecentCommitsMax,
+		SecretScanHistoryTimeoutSeconds: config.SecretScanHistoryTimeoutSeconds,
+		SecretScanHistoryReportOnly:     config.SecretScanHistoryReportOnlyForPreinstall,
+		SecretScanRedact:                config.SecretScanRedact,
+		SemgrepConfig:                   config.SemgrepConfig,
+		SemgrepTimeoutSeconds:           config.SemgrepTimeoutSeconds,
+		SemgrepMaxFindings:              config.SemgrepMaxFindings,
+		SemgrepSeverityThreshold:        config.SemgrepSeverityThreshold,
+		GovulncheckTimeoutSeconds:       config.GovulncheckTimeoutSeconds,
+		GosecTimeoutSeconds:             config.GosecTimeoutSeconds,
+		StaticcheckTimeoutSeconds:       config.StaticcheckTimeoutSeconds,
+		GoScannerMaxFindings:            config.GoScannerMaxFindings,
+		HadolintTimeoutSeconds:          config.HadolintTimeoutSeconds,
+		CheckovTimeoutSeconds:           config.CheckovTimeoutSeconds,
+		IACScannerMaxFindings:           config.IACScannerMaxFindings,
+		TrivySeverity:                   "HIGH,CRITICAL",
+		GrypeFailOn:                     "high",
+		LinterMinSeverity:               "warning",
+		TimeoutSeconds:                  config.ScannerTimeoutSeconds,
 	}
 	return scanners.ApplyRuntimeAvailability(cfg, logger)
 }
@@ -2663,6 +2668,7 @@ func registerControlPlaneRoutes(router *gin.Engine) {
 		api.NewContainerHandler(rdStore, containerScanBridge{}).RegisterRoutes(cp)
 	}
 	api.NewAIHandler(aiStatusBridge{}).RegisterRoutes(cp)
+	registerDoctorAPI(cp)
 	if rdStore != nil {
 		api.NewOpenClawReviewHandler(openclawReviewBridge{}).RegisterRoutes(cp)
 	}

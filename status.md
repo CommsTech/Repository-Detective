@@ -35,7 +35,15 @@
 | RD-009 Credential transport | **Done** | Header preferred; query reject optional; redaction UNIT_TESTED |
 | RD-010 UI session vs API auth | **Done** | Recommend local for new installs; runtime default api_key_only unchanged |
 
-**Next:** Phase 4+ / RD-017 Gitea E2E.
+### Phase 4 (2026-09-04) — Onboarding + Doctor
+
+| Task | Status | Proof |
+|------|--------|-------|
+| RD-013 CSPVR onboarding | **Done** | WIRED wizard stages + verify API |
+| RD-014 Doctor | **Done** | CLI + `/api/v1/doctor` + `/ui/doctor` + UNIT_TESTED engine |
+| RD-008B Class-B decision | **Done** | Option C documented; gate for Phase 5 |
+
+**Next:** Phase 5 only after RD-008B Option C warnings remain / Option A runner path if expanding remediation UX.
 
 **Repository:** https://git.commsnet.org/commstech/Repository-Detective.git
 ## Live deploy (2026-08-02) — Full application audit

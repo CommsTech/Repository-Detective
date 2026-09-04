@@ -1,88 +1,35 @@
-# Onboarding Web UI
+# Onboarding Web UI (RD-013)
 
-Repository Detective includes a browser-based setup wizard for connecting Gitea repositories without hand-editing webhooks.
-
-## Access
+Mental model: **Connect → Select → Protect → Verify → Ready**
 
 | URL | Auth |
 |-----|------|
-| `http://your-host:8081/onboard` | Public (UI only) — **recommended install port** |
-| `http://your-host:8081/` | Redirects to `/onboard` |
+| `http://your-host:8081/onboard/` | Public UI; API calls need operator API key |
 
-Advanced / minimal compose may use port **8080** instead.
+## Stages
 
-API calls from the wizard require the operator API key (`REPOSITORY_DETECTIVE_API_KEY` in `.env`). **Preferred** header:
+1. **Connect** — forge URL/token, public URL, webhook secret, privacy mode; live forge test + permission matrix  
+2. **Select** — list repos; recommend profile (override allowed; RD-012A requirements unchanged)  
+3. **Protect** — profile, Observe/Warn/Enforce (default Observe), privacy egress preview, optional AI, webhook register  
+4. **Verify** — shared doctor engine (`POST /api/v1/onboard/verify`)  
+5. **Ready** — READY / READY_WITH_LIMITATIONS / NOT_READY + env export + next actions  
 
-```http
-X-Repository-Detective-API-Key: your-api-key
-```
+Never uses SAFE / SECURE / SECURITY PASSED.
 
-## Wizard steps
+Manual first scan = `FIRST_SCAN_PROVEN` ≠ webhook E2E (RD-017).
 
-1. **Connection settings** — Gitea URL, access token, public URL, webhook secret, API key
-2. **AI provider (optional)** — skip for deterministic-only; prefer local Ollama when enabling AI
-3. **Select repositories** — loads repos visible to your token
-4. **Register webhooks** — creates push + pull request hooks on selected repos
-5. **Environment export** — copy/paste `REPOSITORY_DETECTIVE_*` variables (AI lines omitted when skipped)
-
-You can complete onboarding and run deterministic scans **without** testing or configuring AI.
-
-## Required configuration
-
-Set `public_url` so Gitea can reach Repository Detective for webhooks:
-
-```yaml
-public_url: "https://detective.example.com"
-```
-
-If the service runs on an internal network and Gitea is public, expose it via port forward, reverse proxy, or tunnel — see [docs/NETWORKING.md](NETWORKING.md). Cloudflare tunnel is optional ([TUNNEL.md](TUNNEL.md)).
-
-Or environment variable:
-
-```bash
-REPOSITORY_DETECTIVE_PUBLIC_URL=https://detective.example.com
-```
-
-The wizard registers hooks at `{public_url}/webhook`.
-
-## API endpoints
-
-All endpoints are under `/api/v1/onboard/` and require the API key header (preferred: `X-Repository-Detective-API-Key`).
+## API (`/api/v1/onboard/*`)
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| GET | `/api/v1/onboard/defaults` | Server-side defaults (Gitea URL, public URL, AI provider) |
-| POST | `/api/v1/onboard/test-gitea` | Test Gitea token |
-| POST | `/api/v1/onboard/test-ai` | Test AI provider (optional) |
-| POST | `/api/v1/onboard/repos` | List user repositories |
-| POST | `/api/v1/onboard/webhooks` | Register webhooks on selected repos |
+| GET | `/defaults` | Defaults + stage metadata |
+| POST | `/test-gitea` | Forge connectivity |
+| POST | `/permissions` | Permission matrix + profile recommend |
+| POST | `/repos` | List repositories |
+| POST | `/recommend-profile` | Profile hint |
+| POST | `/privacy-preview` | LOCAL/EXTERNAL egress disclosure |
+| POST | `/test-ai` | Optional AI connectivity |
+| POST | `/webhooks` | Register hooks |
+| POST | `/verify` | Doctor report for wizard choices |
 
-### Example: test Gitea
-
-```bash
-curl -X POST http://localhost:8081/api/v1/onboard/test-gitea \
-  -H "X-Repository-Detective-API-Key: your-key" \
-  -H "Content-Type: application/json" \
-  -d '{"gitea_url":"https://git.example.com","gitea_token":"your-token"}'
-```
-
-### Example: register webhooks
-
-```bash
-curl -X POST http://localhost:8081/api/v1/onboard/webhooks \
-  -H "X-Repository-Detective-API-Key: your-key" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "gitea_url": "https://git.example.com",
-    "gitea_token": "your-token",
-    "public_url": "https://detective.example.com",
-    "webhook_secret": "shared-secret",
-    "repositories": ["org/repo1", "org/repo2"]
-  }'
-```
-
-## Related
-
-- [QUICKSTART.md](QUICKSTART.md) — recommended install
-- [SETUP.md](SETUP.md) — full walkthrough
-- [AI_PROVIDERS.md](AI_PROVIDERS.md) — optional AI
+See also: [DOCTOR.md](DOCTOR.md), [PRIVACY_MODES.md](PRIVACY_MODES.md).

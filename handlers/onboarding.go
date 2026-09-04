@@ -67,11 +67,12 @@ func (h *OnboardingHandler) RegisterRoutes(router *gin.Engine, onboardAPI *gin.R
 	// Assets live under /onboard/assets (not /onboard/static) to avoid route prefix clashes.
 	router.StaticFS("/onboard/assets", http.FS(staticFS))
 
-	onboardAPI.GET("/defaults", h.handleDefaults)
+	onboardAPI.GET("/defaults", h.handleDefaultsExtended)
 	onboardAPI.POST("/test-gitea", h.handleTestGitea)
 	onboardAPI.POST("/test-ai", h.handleTestAI)
 	onboardAPI.POST("/repos", h.handleListRepos)
 	onboardAPI.POST("/webhooks", h.handleRegisterWebhooks)
+	h.registerPhase4Routes(onboardAPI)
 }
 
 func (h *OnboardingHandler) handleDefaults(c *gin.Context) {

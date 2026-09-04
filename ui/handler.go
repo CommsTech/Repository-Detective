@@ -231,6 +231,7 @@ func (h *Handler) RegisterRoutes(g *gin.RouterGroup) {
 	g.GET("/scans", h.Scans)
 	g.GET("/reports", h.Reports)
 	g.GET("/health", h.SystemHealth)
+	g.GET("/doctor", h.Doctor)
 	g.GET("/scans/:scan_id", h.ScanDetail)
 	g.GET("/scans/:scan_id/sbom", h.ScanSBOM)
 	g.GET("/scans/:scan_id/sbom/download", h.ScanSBOMDownload)
@@ -651,6 +652,10 @@ func (h *Handler) SystemHealth(c *gin.Context) {
 	h.renderNav(c, "health.html", "System Health", "health", map[string]any{
 		"Page": page,
 	})
+}
+
+func (h *Handler) Doctor(c *gin.Context) {
+	h.renderNav(c, "doctor.html", "Doctor", "doctor", map[string]any{})
 }
 
 func (h *Handler) fleetHealthSummary(ctx context.Context) store.FleetHealthSummary {

@@ -50,6 +50,7 @@
       <a href="{{.BasePath}}/learning{{apiKeyQS .APIKey}}" class="{{navActive "learning" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">↻</span> Learning</a>
       <span class="rd-nav-label">Platform</span>
       <a href="{{.BasePath}}/health{{apiKeyQS .APIKey}}" class="{{navActive "health" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">♥</span> System Health</a>
+      <a href="{{.BasePath}}/doctor{{apiKeyQS .APIKey}}" class="{{navActive "doctor" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">⌖</span> Doctor</a>
       <a href="{{.BasePath}}/preinstall{{apiKeyQS .APIKey}}" class="{{navActive "preinstall" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">⌕</span> Pre-install audit</a>
       <a href="{{.BasePath}}/projects{{apiKeyQS .APIKey}}" class="{{navActive "projects" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">◫</span> Project groups</a>
       {{if .SetupComplete}}
