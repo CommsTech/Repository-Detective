@@ -40,48 +40,57 @@ echo "REPOSITORY_DETECTIVE_ENABLE_LLM_AUDITORS=false" >>.env
 echo "REPOSITORY_DETECTIVE_REJECT_QUERY_STRING_API_KEY=true" >>.env
 echo "REPOSITORY_DETECTIVE_REMEDIATION_PR_ENABLED=false" >>.env
 
+# Published compose bind-mounts ./data as non-root user repositorydetective.
+mkdir -p data/tmp data/cache certs config
+chmod -R a+rwX data || true
+
 export RD_IMAGE="$IMAGE"
 export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-rd-clean-install}"
 export COMPOSE_HTTP_TIMEOUT="${COMPOSE_HTTP_TIMEOUT:-600}"
+set -o pipefail
+
 # Avoid colliding with a host's long-lived repository-detective container_name.
 if grep -q 'container_name: repository-detective' docker-compose.yml; then
   sed -i 's/container_name: repository-detective/container_name: rd-clean-install-detective/' docker-compose.yml
 fi
-# Point clean install at a disposable host port to avoid colliding with other RD instances.
+
+# Host publish port (container still listens on 8081 via compose environment literal).
 export RD_HOST_PORT="${RD_E2E_CLEAN_PORT:-18082}"
-# Rewrite compose published port if needed
-if grep -q '8081:8081' docker-compose.yml; then
-  sed -i "s/\"8081:8081\"/\"${RD_HOST_PORT}:8081\"/" docker-compose.yml || true
-  sed -i "s/- 8081:8081/- ${RD_HOST_PORT}:8081/" docker-compose.yml || true
-fi
-# Also map ${REPOSITORY_DETECTIVE_PORT:-8081}:8081 style
-if grep -q 'REPOSITORY_DETECTIVE_PORT:-8081' docker-compose.yml; then
-  export REPOSITORY_DETECTIVE_PORT="$RD_HOST_PORT"
-fi
+export REPOSITORY_DETECTIVE_PORT="$RD_HOST_PORT"
 
 docker compose -f docker-compose.yml down -v >/dev/null 2>&1 || docker-compose -f docker-compose.yml down -v >/dev/null 2>&1 || true
-# Use published image without rebuild when possible
 RD_IMAGE="$IMAGE" docker compose -f docker-compose.yml up -d 2>"$OUT/compose.err" \
   || RD_IMAGE="$IMAGE" docker-compose -f docker-compose.yml up -d
-for i in $(seq 1 40); do
-  if curl -fsS "http://127.0.0.1:${RD_HOST_PORT}/health" >/dev/null 2>&1; then break; fi
+
+READY=0
+for i in $(seq 1 60); do
+  if curl -fsS "http://127.0.0.1:${RD_HOST_PORT}/health" >/dev/null 2>&1; then READY=1; break; fi
   sleep 3
 done
+if [[ "$READY" != "1" ]]; then
+  docker logs rd-clean-install-detective 2>&1 | tee "$OUT/rd-start.log" | tail -80
+  log "ERROR: clean-install health not ready on port ${RD_HOST_PORT}"
+  exit 1
+fi
+
 curl -fsS "http://127.0.0.1:${RD_HOST_PORT}/health" | tee "$OUT/health.json"
 curl -fsS -o /dev/null -w '%{http_code}\n' "http://127.0.0.1:${RD_HOST_PORT}/onboard/" | tee "$OUT/onboard-status.txt"
-# Doctor may 404 until components ready
-for i in $(seq 1 30); do
+
+for i in $(seq 1 45); do
   CODE="$(curl -s -o /dev/null -w '%{http_code}' -H "X-Repository-Detective-API-Key: $API_KEY" "http://127.0.0.1:${RD_HOST_PORT}/api/v1/doctor" || true)"
   if [[ "$CODE" == "200" ]]; then break; fi
   sleep 2
 done
 curl -fsS -H "X-Repository-Detective-API-Key: $API_KEY" "http://127.0.0.1:${RD_HOST_PORT}/api/v1/doctor" | tee "$OUT/doctor.json"
 
-# Scanner inventory inside the running recommended container
 CID="$(docker compose -f docker-compose.yml ps -q repository-detective 2>/dev/null || docker-compose -f docker-compose.yml ps -q repository-detective)"
 docker exec "$CID" sh -c 'for b in gitleaks trivy grype semgrep; do echo -n "$b: "; command -v $b || echo MISSING; done' | tee "$OUT/scanners.txt"
-# Full standard-profile inventory
 docker exec "$CID" sh -c 'for b in gitleaks trivy grype semgrep gosec govulncheck staticcheck hadolint checkov; do echo -n "$b: "; command -v $b >/dev/null && ($b --version 2>/dev/null | head -1 || $b version 2>/dev/null | head -1) || echo MISSING; done' | tee "$OUT/scanners-full.txt"
+
+if grep -q 'MISSING' "$OUT/scanners.txt"; then
+  log "ERROR: required scanner missing from published image"
+  exit 1
+fi
 
 python3 - <<PY
 import json
