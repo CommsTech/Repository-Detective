@@ -1,0 +1,29 @@
+# syntax=docker/dockerfile:1
+# Binary-only overlay onto an existing all-in-one image (avoids reinstalling scanners).
+ARG SOURCE_IMAGE=repository-detective:v0.1.0-beta.3
+ARG GO_VERSION=1.25
+
+FROM golang:${GO_VERSION}-alpine AS builder
+COPY scripts/apk-retry.sh /tmp/apk-retry.sh
+RUN chmod +x /tmp/apk-retry.sh && . /tmp/apk-retry.sh && apk_retry git ca-certificates tzdata
+WORKDIR /app
+ARG GOPROXY=https://proxy.golang.org,direct
+ARG VERSION=dev
+ARG COMMIT=unknown
+ARG BUILD_DATE=unknown
+ENV GOPROXY=${GOPROXY}
+COPY go.mod go.sum ./
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w -X main.version=${VERSION} -X main.commit=${COMMIT} -X main.buildDate=${BUILD_DATE}" -o repository-detective .
+
+FROM ${SOURCE_IMAGE}
+USER root
+ARG VERSION=dev
+ARG COMMIT=unknown
+ARG BUILD_DATE=unknown
+LABEL org.opencontainers.image.version="${VERSION}" \
+      org.opencontainers.image.revision="${COMMIT}" \
+      org.opencontainers.image.created="${BUILD_DATE}"
+COPY --from=builder /app/repository-detective /app/repository-detective
+RUN chmod +x /app/repository-detective && chown repositorydetective:repositorydetective /app/repository-detective
+USER repositorydetective
