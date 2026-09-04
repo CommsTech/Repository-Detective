@@ -35,7 +35,7 @@ func operatorFeatureFlags() operator.FeatureFlags {
 		NotificationsEnabled:      config.NotificationsEnabled,
 		PreinstallAuditEnabled:    config.PreinstallAuditEnabled,
 		RemediationPlannerEnabled: config.RemediationPlannerEnabled,
-		RemediationPREnabled:     config.RemediationPREnabled,
+		RemediationPREnabled:      config.RemediationPREnabled,
 		EvidenceClosureEnabled:    config.EvidenceClosureEnabled,
 		PublicURLConfigured:       config.PublicURL != "",
 		UIEnabled:                 config.UIEnabled,
@@ -79,12 +79,12 @@ func buildReadiness(status string) operator.Readiness {
 func healthPayload(ready bool) gin.H {
 	status := "starting"
 	code := gin.H{
-		"status":       status,
-		"ready":        ready,
-		"service":      "repository-detective",
-		"product_name": "Repository Detective",
-		"tagline":      "Inspect. Analyze. Improve.",
-		"version":      version,
+		"status":                status,
+		"ready":                 ready,
+		"service":               "repository-detective",
+		"product_name":          "Repository Detective",
+		"tagline":               "Inspect. Analyze. Improve.",
+		"version":               version,
 		"public_url_configured": config.PublicURL != "",
 	}
 	if ready {

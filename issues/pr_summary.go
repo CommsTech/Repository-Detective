@@ -79,10 +79,10 @@ type PRCommentAPI interface {
 
 // UpsertResult describes what UpsertPRPolicySummary did.
 type UpsertResult struct {
-	Action          string // created | updated | skipped_duplicate_in_flight | failed
-	CanonicalID     int64
+	Action            string // created | updated | skipped_duplicate_in_flight | failed
+	CanonicalID       int64
 	DuplicatesRemoved int
-	Err             error
+	Err               error
 }
 
 // inFlightPRSummary guards concurrent webhook retries for the same PR.

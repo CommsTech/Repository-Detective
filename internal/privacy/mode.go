@@ -9,10 +9,10 @@ import (
 
 // Operating modes (RD-007).
 const (
-	ModeStandard           = "standard" // legacy alias for hybrid-compatible default
-	ModeLocalOnly          = "local_only"
-	ModeHybrid             = "hybrid"
-	ModeExternalAIEnabled  = "external_ai_enabled"
+	ModeStandard          = "standard" // legacy alias for hybrid-compatible default
+	ModeLocalOnly         = "local_only"
+	ModeHybrid            = "hybrid"
+	ModeExternalAIEnabled = "external_ai_enabled"
 )
 
 // EndpointClass describes whether a destination is local to the operator network.
@@ -148,12 +148,12 @@ func ClassifyURL(raw string) (string, string, error) {
 
 // AIEgressDecision is the result of checking AI config under a privacy mode.
 type AIEgressDecision struct {
-	Allowed      bool
-	Mode         string
-	Provider     string
-	Endpoint     string
+	Allowed       bool
+	Mode          string
+	Provider      string
+	Endpoint      string
 	EndpointClass string
-	Reason       string
+	Reason        string
 }
 
 // EvaluateAIEgress decides whether AI calls are allowed under mode.

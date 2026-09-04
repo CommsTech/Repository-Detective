@@ -32,12 +32,12 @@ type ScannerCoverageRow struct {
 
 // ScannerCoverageSummary aggregates required/optional completion for policy evaluation.
 type ScannerCoverageSummary struct {
-	RequiredTotal      int
-	RequiredCompleted  int
-	RequiredIncomplete []string
-	OptionalTotal      int
-	OptionalCompleted  int
-	Rows               []ScannerCoverageRow
+	RequiredTotal       int
+	RequiredCompleted   int
+	RequiredIncomplete  []string
+	OptionalTotal       int
+	OptionalCompleted   int
+	Rows                []ScannerCoverageRow
 	ZeroRequiredAllowed bool // true only for explicit observation/no-required profiles (none today)
 }
 
