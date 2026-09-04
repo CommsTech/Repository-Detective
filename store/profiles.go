@@ -311,6 +311,7 @@ func EffectiveFromGlobalSnapshot(g GlobalSettingsSnapshot) EffectiveSettings {
 
 func effectiveFromGlobalSnapshot(g GlobalSettingsSnapshot) EffectiveSettings {
 	return EffectiveSettings{
+		ScanProfile:                 NormalizeScanProfile(g.ScanProfile),
 		Enabled:                     g.Enabled,
 		PolicyLevel:                 g.PolicyLevel,
 		WorkspaceMode:               g.WorkspaceMode,

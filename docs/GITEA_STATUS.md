@@ -29,13 +29,17 @@ Default is **disabled** (`enable_gitea_status: false`).
 ## Lifecycle
 
 1. **Pending** — posted when a scan starts (push uses `after` SHA; PR uses `head.sha` when available).
-2. **Final** — posted when the scan completes:
-   - `failure` if any issue severity is at or above `gitea_status_fail_on` (default `high`)
-   - `warning` (mapped to Gitea `failure` with warning description) if any issue is at or above `gitea_status_warn_on` (default `medium`)
-   - `error` if enabled scanners fail execution (`failed`, `timed_out`, `parse_failed`) and `gitea_status_include_scanner_failures=true`
-   - `success` when no qualifying findings and no relevant scanner failures
+2. **Final** — posted when the scan completes. Descriptions use **policy outcomes**, not “security passed”:
+   - `POLICY_MET` → Gitea `success` — required analysis completed; configured conditions not violated
+   - `ACTION_REQUIRED` → `failure` (Enforce) or `warning` (Warn) — owner policy conditions violated
+   - `EVALUATION_INCOMPLETE` → `error` / non-blocking warn — required scanners incomplete
+   - `OBSERVATION_ONLY` → `success` — Observe mode; never blocks workflow
+
+Severity thresholds (`gitea_status_fail_on` / `warn_on`) still feed the policy conditions. Required scanner failures block `POLICY_MET` even when optional tools are missing.
 
 If no commit SHA is available (branch-only PR without `head.sha`), status reporting is skipped with a log message.
+
+Pull requests also receive a **single compact summary comment** (counts + policy outcome + link to canonical issues). Repository Detective does **not** create one inline review comment per finding.
 
 ## API
 

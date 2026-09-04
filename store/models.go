@@ -117,6 +117,7 @@ type RepoSettings struct {
 
 // EffectiveSettings is the resolved configuration for a repository scan.
 type EffectiveSettings struct {
+	ScanProfile       string
 	Enabled           bool
 	PolicyLevel       string
 	WorkspaceMode     string

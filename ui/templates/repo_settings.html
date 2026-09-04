@@ -81,10 +81,16 @@
 {{with .Data.CronInfo}}{{if .Valid}}<p class="rd-muted">Next run (approx): {{.NextRun}}</p>{{else if .Error}}<p class="rd-alert">Cron: {{.Error}}</p>{{end}}{{end}}
 <h2>Policy (stored — enforced on scans)</h2>
 <label>Repo enabled<select name="enabled"><option value="">inherit</option><option value="true">true</option><option value="false">false</option></select></label>
-<label>Policy level<select name="policy_level" data-risk-warn aria-label="Policy level">
-<option value="">inherit</option>
-{{range index .Data.Allowed "policy_level"}}<option value="{{.}}">{{.}}</option>{{end}}</select>
-<span class="rd-risk-hint rd-muted" hidden>Monitor-only mode will not enforce blocking gates.</span></label>
+<label>Policy level (Observe / Warn / Enforce)<select name="policy_level" data-risk-warn aria-label="Policy enforcement mode">
+<option value="">inherit ({{.Data.Effective.PolicyLevel}} — {{enforcementLabel .Data.Effective.PolicyLevel}})</option>
+<option value="monitor_only">observe — {{enforcementLabel "monitor_only"}}</option>
+<option value="issue_only">warn — {{enforcementLabel "issue_only"}}</option>
+<option value="gate_pr">enforce — {{enforcementLabel "gate_pr"}}</option>
+<option value="suggest_fix">suggest_fix (legacy remediation)</option>
+<option value="auto_pr_with_approval">auto_pr_with_approval (reserved)</option>
+<option value="auto_pr_low_risk">auto_pr_low_risk (reserved)</option>
+</select>
+<span class="rd-risk-hint rd-muted" hidden>Observe mode never blocks the development workflow. Enforce only blocks when Gitea branch protection requires the Repository Detective status context. Outcomes describe owner policy compliance — not that code is safe or secure.</span></label>
 <label>Workspace mode<select name="workspace_mode"><option value="">inherit</option>
 {{range index .Data.Allowed "workspace_mode"}}<option value="{{.}}">{{.}}</option>{{end}}</select></label>
 <label>Analysis depth<select name="analysis_depth"><option value="">inherit</option><option>1</option><option>2</option><option>3</option></select></label>

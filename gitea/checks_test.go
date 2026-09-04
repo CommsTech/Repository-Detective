@@ -11,8 +11,8 @@ func TestEvaluateCommitStatusSuccess(t *testing.T) {
 	if eval.State != CommitStateSuccess {
 		t.Fatalf("expected success, got %q", eval.State)
 	}
-	if eval.Description != "Repository-Detective scan passed with no findings" {
-		t.Fatalf("unexpected description %q", eval.Description)
+	if eval.PolicyOutcome != "POLICY_MET" {
+		t.Fatalf("expected POLICY_MET, got %q desc=%q", eval.PolicyOutcome, eval.Description)
 	}
 }
 
@@ -24,8 +24,8 @@ func TestEvaluateCommitStatusFailureOnHighFinding(t *testing.T) {
 	if eval.State != CommitStateFailure {
 		t.Fatalf("expected failure, got %q", eval.State)
 	}
-	if eval.Description != "Repository-Detective found 1 high, 1 medium findings" {
-		t.Fatalf("unexpected description %q", eval.Description)
+	if eval.PolicyOutcome != "ACTION_REQUIRED" {
+		t.Fatalf("expected ACTION_REQUIRED, got %q", eval.PolicyOutcome)
 	}
 }
 
@@ -44,30 +44,44 @@ func TestEvaluateCommitStatusWarningOnMediumFinding(t *testing.T) {
 
 func TestEvaluateCommitStatusScannerFailureIncluded(t *testing.T) {
 	eval := EvaluateCommitStatus(nil, []ScannerResultSummary{
-		{Scanner: "trivy", Status: "failed"},
+		{Scanner: "trivy", Status: "failed", Required: true},
 	}, ChecksConfig{
 		IncludeScannerFailures: true,
 	})
 	if eval.State != CommitStateError {
 		t.Fatalf("expected error, got %q", eval.State)
 	}
+	if eval.PolicyOutcome != "EVALUATION_INCOMPLETE" {
+		t.Fatalf("expected EVALUATION_INCOMPLETE, got %q", eval.PolicyOutcome)
+	}
 }
 
 func TestEvaluateCommitStatusScannerFailureIgnored(t *testing.T) {
 	eval := EvaluateCommitStatus(nil, []ScannerResultSummary{
-		{Scanner: "semgrep", Status: "timed_out"},
+		{Scanner: "semgrep", Status: "timed_out", Required: false},
 	}, ChecksConfig{
 		IncludeScannerFailures: false,
 	})
 	if eval.State != CommitStateSuccess {
-		t.Fatalf("expected success when scanner failures ignored, got %q", eval.State)
+		t.Fatalf("expected success when optional scanner failures ignored, got %q", eval.State)
 	}
 }
 
-func TestEvaluateCommitStatusBinaryMissingNotBad(t *testing.T) {
+func TestEvaluateCommitStatusRequiredBinaryMissingIncomplete(t *testing.T) {
 	eval := EvaluateCommitStatus(nil, []ScannerResultSummary{
-		{Scanner: "gitleaks", Status: "binary_missing"},
-		{Scanner: "semgrep", Status: "disabled"},
+		{Scanner: "gitleaks", Status: "binary_missing", Required: true},
+	}, ChecksConfig{
+		IncludeScannerFailures: false,
+	})
+	if eval.PolicyOutcome != "EVALUATION_INCOMPLETE" {
+		t.Fatalf("required missing binary should be incomplete, got %q %q", eval.PolicyOutcome, eval.Description)
+	}
+}
+
+func TestEvaluateCommitStatusOptionalBinaryMissingOK(t *testing.T) {
+	eval := EvaluateCommitStatus(nil, []ScannerResultSummary{
+		{Scanner: "gitleaks", Status: "binary_missing", Required: false},
+		{Scanner: "semgrep", Status: "disabled", Required: false},
 	}, ChecksConfig{
 		IncludeScannerFailures: true,
 	})
@@ -84,9 +98,6 @@ func TestEvaluateCommitStatusCriticalCountsAsFailure(t *testing.T) {
 	if eval.State != CommitStateFailure {
 		t.Fatalf("expected failure for critical finding, got %q", eval.State)
 	}
-	if eval.Description != "Repository-Detective found 1 critical findings" {
-		t.Fatalf("unexpected description %q", eval.Description)
-	}
 }
 
 func TestIsCommitSHA(t *testing.T) {
@@ -100,7 +111,17 @@ func TestIsCommitSHA(t *testing.T) {
 
 func TestPendingCommitStatusEvaluation(t *testing.T) {
 	eval := PendingCommitStatusEvaluation()
-	if eval.State != CommitStatePending || eval.Description != "Repository-Detective scan started" {
+	if eval.State != CommitStatePending {
 		t.Fatalf("unexpected pending eval: %+v", eval)
+	}
+}
+
+func TestObserveModeNeverBlocks(t *testing.T) {
+	eval := EvaluateCommitStatusForPolicy([]string{"critical"}, nil, ChecksConfig{FailOn: "high"}, "monitor_only", "high")
+	if eval.State == CommitStateFailure {
+		t.Fatalf("observe must not fail, got %s", eval.State)
+	}
+	if eval.PolicyOutcome != "OBSERVATION_ONLY" {
+		t.Fatalf("expected OBSERVATION_ONLY, got %q", eval.PolicyOutcome)
 	}
 }

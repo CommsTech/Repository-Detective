@@ -15,7 +15,19 @@
 **Tests:** `go test ./api/ ./store/` + main AI readiness tests via `golang:1.25-bookworm` — pass.  
 **Not run:** full `./...` suite (long); live E2E install (RD-017/018).
 
-**Next:** Phase 2 semantics — RD-004, RD-005, RD-006, RD-011, RD-012.
+**Next:** Phase 3 privacy/security — RD-007, RD-008, RD-009, RD-010.
+
+### Phase 2 (2026-09-04) — Product semantics
+
+| Task | Status | Notes |
+|------|--------|-------|
+| RD-004 Policy outcomes | **Done** | `POLICY_MET` / `ACTION_REQUIRED` / `EVALUATION_INCOMPLETE` / `OBSERVATION_ONLY` — never “secure/safe” |
+| RD-005 Observe/Warn/Enforce | **Done** | UI labels over `monitor_only` / `issue_only` / `gate_pr` |
+| RD-006 Compact PR summary | **Done** | One PR comment; issues remain canonical |
+| RD-011 Scanner coverage | **Done** | Required incomplete blocks `POLICY_MET` |
+| RD-012 Profile required sets | **Done** | Light/Standard/Deep required scanner sets |
+
+**Tests:** `go test ./gitea/ ./store/ ./issues/ .` (targeted) via golang:1.25 — pass.
 
 **Fleet remediation:** Critical open findings cleared (20→0); noise backlog reduced via learning suppressions; 6 app repos + SEC-EVAL analyzer fix pushed. Details: `state/fleet-remediation-2026-09-04/`.
 

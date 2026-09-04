@@ -27,6 +27,7 @@ func ResolveEffectiveSettingsWithMeta(global GlobalSettingsSnapshot, repoSetting
 	merged = preserveGlobalAIPreferences(merged, global)
 	effective := applyRepoOverrides(merged, repoSettings)
 	meta := buildSettingsMeta(global, repoSettings, effective)
+	effective.ScanProfile = meta.ScanProfile
 	return effective, meta
 }
 

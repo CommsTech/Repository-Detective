@@ -18,18 +18,28 @@ When `database_enabled=false`, only global config and global profile apply.
 
 See [SCAN_PROFILES.md](SCAN_PROFILES.md) for built-in profile names and defaults.
 
-## Policy levels
+## Policy levels (Observe / Warn / Enforce)
 
-| Level | Scans | Persist findings | Gitea issues | Fail commit status |
-|-------|-------|------------------|--------------|-------------------|
-| `monitor_only` | Yes | Yes | No | No (warning/success only) |
-| `issue_only` | Yes | Yes | Yes (per issue policy) | No |
-| `gate_pr` | Yes | Yes | Yes | Yes (when gates met) |
-| `suggest_fix` | Yes | Yes | Yes | Yes (like `gate_pr` until remediation PRs land) |
-| `auto_pr_with_approval` | Reserved | — | — | Like `gate_pr` for now |
-| `auto_pr_low_risk` | Reserved | — | — | Like `gate_pr` for now |
+Operator-facing modes map to stored `policy_level` values:
 
-Remediation PR levels log that full behavior is reserved for a later phase.
+| Mode | Stored value | Scans | Persist findings | Forge issues | Commit status |
+|------|--------------|-------|------------------|--------------|---------------|
+| **Observe** | `monitor_only` | Yes | Yes | No | Non-blocking (`OBSERVATION_ONLY`) |
+| **Warn** | `issue_only` | Yes | Yes | Yes (per issue policy) | Surfaces `ACTION_REQUIRED` without blocking merge |
+| **Enforce** | `gate_pr` | Yes | Yes | Yes | May fail status when branch protection requires the context |
+
+Legacy / reserved: `suggest_fix`, `auto_pr_with_approval`, `auto_pr_low_risk` (status like `gate_pr` for now).
+
+### Policy outcomes (never “safe” / “secure”)
+
+| Outcome | Meaning |
+|---------|---------|
+| `POLICY_MET` | Required analyzers completed; configured policy conditions were not violated |
+| `ACTION_REQUIRED` | One or more configured policy conditions were violated |
+| `EVALUATION_INCOMPLETE` | Required scanners failed, timed out, or were unavailable |
+| `OBSERVATION_ONLY` | Observe mode — findings may exist; Repository Detective does not block |
+
+Mark the status context as required in Gitea branch protection only when you intentionally want Enforce to participate in merge gates. Outcomes describe **owner policy compliance**, not security assurance.
 
 ## Issue policies
 

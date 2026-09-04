@@ -28,6 +28,7 @@ func templateFuncs() template.FuncMap {
 		"mul":            func(a, b float64) float64 { return a * b },
 		"profileLabel":   store.ScanProfileLabel,
 		"profileDesc":    store.ScanProfileDescription,
+		"enforcementLabel": store.EnforcementModeLabel,
 		"pct":            func(f float64) int { return int(f*100 + 0.5) },
 		"rateClass":      rateMeterClass,
 		"rateWidth":      rateMeterWidth,

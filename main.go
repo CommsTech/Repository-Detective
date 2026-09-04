@@ -1384,7 +1384,7 @@ func (p *webhookProcessor) ProcessPush(ctx context.Context, payload *handlers.Gi
 			repo,
 			resolveCommitSHA(result, commitSHA),
 			severitiesForStatus(result, effective, repositoryID),
-			scannerSummaries(result),
+			scannerSummariesForPolicy(result, effective),
 			false,
 			effective.PolicyLevel,
 			effective.SeverityGate,
@@ -1437,13 +1437,14 @@ func (p *webhookProcessor) ProcessPullRequest(ctx context.Context, payload *hand
 			repo,
 			resolveCommitSHA(result, commitSHA),
 			severitiesForStatus(result, effective, repositoryID),
-			scannerSummaries(result),
+			scannerSummariesForPolicy(result, effective),
 			false,
 			effective.PolicyLevel,
 			effective.SeverityGate,
 		)
 		notifyPRGateFailed(postCtx, repositoryID, owner, repo, scanCtx.ScanID, eval)
 		createIssuesFromResult(postCtx, store.ForgeTypeGitea, owner, repo, result, fmt.Sprintf("Pull Request #%d", prNumber), "", prNumber, repositoryID, effective)
+		maybePostPRPolicySummary(postCtx, owner, repo, prNumber, result, effective, eval, repositoryID)
 	})
 }
 
@@ -1459,14 +1460,25 @@ func resolveCommitSHA(result *analyzers.AnalysisResult, fallback string) string 
 }
 
 func scannerSummaries(result *analyzers.AnalysisResult) []gitea.ScannerResultSummary {
+	return scannerSummariesForPolicy(result, store.EffectiveFromGlobalSnapshot(store.DefaultGlobalSettings()))
+}
+
+func scannerSummariesForPolicy(result *analyzers.AnalysisResult, effective store.EffectiveSettings) []gitea.ScannerResultSummary {
 	if result == nil {
 		return nil
 	}
+	requiredSet := map[string]struct{}{}
+	for _, name := range store.RequiredScannersForProfile(effective.ScanProfile, effective) {
+		requiredSet[strings.ToLower(name)] = struct{}{}
+	}
 	summaries := make([]gitea.ScannerResultSummary, 0, len(result.ScannerResults))
 	for _, scannerResult := range result.ScannerResults {
+		name := strings.ToLower(scannerResult.Scanner)
+		_, req := requiredSet[name]
 		summaries = append(summaries, gitea.ScannerResultSummary{
-			Scanner: scannerResult.Scanner,
-			Status:  string(scannerResult.Status),
+			Scanner:  scannerResult.Scanner,
+			Status:   string(scannerResult.Status),
+			Required: req,
 		})
 	}
 	return summaries

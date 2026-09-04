@@ -9,6 +9,16 @@ Repository Detective uses four operator-facing scan profiles. Names say what the
 | **Deep** | `deep` | Heavy workspace scan with **AI cross-checks**. Slower, highest coverage. |
 | **Custom** | `custom` | Manual toggles only — no preset overrides. |
 
+### Required vs optional scanners (RD-012 / RD-011)
+
+| Profile | Required (must complete for `POLICY_MET`) | Optional |
+|---------|--------------------------------------------|----------|
+| Light | `gitleaks`, `trivy` (when enabled) | — |
+| Standard / Deep | All enabled scanners for the profile | — |
+| Custom | All enabled scanners | — |
+
+Missing **required** analyzers (`binary_missing`, `scanner_unavailable`, `failed`, `timed_out`, `parse_failed`) produce `EVALUATION_INCOMPLETE` — never `POLICY_MET`.
+
 Legacy IDs still work and map automatically:
 
 | Legacy | Maps to |

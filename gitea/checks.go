@@ -16,75 +16,60 @@ type ChecksConfig struct {
 
 // ScannerResultSummary carries scanner status for commit checks.
 type ScannerResultSummary struct {
-	Scanner string
-	Status  string
+	Scanner  string
+	Status   string
+	Required bool // when true, incomplete/unavailable blocks POLICY_MET
 }
 
 // CommitStatusEvaluation is the logical commit status outcome.
 type CommitStatusEvaluation struct {
-	State       string
-	Description string
+	State           string
+	Description     string
+	PolicyOutcome   string
+	EnforcementMode string
 }
 
 // PendingCommitStatusEvaluation returns the pending scan status.
 func PendingCommitStatusEvaluation() CommitStatusEvaluation {
 	return CommitStatusEvaluation{
-		State:       CommitStatePending,
-		Description: "Repository-Detective scan started",
+		State:         CommitStatePending,
+		Description:   "Repository-Detective scan started",
+		PolicyOutcome: "",
 	}
 }
 
 // SkippedCommitStatusEvaluation returns the skip reason when no SHA is available.
 func SkippedCommitStatusEvaluation() CommitStatusEvaluation {
 	return CommitStatusEvaluation{
-		State:       CommitStateSuccess,
-		Description: "Repository-Detective scan skipped status: no commit SHA",
+		State:         CommitStateSuccess,
+		Description:   "Repository Detective policy evaluation skipped: no commit SHA",
+		PolicyOutcome: "",
 	}
 }
 
 // AnalysisFailedCommitStatusEvaluation returns status when analysis fails.
 func AnalysisFailedCommitStatusEvaluation() CommitStatusEvaluation {
 	return CommitStatusEvaluation{
-		State:       CommitStateError,
-		Description: "Repository-Detective scan failed",
+		State:         CommitStateError,
+		Description:   "Policy evaluation incomplete — analysis did not finish",
+		PolicyOutcome: "EVALUATION_INCOMPLETE",
 	}
 }
 
 // EvaluateCommitStatus computes final commit status from issue severities and scanner results.
+// Uses Enforce semantics for raw evaluation; prefer EvaluateCommitStatusForPolicy for repo modes.
 func EvaluateCommitStatus(severities []string, scannerResults []ScannerResultSummary, cfg ChecksConfig) CommitStatusEvaluation {
-	if cfg.IncludeScannerFailures && hasBadScannerFailure(scannerResults) {
-		return CommitStatusEvaluation{
-			State:       CommitStateError,
-			Description: "Repository-Detective scan completed with scanner failures",
-		}
-	}
+	eval, _ := EvaluatePolicyOutcome(severities, scannerResults, cfg, "gate_pr", cfg.FailOn, "")
+	return eval
+}
 
-	counts := countSeverities(severities)
-	failOn := normalizeSeverityThreshold(cfg.FailOn, "high")
-	warnOn := normalizeSeverityThreshold(cfg.WarnOn, "medium")
-
-	if hasSeverityAtOrAbove(severities, failOn) {
-		return CommitStatusEvaluation{
-			State:       CommitStateFailure,
-			Description: formatFindingDescription(counts),
-		}
+// EvaluateCommitStatusForPolicy applies per-repo policy level (Observe/Warn/Enforce) to evaluation.
+func EvaluateCommitStatusForPolicy(severities []string, scannerResults []ScannerResultSummary, cfg ChecksConfig, policyLevel, severityGate string) CommitStatusEvaluation {
+	eval, _ := EvaluatePolicyOutcome(severities, scannerResults, cfg, policyLevel, severityGate, "")
+	if isRemediationPolicyLevel(policyLevel) {
+		return eval
 	}
-
-	if hasSeverityAtOrAbove(severities, warnOn) {
-		desc := formatFindingDescription(counts)
-		if MapGiteaCommitState(CommitStateWarning) == CommitStateFailure {
-			desc = "Repository-Detective warning: " + strings.TrimPrefix(desc, "Repository-Detective ")
-		}
-		return CommitStatusEvaluation{
-			State:       CommitStateWarning,
-			Description: desc,
-		}
-	}
-
-	return CommitStatusEvaluation{
-		State:       CommitStateSuccess,
-		Description: "Repository-Detective scan passed with no findings",
-	}
+	return eval
 }
 
 func normalizeSeverityThreshold(value, fallback string) string {
@@ -163,17 +148,48 @@ func formatFindingDescription(counts map[string]int) string {
 		}
 	}
 	if len(parts) == 0 {
-		return "Repository-Detective scan passed with no findings"
+		return "Policy met — no gated findings"
 	}
-	return "Repository-Detective found " + strings.Join(parts, ", ") + " findings"
+	return "Action required — findings: " + strings.Join(parts, ", ")
 }
 
 func hasBadScannerFailure(results []ScannerResultSummary) bool {
 	for _, result := range results {
-		switch strings.ToLower(strings.TrimSpace(result.Status)) {
+		status := strings.ToLower(strings.TrimSpace(result.Status))
+		if result.Required {
+			switch status {
+			case "failed", "timed_out", "parse_failed", "binary_missing", "scanner_unavailable":
+				return true
+			}
+			continue
+		}
+		switch status {
 		case "failed", "timed_out", "parse_failed":
 			return true
 		}
 	}
 	return false
+}
+
+func shouldFailCommitStatus(policyLevel string) bool {
+	switch strings.ToLower(strings.TrimSpace(policyLevel)) {
+	case "gate_pr", "suggest_fix", "auto_pr_with_approval", "auto_pr_low_risk":
+		return true
+	default:
+		return false
+	}
+}
+
+func isRemediationPolicyLevel(policyLevel string) bool {
+	switch strings.ToLower(strings.TrimSpace(policyLevel)) {
+	case "suggest_fix", "auto_pr_with_approval", "auto_pr_low_risk":
+		return true
+	default:
+		return false
+	}
+}
+
+// IsRemediationPolicyLevel reports reserved remediation policy levels.
+func IsRemediationPolicyLevel(policyLevel string) bool {
+	return isRemediationPolicyLevel(policyLevel)
 }

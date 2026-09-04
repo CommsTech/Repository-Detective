@@ -54,7 +54,7 @@ Legend:
 | Capability | Classification |
 |------------|----------------|
 | Trivy / Grype / Gitleaks / Semgrep / Go tools / Hadolint / Checkov / linters | BETA (image-dependent) |
-| Scanner coverage classification (REQUIRED/OPTIONAL states) | PLANNED (RD-011) |
+| Scanner coverage classification (REQUIRED/OPTIONAL states) | BETA — `store.BuildScannerCoverageSummary` |
 | LLM auditors | DISABLED_BY_DEFAULT |
 | AI recommendations | DISABLED_BY_DEFAULT |
 | Deep profile AI | BETA when AI configured |
@@ -65,9 +65,10 @@ Legend:
 
 | Capability | Classification |
 |------------|----------------|
-| POLICY_MET / ACTION_REQUIRED / EVALUATION_INCOMPLETE | PLANNED (RD-004) |
-| Observe / Warn / Enforce modes | PLANNED (RD-005) |
-| Compact PR summaries (no per-finding comments) | PLANNED (RD-006/026) |
+| POLICY_MET / ACTION_REQUIRED / EVALUATION_INCOMPLETE | BETA — `gitea.EvaluatePolicyOutcome` |
+| Observe / Warn / Enforce modes | BETA — aliases over `monitor_only` / `issue_only` / `gate_pr` |
+| Compact PR summaries (no per-finding comments) | BETA — `issues.RenderPRPolicySummary` |
+| Analysis profile required scanner sets | BETA — Light/Standard/Deep |
 | LOCAL_ONLY privacy mode | PLANNED (RD-007) |
 | Isolation threat model doc | PLANNED (RD-008) |
 | `repository-detective doctor` | PLANNED (RD-014) |
@@ -82,7 +83,8 @@ Legend:
 1. Some historical dogfood / beta notes still mention host-network-as-default — treat as historical evidence, not operator docs.
 2. `docs/guides/INSTALL_STEP_BY_STEP.md` and some wiki stubs remain thin — advanced only.
 3. UI “Report issue” links still prefer Gitea templates for operator health reports (intentional for maintainers); public README/CONTRIBUTING point to GitHub.
-4. Full capability matrix refresh after Phase 2–3 semantics land.
+4. Policy outcome persistence on scan records / UI detail pages still thin — follow-up polish.
+5. PR summary idempotency (update prior comment) not yet implemented — may duplicate on re-scan.
 
 ---
 
@@ -93,3 +95,13 @@ Legend:
 | RD-001 feedback path | Pass — single public destination documented; security separated |
 | RD-002 recommended install | Pass — one labeled path; advanced demoted |
 | RD-003 AI optional | Pass — docs/UI/defaults aligned with runtime gate |
+
+## Phase 2 acceptance (this audit)
+
+| Task | Status |
+|------|--------|
+| RD-004 policy outcomes | Pass (unit tested) |
+| RD-005 Observe/Warn/Enforce | Pass (UI labels + evaluation) |
+| RD-006 compact PR summary | Pass (wired; E2E pending) |
+| RD-011 scanner coverage | Pass (unit tested) |
+| RD-012 profile required sets | Pass (unit tested) |

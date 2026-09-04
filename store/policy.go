@@ -193,11 +193,9 @@ func PassesIssueGates(severity string, confidence float64, e EffectiveSettings) 
 	return SeverityRank(severity) >= SeverityRank(threshold)
 }
 
-// SeveritiesForStatus returns severities that should affect commit status evaluation.
+// SeveritiesForStatus returns severities that should affect commit status / policy evaluation.
+// Filtering uses confidence and severity gates; Observe/Warn/Enforce decide blocking in gitea policy evaluation.
 func SeveritiesForStatus(severities []string, confidences []float64, e EffectiveSettings) []string {
-	if !ShouldFailCommitStatus(e) {
-		return nil
-	}
 	out := make([]string, 0, len(severities))
 	for i, severity := range severities {
 		conf := 0.0
