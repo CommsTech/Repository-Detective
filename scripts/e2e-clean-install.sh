@@ -81,9 +81,15 @@ for i in $(seq 1 45); do
   if [[ "$CODE" == "200" ]]; then break; fi
   sleep 2
 done
-curl -fsS -H "X-Repository-Detective-API-Key: $API_KEY" "http://127.0.0.1:${RD_HOST_PORT}/api/v1/doctor" | tee "$OUT/doctor.json"
+DOCTOR_CODE="$(curl -s -o "$OUT/doctor.json" -w '%{http_code}' -H "X-Repository-Detective-API-Key: $API_KEY" "http://127.0.0.1:${RD_HOST_PORT}/api/v1/doctor" || true)"
+echo "$DOCTOR_CODE" | tee "$OUT/doctor-status.txt"
+if [[ "$DOCTOR_CODE" != "200" ]]; then
+  log "doctor API returned HTTP $DOCTOR_CODE (published image may predate Phase 4 Doctor — recorded as NOT_ON_PUBLISHED_IMAGE)"
+  echo '{"note":"doctor endpoint unavailable on this published image digest"}' >"$OUT/doctor.json"
+fi
 
 CID="$(docker compose -f docker-compose.yml ps -q repository-detective 2>/dev/null || docker-compose -f docker-compose.yml ps -q repository-detective)"
+[[ -n "$CID" ]] || { log "ERROR: clean-install container id missing"; exit 1; }
 docker exec "$CID" sh -c 'for b in gitleaks trivy grype semgrep; do echo -n "$b: "; command -v $b || echo MISSING; done' | tee "$OUT/scanners.txt"
 docker exec "$CID" sh -c 'for b in gitleaks trivy grype semgrep gosec govulncheck staticcheck hadolint checkov; do echo -n "$b: "; command -v $b >/dev/null && ($b --version 2>/dev/null | head -1 || $b version 2>/dev/null | head -1) || echo MISSING; done' | tee "$OUT/scanners-full.txt"
 
@@ -94,16 +100,19 @@ fi
 
 python3 - <<PY
 import json
+doctor_code=open("$OUT/doctor-status.txt").read().strip()
 out={
  "image":"$IMAGE",
  "digest":open("$OUT/image-digest.txt").read().strip(),
  "health_ok": True,
  "onboard_status": open("$OUT/onboard-status.txt").read().strip(),
+ "doctor_http": doctor_code,
+ "doctor_on_published_image": doctor_code == "200",
  "host_port":"$RD_HOST_PORT",
  "scanners": open("$OUT/scanners.txt").read(),
  "scanners_full": open("$OUT/scanners-full.txt").read(),
  "upgrade_e2e": "NOT_PROVEN",
- "notes": "Clean install used published/local all-in-one from .env.example-derived config on disposable port. Live forge onboarding is covered by e2e-gitea-acceptance.sh."
+ "notes": "Clean install used published/local all-in-one from .env.example-derived config on disposable port. Live forge onboarding is covered by e2e-gitea-acceptance.sh. Doctor may be absent on older published digests until republish."
 }
 json.dump(out, open("$OUT/clean-install.json","w"), indent=2)
 print("wrote clean-install.json")
