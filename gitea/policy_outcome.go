@@ -73,7 +73,7 @@ func classifyCoverageStatus(status string) string {
 
 func coverageBlocksPolicyMet(state string) bool {
 	switch state {
-	case "FAILED", "TIMEOUT", "UNAVAILABLE":
+	case "FAILED", "TIMEOUT", "UNAVAILABLE", "SKIPPED_BY_POLICY":
 		return true
 	default:
 		return false
