@@ -118,6 +118,18 @@ func TestRunStaticAnalysisSkipsModelEvalMethod(t *testing.T) {
 	}
 }
 
+func TestRunStaticAnalysisSkipsEvalMentionsInDocstrings(t *testing.T) {
+	findings := RunStaticAnalysis([]FileContent{{
+		Path: "helpers.py",
+		Content: "def _safe():\n    \"\"\"Evaluate without using eval().\"\"\"\n    return True\n",
+	}}, true, false)
+	for _, f := range findings {
+		if f.ID == "SEC-EVAL" {
+			t.Fatalf("expected docstring eval mention to be skipped, got SEC-EVAL on %q", f.Evidence.Code)
+		}
+	}
+}
+
 func TestRunStaticAnalysisSkipsStoreINClauseSprintf(t *testing.T) {
 	findings := RunStaticAnalysis([]FileContent{{
 		Path: "store/findings_batch_sqlite.go",

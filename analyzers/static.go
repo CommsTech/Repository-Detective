@@ -193,15 +193,16 @@ func isFalsePositiveEval(path, line string) bool {
 	if regexp.MustCompile(`\.eval\s*\(\s*\)`).MatchString(trimmed) {
 		return true
 	}
-	// Python if eval(...) in comments or markdown changelog lines.
+	// Comments/docstrings mentioning eval (including negation) are not code execution.
+	lower := strings.ToLower(trimmed)
 	if strings.HasPrefix(trimmed, "#") || strings.HasPrefix(trimmed, "//") ||
-		strings.HasPrefix(trimmed, "- ") || strings.HasPrefix(trimmed, "* ") {
-		if regexp.MustCompile(`(?i)\beval\s*\(`).MatchString(trimmed) {
-			return true
-		}
+		strings.HasPrefix(trimmed, "- ") || strings.HasPrefix(trimmed, "* ") ||
+		strings.HasPrefix(trimmed, `"""`) || strings.HasPrefix(trimmed, "'''") ||
+		(strings.Contains(lower, "without") && strings.Contains(lower, "eval")) ||
+		strings.Contains(lower, "dynamic code execution") {
+		return true
 	}
 	// Common library false positives (sourcemaps / safe wrappers).
-	lower := strings.ToLower(trimmed)
 	if strings.Contains(lower, "/*#__pure__*/") {
 		return true
 	}
