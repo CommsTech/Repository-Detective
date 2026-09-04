@@ -157,7 +157,7 @@ docker compose -f docs/examples/docker-compose.yml --profile all-in-one up -d --
 docker compose -f docs/examples/docker-compose.yml --profile core up -d --build
 ```
 
-Root [docker-compose.yml](../docker-compose.yml) builds **all-in-one** for homelab host networking (port 8081).
+Root [docker-compose.yml](../docker-compose.yml) is the **recommended** all-in-one deploy: bridge networking, published port **8081**. Optional host networking: `docker compose -f docker-compose.yml -f docker-compose.host-network.yml up -d`.
 
 ## Volumes and paths
 

@@ -23,10 +23,11 @@ Central index for deploying private beta instances. For fastest path see [QUICKS
 
 ```text
 Image:     repository-detective:all-in-one
-Compose:   docker-compose.yml (port 8081, host networking)
+Compose:   docker-compose.yml (port 8081, bridge + publish; host-network overlay optional)
 Database:  ./data/repository-detective.db (volume mount)
 Config:    ./config/config.yaml + .env
-Profile:   beta_standard (see BETA_READINESS.md)
+Profile:   standard (deterministic; AI optional)
+AI:        off by default (ENABLE_LLM_AUDITORS=false)
 ```
 
 ---

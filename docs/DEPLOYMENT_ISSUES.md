@@ -61,7 +61,7 @@ Repository: https://git.commsnet.org/commstech/repository-detective
 
 **Cause:** Many stale `GITEA-ACTIONS-TASK-*` bridge networks.
 
-**Fix (in repo):** `docker-compose.yml` uses `network_mode: host`.
+**Fix (in repo):** apply the optional host-network overlay — `docker compose -f docker-compose.yml -f docker-compose.host-network.yml up -d` — or prune stale networks.
 
 **Workaround:** `docker network prune` periodically.
 

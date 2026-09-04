@@ -31,9 +31,11 @@ REPOSITORY_DETECTIVE_WEBHOOK_SECRET=another-random-string
 REPOSITORY_DETECTIVE_SKIP_STARTUP_CHECKS=false
 ```
 
-**Note:** Docker Compose loads `.env` via `env_file`, and `REPOSITORY_DETECTIVE_*` values **override** `config/config.yaml`. The example files are aligned so a fresh copy enables the full scanner fleet (gitleaks, semgrep, Go tools) with LLM auditors off.
+**Note:** Docker Compose loads `.env` via `env_file`, and `REPOSITORY_DETECTIVE_*` values **override** `config/config.yaml`. The example files are aligned so a fresh copy enables the full scanner fleet (gitleaks, semgrep, Go tools) with LLM auditors **off** (AI optional).
 
-Legacy `REPOSITORY_DETECTIVE_*` variables work if you prefer.
+## Optional AI
+
+Leave `REPOSITORY_DETECTIVE_ENABLE_LLM_AUDITORS=false` for deterministic-only operation. To enable privacy-preserving AI later, configure a local Ollama / OpenAI-compatible endpoint — see [AI_PROVIDERS.md](AI_PROVIDERS.md).
 
 ## 3. Start (all-in-one Docker)
 

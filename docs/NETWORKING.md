@@ -56,13 +56,15 @@ Test webhook delivery in Gitea.
 
 ## B. Docker host network (Linux)
 
-The default `docker-compose.yml` already uses `network_mode: host` and listens on port **8081**.
+Default `docker-compose.yml` uses **bridge** networking and publishes port **8081**.
+
+For host networking (when bridge IP pools are exhausted or you need it for LAN reachability), apply the overlay:
 
 ```bash
-docker compose up -d --build
+docker compose -f docker-compose.yml -f docker-compose.host-network.yml up -d
 ```
 
-Set `REPOSITORY_DETECTIVE_PORT=8081` (or legacy `REPOSITORY_DETECTIVE_PORT=8081`) in `.env`.
+Set `REPOSITORY_DETECTIVE_PORT=8081` in `.env`.
 
 Not supported the same way on Docker Desktop for Windows/Mac.
 

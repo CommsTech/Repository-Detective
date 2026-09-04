@@ -44,6 +44,7 @@
 | **UI auth** | API-key mode by default; optional local login (`auth_mode=local`) |
 | **Not yet** | SaaS, multi-tenant, billing, auto-merge, third-party auto-submit |
 | **Try it** | [Public beta guide](docs/PUBLIC_BETA.md) · [Quickstart](docs/QUICKSTART.md) · [Contributing](CONTRIBUTING.md) |
+| **Report a bug** | [GitHub Issues](https://github.com/CommsTech/Repository-Detective/issues/new/choose) · Security: [SECURITY.md](SECURITY.md) |
 | **Editions docs** | [Community](docs/COMMUNITY_EDITION.md) · [Commercial](docs/COMMERCIAL_ENTERPRISE.md) · [Editions overview](docs/EDITIONS.md) |
 
 > **Naming:** The product is **Repository Detective**. Use `REPOSITORY_DETECTIVE_*` env vars and `X-Repository-Detective-API-Key`. See [docs/NAMING.md](docs/NAMING.md).
@@ -51,47 +52,56 @@
 | Host | Role |
 |------|------|
 | [Gitea](https://git.commsnet.org/commstech/Repository-Detective.git) | Canonical — CI, wiki, day-to-day development |
-| [GitHub](https://github.com/CommsTech/Repository-Detective.git) | Public mirror for discovery and community testers |
+| [GitHub](https://github.com/CommsTech/Repository-Detective.git) | Public mirror for discovery and **public feedback** |
 
 Sync policy: [docs/GITHUB_MIRROR.md](docs/GITHUB_MIRROR.md).
 
 **Docs:** [Public beta guide](docs/PUBLIC_BETA.md) · [Quickstart](docs/QUICKSTART.md) · [Wiki source (`docs/wiki/`)](docs/wiki/Home.md) · [GitHub Wiki](https://github.com/CommsTech/Repository-Detective/wiki) (after first publish) · [Gitea wiki](https://git.commsnet.org/commstech/repository-detective/wiki)
 
-## Setup
+## Recommended Installation
 
-**Start here:** [docs/SETUP.md](docs/SETUP.md) — step-by-step from clone to working webhooks.  
-**Public beta testers:** [docs/PUBLIC_BETA.md](docs/PUBLIC_BETA.md).
+**Start here:** [docs/QUICKSTART.md](docs/QUICKSTART.md) — one path from clone → configure Gitea → first scan.  
+Full walkthrough: [docs/SETUP.md](docs/SETUP.md). Public beta notes: [docs/PUBLIC_BETA.md](docs/PUBLIC_BETA.md).
 
 **Operator docs:** [docs/README.md](docs/README.md) · [Dashboard](docs/DASHBOARD_GUIDE.md) · [Auth (local)](docs/AUTH_LOCAL.md) · [Privacy](docs/PRIVACY_AND_DATA_PROTECTION.md)
 
 The published tree is a sanitized install base. **Only examples ship** (`.env.example`, `config/*.example.yaml`). Operator secrets (`.env`), local config (`config/config.yaml`), and the SQLite database under `data/` are gitignored and must stay private on your host. Gate: `./scripts/check-public-release-secrets.sh`.
 
-Quick local trial (prefer pull — avoids a long local build):
+Canonical defaults: **Docker Compose** (`docker-compose.yml`), published **all-in-one** image, port **8081**, **AI optional** (LLM auditors off by default).
 
 ```bash
 git clone https://github.com/CommsTech/Repository-Detective.git && cd Repository-Detective
-cp .env.example .env   # set REPOSITORY_DETECTIVE_API_KEY at minimum
+cp .env.example .env   # set REPOSITORY_DETECTIVE_API_KEY; add Gitea URL/token/webhook for forge use
 docker compose pull && docker compose up -d
 curl http://127.0.0.1:8081/health
 ```
 
-Then open http://127.0.0.1:8081/onboard — published image: `git.commsnet.org/commstech/repository-detective:all-in-one` ([DOCKER.md](docs/DOCKER.md); GHCR is a public mirror).
+Then open http://127.0.0.1:8081/onboard — image: `git.commsnet.org/commstech/repository-detective:all-in-one` ([DOCKER.md](docs/DOCKER.md); GHCR is a public mirror).
 
-Minimal compose (port **8080**, build from source): `docker compose -f docker-compose.minimal.yml up -d --build`.
+### Advanced Installation Options
+
+| Option | When to use |
+|--------|-------------|
+| `docker compose up -d --build` | Develop against local source (~long build) |
+| `docker-compose.minimal.yml` (port **8080**) | Lightweight local build without published image |
+| `docker-compose.offline.yml` | Air-gapped / preloaded tar |
+| Host-network / Traefik overlays | Special networking — [docs/NETWORKING.md](docs/NETWORKING.md) |
+| External DB / runner topology | [docs/DATABASE.md](docs/DATABASE.md) · [docs/RUNNER_DELEGATION.md](docs/RUNNER_DELEGATION.md) |
 
 **AI agents (OpenClaw, Cursor, etc.):** [docs/AGENT_QUICKSTART.md](docs/AGENT_QUICKSTART.md) · [docs/MCP.md](docs/MCP.md) · [docs/OPENCLAW_INTEGRATION.md](docs/OPENCLAW_INTEGRATION.md) · [docs/openapi.yaml](docs/openapi.yaml)
+
 ## What it does
 
 - Scans changed files on push; scans PR diff files on pull requests
 - Runs **deterministic checks first**: static rules, [Trivy](https://github.com/aquasecurity/trivy), [Grype](https://github.com/anchore/grype), golangci-lint, ruff, shellcheck
-- Uses LLM analysis only on flagged files (or disable entirely with `REPOSITORY_DETECTIVE_ENABLE_LLM_AUDITORS=false`)
+- **AI is optional** — LLM auditors off by default (`REPOSITORY_DETECTIVE_ENABLE_LLM_AUDITORS=false`); local LLM (Ollama / OpenAI-compatible) is the recommended privacy-preserving option when enabled
 - Creates Gitea issues with severity, file, line, code snippet, and PoC when available
-- Optional LLM backends — **off by default** in beta (`enable_llm_auditors: false`)
 - Remediation planner yes; **remediation PRs off by default**. Issue dedup is fingerprint + forge mapping (SQLite)
 - **No auto-merge** and **no automatic third-party issue submission**
+- Policy / commit-status outcomes describe compliance with an **owner-defined policy**, not that a repository is “safe” or “secure”
 - **AI recommendations** (optional, off by default) — provider-neutral advisory layer with CAH gating; see [docs/AI_RECOMMENDATIONS.md](docs/AI_RECOMMENDATIONS.md)
 - **Issue providers:** Gitea supported; GitHub code path exists but RC-unproven; GitLab not implemented — [docs/ISSUE_PROVIDERS.md](docs/ISSUE_PROVIDERS.md)
-- **Marketing:** not ready — see [docs/release/RC_ACCEPTANCE_BASELINE.md](docs/release/RC_ACCEPTANCE_BASELINE.md)
+- Release maturity: [docs/release/RC_ACCEPTANCE_BASELINE.md](docs/release/RC_ACCEPTANCE_BASELINE.md)
 
 ## Go module proxy (supply chain)
 

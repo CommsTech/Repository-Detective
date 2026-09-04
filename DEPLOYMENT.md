@@ -2,23 +2,29 @@
 
 See **[docs/DEPLOYMENT_ISSUES.md](docs/DEPLOYMENT_ISSUES.md)** for known deployment problems and workarounds on this host.
 
-See **[docs/SETUP.md](docs/SETUP.md)** for the full walkthrough.
+See **[docs/SETUP.md](docs/SETUP.md)** for the full walkthrough and **[docs/QUICKSTART.md](docs/QUICKSTART.md)** for the recommended path.
 
 ## Prerequisites
 
-- Gitea with an API token (repo read, hook write, issue write if auto-creating issues)
-- An AI backend — [docs/AI_PROVIDERS.md](docs/AI_PROVIDERS.md)
-- Docker, or Go 1.21+ to build from source
-- A URL Gitea can reach for webhooks — [docs/NETWORKING.md](docs/NETWORKING.md)
+### Required
 
-## Quick deploy
+- Docker (Compose v2 recommended)
+- A Gitea API token when connecting a forge (repo read, hook write, issue write if auto-creating issues)
+- A URL Gitea can reach for webhooks when using forge integration — [docs/NETWORKING.md](docs/NETWORKING.md)
+
+### Optional
+
+- An AI backend — **not required** for deterministic scanning. Prefer local Ollama / OpenAI-compatible endpoints for privacy — [docs/AI_PROVIDERS.md](docs/AI_PROVIDERS.md)
+- Go 1.25+ only if building from source without Docker
+
+## Recommended Installation
 
 ```bash
 git clone https://git.commsnet.org/commstech/Repository-Detective.git
-cd repository-detective
-cp .env.example .env   # or copy from a legacy install at ~/repository-detective/.env
-# edit .env
-docker compose up -d --build
+cd Repository-Detective
+cp .env.example .env   # or copy from a legacy install
+# edit .env — API key required; AI vars optional
+docker compose pull && docker compose up -d
 curl -m 5 http://127.0.0.1:8081/health
 ```
 
@@ -47,7 +53,13 @@ docker compose up -d --build
 
 If `proxy.golang.org` is blocked, `vendor-deps.sh` can retry with `goproxy.io` as a **temporary local workaround only** — not recommended for security-sensitive or government deployments. Prefer an internal artifact proxy or fully offline `vendor/` + `GOPROXY=off`. The `vendor/` directory is not committed.
 
-When Docker bridge IP pools are exhausted, the default `docker-compose.yml` uses `network_mode: host` (listens on port 8081).
+When Docker bridge IP pools are exhausted, apply the **optional** host-network overlay:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.host-network.yml up -d
+```
+
+Default `docker-compose.yml` uses **bridge** networking and publishes port **8081**.
 
 Disable the legacy systemd unit after Docker is healthy:
 
@@ -55,13 +67,16 @@ Disable the legacy systemd unit after Docker is healthy:
 sudo systemctl disable --now repository-detective.service
 ```
 
-## Compose files
+## Advanced Installation Options — Compose files
 
-| File | Port | Builds image? |
-|------|------|---------------|
-| `docker-compose.minimal.yml` | 8080 | yes |
-| `docker-compose.yml` | 8081 | yes |
-| `docker-compose.offline.yml` | 8081 | no — load tar first |
+| File | Port | Builds image? | Role |
+|------|------|---------------|------|
+| `docker-compose.yml` | **8081** | pull preferred | **Recommended** |
+| `docker-compose.minimal.yml` | 8080 | yes | Local contrib / no registry |
+| `docker-compose.offline.yml` | 8081 | no — load tar first | Air-gap |
+| `docker-compose.beta.yml` | 8081 | yes | Private beta profile |
+| `docker-compose.host-network.yml` | 8081 | — | Overlay when bridge pools exhausted |
+| `docker-compose.traefik.yml` | — | — | Reverse-proxy overlay |
 
 ## Pre-built image transfer
 
@@ -85,6 +100,8 @@ curl -H "X-Repository-Detective-API-Key: $REPOSITORY_DETECTIVE_API_KEY" http://1
 docker logs repository-detective --tail 50
 ```
 
+`ai_provider: disabled` (or AI Analysis: Disabled) with LLM auditors off is expected — not a failed install.
+
 ## CI/CD
 
 `.gitea/workflows/` runs tests on push to `main`. Tag `v*` to build release binaries.
@@ -96,3 +113,4 @@ Local test guide: [docs/TESTING.md](docs/TESTING.md)
 - [SETUP.md](docs/SETUP.md)
 - [NETWORKING.md](docs/NETWORKING.md)
 - [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
+- [AI_PROVIDERS.md](docs/AI_PROVIDERS.md) (optional)
