@@ -87,6 +87,8 @@ func healthPayload(ready bool) gin.H {
 		"product_name":          "Repository Detective",
 		"tagline":               "Inspect. Analyze. Improve.",
 		"version":               version,
+		"commit":                commit,
+		"build_date":            buildDate,
 		"public_url_configured": config.PublicURL != "",
 	}
 	if ready {
