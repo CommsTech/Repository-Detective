@@ -9,15 +9,22 @@ Repository Detective uses four operator-facing scan profiles. Names say what the
 | **Deep** | `deep` | Heavy workspace scan with **AI cross-checks**. Slower, highest coverage. |
 | **Custom** | `custom` | Manual toggles only — no preset overrides. |
 
-### Required vs optional scanners (RD-012 / RD-011)
+### Required vs optional scanners (RD-012 / RD-012A)
 
-| Profile | Required (must complete for `POLICY_MET`) | Optional |
-|---------|--------------------------------------------|----------|
-| Light | `gitleaks`, `trivy` (when enabled) | — |
-| Standard / Deep | All enabled scanners for the profile | — |
-| Custom | All enabled scanners | — |
+| Concept | Meaning |
+|---------|---------|
+| **Profile-required** | Declared by the profile; cannot be removed by disabling the scanner |
+| **Operator-enabled optional** | Extra scanners turned on; for Standard/Deep these join the required set when enabled |
+| **Applicability** | `NOT_APPLICABLE` (e.g. no matching manifests) — complete for required only when the tool legitimately decides N/A |
+| **Disabled** | `SKIPPED_BY_POLICY` — **incomplete** when the scanner is REQUIRED |
 
-Missing **required** analyzers (`binary_missing`, `scanner_unavailable`, `failed`, `timed_out`, `parse_failed`) produce `EVALUATION_INCOMPLETE` — never `POLICY_MET`.
+| Profile | Always required (even if disabled) | Also required |
+|---------|--------------------------------------|---------------|
+| Light | `gitleaks`, `trivy` | — |
+| Standard / Deep | `gitleaks`, `trivy`, `grype`, `semgrep` | Union of all currently enabled scanners |
+| Custom | — | All enabled scanners; **empty enabled set is incomplete** (never silent `0/0` → `POLICY_MET`) |
+
+Missing, disabled, failed, timed-out, or unavailable **required** analyzers produce `EVALUATION_INCOMPLETE` — never `POLICY_MET`.
 
 Legacy IDs still work and map automatically:
 
