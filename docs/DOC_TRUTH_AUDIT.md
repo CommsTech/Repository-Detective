@@ -33,7 +33,7 @@ Proof levels: `CODE_PRESENT` / `WIRED` / `UNIT_TESTED` / `INTEGRATION_TESTED` / 
 | Doctor JSON | **E2E_PROVEN** | `/api/v1/doctor` authorized; missing token → 401 |
 | Restart persistence of proofs | **E2E_PROVEN** | Webhook/first-scan evidence survives restart |
 | Webhook negatives | **E2E_PROVEN** | Bad/missing/malformed → 401; replay via fingerprints (not delivery-ID reject) |
-| Clean install RD-018 | harness | `scripts/e2e-clean-install.sh` (published image + `.env.example`) |
+| Clean install RD-018 | **E2E_PROVEN** (health/onboard/scanners) | Doctor absent on published `v0.1.0-beta.2` digest until republish |
 | Upgrade E2E | **NOT_PROVEN** | No trustworthy prior public-beta baseline selected |
 | Remediation planner | CODE_PRESENT / prior unit | Not expanded this phase |
 | Class-B remediation execution | **NOT_PROVEN** | Intentionally excluded (RD-008B Option C) |

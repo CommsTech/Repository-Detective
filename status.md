@@ -12,7 +12,7 @@
 | E2E harness scenarios | **PASS** | `e2e/results/20260904T182636Z-2505621/` — zero FAIL |
 | Required-scanner fail-closed | **E2E_PROVEN** | Controlled gitleaks stub |
 | PR summary idempotency | **E2E_PROVEN** | RD-006A at Gitea 1.22.3 |
-| Clean install RD-018 | **Pending script** | `scripts/e2e-clean-install.sh` |
+| Clean install RD-018 | **PASS** | health+onboard+scanners; Doctor absent on published beta.2 digest |
 | Upgrade E2E | **NOT_PROVEN** | No prior public-beta baseline |
 | Class-B remediation / RD-015–016 | **Excluded** | RD-008B Option C unchanged |
 
