@@ -1,0 +1,55 @@
+name: Installation problem
+description: Compose, ports, env vars, image pull, or first-start failures
+labels: ["type/bug", "area/install", "status/needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for **install / first-start** friction.
+        Do **not** paste secrets, tokens, `.env`, or customer code.
+        Prefer redacted `docker compose` / health output.
+  - type: dropdown
+    id: install_path
+    attributes:
+      label: Installation path you followed
+      options:
+        - Recommended — docker compose pull (port 8081)
+        - Build from source (docker compose --build)
+        - Minimal compose (port 8080)
+        - Offline / prebuilt image
+        - Other / custom
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: What failed?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps already tried
+    validations:
+      required: true
+  - type: input
+    id: host
+    attributes:
+      label: Host OS / Docker version
+      placeholder: "Ubuntu 24.04 · Docker 27.x"
+  - type: input
+    id: version
+    attributes:
+      label: Image tag / commit
+      placeholder: all-in-one · v0.1.0-beta.x · main@sha
+    validations:
+      required: true
+  - type: textarea
+    id: health
+    attributes:
+      label: Redacted `/health` output (optional)
+  - type: textarea
+    id: logs
+    attributes:
+      label: Redacted logs (optional)
+      description: Strip API keys, forge tokens, and webhook secrets.

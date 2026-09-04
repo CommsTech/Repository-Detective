@@ -1,8 +1,14 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Private beta scope
-    url: https://git.commsnet.org/commstech/Repository-Detective/src/branch/main/docs/beta/PRIVATE_BETA_TEST_SCOPE.md
-  - name: Feedback templates (docs)
-    url: https://git.commsnet.org/commstech/Repository-Detective/src/branch/main/docs/beta/PRIVATE_BETA_FEEDBACK_TEMPLATE.md
-  - name: Security — do not paste secrets
-    url: https://git.commsnet.org/commstech/Repository-Detective/src/branch/main/docs/PRIVACY_AND_DATA_PROTECTION.md
+  - name: Public feedback (GitHub)
+    url: https://github.com/CommsTech/Repository-Detective/issues/new/choose
+    about: Prefer GitHub for anonymous/public beta bug and feature reports
+  - name: Security policy
+    url: https://git.commsnet.org/commstech/Repository-Detective/src/branch/main/SECURITY.md
+    about: Report product vulnerabilities privately — do not paste exploits or secrets here
+  - name: Private vulnerability reporting (GitHub)
+    url: https://github.com/CommsTech/Repository-Detective/security/advisories/new
+    about: GitHub private advisory form for Repository Detective itself
+  - name: Public beta guide
+    url: https://git.commsnet.org/commstech/Repository-Detective/src/branch/main/docs/PUBLIC_BETA.md
+    about: What public beta covers and how to install

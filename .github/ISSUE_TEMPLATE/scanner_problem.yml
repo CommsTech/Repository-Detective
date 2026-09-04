@@ -1,0 +1,46 @@
+name: Scanner problem
+description: Missing scanner, timeout, parse failure, or unavailable analyzer
+labels: ["type/bug", "area/scanners", "status/needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this when a scanner did not run, timed out, failed to parse, or is missing from the image.
+        For “this finding is wrong”, use **Scanner false positive** instead.
+        Do **not** paste secrets or customer source.
+  - type: input
+    id: scanner
+    attributes:
+      label: Scanner / tool name
+      placeholder: gitleaks · semgrep · trivy · grype · …
+    validations:
+      required: true
+  - type: dropdown
+    id: symptom
+    attributes:
+      label: Symptom
+      options:
+        - UNAVAILABLE / missing binary
+        - FAILED / non-zero exit
+        - TIMEOUT
+        - parse_failed / empty report
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Repository Detective version / image tag
+    validations:
+      required: true
+  - type: input
+    id: scan_id
+    attributes:
+      label: Scan ID (if known)
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Redacted log lines, `/health` tools_summary, or System Health capability row.
+    validations:
+      required: true

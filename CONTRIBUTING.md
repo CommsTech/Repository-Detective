@@ -1,17 +1,19 @@
 # Contributing to Repository Detective
 
-Thanks for helping. Canonical development is on **Gitea**; **GitHub** is the public mirror for discovery and community feedback.
+Thanks for helping. Canonical development is on **Gitea**; **GitHub** is the public mirror for discovery and **public feedback**.
 
-| Host | URL |
-|------|-----|
-| Canonical (CI, wiki, primary issues) | https://git.commsnet.org/commstech/repository-detective |
-| Public mirror | https://github.com/CommsTech/Repository-Detective |
+| Host | Role | URL |
+|------|------|-----|
+| Gitea | Canonical CI, wiki, maintainer development | https://git.commsnet.org/commstech/Repository-Detective |
+| GitHub | Public mirror + **public issue reports** | https://github.com/CommsTech/Repository-Detective |
 
-## Ways to help
+## Where to report
 
-- File bugs, false positives, missed detections, and docs gaps
-- Improve operator docs under `docs/` and `docs/wiki/`
-- Share repro steps from self-hosted installs (redact secrets and private paths)
+| Kind | Where |
+|------|--------|
+| Bug, install problem, scanner problem, feature request | **[GitHub Issues](https://github.com/CommsTech/Repository-Detective/issues/new/choose)** (templates provided) |
+| Security vulnerability in Repository Detective | **[SECURITY.md](SECURITY.md)** — private advisory preferred; never paste exploit details in public issues |
+| Maintainer / internal ops templates | Gitea `.gitea/ISSUE_TEMPLATE/` |
 
 ## Before you open an issue
 
@@ -20,8 +22,6 @@ Thanks for helping. Canonical development is on **Gitea**; **GitHub** is the pub
 3. Prefer: scan ID, finding fingerprint, rule ID, severity, and a minimal repro.
 4. Run a quick health check: `curl -s http://127.0.0.1:8081/health`
 
-Issue templates live under `.gitea/ISSUE_TEMPLATE/` (Gitea). On GitHub, use the same structure in free-form issues until `.github` templates are mirrored.
-
 ## Local development
 
 ```bash
@@ -29,12 +29,13 @@ git clone https://github.com/CommsTech/Repository-Detective.git
 cd Repository-Detective
 cp .env.example .env
 cp config/config.yaml.example config/config.yaml
-# Edit .env — set API key + at least one forge token
-docker compose -f docker-compose.minimal.yml up -d --build
-curl -s http://localhost:8080/health
+# Edit .env — set API key; add Gitea URL/token/webhook when connecting a forge.
+# AI is optional — leave REPOSITORY_DETECTIVE_ENABLE_LLM_AUDITORS=false
+docker compose pull && docker compose up -d
+curl -s http://127.0.0.1:8081/health
 ```
 
-Homelab / all-in-one default port is **8081**. See [docs/QUICKSTART.md](docs/QUICKSTART.md) and [docs/SETUP.md](docs/SETUP.md).
+Recommended install uses port **8081**. Minimal compose (`docker-compose.minimal.yml`, port 8080) is an advanced/local-build option. See [docs/QUICKSTART.md](docs/QUICKSTART.md) and [docs/SETUP.md](docs/SETUP.md).
 
 Tests (match `go.mod`):
 

@@ -16,10 +16,10 @@ The same policy applies to **container images**:
 
 | Host | Role | When to push |
 |------|------|--------------|
-| **Gitea** | Canonical — day-to-day commits, Issues, Actions, wiki, **container packages** | Keep `main` / packages updated continuously |
-| **GitHub** | Public community mirror (git + optional GHCR) | After each publish-ready `main` update (or batch with `--github`) |
+| **Gitea** | Canonical — day-to-day commits, Actions, wiki, **container packages**, maintainer issues | Keep `main` / packages updated continuously |
+| **GitHub** | Public community mirror (git + optional GHCR) + **public feedback Issues** | After each publish-ready `main` update (or batch with `--github`) |
 
-Day-to-day development stays on Gitea. GitHub is for testers and discovery — not a second active development remote.
+Day-to-day development stays on Gitea. Public bug/feature reports should use [GitHub Issues](https://github.com/CommsTech/Repository-Detective/issues/new/choose). Security: [SECURITY.md](../SECURITY.md).
 
 ### Container publish order
 

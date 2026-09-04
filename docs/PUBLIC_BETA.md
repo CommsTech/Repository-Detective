@@ -42,18 +42,23 @@ cp config/config.yaml.example config/config.yaml
 
 Before publishing mirrors, operators run `./scripts/check-public-release-secrets.sh`.
 
+### Recommended installation (port 8081)
+
 ```bash
 git clone https://github.com/CommsTech/Repository-Detective.git
 cd Repository-Detective
 cp .env.example .env
 cp config/config.yaml.example config/config.yaml
-# Set REPOSITORY_DETECTIVE_API_KEY (+ Gitea URL/token if you want webhooks)
-docker compose -f docker-compose.minimal.yml up -d --build
-curl -s http://localhost:8080/health
-open http://localhost:8080/onboard
+# Required: REPOSITORY_DETECTIVE_API_KEY
+# For forge/webhooks: GITEA_URL, GITEA_TOKEN, WEBHOOK_SECRET
+# AI is optional — ENABLE_LLM_AUDITORS defaults to false
+docker compose pull && docker compose up -d
+curl -s http://127.0.0.1:8081/health
+# open http://127.0.0.1:8081/onboard
 ```
 
-Deeper install: [QUICKSTART.md](QUICKSTART.md) · [SETUP.md](SETUP.md) · smoke: [BETA_SMOKE_TEST.md](BETA_SMOKE_TEST.md).
+Deeper install: [QUICKSTART.md](QUICKSTART.md) · [SETUP.md](SETUP.md) · smoke: [BETA_SMOKE_TEST.md](BETA_SMOKE_TEST.md).  
+Advanced (build-from-source / port 8080): `docker compose -f docker-compose.minimal.yml up -d --build`.
 
 ## Feedback we want most
 
@@ -64,8 +69,9 @@ Deeper install: [QUICKSTART.md](QUICKSTART.md) · [SETUP.md](SETUP.md) · smoke:
 
 Never paste secrets. Prefer scan ID + fingerprint.
 
-- GitHub: https://github.com/CommsTech/Repository-Detective/issues  
-- Gitea (canonical templates): https://git.commsnet.org/commstech/Repository-Detective/issues/new  
+**Public bug / feature reports:** [GitHub Issues](https://github.com/CommsTech/Repository-Detective/issues/new/choose) (templates: bug, feature, installation, scanner).  
+**Security vulnerabilities:** [SECURITY.md](../SECURITY.md) — private advisory preferred; do not file exploit details as normal issues.  
+**Canonical development forge:** [Gitea](https://git.commsnet.org/commstech/Repository-Detective) (CI, wiki, maintainers).
 
 ## License
 
