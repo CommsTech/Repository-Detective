@@ -1,5 +1,14 @@
 # Development Issues Log
 
+## Fixed (2026-09-04) — Phase 1 public-beta blockers (RD-001/002/003/029)
+
+| Priority | Issue | Resolution |
+|----------|-------|------------|
+| P0 | Public feedback path unclear / incomplete GitHub templates | GitHub Issues confirmed enabled; templates for bug/feature/install/scanner; SECURITY.md + private advisories; docs point one place for public bugs |
+| P0 | Multiple install paths / 8080 vs 8081 / AI listed as required | Single **Recommended Installation** (compose pull, :8081); advanced options demoted; AI section optional everywhere |
+| P0 | Docs/UI implied AI required despite runtime optional | Defaults (`DefaultGlobalSettings`), configure/onboarding/health copy, AI test-connection → Disabled not 503 |
+| P3 | Stale doc claims (host-network default, enable_llm true examples) | Corrected NETWORKING/DOCKER/DEPLOYMENT; DOC_TRUTH_AUDIT.md |
+
 ## Fixed (2026-09-01) — Month-end audit: secret scanning, learning loop, disk
 
 | Priority | Issue | Resolution |

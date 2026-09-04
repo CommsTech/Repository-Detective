@@ -1,8 +1,25 @@
 # Repository Detective - Implementation Status
 
-**Last updated:** 2026-08-02  
-**Repository:** https://git.commsnet.org/commstech/Repository-Detective.git
+**Last updated:** 2026-09-04  
+**Program:** Product Hardening & Public Beta Improvement Backlog (RD-001…RD-030)
 
+### Phase 1 (2026-09-04) — Public-beta contradictions
+
+| Task | Status | Notes |
+|------|--------|-------|
+| RD-001 Public feedback path | **Done** | GitHub Issues = public feedback (verified enabled); templates expanded; SECURITY.md + private advisories; Gitea remains canonical forge |
+| RD-002 Recommended Installation | **Done** | Compose pull :8081 labeled Recommended; advanced options demoted; AI removed from required env |
+| RD-003 AI explicitly optional | **Done** | Defaults/UI/onboarding/API aligned; `AI Analysis: Disabled`; startup gate unchanged |
+| RD-029 Doc truth audit | **Done** | [docs/DOC_TRUTH_AUDIT.md](docs/DOC_TRUTH_AUDIT.md) |
+
+**Tests:** `go test ./api/ ./store/` + main AI readiness tests via `golang:1.25-bookworm` — pass.  
+**Not run:** full `./...` suite (long); live E2E install (RD-017/018).
+
+**Next:** Phase 2 semantics — RD-004, RD-005, RD-006, RD-011, RD-012.
+
+**Fleet remediation:** Critical open findings cleared (20→0); noise backlog reduced via learning suppressions; 6 app repos + SEC-EVAL analyzer fix pushed. Details: `state/fleet-remediation-2026-09-04/`.
+
+**Repository:** https://git.commsnet.org/commstech/Repository-Detective.git
 ## Live deploy (2026-08-02) — Full application audit
 
 | Item | Value |

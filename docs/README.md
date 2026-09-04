@@ -12,8 +12,9 @@ detect → issue → plan → approve → patch PR → merge → rescan → veri
 
 | Document | Description |
 |----------|-------------|
-| [QUICKSTART.md](QUICKSTART.md) | Zero to first scan (~15 min) |
-| [PUBLIC_BETA.md](PUBLIC_BETA.md) | Public community beta — try it + feedback |
+| [QUICKSTART.md](QUICKSTART.md) | **Recommended Installation** — zero to first scan (~15 min) |
+| [PUBLIC_BETA.md](PUBLIC_BETA.md) | Public community beta — try it + [GitHub feedback](https://github.com/CommsTech/Repository-Detective/issues/new/choose) |
+| [SECURITY.md](../SECURITY.md) | Product vulnerability reporting (private advisory) |
 | [AGENT_QUICKSTART.md](AGENT_QUICKSTART.md) | AI agents — REST + MCP for OpenClaw / automations |
 | [MCP.md](MCP.md) | MCP stdio bridge (`repository-detective-mcp`) |
 | [OPENCLAW_INTEGRATION.md](OPENCLAW_INTEGRATION.md) | RD↔OpenClaw both directions |
@@ -25,6 +26,7 @@ detect → issue → plan → approve → patch PR → merge → rescan → veri
 | [DOCKER.md](DOCKER.md) | Image targets and build |
 | [RELEASE_NOTES_0.1.0_BETA.md](RELEASE_NOTES_0.1.0_BETA.md) | Beta release notes |
 | [DOCS_AUDIT.md](DOCS_AUDIT.md) | Documentation completeness audit |
+| [DOC_TRUTH_AUDIT.md](DOC_TRUTH_AUDIT.md) | RD-029 capability claims vs source (STABLE/BETA/…) |
 | [FEATURE_COMPLETENESS_AUDIT.md](FEATURE_COMPLETENESS_AUDIT.md) | Feature inventory and gap audit |
 | [API_ROUTES.md](API_ROUTES.md) | API route reference |
 | [openapi.yaml](openapi.yaml) | OpenAPI 3 (also `GET /api/v1/openapi.yaml`) |

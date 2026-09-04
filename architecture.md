@@ -97,7 +97,17 @@ git.commsnet.org/commstech/repository-detective
 - Auth: `api_key` / `REPOSITORY_DETECTIVE_API_KEY`
 - Per-scanner enables (`enable_trivy`, `enable_gitleaks`, …) and scan profiles (Light/Standard/Deep/Custom)
 - Timeouts: `analysis_timeout_seconds`, `scanner_timeout_seconds`
-- Optional AI: `ai_provider`, `ai_base_url`, `ai_api_key`, `ai_model` (off by default for beta)
+- Optional AI: `ai_provider`, `ai_base_url`, `ai_api_key`, `ai_model` (off by default; `needsAIProvider()` only when LLM auditors enabled at depth ≥ 3)
 - Include/exclude and skip patterns for repositories and files
 
-See [docs/CONFIGURATION.md](docs/CONFIGURATION.md), [docs/ONBOARDING.md](docs/ONBOARDING.md), and [docs/AI_PROVIDERS.md](docs/AI_PROVIDERS.md).
+### Public beta support model
+
+- **GitHub Issues** — public bug/feature/install/scanner feedback
+- **Gitea** — canonical development forge (CI, wiki, maintainers)
+- **SECURITY.md** — product vulnerabilities (private advisory preferred)
+
+### Recommended deployment
+
+`docker-compose.yml` + published all-in-one image, port **8081**, bridge networking (host-network overlay optional).
+
+See [docs/CONFIGURATION.md](docs/CONFIGURATION.md), [docs/ONBOARDING.md](docs/ONBOARDING.md), [docs/AI_PROVIDERS.md](docs/AI_PROVIDERS.md), and [docs/DOC_TRUTH_AUDIT.md](docs/DOC_TRUTH_AUDIT.md).
