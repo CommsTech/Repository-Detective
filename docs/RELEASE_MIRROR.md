@@ -24,6 +24,12 @@ The script:
 3. Pushes the tag to GitHub without rewriting `main` (optional `--also-refresh-main`)
 4. Creates a GitHub Release with notes pointing at acceptance + VERIFY_RELEASE
 
+Sanitization note: the snapshot commit is built with `git archive` then `git add`, so
+**`.gitignore` rules apply** (for example most of `docs/dogfood-reports/` stays out of the
+public tag). That means the GitHub tag tree ID will not equal the raw Gitea
+`e130bfb^{tree}` — it is the **public-sanitized** tree of that source commit.
+The release notes still bind the immutable container digest to source commit `e130bfb`.
+
 ## Validation
 
 ```bash
