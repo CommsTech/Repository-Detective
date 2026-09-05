@@ -175,10 +175,19 @@ wait_rd_ready() {
 snapshot_rd_db() {
   local label="$1"
   local dest="$OUT_DIR/snapshots/${label}.db"
-  # Copy DB from volume without mutating the live fixture; keep disposable baseline.
-  docker run --rm --volumes-from rd-e2e-detective -v "$OUT_DIR/snapshots:/out" alpine:3.20 \
-    sh -c 'cp /app/data/repository-detective.db /out/'"${label}"'.db && chmod 644 /out/'"${label}"'.db' \
-    || fail "failed to snapshot DB as $label"
+  # Checkpoint WAL so a single-file docker cp is a consistent disposable baseline.
+  docker exec rd-e2e-detective sh -c '
+    if command -v sqlite3 >/dev/null 2>&1; then
+      sqlite3 /app/data/repository-detective.db "PRAGMA wal_checkpoint(FULL);"
+    fi
+  ' >/dev/null 2>&1 || true
+  if ! docker cp "rd-e2e-detective:/app/data/repository-detective.db" "$dest" 2>/dev/null; then
+    fail "failed to snapshot DB as $label"
+  fi
+  # Best-effort WAL companions (may be empty after checkpoint).
+  docker cp "rd-e2e-detective:/app/data/repository-detective.db-wal" "${dest}-wal" 2>/dev/null || true
+  docker cp "rd-e2e-detective:/app/data/repository-detective.db-shm" "${dest}-shm" 2>/dev/null || true
+  chmod 644 "$dest" 2>/dev/null || true
   log "snapshot written $dest ($(wc -c <"$dest") bytes)"
 }
 
@@ -284,14 +293,14 @@ for i in $(seq 1 100); do
   echo "$FINDINGS" >"$OUT_DIR/findings-before.json"
   DOC="$(rd_api GET /api/v1/doctor 2>/dev/null || echo '{}')"
   echo "$DOC" >"$OUT_DIR/doctor-before.json"
-  if jq -e '(.findings // []) | length > 0' <<<"$FINDINGS" >/dev/null 2>&1 \
-     || jq -e '.checks[]? | select(.id=="proof.first_scan" and .state=="PASS")' <<<"$DOC" >/dev/null 2>&1; then
+  COUNT="$(jq '(.findings // []) | length' <<<"$FINDINGS" 2>/dev/null || echo 0)"
+  if [[ "${COUNT:-0}" -gt 0 ]]; then
     SEED_OK=1
     break
   fi
   sleep 3
 done
-[[ "$SEED_OK" == "1" ]] || fail "failed to seed findings under beta.3"
+[[ "$SEED_OK" == "1" ]] || fail "failed to seed findings under beta.3 (need at least one finding)"
 FINDING_COUNT_BEFORE="$(jq '(.findings // []) | length' "$OUT_DIR/findings-before.json")"
 record_scenario "seed_state" "PASS" "findings=$FINDING_COUNT_BEFORE"
 

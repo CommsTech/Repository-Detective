@@ -3,13 +3,19 @@
 **Last updated:** 2026-09-05  
 **Program:** Product Hardening & Public Beta Improvement Backlog (RD-001…RD-030)
 
-### Phase 8A (2026-09-05) — Tech-debt duplicate-path audit (RD-030) — COMPLETE (docs)
+### Phase 8A (2026-09-05) — Beta hardening & real-use readiness — COMPLETE
 
 | Task | Status | Notes |
 |------|--------|-------|
-| RD-030 Architecture duplicate-path audit | **Done** | [docs/TECH_DEBT_AUDIT.md](docs/TECH_DEBT_AUDIT.md) — classifications only; **no code deleted** |
-| DEAD_PROVEN candidates | **Documented** | `RunAllCandidates`, `BuildWorkflowTrigger`, `handleDefaults`, `Recorder.RecordIssues`, `ComputeOverallScore`, `store.PolicyOutcome*` |
-| Forgejo estimate | **Optional note** | Recommend Forgejo **15 LTS** first; no support claim |
+| RD-031 gofmt debt | **Done** | 140 files; CI `check-fmt` / workflow fails unclean |
+| RD-032 new-install auth | **Done** | Recommend `AUTH_MODE=local`; runtime default `api_key_only` unchanged |
+| RD-033 upgrade harness | **Done** | `scripts/e2e-upgrade-from-beta3.sh` → `UPGRADE_FROM_BETA3_TO_CURRENT_MAIN_INTEGRATION_PROVEN` when PASS |
+| RD-034 redaction | **Done** | `SanitizeDiagnostic` + corpus; remaining heuristic limits documented |
+| RD-035 dogfood | **Done** | [docs/release/DOGFOOD_2026-09-05.md](docs/release/DOGFOOD_2026-09-05.md) |
+| RD-024 finding-quality metrics | **Done** | `GET /analytics/finding-quality?window=7d\|30d\|all` |
+| RD-025 calibration transparency | **Done** | `/calibration/history` + accepted revert |
+| RD-030 tech-debt audit | **Done** | [docs/TECH_DEBT_AUDIT.md](docs/TECH_DEBT_AUDIT.md) — **no code deleted** |
+| Class-B / RD-015–016 | **Excluded** | Unchanged |
 
 ### Phase 7 (2026-09-05) — Public trust, presentation, release supply chain — COMPLETE
 

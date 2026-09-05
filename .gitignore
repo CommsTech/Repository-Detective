@@ -290,3 +290,4 @@ e2e/results/
 
 # Local operator/fleet scratch (never publish)
 state/
+repository-detective.upgrade
