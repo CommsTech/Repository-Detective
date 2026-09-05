@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"time"
 
@@ -635,16 +634,7 @@ func checkRemediation(in Input) []Check {
 }
 
 func sanitizeDetail(s string) string {
-	s = security.RedactSecrets(s)
-	// Extra pass for unquoted token=/secret= fragments in diagnostic details.
-	s = redactUnquotedAssignments(s)
-	return s
-}
-
-var unquotedSecretAssign = regexp.MustCompile(`(?i)\b(password|api[_-]?key|secret|token|auth)\s*[:=]\s*([^\s"'\\]{8,})`)
-
-func redactUnquotedAssignments(s string) string {
-	return unquotedSecretAssign.ReplaceAllString(s, "$1=[REDACTED]")
+	return security.SanitizeDiagnostic(s, 2000)
 }
 
 func nz(s, def string) string {

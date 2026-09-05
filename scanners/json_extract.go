@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+
+	"git.commsnet.org/commstech/repository-detective/internal/security"
 )
 
 // errNoJSONValue reports that scanner output held only log lines and no JSON at all.
@@ -84,12 +86,10 @@ func stripANSI(b []byte) []byte {
 	return out.Bytes()
 }
 
-// redactScannerDetail collapses noisy ANSI tool logs into a single-line operator message.
+// redactScannerDetail collapses noisy ANSI tool logs into a single-line operator message
+// and routes through the central credential sanitizer (RD-034).
 func redactScannerDetail(detail string) string {
 	clean := string(stripANSI([]byte(detail)))
 	clean = strings.Join(strings.Fields(clean), " ")
-	if len(clean) > 400 {
-		return clean[:397] + "..."
-	}
-	return clean
+	return security.SanitizeDiagnostic(clean, 400)
 }
