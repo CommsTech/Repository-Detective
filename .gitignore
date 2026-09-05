@@ -291,3 +291,4 @@ e2e/results/
 # Local operator/fleet scratch (never publish)
 state/
 repository-detective.upgrade
+docs/assets/screenshots/_quarantine_private/
