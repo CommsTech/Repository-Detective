@@ -8,6 +8,30 @@ Use this guide when moving Repository Detective between versions on a homelab or
 2. **Note schema version** — On startup, migrations apply sequentially (`schema_migrations` table).
 3. **Review release notes** — Check for new required env vars, scanner binaries, or breaking API changes.
 
+## Automated upgrade acceptance (RD-033)
+
+Disposable harness (does not mutate production):
+
+```bash
+./scripts/e2e-upgrade-from-beta3.sh
+```
+
+Flow:
+
+1. Deploy exact `v0.1.0-beta.3` digest `sha256:6a615548c8a1fc2494140e73f1c3bd3f78f0ed54a7b15eaa7a1025e83e308727`
+2. Seed representative state against disposable Gitea 1.22.3
+3. Snapshot the SQLite DB (immutable baseline copy retained)
+4. Upgrade to `repository-detective:upgrade-candidate` (current tree overlaid via `Dockerfile.binary-overlay`)
+5. Run migrations, restart, verify persistence, auth, Doctor, and post-upgrade activity
+
+Classification until the candidate is a published release digest:
+
+`UPGRADE_FROM_BETA3_TO_CURRENT_MAIN_INTEGRATION_PROVEN`
+
+After publishing the next release, re-run with exact digests beta.3 → beta.4 for `PUBLISHED_RELEASE_UPGRADE_E2E_PROVEN`.
+
+Artifacts land under `e2e/results/<run-id>/` with sanitized diagnostics on failure.
+
 ## Standard upgrade (Docker Compose)
 
 ```bash

@@ -908,8 +908,8 @@ fi
 # clean install note (RD-018) — separate script
 record_scenario "clean_install_rd018" "NOT_RUN_HERE" "see scripts/e2e-clean-install.sh"
 
-# upgrade
-record_scenario "upgrade_e2e" "NOT_PROVEN" "no trustworthy prior public-beta baseline selected"
+# upgrade — see dedicated RD-033 harness (beta.3 → current candidate)
+record_scenario "upgrade_e2e" "SEE_DEDICATED_HARNESS" "scripts/e2e-upgrade-from-beta3.sh → UPGRADE_FROM_BETA3_TO_CURRENT_MAIN_INTEGRATION_PROVEN when PASS"
 
 # Determine overall exit: fail if any FAIL
 if jq -e '.scenarios[] | select(.status=="FAIL")' "$ARTIFACT.tmp" >/dev/null 2>&1; then
