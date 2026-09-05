@@ -67,6 +67,9 @@ services:
       REPOSITORY_DETECTIVE_ANALYSIS_TIMEOUT: "1800"
       # Tree-head resolve/reopen acceptance (history secret scan is separate evidence path).
       REPOSITORY_DETECTIVE_SECRET_SCAN_GIT_HISTORY_ENABLED: "false"
+      # Policy outcome E2E (RD-017C): do not collapse ACTION_REQUIRED/POLICY_MET when
+      # optional/history helpers fail; required-scanner fail-closed is proven separately.
+      REPOSITORY_DETECTIVE_GITEA_STATUS_INCLUDE_SCANNER_FAILURES: "false"
     volumes:
       - rd-e2e-rd-data:/app/data
       - ./config:/app/config:ro

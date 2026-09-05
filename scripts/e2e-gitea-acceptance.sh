@@ -602,13 +602,13 @@ wait_pr_policy() {
     out="$(jq -r '[.[] | select(.body|contains("repository-detective-policy-summary")) | .body] | .[0] // empty' <<<"$body" \
       | sed -n 's/.*\*\*Policy:\*\* `\([^`]*\)`.*/\1/p' | head -1)"
     if [[ "$out" == "$want" ]]; then
-      echo "$out"
+      printf '%s' "$out"
       return 0
     fi
-    if (( i % 12 == 0 )); then log "wait policy $label want=$want got=${out:-none} ($i/$tries)"; fi
+    if (( i % 12 == 0 )); then log "wait policy $label want=$want got=${out:-none} ($i/$tries)" >&2; fi
     sleep 5
   done
-  echo "${out:-none}"
+  printf '%s' "${out:-none}"
   return 1
 }
 
