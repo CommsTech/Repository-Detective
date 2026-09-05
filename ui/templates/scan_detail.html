@@ -1,0 +1,198 @@
+{{define "scan_detail.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>{{template "head" .}}</head>
+<body class="rd-app">
+{{template "nav" .}}
+
+{{with .Data}}
+{{with .Scan}}
+<nav class="rd-breadcrumb" aria-label="Breadcrumb">
+  <a href="{{$.BasePath}}/scans{{apiKeyQS $.APIKey}}">Scans</a>
+  <span>/</span>
+  <span>{{shortID .ID 12}}</span>
+</nav>
+<div class="rd-grid">
+  <div class="rd-stat {{scanBadge .Status}}">
+    <div class="rd-stat-value"><span class="rd-badge {{scanBadge .Status}}">{{.Status}}</span></div>
+    <div class="rd-stat-label">Scan status</div>
+  </div>
+  <div class="rd-stat high">
+    <div class="rd-stat-value">{{$.Data.Summary.IssuesFound}}</div>
+    <div class="rd-stat-label">Findings (raw)</div>
+  </div>
+  {{with $.Data.FindingBreakdown}}{{if gt .ActionableCount 0}}
+  <div class="rd-stat medium">
+    <div class="rd-stat-value">{{.ActionableCount}}</div>
+    <div class="rd-stat-label">Actionable (ungrouped)</div>
+  </div>
+  {{end}}{{if gt .GroupedCount 0}}
+  <div class="rd-stat info">
+    <div class="rd-stat-value">{{.GroupedCount}}</div>
+    <div class="rd-stat-label">Informational (grouped)</div>
+  </div>
+  {{end}}{{end}}
+  <div class="rd-stat info">
+    <div class="rd-stat-value">{{$.Data.Summary.FilesAnalyzed}}</div>
+    <div class="rd-stat-label">Files analyzed</div>
+  </div>
+  <div class="rd-stat">
+    <div class="rd-stat-value">{{formatDuration .StartedAt .FinishedAt}}</div>
+    <div class="rd-stat-label">Duration</div>
+  </div>
+</div>
+
+<div class="rd-card">
+  <h2>Scan {{shortID .ID 12}}</h2>
+  {{if $.Data.RepoName}}<p><strong>Repository:</strong> {{$.Data.RepoName}}</p>{{end}}
+  <p><strong>Trigger:</strong> {{.TriggerType}} · <strong>Ref:</strong> {{.Ref}} · <strong>Profile:</strong> {{profileLabel $.Data.Summary.ScanProfile}}</p>
+  <p><strong>Commit:</strong> {{if .CommitSHA}}{{.CommitSHA}}{{else}}<span class="rd-muted">not pinned</span>{{end}}
+     · <strong>Workspace:</strong> {{.WorkspaceModeUsed}}</p>
+  <p><strong>Started:</strong> {{.StartedAt.Format "2006-01-02 15:04:05 UTC"}}
+     · <strong>Finished:</strong> {{formatTime .FinishedAt}}</p>
+
+  {{if $.Data.Summary.PersistenceIncomplete}}
+  <div class="rd-alert rd-alert-danger" role="alert">
+    <strong>Persistence incomplete.</strong>
+    Findings are still being written or failed to persist fully.
+    Expected {{$.Data.Summary.PersistenceExpectedCount}} instances;
+    persisted {{$.Data.Summary.PersistencePersistedCount}}.
+    Issue filing and reconciliation are blocked until persistence completes.
+    {{if $.Data.Summary.PersistenceError}}<br><span class="rd-muted">{{$.Data.Summary.PersistenceError}}</span>{{end}}
+  </div>
+  {{else if eq $.Data.Summary.PersistenceStatus "complete"}}
+  <div class="rd-alert info">Finding persistence complete{{if $.Data.Summary.IssueSyncStatus}} · issue sync: {{$.Data.Summary.IssueSyncStatus}}{{end}}.</div>
+  {{end}}
+
+  {{if eq .Status "completed"}}
+  <div class="rd-pipeline">
+    <div class="rd-pipeline-step done">Prepare</div>
+    <div class="rd-pipeline-step done">Scan</div>
+    <div class="rd-pipeline-step done">Validate</div>
+    <div class="rd-pipeline-step done">Dedup</div>
+    <div class="rd-pipeline-step done">Prove</div>
+  </div>
+  {{else if or (eq .Status "running") (eq .Status "started")}}
+  <div class="rd-alert info" data-scan-auto-refresh="5">
+    Scan is {{.Status}} — this page refreshes automatically every 5 seconds.
+  </div>
+  <div class="rd-pipeline">
+    <div class="rd-pipeline-step done">Prepare</div>
+    <div class="rd-pipeline-step active">Scan</div>
+    <div class="rd-pipeline-step">Validate</div>
+    <div class="rd-pipeline-step">Dedup</div>
+    <div class="rd-pipeline-step">Prove</div>
+  </div>
+  <p class="rd-muted" data-scan-refresh-label>Refreshing soon…</p>
+  {{end}}
+
+  {{if .Error}}<div class="rd-alert">{{.Error}}</div>{{end}}
+
+  {{with $.Data.RunnerJob}}{{if .JobID}}
+  <p><strong>Runner job:</strong> {{.JobID}} · <span class="rd-badge {{scanBadge .Status}}">{{.Status}}</span> · {{.RunnerMode}}</p>
+  {{end}}{{end}}
+
+  <div class="rd-actions">
+    {{if $.Data.ScanTriggerEnabled}}{{with $.Data.Repo}}<a class="rd-btn" href="{{$.BasePath}}/repos/{{.ID}}/scan{{apiKeyQS $.APIKey}}">Scan again</a>{{end}}{{end}}
+    <a class="rd-btn rd-btn-secondary" href="{{$.BasePath}}/findings{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}">View findings</a>
+    <a class="rd-btn rd-btn-ghost" href="{{$.BasePath}}/scans/{{.ID}}/graph{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}">Repository map</a>
+    {{if $.Data.BetaFeedbackURL}}<a class="rd-btn rd-btn-ghost" href="{{$.Data.BetaFeedbackURL}}" target="_blank" rel="noopener">Submit beta feedback</a>{{end}}
+  </div>
+</div>
+
+{{template "reconciliation_panel.html" $}}
+
+<div class="rd-card">
+  <div class="rd-card-head"><h2>AI recommendations</h2><span class="rd-chip">Advisory only</span></div>
+  <p class="rd-muted">Deterministic scanners remain source of truth. The configured AI provider receives redacted finding summaries only when enabled.</p>
+  {{if $.Data.AIRecommendationsEnabled}}
+  {{with $.Data.AIReview}}{{if .ReviewID}}
+  <p><strong>Status:</strong> <span class="rd-badge">{{.Status}}</span> · <strong>Findings sent:</strong> {{.FindingsSent}} · <strong>Redactions:</strong> {{.RedactionCount}} · <strong>Recommendations:</strong> {{.RecommendationsCount}}</p>
+  {{if .OverallAssessment}}<p>{{.OverallAssessment}}</p>{{end}}
+  {{if .ErrorMessage}}<p class="rd-muted">{{.ErrorMessage}}</p>{{end}}
+  {{else}}
+  <p class="rd-muted">No AI recommendations for this scan yet. Trigger via <code>POST /api/v1/scans/{{$.Data.Scan.ID}}/ai-recommendations</code> when enabled.</p>
+  {{end}}{{end}}
+  {{if $.Data.AIRecommendations}}
+  <table class="rd-table rd-table-compact">
+    <tr><th>Fingerprint</th><th>Classification</th><th>Action</th><th>Reason</th></tr>
+    {{range $.Data.AIRecommendations}}
+    <tr>
+      <td><code>{{shortID .FindingFingerprint 16}}</code></td>
+      <td>{{.Classification}}</td>
+      <td>{{.SuggestedAction}}</td>
+      <td class="rd-muted">{{.Reason}}</td>
+    </tr>
+    {{end}}
+  </table>
+  {{end}}
+  {{else}}
+  <p class="rd-muted">AI recommendations are disabled. Enable <code>ai_recommendations_enabled</code> with a token budget in Configure.</p>
+  {{end}}
+</div>
+
+{{with $.Data.FindingBreakdown}}{{if .Grouped}}
+<div class="rd-card">
+  <div class="rd-card-head"><h2>Grouped informational findings</h2><span class="rd-chip">{{.GroupedCount}} in {{len .Grouped}} groups</span></div>
+  <p class="rd-muted">Repeated graph/quality heuristics are summarized here. Actionable findings remain listed individually in the findings queue.</p>
+  <table class="rd-table rd-table-compact">
+    <tr><th>Rule</th><th>Source</th><th>Severity</th><th>Count</th><th>Summary</th></tr>
+    {{range .Grouped}}
+    <tr>
+      <td><code>{{.RuleID}}</code></td>
+      <td>{{.Source}}</td>
+      <td><span class="rd-badge {{severityBadge .Severity}}">{{.Severity}}</span></td>
+      <td>{{.Count}}</td>
+      <td class="rd-muted">{{.Description}}</td>
+    </tr>
+    {{end}}
+  </table>
+</div>
+{{end}}{{end}}
+
+<div class="rd-card">
+  <h2>Scanner results</h2>
+  <p class="rd-muted"><strong>binary_missing</strong> means the tool was not installed in this runtime — the repo was <em>not</em> scanned by that engine. A missing scanner does <em>not</em> mean the repository is clean.</p>
+  <p class="rd-muted"><strong>parse_failed</strong> means the scanner ran but its output could not be parsed — treat coverage for that tool as incomplete and check Detail/Error below.</p>
+  <p class="rd-muted"><strong>timed_out</strong> / <strong>failed</strong> mean the tool did not finish successfully.</p>
+  <table class="rd-table">
+    <tr><th>Scanner</th><th>Status</th><th>Findings</th><th>Detail</th></tr>
+    {{range $.Data.ScannerResults}}
+    <tr {{if or (eq .Status "parse_failed") (eq .Status "timed_out") (eq .Status "failed") (eq .Status "error")}}class="rd-row-warn"{{end}}>
+      <td><strong>{{.ScannerName}}</strong></td>
+      <td><span class="rd-badge {{scannerBadge .Status}}">{{.Status}}</span></td>
+      <td>{{.FindingsCount}}</td>
+      <td class="rd-muted">{{if .Error}}{{.Error}}{{else if .Detail}}{{.Detail}}{{else}}—{{end}}</td>
+    </tr>
+    {{else}}
+    <tr><td colspan="4" class="rd-muted">No scanner results recorded</td></tr>
+    {{end}}
+  </table>
+  <p class="rd-muted">Install optional scanners (trivy, grype, gitleaks, semgrep, syft) in the image or host PATH to improve coverage. See Configure → scanner availability.</p>
+</div>
+
+{{if $.Data.SBOMStatus}}
+<div class="rd-card">
+  <h2>SBOM status</h2>
+  {{if eq $.Data.SBOMStatus "sbom_tool_missing"}}
+  <div class="rd-alert info">
+    <strong>SBOM tool unavailable.</strong> Dependency manifests may be present (e.g. <code>requirements.txt</code>) but Syft was not installed in this runtime, so no SBOM was generated. Install <code>syft</code> or use the full scanner image to enable Python/Node SBOM export.
+  </div>
+  {{else}}
+  <p><span class="rd-badge">{{$.Data.SBOMStatus}}</span>{{if $.Data.SBOMDetail}} — {{$.Data.SBOMDetail}}{{end}}</p>
+  {{end}}
+</div>
+{{end}}
+
+<div class="rd-card">
+  <h2>Scan summary</h2>
+  <p class="rd-muted">Graph: {{$.Data.Summary.GraphNodes}} nodes · {{$.Data.Summary.GraphEdges}} edges · Analysis {{$.Data.Summary.AnalysisTimeMS}}ms</p>
+  <pre class="rd-pre">{{jsonPretty .SummaryJSON}}</pre>
+</div>
+{{end}}
+{{end}}
+
+{{template "foot" .}}
+</body>
+</html>
+{{end}}

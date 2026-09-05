@@ -1,0 +1,184 @@
+{{define "repo_report.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>{{template "head" .}}</head>
+<body class="rd-app rd-print-report">
+{{template "nav" .}}
+
+{{with .Data.Repo}}
+<nav class="rd-breadcrumb rd-no-print" aria-label="Breadcrumb">
+  <a href="{{$.BasePath}}/reports{{apiKeyQS $.APIKey}}">Reports</a>
+  <span>/</span>
+  <span>{{.FullName}}</span>
+</nav>
+
+<div class="rd-report-toolbar rd-no-print">
+  <div>
+    <p class="rd-report-toolbar-title">Repository report</p>
+    <p class="rd-muted">Print or save a PDF of this audit report (sidebar and controls are hidden in the print layout).</p>
+  </div>
+  <button type="button" class="rd-btn" data-rd-print>Print / Save PDF</button>
+</div>
+
+{{template "executive_summary.html" (dict "Executive" $.Data.Executive)}}
+
+<div class="rd-report rd-print-block">
+  <h2>Repository audit report — {{.FullName}}</h2>
+  <p class="rd-report-meta">{{.ForgeType}} · Policy: {{$.Data.Effective.PolicyLevel}} · Profile: {{profileLabel $.Data.ProfileMeta.ScanProfile}}</p>
+  <div class="rd-kpi-row">
+    {{range $sev, $count := $.Data.SeverityCounts}}
+    <div class="rd-kpi"><strong>{{$count}}</strong><span>{{$sev}} open</span></div>
+    {{end}}
+    <div class="rd-kpi"><strong>{{$.Data.FindingsTotal}}</strong><span>Matching findings</span></div>
+    <div class="rd-kpi"><strong>{{len $.Data.Scans}}</strong><span>Recent scans</span></div>
+    <div class="rd-kpi"><strong>{{len $.Data.ExternalIssues}}</strong><span>Forge issues</span></div>
+  </div>
+</div>
+
+<div class="rd-chart-card rd-print-block">
+  <div class="rd-card-head"><h2>Category radar</h2><span class="rd-chip">Open findings</span></div>
+  <div class="rd-chart-canvas-wrap rd-chart-radar">
+    <canvas id="rd-report-radar" role="img" aria-label="Finding categories radar"></canvas>
+  </div>
+</div>
+
+<div class="rd-split">
+  <div class="rd-card">
+    <div class="rd-card-head"><h2>Scanner coverage (effective)</h2></div>
+    <div class="rd-badge-row">
+      <span class="rd-badge {{if $.Data.Effective.EnableTrivy}}found{{else}}skipped{{end}}">Trivy</span>
+      <span class="rd-badge {{if $.Data.Effective.EnableGrype}}found{{else}}skipped{{end}}">Grype</span>
+      <span class="rd-badge {{if $.Data.Effective.EnableGitleaks}}found{{else}}skipped{{end}}">Gitleaks</span>
+      <span class="rd-badge {{if $.Data.Effective.EnableSemgrep}}found{{else}}skipped{{end}}">Semgrep</span>
+      <span class="rd-badge {{if $.Data.Effective.EnableGovulncheck}}found{{else}}skipped{{end}}">govulncheck</span>
+      <span class="rd-badge {{if $.Data.Effective.EnableGosec}}found{{else}}skipped{{end}}">gosec</span>
+      <span class="rd-badge {{if $.Data.Effective.EnableStaticcheck}}found{{else}}skipped{{end}}">staticcheck</span>
+    </div>
+    <dl class="rd-dl">
+      <dt>Workspace mode</dt><dd>{{$.Data.Effective.WorkspaceMode}}</dd>
+      <dt>Analysis depth</dt><dd>{{$.Data.Effective.AnalysisDepth}}</dd>
+      <dt>Severity gate</dt><dd>{{$.Data.Effective.SeverityGate}}</dd>
+      <dt>Confidence gate</dt><dd>{{printf "%.2f" $.Data.Effective.ConfidenceGate}}</dd>
+    </dl>
+  </div>
+  <div class="rd-card">
+    <div class="rd-card-head"><h2>Remediation plan</h2></div>
+    <ol class="rd-muted">
+      <li>Prioritize critical and high severity open findings</li>
+      <li>Review linked Gitea issues for assignment and tracking</li>
+      <li>Apply approved remediation plans via safe PR workflow</li>
+      <li>Verify closure with post-merge rescan evidence</li>
+    </ol>
+    <div class="rd-actions rd-no-print">
+      <a class="rd-btn" href="{{$.BasePath}}/findings?repo_id={{.ID}}{{if $.APIKey}}&amp;api_key={{$.APIKey}}{{end}}">Open triage queue</a>
+      <a class="rd-btn rd-btn-secondary" href="{{$.BasePath}}/repos/{{.ID}}/settings{{apiKeyQS $.APIKey}}">Adjust policy</a>
+    </div>
+  </div>
+</div>
+
+<form method="get" class="rd-card rd-no-print" action="{{$.BasePath}}/repos/{{.ID}}/report">
+  <div class="rd-card-head">
+    <h2>Technical findings</h2>
+    <span class="rd-chip">{{$.Data.FindingsTotal}} total · showing {{len $.Data.Findings}}</span>
+  </div>
+  <div class="rd-toolbar">
+    <label>Severity
+      <select name="severity" aria-label="Filter by severity">
+        <option value="">All severities</option>
+        <option value="critical" {{if eq $.Data.FindingsFilter.Severity "critical"}}selected{{end}}>Critical</option>
+        <option value="high" {{if eq $.Data.FindingsFilter.Severity "high"}}selected{{end}}>High</option>
+        <option value="medium" {{if eq $.Data.FindingsFilter.Severity "medium"}}selected{{end}}>Medium</option>
+        <option value="low" {{if eq $.Data.FindingsFilter.Severity "low"}}selected{{end}}>Low</option>
+      </select>
+    </label>
+    <label>Category
+      <input name="category" value="{{$.Data.FindingsFilter.Category}}" placeholder="security, secret, dependency…" aria-label="Filter by category">
+    </label>
+    <label>Scanner / source
+      <input name="source" value="{{$.Data.FindingsFilter.Source}}" placeholder="static, trivy, semgrep…" aria-label="Filter by scanner source">
+    </label>
+    <label>Status
+      <select name="status" aria-label="Filter by status">
+        <option value="">All statuses</option>
+        <option value="open" {{if eq $.Data.FindingsFilter.Status "open"}}selected{{end}}>Open</option>
+        <option value="resolved" {{if eq $.Data.FindingsFilter.Status "resolved"}}selected{{end}}>Resolved</option>
+      </select>
+    </label>
+  </div>
+  {{if $.APIKey}}<input type="hidden" name="api_key" value="{{$.APIKey}}">{{end}}
+  <div class="rd-actions"><button type="submit">Apply filters</button></div>
+</form>
+
+<div class="rd-card rd-card-flush">
+  {{template "findings_table" (dict "BasePath" $.BasePath "APIKey" $.APIKey "Findings" $.Data.Findings "ShowRepo" false)}}
+  {{$total := $.Data.FindingsTotal}}
+  {{$size := $.Data.FindingsPageSize}}
+  {{$offset := $.Data.FindingsFilter.Offset}}
+  {{if gt $total $size}}
+  <nav class="rd-pagination rd-no-print" aria-label="Findings pages">
+    {{if gt $offset 0}}
+    <a class="rd-btn rd-btn-sm rd-btn-ghost" href="{{$.BasePath}}/repos/{{.ID}}/report?offset={{sub $offset $size}}{{if $.Data.FindingsFilter.Severity}}&amp;severity={{$.Data.FindingsFilter.Severity}}{{end}}{{if $.Data.FindingsFilter.Category}}&amp;category={{$.Data.FindingsFilter.Category}}{{end}}{{if $.Data.FindingsFilter.Status}}&amp;status={{$.Data.FindingsFilter.Status}}{{end}}{{if $.Data.FindingsFilter.Source}}&amp;source={{$.Data.FindingsFilter.Source}}{{end}}{{apiKeyQS $.APIKey}}">← Previous</a>
+    {{end}}
+    <span class="rd-muted">Rows {{add $offset 1}}–{{min (add $offset (len $.Data.Findings)) $total}} of {{$total}}</span>
+    {{if lt (add $offset $size) $total}}
+    <a class="rd-btn rd-btn-sm rd-btn-ghost" href="{{$.BasePath}}/repos/{{.ID}}/report?offset={{add $offset $size}}{{if $.Data.FindingsFilter.Severity}}&amp;severity={{$.Data.FindingsFilter.Severity}}{{end}}{{if $.Data.FindingsFilter.Category}}&amp;category={{$.Data.FindingsFilter.Category}}{{end}}{{if $.Data.FindingsFilter.Status}}&amp;status={{$.Data.FindingsFilter.Status}}{{end}}{{if $.Data.FindingsFilter.Source}}&amp;source={{$.Data.FindingsFilter.Source}}{{end}}{{apiKeyQS $.APIKey}}">Next →</a>
+    {{end}}
+  </nav>
+  {{else if gt $total 0}}
+  <p class="rd-muted rd-pagination-note">Showing all {{$total}} matching findings (sorted by severity).</p>
+  {{end}}
+</div>
+
+{{if $.Data.ExternalIssues}}
+<div class="rd-card">
+  <div class="rd-card-head"><h2>Linked forge issues</h2><span class="rd-chip">{{len $.Data.ExternalIssues}}</span></div>
+  <table class="rd-table rd-table-compact">
+    <thead>
+      <tr>
+        <th scope="col">Issue</th>
+        <th scope="col">State</th>
+        <th scope="col">Finding</th>
+        <th scope="col">Updated</th>
+      </tr>
+    </thead>
+    <tbody>
+    {{range $.Data.ExternalIssues}}
+    <tr>
+      <td><a class="rd-link" href="{{.IssueURL}}" target="_blank" rel="noopener">#{{.IssueNumber}}</a></td>
+      <td><span class="rd-badge {{statusBadge .State}}">{{.State}}</span></td>
+      <td><a class="rd-link" href="{{$.BasePath}}/findings/{{.FindingID}}{{apiKeyQS $.APIKey}}">Finding {{.FindingID}}</a></td>
+      <td class="rd-muted">{{.UpdatedAt.Format "2006-01-02"}}</td>
+    </tr>
+    {{end}}
+    </tbody>
+  </table>
+</div>
+{{end}}
+
+<div class="rd-card">
+  <div class="rd-card-head"><h2>Recent scans</h2></div>
+  <table class="rd-table rd-table-compact">
+    <thead>
+      <tr><th scope="col">Scan</th><th scope="col">Status</th><th scope="col">Findings</th><th scope="col">Date</th></tr>
+    </thead>
+    <tbody>
+    {{range $.Data.Scans}}
+    <tr>
+      <td><a class="rd-link" href="{{$.BasePath}}/scans/{{.ID}}{{apiKeyQS $.APIKey}}">{{shortID .ID 8}}</a></td>
+      <td><span class="rd-badge {{scanBadge .Status}}">{{.Status}}</span></td>
+      <td>{{issuesFromScan .SummaryJSON}}</td>
+      <td class="rd-muted">{{.StartedAt.Format "2006-01-02"}}</td>
+    </tr>
+    {{end}}
+    </tbody>
+  </table>
+</div>
+
+{{end}}
+
+<script type="application/json" id="rd-report-chart-data">{{jsonScript .Data.ChartJSON}}</script>
+<script src="{{.BasePath}}/static/chart.umd.min.js" defer></script>
+<script src="{{.BasePath}}/static/repo-report-charts.js" defer></script>
+{{template "foot" .}}
+</body></html>
+{{end}}

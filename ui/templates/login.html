@@ -1,0 +1,27 @@
+{{define "login.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>{{template "head" .}}</head>
+<body class="rd-app rd-page-auth">
+<div class="rd-auth-wrap">
+  <div class="rd-auth-card">
+    <img src="{{.BasePath}}/static/logo.svg" alt="Repository Detective" width="64" height="64">
+    <h1>Sign in</h1>
+    <p class="rd-muted">Repository Detective — Inspect · Analyze · Improve</p>
+    {{with .Data.Error}}{{if .}}<p class="rd-alert danger rd-alert-danger" role="alert">{{.}}</p>{{end}}{{end}}
+    <form method="post" action="{{.BasePath}}/login" class="rd-auth-form">
+      <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+      {{with .Data.Next}}{{if .}}<input type="hidden" name="next" value="{{.}}">{{end}}{{end}}
+      <label>Email
+        <input type="email" name="email" required autocomplete="username" autofocus>
+      </label>
+      <label>Password
+        <input type="password" name="password" required autocomplete="current-password">
+      </label>
+      <button type="submit" class="rd-btn">Sign in</button>
+    </form>
+  </div>
+</div>
+</body>
+</html>
+{{end}}

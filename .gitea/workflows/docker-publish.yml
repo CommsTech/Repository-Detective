@@ -1,0 +1,127 @@
+# Publish Repository Detective images.
+#
+# Canonical: Gitea Package Registry (git.commsnet.org/commstech/repository-detective)
+# Mirror:    GHCR (ghcr.io/commstech/repository-detective) — optional, for public discovery
+#
+# Runs on Gitea Actions when a v* tag is pushed. GitHub workflow of the same name
+# only mirrors to GHCR after Gitea is the source of truth for git.
+
+name: Docker publish
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Image tag override (empty = git tag / sha)"
+        required: false
+        default: ""
+      push_latest:
+        description: "Also tag all-in-one as latest"
+        type: boolean
+        default: true
+      mirror_ghcr:
+        description: "Also mirror tags to ghcr.io (requires GHCR_TOKEN secret)"
+        type: boolean
+        default: true
+
+env:
+  GITEA_REGISTRY: git.commsnet.org/commstech
+  GHCR_REGISTRY: ghcr.io/commstech
+  IMAGE_NAME: repository-detective
+
+jobs:
+  publish:
+    name: Build and push (Gitea primary)
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
+
+      - name: Derive tags
+        id: meta
+        run: |
+          set -eu
+          BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          SHA="${GITHUB_SHA:-${GITEA_SHA:-unknown}}"
+          SHORT="$(echo "$SHA" | cut -c1-12)"
+          if [ -n "${{ github.event.inputs.tag }}" ]; then
+            VERSION="${{ github.event.inputs.tag }}"
+          elif [ "${GITHUB_REF_TYPE:-${GITEA_REF_TYPE:-}}" = "tag" ]; then
+            VERSION="${GITHUB_REF_NAME:-${GITEA_REF_NAME}}"
+          else
+            VERSION="sha-${SHORT}"
+          fi
+          IMAGE="$(echo "${GITEA_REGISTRY}/${IMAGE_NAME}" | tr '[:upper:]' '[:lower:]')"
+          TAGS="${IMAGE}:all-in-one,${IMAGE}:${VERSION},${IMAGE}:${VERSION}-all-in-one,${IMAGE}:latest"
+          {
+            echo "version=${VERSION}"
+            echo "build_date=${BUILD_DATE}"
+            echo "gitea_image=${IMAGE}"
+            echo "gitea_tags=${TAGS}"
+          } >> "$GITHUB_OUTPUT"
+          echo "Publishing version=${VERSION} → ${IMAGE}"
+
+      - name: Log in to Gitea Container Registry
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+        with:
+          registry: git.commsnet.org
+          username: ${{ secrets.GITEA_PACKAGE_USER || github.actor }}
+          password: ${{ secrets.GITEA_PACKAGE_TOKEN || secrets.GITEA_TOKEN }}
+
+      - name: Build and push all-in-one to Gitea
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+        with:
+          context: .
+          file: ./Dockerfile
+          target: all-in-one
+          push: true
+          provenance: false
+          build-args: |
+            INSTALL_EXTERNAL_TOOLS=true
+            VERSION=${{ steps.meta.outputs.version }}
+            COMMIT=${{ github.sha }}
+            BUILD_DATE=${{ steps.meta.outputs.build_date }}
+          tags: ${{ steps.meta.outputs.gitea_tags }}
+          cache-from: type=gha,scope=rd-all-in-one
+          cache-to: type=gha,mode=max,scope=rd-all-in-one
+
+      - name: Mirror all-in-one to GHCR (optional)
+        if: ${{ github.event.inputs.mirror_ghcr != 'false' && (secrets.GHCR_TOKEN != '') }}
+        env:
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          GHCR_USER: ${{ secrets.GHCR_USER }}
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          set -eu
+          USER_NAME="${GHCR_USER:-CommsTech}"
+          echo "$GHCR_TOKEN" | docker login ghcr.io -u "$USER_NAME" --password-stdin
+          SRC="$(echo "${GITEA_REGISTRY}/${IMAGE_NAME}:${VERSION}" | tr '[:upper:]' '[:lower:]')"
+          DEST="$(echo "${GHCR_REGISTRY}/${IMAGE_NAME}" | tr '[:upper:]' '[:lower:]')"
+          docker pull "$SRC"
+          for t in "${VERSION}" "${VERSION}-all-in-one" all-in-one latest; do
+            docker tag "$SRC" "${DEST}:${t}"
+            docker push "${DEST}:${t}"
+          done
+          echo "Mirrored ${SRC} → ${DEST}"
+
+      - name: Summary
+        run: |
+          {
+            echo "### Published (Gitea canonical)"
+            echo "- \`${{ steps.meta.outputs.gitea_image }}:${{ steps.meta.outputs.version }}\`"
+            echo "- \`${{ steps.meta.outputs.gitea_image }}:all-in-one\`"
+            echo ""
+            echo "Pull:"
+            echo "\`\`\`bash"
+            echo "docker login git.commsnet.org"
+            echo "docker pull ${{ steps.meta.outputs.gitea_image }}:all-in-one"
+            echo "\`\`\`"
+          } >> "$GITHUB_STEP_SUMMARY"

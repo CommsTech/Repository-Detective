@@ -1,0 +1,31 @@
+name: Compliance / privacy
+about: Data protection, retention, or compliance-readiness gap
+labels:
+  - type/compliance
+  - type/privacy
+  - status/needs-triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Repository Detective is **privacy-aware** but not certified HIPAA/GDPR compliant.
+        Describe the gap and affected data flows. No PHI/PII in this form.
+  - type: textarea
+    id: data_flow
+    attributes:
+      label: Affected data flow
+      description: e.g. logs, Gitea issues, AI prompts, reports, UI
+    validations:
+      required: true
+  - type: textarea
+    id: risk
+    attributes:
+      label: Risk if unaddressed
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+    validations:
+      required: true

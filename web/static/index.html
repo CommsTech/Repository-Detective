@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Repository Detective — Onboarding</title>
+  <link rel="stylesheet" href="/onboard/assets/style.css">
+</head>
+<body>
+  <div class="container">
+    <header class="rd-onboard-header">
+      <img src="/onboard/assets/logo.svg" alt="Repository Detective">
+      <div>
+        <h1>Repository Detective</h1>
+        <p class="subtitle">Connect → Select → Protect → Verify → Ready</p>
+      </div>
+    </header>
+
+    <nav class="rd-stage-nav" aria-label="Onboarding stages">
+      <span data-stage="1" class="active">1 Connect</span>
+      <span data-stage="2">2 Select</span>
+      <span data-stage="3">3 Protect</span>
+      <span data-stage="4">4 Verify</span>
+      <span data-stage="5">5 Ready</span>
+    </nav>
+
+    <section class="card stage" data-stage-panel="1">
+      <h2>1. Connect</h2>
+      <p class="repo-meta">Configure forge access and prove the token works. Secrets stay in the browser until you export env values.</p>
+      <div class="grid">
+        <label>Gitea / Forgejo URL<input id="giteaUrl" type="url" placeholder="https://git.example.com"></label>
+        <label>Access token<input id="giteaToken" type="password" placeholder="Personal access token"></label>
+        <label>Repository Detective public URL
+          <input id="publicUrl" type="url" placeholder="https://detective.example.com">
+          <small>Callback URL for webhooks (where the forge reaches RD).</small>
+        </label>
+        <label>Webhook secret<input id="webhookSecret" type="text" placeholder="shared-secret"></label>
+        <label>Operator API key<input id="apiKey" type="password" placeholder="Protects onboarding API"></label>
+        <label>Privacy mode
+          <select id="privacyMode">
+            <option value="hybrid">HYBRID (default)</option>
+            <option value="local_only">LOCAL_ONLY</option>
+            <option value="external_ai_enabled">EXTERNAL_AI_ENABLED</option>
+          </select>
+        </label>
+      </div>
+      <div class="actions">
+        <button id="testGiteaBtn" type="button">Verify forge connection</button>
+        <button id="checkPermsBtn" type="button">Check permissions</button>
+        <span id="giteaStatus" class="status"></span>
+      </div>
+      <pre id="permMatrix" class="env-box" hidden></pre>
+      <p class="repo-meta">UI auth bootstrap (optional): after install, use <code>/ui/bootstrap</code> when <code>auth_mode=local</code>. Existing installs keep API-key UI mode unless you opt in.</p>
+      <div class="actions"><button type="button" class="primary" data-next="2">Continue to Select</button></div>
+    </section>
+
+    <section class="card stage" data-stage-panel="2" hidden>
+      <h2>2. Select</h2>
+      <p class="repo-meta">Load repositories, confirm access, and review the recommended analysis profile (override allowed). Profile REQUIRED scanners stay authoritative.</p>
+      <div class="actions">
+        <button id="loadReposBtn" type="button">Load available repositories</button>
+      </div>
+      <label id="repoSearchWrap" class="repo-search" hidden>
+        Search<input id="repoSearch" type="search" placeholder="owner/repo">
+      </label>
+      <div id="repoList" class="repo-list"></div>
+      <p id="profileHint" class="repo-meta"></p>
+      <div class="actions"><button type="button" data-next="3" class="primary">Continue to Protect</button></div>
+    </section>
+
+    <section class="card stage" data-stage-panel="3" hidden>
+      <h2>3. Protect</h2>
+      <div class="grid">
+        <label>Analysis profile
+          <select id="scanProfile">
+            <option value="light">Light</option>
+            <option value="standard" selected>Standard</option>
+            <option value="deep">Deep</option>
+            <option value="custom">Custom</option>
+          </select>
+        </label>
+        <label>Policy mode
+          <select id="policyMode">
+            <option value="Observe" selected>Observe (safest default)</option>
+            <option value="Warn">Warn</option>
+            <option value="Enforce">Enforce (commit status — never auto-merge)</option>
+          </select>
+        </label>
+      </div>
+      <p class="repo-meta">Observe is the safest Community default. Enforce gates PRs via commit status only — Repository Detective never auto-merges.</p>
+      <h3>AI (optional)</h3>
+      <p class="repo-meta"><strong>AI Analysis: Disabled</strong> by default. Skip unless you want LLM auditors.</p>
+      <div class="grid">
+        <label>Provider
+          <select id="aiProvider">
+            <option value="">— skip (deterministic only) —</option>
+            <option value="ollama">Ollama (local recommended)</option>
+            <option value="openai">OpenAI</option>
+            <option value="anthropic">Anthropic</option>
+            <option value="openrouter">OpenRouter</option>
+            <option value="openwebui">OpenWebUI</option>
+          </select>
+        </label>
+        <label>Base URL<input id="aiBaseUrl" type="url" placeholder="http://10.x.x.x:11434"></label>
+        <label>API key<input id="aiApiKey" type="password" placeholder="Only if needed"></label>
+        <label>Model<input id="aiModel" type="text" placeholder="qwen2.5-coder"></label>
+      </div>
+      <div class="actions">
+        <button id="privacyPreviewBtn" type="button">Preview privacy egress</button>
+        <button id="testAiBtn" type="button">Test AI (optional)</button>
+        <span id="aiStatus" class="status"></span>
+      </div>
+      <pre id="privacyPreview" class="env-box" hidden></pre>
+      <div class="actions">
+        <button id="registerWebhooksBtn" type="button">Register webhooks on selected repos</button>
+        <span id="webhookStatus" class="status"></span>
+      </div>
+      <div class="actions"><button type="button" class="primary" data-next="4">Continue to Verify</button></div>
+    </section>
+
+    <section class="card stage" data-stage-panel="4" hidden>
+      <h2>4. Verify</h2>
+      <p class="repo-meta">Active readiness checks (same engine as <code>repository-detective doctor</code>). Never claims repositories are safe or secure.</p>
+      <div class="actions">
+        <button id="runVerifyBtn" type="button" class="primary">Run verification</button>
+        <span id="verifyStatus" class="status"></span>
+      </div>
+      <pre id="verifyOut" class="env-box"></pre>
+      <div class="actions"><button type="button" class="primary" data-next="5">Continue to Ready</button></div>
+    </section>
+
+    <section class="card stage" data-stage-panel="5" hidden>
+      <h2>5. Ready</h2>
+      <div id="readyBanner" class="status"></div>
+      <pre id="readySummary" class="env-box"></pre>
+      <h3>Environment export</h3>
+      <pre id="envExport"></pre>
+      <button id="copyEnvBtn" type="button">Copy to clipboard</button>
+      <p class="repo-meta">Next: open the dashboard and <strong>Run first scan</strong>, or open/push a test PR. A manual first scan is FIRST_SCAN_PROVEN — not webhook E2E proof.</p>
+      <p class="repo-meta"><a href="/ui/" target="_blank" rel="noopener">Open operator UI</a> · <a href="/api/v1/doctor" target="_blank" rel="noopener">Doctor JSON</a></p>
+    </section>
+  </div>
+  <script src="/onboard/assets/app.js"></script>
+</body>
+</html>

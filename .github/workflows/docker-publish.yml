@@ -1,0 +1,103 @@
+# GitHub mirror workflow — GHCR only.
+# Canonical image builds run on Gitea (.gitea/workflows/docker-publish.yml).
+# Use this to refresh the public GHCR mirror after a Gitea package exists,
+# or when tagging on the GitHub mirror repo.
+
+name: Docker publish (GHCR mirror)
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Image tag (default: git tag)"
+        required: false
+        default: ""
+      source_gitea:
+        description: "Pull from Gitea and retag to GHCR instead of rebuilding"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  GITEA_IMAGE: git.commsnet.org/commstech/repository-detective
+  GHCR_IMAGE: ghcr.io/commstech/repository-detective
+
+jobs:
+  mirror:
+    name: Mirror to GHCR
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Derive version
+        id: meta
+        run: |
+          if [ -n "${{ inputs.tag }}" ]; then
+            VERSION="${{ inputs.tag }}"
+          elif [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            VERSION="${GITHUB_REF_NAME}"
+          else
+            VERSION="sha-${GITHUB_SHA::12}"
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull from Gitea and mirror (preferred)
+        if: ${{ inputs.source_gitea != false }}
+        env:
+          GITEA_USER: ${{ secrets.GITEA_PACKAGE_USER }}
+          GITEA_TOKEN: ${{ secrets.GITEA_PACKAGE_TOKEN }}
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          set -eu
+          if [ -z "${GITEA_TOKEN:-}" ]; then
+            echo "GITEA_PACKAGE_TOKEN not set — falling through to rebuild on GHCR."
+            echo "skip=true" >> "$GITHUB_ENV"
+            exit 0
+          fi
+          echo "$GITEA_TOKEN" | docker login git.commsnet.org -u "${GITEA_USER:-commstech}" --password-stdin
+          SRC="${GITEA_IMAGE}:${VERSION}"
+          docker pull "$SRC"
+          for t in "${VERSION}" "${VERSION}-all-in-one" all-in-one latest; do
+            docker tag "$SRC" "${GHCR_IMAGE}:${t}"
+            docker push "${GHCR_IMAGE}:${t}"
+          done
+          echo "Mirrored ${SRC} → ${GHCR_IMAGE}"
+          echo "skip=false" >> "$GITHUB_ENV"
+
+      - name: Build and push on GHCR (fallback rebuild)
+        if: ${{ env.skip == 'true' || inputs.source_gitea == false }}
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
+
+      - name: Build all-in-one for GHCR fallback
+        if: ${{ env.skip == 'true' || inputs.source_gitea == false }}
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+        with:
+          context: .
+          file: ./Dockerfile
+          target: all-in-one
+          push: true
+          provenance: false
+          build-args: |
+            INSTALL_EXTERNAL_TOOLS=true
+            VERSION=${{ steps.meta.outputs.version }}
+            COMMIT=${{ github.sha }}
+          tags: |
+            ${{ env.GHCR_IMAGE }}:all-in-one
+            ${{ env.GHCR_IMAGE }}:${{ steps.meta.outputs.version }}
+            ${{ env.GHCR_IMAGE }}:latest

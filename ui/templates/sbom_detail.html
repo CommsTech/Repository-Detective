@@ -1,0 +1,43 @@
+{{define "sbom_detail.html"}}
+<!DOCTYPE html><html lang="en"><head>{{template "head" .}}</head><body class="rd-app">
+{{template "nav" .}}
+<nav class="rd-breadcrumb" aria-label="Breadcrumb">
+  {{if .Data.Scan}}<a href="{{$.BasePath}}/scans{{apiKeyQS $.APIKey}}">Scans</a><span>/</span>{{end}}
+  {{if .Data.Repo}}<a href="{{$.BasePath}}/repos/{{.Data.Repo.ID}}{{apiKeyQS $.APIKey}}">{{.Data.Repo.FullName}}</a><span>/</span>{{end}}
+  <span>SBOM</span>
+</nav>
+
+{{if .Data.SBOMMissing}}
+<div class="rd-card"><h2>SBOM not available</h2>
+<p class="rd-muted">No SBOM artifact was stored for this scope. Common causes:</p>
+<ul class="rd-muted">
+  <li><strong>sbom_tool_missing</strong> — Syft is not installed in this runtime even though dependency files (e.g. <code>requirements.txt</code>, <code>go.mod</code>) may exist.</li>
+  <li>SBOM generation disabled in scan profile.</li>
+  <li>Scan failed before SBOM export completed.</li>
+</ul>
+<p class="rd-muted">Install <code>syft</code> or use the full scanner image, then re-run a scan. Missing SBOM does <em>not</em> mean the repo has no dependencies.</p>
+</div>
+{{else}}
+{{with .Data.Artifact}}
+<div class="rd-grid">
+  <div class="rd-stat info"><div class="rd-stat-value">{{.Format}}</div><div class="rd-stat-label">Format</div></div>
+  <div class="rd-stat"><div class="rd-stat-value">{{.PackageCount}}</div><div class="rd-stat-label">Packages</div></div>
+  <div class="rd-stat high"><div class="rd-stat-value">{{.VulnCount}}</div><div class="rd-stat-label">Correlated vulns</div></div>
+  <div class="rd-stat"><div class="rd-stat-value"><span class="rd-badge {{statusBadge .Status}}">{{.Status}}</span></div><div class="rd-stat-label">Status</div></div>
+</div>
+<div class="rd-card">
+  <h2>SBOM summary</h2>
+  <dl class="rd-dl">
+    <dt>Scan</dt><dd><code>{{.ScanID}}</code></dd>
+    <dt>Repository ID</dt><dd>{{.RepositoryID}}</dd>
+    <dt>Generated</dt><dd>{{.CreatedAt.Format "2006-01-02 15:04 UTC"}}</dd>
+    {{if .Detail}}<dt>Detail</dt><dd>{{.Detail}}</dd>{{end}}
+    {{if .ArtifactPath}}<dt>Artifact path</dt><dd><code>{{.ArtifactPath}}</code></dd>{{end}}
+  </dl>
+  {{if $.Data.DownloadPath}}<div class="rd-actions"><a class="rd-btn rd-btn-secondary" href="{{$.Data.DownloadPath}}">Download SBOM</a></div>{{end}}
+</div>
+{{end}}
+{{end}}
+{{template "foot" .}}
+</body></html>
+{{end}}

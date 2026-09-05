@@ -1,0 +1,130 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  GOPROXY: https://proxy.golang.org,direct
+  GOTOOLCHAIN: auto
+
+jobs:
+  ci:
+    name: CI
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version: "1.25"
+          cache: true
+
+      - name: Verify module integrity
+        run: |
+          go mod tidy
+          git diff --exit-code go.mod go.sum
+
+      - name: Format check (changed Go files)
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+          else
+            BASE="${{ github.event.before }}"
+          fi
+          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+            BASE="HEAD~1"
+          fi
+          FILES=$(git diff --name-only --diff-filter=ACMRTUXB "$BASE" HEAD -- '*.go' | grep -v '^vendor/' || true)
+          if [ -z "$FILES" ]; then
+            echo "No Go files changed — skipping format check"
+            exit 0
+          fi
+          UNFORMATTED=$(gofmt -s -l $FILES)
+          if [ -n "$UNFORMATTED" ]; then
+            echo "The following files need gofmt:"
+            echo "$UNFORMATTED"
+            exit 1
+          fi
+
+      - name: Go vet
+        run: |
+          pkgs=$(go list ./... | grep -v '/e2e/results/')
+          go vet $pkgs
+
+      - name: Install staticcheck
+        run: go install honnef.co/go/tools/cmd/staticcheck@v0.6.1
+
+      - name: Staticcheck
+        env:
+          GOFLAGS: -buildvcs=false
+        run: |
+          pkgs=$(go list ./... | grep -v '/e2e/results/')
+          staticcheck $pkgs
+
+      - name: Run tests
+        run: |
+          pkgs=$(go list ./... | grep -v '/e2e/results/')
+          go test -race -count=1 $pkgs
+
+      - name: Build binary
+        run: CGO_ENABLED=0 go build -ldflags "-s -w" -o bin/repository-detective .
+
+      - name: Verify binary exists
+        run: test -f bin/repository-detective
+
+      - name: Govulncheck
+        env:
+          GOPROXY: https://proxy.golang.org,direct
+        run: |
+          chmod +x scripts/ci-govulncheck.sh
+          ./scripts/ci-govulncheck.sh
+
+      - name: Build Docker image
+        run: |
+          # CI validates Dockerfile + /health on core (no external scanner downloads).
+          # Full all-in-one matrix is covered by scripts/docker-build-verify.sh locally.
+          for attempt in 1 2 3; do
+            echo "docker build attempt ${attempt}/3"
+            if docker build --target core -t repository-detective:ci .; then
+              exit 0
+            fi
+            sleep 30
+          done
+          exit 1
+
+      - name: Verify container starts
+        run: |
+          PORT=18080
+          NAME=rd-ci-smoke-$$
+          docker rm -f "$NAME" 2>/dev/null || true
+          docker run -d --name "$NAME" \
+            -e REPOSITORY_DETECTIVE_PORT="$PORT" \
+            -e REPOSITORY_DETECTIVE_LISTEN_HOST=0.0.0.0 \
+            -e REPOSITORY_DETECTIVE_SKIP_STARTUP_CHECKS=true \
+            -e REPOSITORY_DETECTIVE_DATABASE_PATH=/app/data/repository-detective.db \
+            -e REPOSITORY_DETECTIVE_GITEA_URL=http://example.com \
+            -e REPOSITORY_DETECTIVE_GITEA_TOKEN=ci-smoke \
+            -e REPOSITORY_DETECTIVE_API_KEY=ci-smoke-key \
+            -e REPOSITORY_DETECTIVE_AI_PROVIDER=ollama \
+            -e REPOSITORY_DETECTIVE_AI_BASE_URL=http://127.0.0.1:11434/v1 \
+            repository-detective:ci
+          trap 'docker rm -f "$NAME" 2>/dev/null || true' EXIT
+          for i in $(seq 1 30); do
+            if docker exec "$NAME" wget -q -O- "http://127.0.0.1:${PORT}/health"; then
+              echo
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs "$NAME" 2>&1 | tail -40
+          exit 1

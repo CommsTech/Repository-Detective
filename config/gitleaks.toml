@@ -1,0 +1,17 @@
+# Gitleaks config for Repository Detective self-scans and CI.
+# Unit tests and benchmark fixtures intentionally contain secret-shaped strings.
+
+title = "repository-detective"
+
+[allowlist]
+description = "Tests, fixtures, docs examples, and vendor trees"
+paths = [
+  '''(^|/)vendor/''',
+  '''(^|/)testdata/''',
+  '''(^|/)benchmark/fixture/''',
+  '''_test\.go$''',
+  '''\.go\.src$''',
+  '''(^|/)docs/dogfood-reports/''',
+  '''(^|/)deployment-backups/''',
+  '''(^|/)data/tmp/''',
+]

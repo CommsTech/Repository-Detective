@@ -1,0 +1,21 @@
+# Remediation PR safe — full safe loop with conservative PR gates
+# Enable only after planner works on a test repo.
+
+scan_profile: standard
+enable_staticcheck: true
+enable_hadolint: true
+
+remediation_planner_enabled: true
+remediation_pr_enabled: true
+remediation_pr_require_approval: true
+remediation_pr_max_files_changed: 3
+remediation_pr_max_diff_lines: 100
+remediation_pr_branch_prefix: repository-detective/fix
+remediation_pr_validation_timeout_seconds: 300
+
+evidence_closure_enabled: true
+evidence_closure_close_issues: false
+evidence_closure_comment: true
+evidence_closure_require_scanner_success: true
+
+# Remediation PR safety: branch + PR only — no auto-merge, no auto-close

@@ -1,0 +1,65 @@
+name: Bug report
+about: Report incorrect behavior in Repository Detective
+labels:
+  - type/bug
+  - status/needs-triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting a bug. Do **not** paste secrets, tokens, or customer data.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What went wrong?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Impact
+      options:
+        - critical
+        - high
+        - medium
+        - low
+  - type: input
+    id: version
+    attributes:
+      label: Repository Detective version / commit
+  - type: input
+    id: scan_id
+    attributes:
+      label: Scan ID (if applicable)
+  - type: input
+    id: repo
+    attributes:
+      label: Repository (owner/name)
+  - type: dropdown
+    id: report_only
+    attributes:
+      label: Report-only scan?
+      options:
+        - "yes"
+        - "no"
+        - unknown
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs (redact secrets)
+      description: Paste redacted logs only

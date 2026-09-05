@@ -1,0 +1,91 @@
+{{define "reconciliation_panel.html"}}
+{{with .Data.Reconciliation}}
+<div class="rd-card rd-reconciliation-panel" id="issue-finding-reconciliation">
+  <div class="rd-card-head">
+    <h2>Issue / finding reconciliation</h2>
+    {{if .CountsDifferExpected}}<span class="rd-badge monitor">counts may differ — expected</span>{{else}}<span class="rd-badge success">aligned</span>{{end}}
+  </div>
+  <p class="rd-muted rd-recon-explainer">Scan findings and forge issues may differ. Report-only scans persist findings without filing Gitea issues. Open Gitea issues are mapped by fingerprint when available.</p>
+  <p class="rd-muted rd-recon-detail">{{.ReportOnlyExplanation}}</p>
+  {{if .MismatchWarning}}<div class="rd-alert warn">{{.MismatchWarning}}</div>{{end}}
+
+  <div class="rd-grid rd-grid-stats rd-recon-grid">
+    {{if .LatestScanID}}
+    <a class="rd-stat rd-stat-link" href="{{$.BasePath}}/scans/{{.LatestScanID}}{{apiKeyQS $.APIKey}}">
+      <div class="rd-stat-value">{{shortID .LatestScanID 10}}</div>
+      <div class="rd-stat-label">Latest scan</div>
+    </a>
+    {{end}}
+    {{if .LatestScanID}}
+    <a class="rd-stat info rd-stat-link" href="{{$.BasePath}}/scans/{{.LatestScanID}}{{apiKeyQS $.APIKey}}">
+      <div class="rd-stat-value">{{.ScanFindingsTotal}}</div>
+      <div class="rd-stat-label">Scan findings</div>
+    </a>
+    {{else}}
+    <div class="rd-stat info">
+      <div class="rd-stat-value">{{.ScanFindingsTotal}}</div>
+      <div class="rd-stat-label">Scan findings</div>
+    </div>
+    {{end}}
+    <a class="rd-stat rd-stat-link" href="{{$.BasePath}}/findings?repo_id={{.RepositoryID}}&amp;status=open{{if $.APIKey}}&amp;api_key={{$.APIKey}}{{end}}">
+      <div class="rd-stat-value">{{.ActivePresentOpen}}</div>
+      <div class="rd-stat-label">Active-present</div>
+    </a>
+    <div class="rd-stat warn">
+      <div class="rd-stat-value">{{.ActionableActiveOpen}}</div>
+      <div class="rd-stat-label">Actionable active</div>
+    </div>
+    <div class="rd-stat info">
+      <div class="rd-stat-value">{{.InformationalActiveOpen}}</div>
+      <div class="rd-stat-label">Info/low active</div>
+    </div>
+    <div class="rd-stat">
+      <div class="rd-stat-value">{{.ReportOnlyFindings}}</div>
+      <div class="rd-stat-label">Report-only (no issue)</div>
+    </div>
+    <div class="rd-stat high">
+      <div class="rd-stat-value">{{.ForgeOpenIssues}}</div>
+      <div class="rd-stat-label">Open forge issues</div>
+    </div>
+    <div class="rd-stat">
+      <div class="rd-stat-value">{{.MappedOpenIssues}}</div>
+      <div class="rd-stat-label">Mapped open issues</div>
+    </div>
+    <div class="rd-stat warn">
+      <div class="rd-stat-value">{{.UnmappedOpenIssues}}</div>
+      <div class="rd-stat-label">Unmapped open issues</div>
+    </div>
+    <div class="rd-stat">
+      <div class="rd-stat-value">{{.ResolvedVerifiedOpen}}</div>
+      <div class="rd-stat-label">Resolved-verified open</div>
+    </div>
+    <div class="rd-stat">
+      <div class="rd-stat-value">{{.DuplicateFindings}}</div>
+      <div class="rd-stat-label">Duplicates</div>
+    </div>
+    <div class="rd-stat">
+      <div class="rd-stat-value">{{.SkippedDueReportOnly}}</div>
+      <div class="rd-stat-label">Skipped (report-only)</div>
+    </div>
+    <div class="rd-stat">
+      <div class="rd-stat-value">{{.SkippedDueBacklogControl}}</div>
+      <div class="rd-stat-label">Skipped (backlog-control)</div>
+    </div>
+  </div>
+
+  <dl class="rd-dl rd-recon-sync">
+    <dt>Issue sync</dt><dd><code>{{if .IssueSyncStatus}}{{.IssueSyncStatus}}{{else}}—{{end}}</code></dd>
+    <dt>Persistence</dt><dd><code>{{if .PersistenceStatus}}{{.PersistenceStatus}}{{else}}—{{end}}</code></dd>
+    <dt>Report-only scan</dt><dd>{{if .DryRunReportOnly}}yes{{else}}no{{end}}</dd>
+    <dt>Issue filing enabled</dt><dd>{{if .IssueFilingEnabled}}yes{{else}}<strong>no (beta safe)</strong>{{end}}</dd>
+    {{if .LatestScanID}}<dt>Latest scan</dt><dd><a class="rd-link" href="{{$.BasePath}}/scans/{{.LatestScanID}}{{apiKeyQS $.APIKey}}">{{shortID .LatestScanID 12}}</a></dd>{{end}}
+    {{if .LastReconciliationAt}}<dt>Last reconciliation</dt><dd class="rd-muted">{{.LastReconciliationAt.Format "2006-01-02 15:04 UTC"}}</dd>{{end}}
+  </dl>
+
+  <div class="rd-actions">
+    {{if $.Data.ReconcileEnabled}}<a class="rd-btn rd-btn-secondary" href="{{$.BasePath}}/repos/{{.RepositoryID}}/reconcile{{apiKeyQS $.APIKey}}">Run reconciliation preview</a>{{end}}
+    <a class="rd-btn rd-btn-ghost" href="{{$.BasePath}}/findings?repo_id={{.RepositoryID}}{{if $.APIKey}}&amp;api_key={{$.APIKey}}{{end}}">Browse findings</a>
+  </div>
+</div>
+{{end}}
+{{end}}

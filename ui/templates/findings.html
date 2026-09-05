@@ -1,0 +1,76 @@
+{{define "findings.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>{{template "head" .}}</head>
+<body class="rd-app">
+{{template "nav" .}}
+
+<form method="get" class="rd-card">
+  <div class="rd-card-head">
+    <h2>Triage filters</h2>
+    <span class="rd-chip">{{len .Data.Findings}} results</span>
+    {{if .Data.FocusMode}}<span class="rd-chip">Focus list</span>{{end}}
+  </div>
+  <p class="rd-muted">Start with the focus list (critical + high open). Export the current filter as CSV or JSON for reporting.</p>
+  <div class="rd-actions" style="margin-bottom:0.75rem;display:flex;gap:0.5rem;flex-wrap:wrap">
+    <a class="rd-btn rd-btn-secondary" href="{{.BasePath}}/findings?focus=1&amp;status=open{{if .APIKey}}&amp;api_key={{.APIKey}}{{end}}">Focus list</a>
+    <a class="rd-btn rd-btn-ghost" href="{{.BasePath}}/findings/export?format=csv{{if .Data.ExportQuery}}&amp;{{.Data.ExportQuery}}{{else}}{{if .APIKey}}&amp;api_key={{.APIKey}}{{end}}{{end}}">Export CSV</a>
+    <a class="rd-btn rd-btn-ghost" href="{{.BasePath}}/findings/export?format=json{{if .Data.ExportQuery}}&amp;{{.Data.ExportQuery}}{{else}}{{if .APIKey}}&amp;api_key={{.APIKey}}{{end}}{{end}}">Export JSON</a>
+  </div>
+  <div class="rd-toolbar">
+    <label>Severity
+      <select name="severity" aria-label="Filter by severity">
+        <option value="">All severities</option>
+        <option value="critical" {{if eq .Data.Filter.Severity "critical"}}selected{{end}}>Critical</option>
+        <option value="high" {{if eq .Data.Filter.Severity "high"}}selected{{end}}>High</option>
+        <option value="medium" {{if eq .Data.Filter.Severity "medium"}}selected{{end}}>Medium</option>
+        <option value="low" {{if eq .Data.Filter.Severity "low"}}selected{{end}}>Low</option>
+      </select>
+    </label>
+    <label>Repository
+      <select name="repo_id" aria-label="Filter by repository">
+        <option value="">All repositories</option>
+        {{range .Data.Repositories}}
+        <option value="{{.ID}}" {{if eq $.Data.Filter.RepositoryID .ID}}selected{{end}}>{{.FullName}}</option>
+        {{end}}
+      </select>
+    </label>
+    <label>Category
+      <input name="category" value="{{.Data.Filter.Category}}" placeholder="security, secret, dependency…" aria-label="Filter by category">
+    </label>
+    <label>Scanner / source
+      <input name="source" value="{{.Data.Filter.Source}}" placeholder="static, trivy, semgrep…" aria-label="Filter by scanner source">
+    </label>
+    <label>Status
+      <select name="status" aria-label="Filter by status">
+        <option value="">All statuses</option>
+        <option value="open" {{if eq .Data.Filter.Status "open"}}selected{{end}}>Open</option>
+        <option value="suppressed" {{if eq .Data.Filter.Status "suppressed"}}selected{{end}}>Suppressed</option>
+        <option value="false_positive" {{if eq .Data.Filter.Status "false_positive"}}selected{{end}}>False positive</option>
+        <option value="resolved" {{if eq .Data.Filter.Status "resolved"}}selected{{end}}>Resolved</option>
+      </select>
+    </label>
+    <label class="rd-checkbox-label">
+      <input type="checkbox" name="show_suppressed" value="1" {{if .Data.Filter.IncludeSuppressed}}checked{{end}}>
+      Show suppressed / false-positive
+    </label>
+    <label class="rd-checkbox-label">
+      <input type="checkbox" name="only_suppressed" value="1" {{if .Data.Filter.OnlySuppressed}}checked{{end}}>
+      Only suppressed
+    </label>
+  </div>
+  {{if .APIKey}}<input type="hidden" name="api_key" value="{{.APIKey}}">{{end}}
+  <div class="rd-actions"><button type="submit">Apply filters</button></div>
+</form>
+
+<div class="rd-card">
+  <div class="rd-card-head">
+    <h2>Findings queue</h2>
+    <p class="rd-muted" style="margin:0">Triage → reproduce → fix → test → verify</p>
+  </div>
+  {{template "findings_table" (dict "BasePath" .BasePath "APIKey" .APIKey "Findings" .Data.Findings "ShowRepo" true)}}
+  <p class="rd-muted">Showing up to {{if .Data.FocusMode}}50 focus{{else}}100{{end}} findings. Use Export CSV/JSON for larger dumps.</p>
+</div>
+{{template "foot" .}}
+</body></html>
+{{end}}

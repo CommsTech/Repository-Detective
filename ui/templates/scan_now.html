@@ -1,0 +1,32 @@
+{{define "scan_now.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>{{template "head" .}}</head>
+<body class="rd-app">
+{{template "nav" .}}
+{{with .Data.ScanForm.Repo}}
+<nav class="rd-breadcrumb" aria-label="Breadcrumb">
+  <a href="{{$.BasePath}}/repos{{apiKeyQS $.APIKey}}">Repositories</a>
+  <span>/</span>
+  <a href="{{$.BasePath}}/repos/{{.ID}}{{apiKeyQS $.APIKey}}">{{.FullName}}</a>
+  <span>/</span>
+  <span>Scan now</span>
+</nav>
+{{end}}
+
+<div class="rd-card">
+  <div class="rd-card-head"><h2>Scan now — {{.Data.ScanForm.Repo.FullName}}</h2></div>
+  {{if not .Data.ScanForm.ScanEnabled}}
+  <div class="rd-alert">Manual scan is unavailable — the scan engine is not configured.</div>
+  {{else}}
+  {{if eq .Data.ScanForm.ScanPolicyMode "private_beta_safe"}}
+  <div class="rd-alert info">Private beta safe mode: issue filing is off globally. Enable <code>auto_create_issues</code> to file forge issues.</div>
+  {{else}}
+  <div class="rd-alert info">Uncheck report-only to file or update Gitea issues when repo policy allows.</div>
+  {{end}}
+  {{template "scan_now_form.html" .}}
+  {{end}}
+</div>
+{{template "foot" .}}
+</body></html>
+{{end}}

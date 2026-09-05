@@ -1,0 +1,288 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# Dependency directories (remove the comment below to include it)
+# vendor/
+
+# Go workspace file
+go.work
+
+# Build output
+bin/
+!deploy/bin/
+!deploy/bin/README.md
+dist/
+build/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Environment files — never commit live operator secrets
+.env
+.env.local
+.env.*.local
+.env.production
+.env.homelab
+!.env.example
+# Local operator config may contain secrets; ship examples only.
+config/config.yaml
+config/*.local.yaml
+config/config.yaml.bak-*
+
+# Local SQLite databases
+data/
+data/*.db
+*.db
+
+# Scanner workspace temp files
+.scanner-workspace/
+scanner-workspace/
+
+# Runner local artifact directories
+runner-artifacts/
+runner-work/
+
+# Dogfood reports (may contain operator-specific details — keep local by default)
+docs/dogfood-reports/*
+# Local runtime state (nightly learner)
+state/nightly-rd-evolution/
+reports/nightly-rd-evolution/
+
+# Sanitized, committable dogfood reports (no keys, tokens, or internal hostnames)
+!docs/dogfood-reports/qdrant-redacted-local-test.md
+!docs/dogfood-reports/qdrant-redacted-test-result.json
+!docs/dogfood-reports/ruview-preinstall-audit.md
+!docs/dogfood-reports/ruview-preinstall-shareable-report.md
+!docs/dogfood-reports/ruview-private-security-disclosure-draft.md
+!docs/dogfood-reports/ruview-public-issue-drafts.md
+!docs/dogfood-reports/ruview-gitleaks-parse-diagnosis.md
+!docs/dogfood-reports/ruview-preinstall-audit-rerun.md
+!docs/dogfood-reports/ruview-preinstall-compare.md
+!docs/dogfood-reports/ruview-gitleaks-triage.md
+!docs/dogfood-reports/working-tree-cleanup-report.md
+!docs/dogfood-reports/issue-resolution-sprint-plan.md
+!docs/dogfood-reports/current-security-blocker-verification.md
+!docs/dogfood-reports/repo-cleanup-audit.md
+!docs/dogfood-reports/issue-resolution-batch-plan-current.md
+!docs/dogfood-reports/core-application-remediation-sprint.md
+!docs/dogfood-reports/rd-self-remediation-dl3018-test.md
+!docs/dogfood-reports/rd-self-remediation-staticcheck-e2e-test.md
+!docs/dogfood-reports/ci-release-fix-report.md
+!docs/dogfood-reports/product-repo-issue-burndown-plan.md
+!docs/dogfood-reports/batch4b-baseline.md
+!docs/dogfood-reports/batch4b-active-fixes-queue.md
+!docs/dogfood-reports/batch4b-resolved-absent-closeout-report.md
+!docs/dogfood-reports/batch4b-verification-report.md
+!docs/dogfood-reports/final-product-repo-closeout-baseline.md
+!docs/dogfood-reports/final-43-issues-export.md
+!docs/dogfood-reports/final-43-issues-classification.md
+!docs/dogfood-reports/final-evidence-backed-closures-report.md
+!docs/dogfood-reports/final-active-codefix-queue.md
+!docs/dogfood-reports/final-product-repo-closeout-verification.md
+!docs/dogfood-reports/batch6-baseline.md
+!docs/dogfood-reports/operator-issue-disposition-report.md
+!docs/dogfood-reports/historical-summary-rollup-disposition-report.md
+!docs/dogfood-reports/non-product-repo-dry-run-plan.md
+!docs/dogfood-reports/batch6-final-verification.md
+!docs/dogfood-reports/non-product-dry-run-baseline.md
+!docs/dogfood-reports/non-product-dry-run-repo-selection.md
+!docs/dogfood-reports/non-product-small-repo-dry-run-report.md
+!docs/dogfood-reports/non-product-medium-repo-dry-run-report.md
+!docs/dogfood-reports/non-product-dry-run-learning-evaluation.md
+!docs/dogfood-reports/non-product-dry-run-next-gate.md
+!docs/dogfood-reports/calibration-and-scanner-fix-baseline.md
+!docs/dogfood-reports/homelab-infra-profile-notes.md
+!docs/dogfood-reports/non-product-dry-run-round2-report.md
+!docs/dogfood-reports/current-product-issue-regression-baseline.md
+!docs/dogfood-reports/product-issue-burndown-after-filing-restore.md
+!docs/dogfood-reports/issue-filing-policy-e2e-report.md
+!docs/dogfood-reports/docs-wiki-history-scan-baseline.md
+!docs/dogfood-reports/gitea-wiki-publish-report.md
+!docs/dogfood-reports/documentation-upgrade-report.md
+!docs/dogfood-reports/product-rescan-and-issue-sync-report.md
+!docs/dogfood-reports/docs-and-wiki-verification-report.md
+!docs/dogfood-reports/live-docs-history-scan-verification.md
+!docs/dogfood-reports/graph-sandbox-baseline.md
+!docs/dogfood-reports/graph-rescan-verification-report.md
+!docs/dogfood-reports/preinstall-sandbox-verification-report.md
+!docs/dogfood-reports/preinstall-git-product-rescan-baseline.md
+!docs/dogfood-reports/live-all-in-one-git-redeploy-report.md
+!docs/dogfood-reports/live-preinstall-sandbox-audit-report.md
+!docs/dogfood-reports/product-clean-rescan-issue-sync-report.md
+!docs/dogfood-reports/remaining-active-present-triage.md
+!docs/dogfood-reports/runner-remediation-preinstall-baseline.md
+!docs/dogfood-reports/runner-remediation-live-verification.md
+!docs/dogfood-reports/runner-worker-test-baseline.md
+!docs/dogfood-reports/native-runner-enablement-plan.md
+!docs/dogfood-reports/native-runner-live-validation.md
+!docs/dogfood-reports/native-runner-failure-rollback-report.md
+!docs/dogfood-reports/remediation-pr-dry-run-verification.md
+!docs/dogfood-reports/remediation-pr-controlled-test-report.md
+!docs/dogfood-reports/post-runner-stabilization-baseline.md
+!docs/dogfood-reports/remaining-active-present-classification.md
+!docs/dogfood-reports/post-runner-product-rescan-report.md
+!docs/dogfood-reports/native-runner-soak-test-report.md
+!docs/dogfood-reports/remediation-pr-controlled-gate.md
+!docs/dogfood-reports/active-present-79-baseline.md
+!docs/dogfood-reports/active-present-79-classification.md
+!docs/dogfood-reports/active-present-79-rescan-report.md
+!docs/dogfood-reports/gitea-wiki-http-500-triage.md
+!docs/dogfood-reports/active-present-26-baseline.md
+!docs/dogfood-reports/active-present-26-classification.md
+!docs/dogfood-reports/active-present-26-rescan-report.md
+!docs/dogfood-reports/docker-image-scanning-baseline.md
+!docs/dogfood-reports/container-image-scan-verification.md
+!docs/dogfood-reports/container-live-demo-baseline.md
+!docs/dogfood-reports/live-redeploy-9e10a40-report.md
+!docs/dogfood-reports/container-runner-prep-report.md
+!docs/dogfood-reports/container-image-scan-alpine-320-report.md
+!docs/dogfood-reports/openclaw-ai-review-baseline.md
+!docs/dogfood-reports/openclaw-ai-review-verification.md
+!docs/dogfood-reports/sbom-end-to-end-verification.md
+!docs/dogfood-reports/ui-route-smoke-report.md
+!docs/dogfood-reports/ui-responsiveness-bench-2026-08-02.md
+!docs/dogfood-reports/ui-flow-eval-2026-08-02.md
+!docs/dogfood-reports/full-application-audit-2026-08-02.md
+!docs/dogfood-reports/external-review-reconciliation-2026-08-02.md
+!docs/dogfood-reports/container-log-health-report.md
+!docs/dogfood-reports/full-application-acceptance-report.md
+!docs/dogfood-reports/live-rc-redeploy-baseline.md
+!docs/dogfood-reports/rc-active-present-regression-baseline.md
+!docs/dogfood-reports/rc-active-present-21-classification.md
+!docs/dogfood-reports/rc-active-present-rescan-report.md
+!docs/dogfood-reports/gitea-issue-target-regression-report.md
+!docs/dogfood-reports/github-issue-provider-rc-status.md
+!docs/dogfood-reports/sbom-artifact-download-verification.md
+!docs/dogfood-reports/rc-screenshot-visual-qa-report.md
+!docs/dogfood-reports/external-clean-install-report.md
+!docs/dogfood-reports/current-readiness-reconciliation.md
+!docs/dogfood-reports/gitea-wiki-server-repair-plan.md
+!docs/dogfood-reports/gitea-filing-controlled-test-plan.md
+!docs/dogfood-reports/external-clean-install-test-plan.md
+!docs/dogfood-reports/private-beta-first-tester-scan.md
+!docs/dogfood-reports/gitea-wiki-server-repair-result.md
+!docs/dogfood-reports/gitea-filing-controlled-proof-result.md
+!docs/dogfood-reports/store-timeout-triage-report.md
+!docs/dogfood-reports/sbom-test-failure-triage.md
+!docs/dogfood-reports/live-structured-issue-body-deploy.md
+!docs/dogfood-reports/external-clean-install-result.md
+!docs/dogfood-reports/rc-all-in-one-build-report.md
+!docs/dogfood-reports/live-rc-redeploy-report.md
+!docs/dogfood-reports/findings-detail-live-verification.md
+!docs/dogfood-reports/sbom-live-verification.md
+!docs/dogfood-reports/ai-recommendations-live-verification.md
+!docs/dogfood-reports/issue-provider-rc-verification.md
+!docs/dogfood-reports/non-product-beta-scan-1.md
+!docs/dogfood-reports/non-product-beta-scan-2.md
+!docs/dogfood-reports/gitea-issue-template-verification.md
+!docs/dogfood-reports/external-tester-1-scan-report.md
+!docs/dogfood-reports/external-tester-1-calibration-baseline.md
+!docs/dogfood-reports/external-tester-1-calibration-rescan.md
+!docs/dogfood-reports/fleet-scanning-and-filing-audit.md
+!docs/dogfood-reports/unknown-unmapped-finding-audit.md
+!docs/dogfood-reports/post-overnight-fleet-checkpoint.md
+!docs/marketing/
+!docs/marketing/**
+
+# Beta readiness docs (sanitized, committable)
+!docs/beta/
+!docs/beta/**
+
+# Private operator dogfood (unsanitized — keep local)
+docs/DOGFOOD_REPORT_FIRST_39_REPOS.md
+
+# Operator-only closeout scripts (homelab paths, not portable)
+scripts/apply_closeout_suppressions.py
+scripts/apply_repo_closeout_step2.py
+scripts/apply_repo_closeout_step5.py
+scripts/issue_closeout_triage.py
+
+# Configuration overrides
+config.local.yaml
+config.*.local.yaml
+
+# Docker
+.dockerignore
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Coverage reports
+coverage.out
+coverage.html
+
+# Profiling data
+*.prof
+
+# Air live reload
+tmp/
+
+# Local development
+.local/
+
+# Staged scanner binaries (large; optional for offline Docker builds)
+deploy/bin/trivy
+deploy/bin/grype
+deploy/bin/gitleaks
+
+# Local deployment artifacts and drills (operator-only)
+deployment-backups/
+restore-drill-test/
+
+# Root-level build outputs (use build/ or Docker images)
+/repository-detective
+/repository-detective-build
+/bugbot
+bugbot
+repository-detective-build
+
+# Vendored modules (generate via scripts/vendor-deps.sh when needed)
+vendor/
+
+# Production configuration files (contain secrets)
+docker-compose.prod.yml
+docker-compose.override.yml
+.env
+bugbot-build
+
+# Operator SSH / deploy keys (never publish)
+*.pem
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+secrets/
+.secrets/
+e2e/results/
+
+# Local operator/fleet scratch (never publish)
+state/

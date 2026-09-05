@@ -1,0 +1,57 @@
+{{define "container_images.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>{{template "head" .}}</head>
+<body class="rd-app">
+{{template "nav" .}}
+<div class="rd-card">
+  <div class="rd-card-head"><h2>Container Images</h2><span class="rd-chip">Opt-in</span></div>
+  <p class="rd-muted">Runner-based OCI image scanning. Core never mounts Docker socket by default. Issue filing off unless explicitly enabled.</p>
+  <table class="rd-table rd-table-compact">
+    <tr><td>Scanning enabled</td><td><strong>{{if .Data.Enabled}}yes{{else}}no (disabled by default){{end}}</strong></td></tr>
+    <tr><td>Requires runner</td><td><strong>{{if .Data.RequireRunner}}yes{{else}}no{{end}}</strong></td></tr>
+    <tr><td>Core Docker socket</td><td><strong>{{if .Data.AllowCoreSocket}}allowed{{else}}disabled{{end}}</strong></td></tr>
+    <tr><td>Issue creation</td><td><strong>{{if .Data.CreateIssues}}enabled{{else}}report-only{{end}}</strong></td></tr>
+  </table>
+  <p class="rd-muted">API: <code>POST /api/v1/repositories/{{.Data.RepoID}}/containers/discover</code> · <code>POST .../containers/scan</code></p>
+</div>
+
+<div class="rd-card">
+  <div class="rd-card-head"><h2>Discovered images</h2></div>
+  <table class="rd-table">
+    <tr><th>Image</th><th>Source</th><th>Line</th><th>Mutable tag</th><th>Last digest</th></tr>
+    {{range .Data.References}}
+    <tr>
+      <td><code>{{.Image}}</code></td>
+      <td>{{.FilePath}}:{{.Line}}</td>
+      <td>{{.Line}}</td>
+      <td>{{if .MutableTag}}yes{{else}}no{{end}}</td>
+      <td class="rd-muted">{{if .LastDigest}}{{.LastDigest}}{{else}}—{{end}}</td>
+    </tr>
+    {{else}}
+    <tr><td colspan="5" class="rd-muted">No images discovered yet — run Discover via API or scan the repository first.</td></tr>
+    {{end}}
+  </table>
+</div>
+
+<div class="rd-card">
+  <div class="rd-card-head"><h2>Image scan history</h2></div>
+  <table class="rd-table">
+    <tr><th>Image</th><th>Status</th><th>Vulns</th><th>SBOM</th><th>Job</th></tr>
+    {{range .Data.Scans}}
+    <tr>
+      <td><code>{{.Image}}</code></td>
+      <td>{{.Status}}</td>
+      <td>{{.VulnCount}}</td>
+      <td>{{if .SBOMFormat}}{{.SBOMFormat}}{{else}}—{{end}}</td>
+      <td class="rd-muted">{{.RunnerJobID}}</td>
+    </tr>
+    {{else}}
+    <tr><td colspan="5" class="rd-muted">No image scans yet.</td></tr>
+    {{end}}
+  </table>
+</div>
+<p><a class="rd-link" href="{{.BasePath}}/repos/{{.Data.RepoID}}{{apiKeyQS .APIKey}}">← Repository</a></p>
+{{template "foot" .}}
+</body></html>
+{{end}}
