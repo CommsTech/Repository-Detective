@@ -1,13 +1,21 @@
 # Development Issues Log
 
-## Open / in progress (2026-09-04) — Phase 6B release alignment
+## Fixed (2026-09-05) — Phase 6B release alignment
+
+| Priority | Issue | Resolution |
+|----------|-------|------------|
+| P0 | Published beta.2 lacked Doctor / current tree | Published `v0.1.0-beta.3` digest `sha256:6a615548…`; clean-install + core E2E on exact digest |
+| P0 | DOC_TRUTH on GitHub lagged Phase 6A evidence | Snapshot lag; refreshed DOC_TRUTH + release evidence |
+| P1 | Live-forge POLICY_MET / ACTION_REQUIRED / OBSERVATION_ONLY | Controlled harness; POLICY_MET uses orphan clean tree |
+| P1 | Secret auto-close after fix looked incomplete | Documented intentional PARTIAL (RD-017D) |
+| P1 | Clean-install Doctor HTTP 401 | Compose host env overrode ephemeral API key |
+
+## Open / deferred
 
 | Priority | Issue | Plan |
 |----------|-------|------|
-| P0 | Published beta.2 lacked Doctor / current tree | Publish `v0.1.0-beta.3`; prove clean-install + core E2E on exact digest |
-| P0 | DOC_TRUTH on GitHub lagged Phase 6A evidence | Snapshot lag root cause; refresh DOC_TRUTH + re-sync |
-| P1 | Live-forge POLICY_MET / ACTION_REQUIRED / OBSERVATION_ONLY | Controlled harness scenarios (RD-017C) |
-| P1 | Secret auto-close after fix looked incomplete | Document intentional PARTIAL semantics (RD-017D); no naive absence-close |
+| P2 | Upgrade E2E | NOT_PROVEN — use beta.3 as baseline for next release |
+| P2 | Class-B remediation / RD-015–016 | Excluded (RD-008B Option C) |
 
 ## Fixed (2026-09-04) — Phase 6A real Gitea E2E (RD-017A / RD-018)
 

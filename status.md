@@ -3,18 +3,18 @@
 **Last updated:** 2026-09-04  
 **Program:** Product Hardening & Public Beta Improvement Backlog (RD-001…RD-030)
 
-### Phase 6B (2026-09-04) — Release alignment & proof closure — IN PROGRESS
+### Phase 6B (2026-09-05) — Release alignment & proof closure — COMPLETE
 
 | Task | Status | Notes |
 |------|--------|-------|
-| RD-018A Publish beta.3 | In progress | Canonical Gitea + GHCR; digests recorded |
-| RD-018B Clean install on published digest | Pending | Exact digest, empty storage |
-| RD-017B Core E2E on published digest | Pending | `RD_E2E_IMAGE=<digest>` |
-| RD-017C Four policy outcomes | Harness extended | POLICY_MET / ACTION_REQUIRED / OBSERVATION_ONLY + fail-closed |
-| RD-017D Secret resolution semantics | Documented | PARTIAL intentional; no naive absence-close |
-| RD-029A DOC_TRUTH drift | Fixed (root cause: snapshot lag) | Content re-sync after publish |
-| RD-021A Minimal badges | Done | CI / beta.3 / container / license / Gitea 1.22.3 |
-| Class-B / RD-015–016 | Excluded | RD-008B Option C unchanged |
+| RD-018A Publish beta.3 | **Done** | Digest `sha256:6a615548…308727` on Gitea + GHCR (match) |
+| RD-018B Clean install on published digest | **PUBLISHED_IMAGE_CLEAN_INSTALL_E2E_PROVEN** | Doctor present; empty storage |
+| RD-017B Core E2E on published digest | **PUBLISHED_IMAGE_CORE_E2E_PROVEN** | Gitea 1.22.3; zero FAIL |
+| RD-017C Four policy outcomes | **E2E_PROVEN** | POLICY_MET / ACTION_REQUIRED / OBSERVATION_ONLY / EVALUATION_INCOMPLETE |
+| RD-017D Secret resolution semantics | **PARTIAL** intentional | Documented; no naive absence-close |
+| RD-029A DOC_TRUTH drift | **Fixed** | Snapshot lag root cause |
+| RD-021A Minimal badges | **Done** | CI / beta.3 / container / license / Gitea 1.22.3 |
+| Class-B / RD-015–016 | **Excluded** | RD-008B Option C unchanged |
 
 ### Phase 6A (2026-09-04) — Real Gitea E2E (RD-017A / RD-018) — COMPLETE (stop before Phase 5)
 
