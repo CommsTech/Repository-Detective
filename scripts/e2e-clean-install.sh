@@ -47,6 +47,9 @@ chmod -R a+rwX data || true
 export RD_IMAGE="$IMAGE"
 export COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-rd-clean-install}"
 export COMPOSE_HTTP_TIMEOUT="${COMPOSE_HTTP_TIMEOUT:-600}"
+# Compose `environment:` interpolates host env over env_file — keep the ephemeral key in sync.
+export REPOSITORY_DETECTIVE_API_KEY="$API_KEY"
+export REPOSITORY_DETECTIVE_WEBHOOK_SECRET="$WH_SECRET"
 set -o pipefail
 
 # Avoid colliding with a host's long-lived repository-detective container_name.
@@ -73,6 +76,13 @@ if [[ "$READY" != "1" ]]; then
   exit 1
 fi
 
+# Wait until control-plane routes are registered (Doctor returns 200, not 401/404 during boot).
+for i in $(seq 1 60); do
+  H="$(curl -fsS "http://127.0.0.1:${RD_HOST_PORT}/health" 2>/dev/null || echo '{}')"
+  if echo "$H" | jq -e '.ready == true' >/dev/null 2>&1; then break; fi
+  sleep 2
+done
+
 curl -fsS "http://127.0.0.1:${RD_HOST_PORT}/health" | tee "$OUT/health.json"
 curl -fsS -o /dev/null -w '%{http_code}\n' "http://127.0.0.1:${RD_HOST_PORT}/onboard/" | tee "$OUT/onboard-status.txt"
 
@@ -84,9 +94,13 @@ done
 DOCTOR_CODE="$(curl -s -o "$OUT/doctor.json" -w '%{http_code}' -H "X-Repository-Detective-API-Key: $API_KEY" "http://127.0.0.1:${RD_HOST_PORT}/api/v1/doctor" || true)"
 echo "$DOCTOR_CODE" | tee "$OUT/doctor-status.txt"
 if [[ "$DOCTOR_CODE" != "200" ]]; then
-  log "doctor API returned HTTP $DOCTOR_CODE (published image may predate Phase 4 Doctor — recorded as NOT_ON_PUBLISHED_IMAGE)"
-  echo '{"note":"doctor endpoint unavailable on this published image digest"}' >"$OUT/doctor.json"
+  log "doctor API returned HTTP $DOCTOR_CODE"
+  docker logs rd-clean-install-detective 2>&1 | tee "$OUT/rd-doctor-fail.log" | tail -40 || true
+  log "ERROR: Doctor must be present on the published digest (Phase 6B)"
+  exit 1
 fi
+# Capture version identity from Doctor
+jq '{version,commit,edition,overall}' "$OUT/doctor.json" | tee "$OUT/doctor-identity.json" || true
 
 CID="$(docker compose -f docker-compose.yml ps -q repository-detective 2>/dev/null || docker-compose -f docker-compose.yml ps -q repository-detective)"
 [[ -n "$CID" ]] || { log "ERROR: clean-install container id missing"; exit 1; }
@@ -112,7 +126,8 @@ out={
  "scanners": open("$OUT/scanners.txt").read(),
  "scanners_full": open("$OUT/scanners-full.txt").read(),
  "upgrade_e2e": "NOT_PROVEN",
- "notes": "Clean install used published/local all-in-one from .env.example-derived config on disposable port. Live forge onboarding is covered by e2e-gitea-acceptance.sh. Doctor may be absent on older published digests until republish."
+ "proof": "PUBLISHED_IMAGE_CLEAN_INSTALL_E2E_PROVEN" if doctor_code == "200" else "CLEAN_INSTALL_PARTIAL",
+ "notes": "Clean install used exact published digest with empty storage and documented compose. Live forge onboarding is covered by e2e-gitea-acceptance.sh."
 }
 json.dump(out, open("$OUT/clean-install.json","w"), indent=2)
 print("wrote clean-install.json")
