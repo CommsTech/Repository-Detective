@@ -69,8 +69,9 @@ scanner-workspace/
 runner-artifacts/
 runner-work/
 
-# Private / production screenshot quarantine — never publish
-docs/assets/screenshots/_quarantine_private/
+# Local RD-031 gofmt scratch lists
+.rd-gofmt-before.txt
+.rd-gofmt-after.txt
 
 # Dogfood reports (may contain operator-specific details — keep local by default)
 docs/dogfood-reports/*

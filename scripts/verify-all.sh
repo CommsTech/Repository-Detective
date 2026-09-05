@@ -7,8 +7,10 @@ echo "==> go mod tidy check"
 go mod tidy
 git diff --exit-code go.mod go.sum
 
-echo "==> gofmt"
-test -z "$(gofmt -s -l . | grep -v vendor || true)"
+echo "==> gofmt (tracked Go files)"
+FILES=$(git ls-files '*.go' | grep -v '^vendor/' || true)
+test -n "$FILES"
+test -z "$(echo "$FILES" | xargs -n 200 gofmt -s -l)"
 
 echo "==> go vet"
 go vet ./...

@@ -34,27 +34,22 @@ jobs:
           go mod tidy
           git diff --exit-code go.mod go.sum
 
-      - name: Format check (changed Go files)
+      - name: Format check (all tracked Go files)
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            BASE="${{ github.event.pull_request.base.sha }}"
-          else
-            BASE="${{ github.event.before }}"
-          fi
-          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
-            BASE="HEAD~1"
-          fi
-          FILES=$(git diff --name-only --diff-filter=ACMRTUXB "$BASE" HEAD -- '*.go' | grep -v '^vendor/' || true)
+          set -euo pipefail
+          FILES=$(git ls-files '*.go' | grep -v '^vendor/' || true)
           if [ -z "$FILES" ]; then
-            echo "No Go files changed — skipping format check"
+            echo "No tracked Go files"
             exit 0
           fi
-          UNFORMATTED=$(gofmt -s -l $FILES)
+          # Fail the job when any tracked application Go source is not gofmt-clean.
+          UNFORMATTED=$(echo "$FILES" | xargs -n 200 gofmt -s -l)
           if [ -n "$UNFORMATTED" ]; then
-            echo "The following files need gofmt:"
+            echo "The following tracked Go files need gofmt -s:"
             echo "$UNFORMATTED"
             exit 1
           fi
+          echo "gofmt-clean: $(echo "$FILES" | wc -l) tracked files"
 
       - name: Go vet
         run: |

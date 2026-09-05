@@ -18,7 +18,7 @@ BINARY_UNIX=$(BINARY_NAME)_unix
 # Build flags
 LDFLAGS=-ldflags "-X main.Version=$(shell git describe --tags --always --dirty) -X main.BuildTime=$(shell date -u '+%Y-%m-%d_%H:%M:%S')"
 
-.PHONY: all build clean test coverage deps lint fmt docker-build docker-run docker-push help
+.PHONY: all build clean test coverage deps lint fmt check-fmt docker-build docker-run docker-push help
 
 # Default target
 all: clean deps test build
@@ -92,6 +92,21 @@ fmt:
 	@echo "Formatting code..."
 	$(GOCMD) fmt ./...
 	@echo "Code formatting complete"
+
+# Fail if any tracked Go source is not gofmt-clean (RD-031)
+check-fmt:
+	@echo "Checking gofmt on tracked Go files..."
+	@files=$$(git ls-files '*.go' | grep -v '^vendor/' || true); \
+	if [ -z "$$files" ]; then echo "No tracked Go files"; exit 0; fi; \
+	unformatted=$$(echo "$$files" | xargs -n 200 gofmt -s -l); \
+	if [ -n "$$unformatted" ]; then \
+		echo "The following tracked Go files need gofmt -s:"; \
+		echo "$$unformatted"; \
+		exit 1; \
+	fi; \
+	echo "gofmt-clean: $$(echo "$$files" | wc -l) tracked files"
+
+.PHONY: all build clean test coverage deps lint fmt check-fmt docker-build docker-run docker-push help
 
 # Install the application
 install: build
