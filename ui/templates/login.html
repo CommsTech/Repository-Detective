@@ -6,8 +6,8 @@
 <div class="rd-auth-wrap">
   <div class="rd-auth-card">
     <img src="{{.BasePath}}/static/logo.svg" alt="Repository Detective" width="64" height="64">
-    <h1>Sign in</h1>
-    <p class="rd-muted">Repository Detective — Inspect · Analyze · Improve</p>
+    <h1>Operator login</h1>
+    <p class="rd-muted">Sign in with your local operator account. Automation still uses an API token (header), not this form.</p>
     {{with .Data.Error}}{{if .}}<p class="rd-alert danger rd-alert-danger" role="alert">{{.}}</p>{{end}}{{end}}
     <form method="post" action="{{.BasePath}}/login" class="rd-auth-form">
       <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">

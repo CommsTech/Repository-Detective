@@ -22,6 +22,9 @@ type OnboardingHandler struct {
 	publicURL     string
 	giteaScanOrgs []string
 	aiConfig      ai.Config
+	authMode      string
+	userCounter   func(context.Context) (int, error)
+	repoCounter   func(context.Context) (int, error)
 }
 
 // OnboardingConfig holds server-side defaults for the onboarding UI.
@@ -30,6 +33,10 @@ type OnboardingConfig struct {
 	PublicURL     string
 	GiteaScanOrgs []string
 	AIConfig      ai.Config
+	AuthMode      string
+	// Optional counters for fresh-install detection (nil-safe).
+	CountUsers        func(context.Context) (int, error)
+	CountRepositories func(context.Context) (int, error)
 }
 
 // NewOnboardingHandler creates an onboarding handler.
@@ -40,6 +47,9 @@ func NewOnboardingHandler(logger *logrus.Logger, cfg OnboardingConfig) *Onboardi
 		publicURL:     cfg.PublicURL,
 		giteaScanOrgs: append([]string(nil), cfg.GiteaScanOrgs...),
 		aiConfig:      cfg.AIConfig,
+		authMode:      strings.TrimSpace(cfg.AuthMode),
+		userCounter:   cfg.CountUsers,
+		repoCounter:   cfg.CountRepositories,
 	}
 }
 

@@ -3,15 +3,22 @@ package store
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 )
 
+// ErrBootstrapClosed is returned when CreateFirstOwner runs after any user exists.
+var ErrBootstrapClosed = errors.New("bootstrap closed: local users already exist")
+
 // AuthStore provides local user/session persistence.
 type AuthStore interface {
 	CountUsers(ctx context.Context) (int, error)
 	CreateUser(ctx context.Context, user User) (User, error)
+	// CreateFirstOwner inserts the first owner inside an exclusive transaction.
+	// Returns ErrBootstrapClosed when any user already exists.
+	CreateFirstOwner(ctx context.Context, user User) (User, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id int64) (User, error)
 	UpdateUserLastLogin(ctx context.Context, id int64, at time.Time) error
@@ -62,6 +69,71 @@ func (s *SQLiteStore) CreateUser(ctx context.Context, user User) (User, error) {
 	if err != nil {
 		return User{}, fmt.Errorf("create user id: %w", err)
 	}
+	user.ID = id
+	user.Email = email
+	user.Enabled = enabled == 1
+	return user, nil
+}
+
+// CreateFirstOwner atomically creates the first owner when the users table is empty.
+func (s *SQLiteStore) CreateFirstOwner(ctx context.Context, user User) (User, error) {
+	email := strings.TrimSpace(strings.ToLower(user.Email))
+	if email == "" {
+		return User{}, fmt.Errorf("email is required")
+	}
+	now := time.Now().UTC()
+	if user.CreatedAt.IsZero() {
+		user.CreatedAt = now
+	}
+	if user.UpdatedAt.IsZero() {
+		user.UpdatedAt = now
+	}
+	enabled := 1
+	if !user.Enabled {
+		enabled = 0
+	}
+
+	conn, err := s.db.Conn(ctx)
+	if err != nil {
+		return User{}, fmt.Errorf("bootstrap conn: %w", err)
+	}
+	defer conn.Close()
+
+	if _, err := conn.ExecContext(ctx, `BEGIN IMMEDIATE`); err != nil {
+		return User{}, fmt.Errorf("begin immediate bootstrap: %w", err)
+	}
+	committed := false
+	defer func() {
+		if !committed {
+			_, _ = conn.ExecContext(context.Background(), `ROLLBACK`)
+		}
+	}()
+
+	var count int
+	if err := conn.QueryRowContext(ctx, `SELECT COUNT(1) FROM users`).Scan(&count); err != nil {
+		return User{}, fmt.Errorf("count users for bootstrap: %w", err)
+	}
+	if count > 0 {
+		return User{}, ErrBootstrapClosed
+	}
+
+	res, err := conn.ExecContext(ctx, `
+		INSERT INTO users (email, display_name, password_hash, role, enabled, created_at, updated_at, last_login_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, NULL)`,
+		email, strings.TrimSpace(user.DisplayName), user.PasswordHash, user.Role, enabled,
+		formatTime(user.CreatedAt), formatTime(user.UpdatedAt),
+	)
+	if err != nil {
+		return User{}, fmt.Errorf("create first owner: %w", err)
+	}
+	id, err := res.LastInsertId()
+	if err != nil {
+		return User{}, fmt.Errorf("create first owner id: %w", err)
+	}
+	if _, err := conn.ExecContext(ctx, `COMMIT`); err != nil {
+		return User{}, fmt.Errorf("commit bootstrap: %w", err)
+	}
+	committed = true
 	user.ID = id
 	user.Email = email
 	user.Enabled = enabled == 1

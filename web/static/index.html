@@ -35,7 +35,10 @@
           <small>Callback URL for webhooks (where the forge reaches RD).</small>
         </label>
         <label>Webhook secret<input id="webhookSecret" type="text" placeholder="shared-secret"></label>
-        <label>Operator API key<input id="apiKey" type="password" placeholder="Protects onboarding API"></label>
+        <label>Automation API token
+          <input id="apiKey" type="password" placeholder="Protects onboarding API + scripts/MCP">
+          <small>For automation only — not the operator login password.</small>
+        </label>
         <label>Privacy mode
           <select id="privacyMode">
             <option value="hybrid">HYBRID (default)</option>
@@ -44,13 +47,23 @@
           </select>
         </label>
       </div>
+      <div id="authRecommend" class="rd-auth-recommend" hidden>
+        <h3>Operator login (recommended for new installs)</h3>
+        <p class="repo-meta" id="authRecommendSummary"></p>
+        <p class="repo-meta">
+          After you start with the exported <code>.env</code>, create the first operator account at
+          <a id="authBootstrapLink" href="/ui/bootstrap">/ui/bootstrap</a>
+          (available only while no local users exist). Daily UI access is
+          <a id="authLoginLink" href="/ui/login">/ui/login</a> — do not paste the automation API token into the login form.
+        </p>
+        <p class="repo-meta" id="authCompatNote"></p>
+      </div>
       <div class="actions">
         <button id="testGiteaBtn" type="button">Verify forge connection</button>
         <button id="checkPermsBtn" type="button">Check permissions</button>
         <span id="giteaStatus" class="status"></span>
       </div>
       <pre id="permMatrix" class="env-box" hidden></pre>
-      <p class="repo-meta">UI auth bootstrap (optional): after install, use <code>/ui/bootstrap</code> when <code>auth_mode=local</code>. Existing installs keep API-key UI mode unless you opt in.</p>
       <div class="actions"><button type="button" class="primary" data-next="2">Continue to Select</button></div>
     </section>
 
@@ -134,10 +147,11 @@
       <div id="readyBanner" class="status"></div>
       <pre id="readySummary" class="env-box"></pre>
       <h3>Environment export</h3>
+      <p class="repo-meta">Includes recommended <code>AUTH_MODE=local</code> and a generated <code>SESSION_SECRET</code> for new installs. Existing operators who intentionally keep API-key UI mode can change those lines.</p>
       <pre id="envExport"></pre>
       <button id="copyEnvBtn" type="button">Copy to clipboard</button>
-      <p class="repo-meta">Next: open the dashboard and <strong>Run first scan</strong>, or open/push a test PR. A manual first scan is FIRST_SCAN_PROVEN — not webhook E2E proof.</p>
-      <p class="repo-meta"><a href="/ui/" target="_blank" rel="noopener">Open operator UI</a> · <a href="/api/v1/doctor" target="_blank" rel="noopener">Doctor JSON</a></p>
+      <p class="repo-meta">Next: start with the exported env → create first operator at <a href="/ui/bootstrap">/ui/bootstrap</a> → open dashboard and <strong>Run first scan</strong>, or open/push a test PR. A manual first scan is FIRST_SCAN_PROVEN — not webhook E2E proof.</p>
+      <p class="repo-meta"><a href="/ui/" target="_blank" rel="noopener">Open operator UI</a> · <a href="/ui/login" rel="noopener">Operator login</a> · <a href="/api/v1/doctor" target="_blank" rel="noopener">Doctor JSON</a></p>
     </section>
   </div>
   <script src="/onboard/assets/app.js"></script>

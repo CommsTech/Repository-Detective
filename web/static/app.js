@@ -2,6 +2,25 @@ const selectedRepos = new Set();
 let loadedRepos = [];
 let defaultScanOrgs = [];
 let lastVerifyReport = null;
+let generatedSessionSecret = '';
+let authDefaults = {
+  recommend_local_auth: true,
+  auth_mode: 'api_key_only',
+  auth_recommendation: null,
+};
+
+function randomHex(bytes) {
+  const arr = new Uint8Array(bytes);
+  crypto.getRandomValues(arr);
+  return Array.from(arr, (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+function ensureSessionSecret() {
+  if (!generatedSessionSecret) {
+    generatedSessionSecret = randomHex(32);
+  }
+  return generatedSessionSecret;
+}
 
 function apiHeaders() {
   const key = document.getElementById('apiKey').value.trim();
@@ -49,10 +68,12 @@ function showStage(n) {
 
 function updateEnvExport() {
   const p = connectionPayload();
+  const recommendLocal = authDefaults.recommend_local_auth !== false;
   const lines = [
     `REPOSITORY_DETECTIVE_GITEA_URL=${p.gitea_url}`,
     `REPOSITORY_DETECTIVE_GITEA_TOKEN=${p.gitea_token || 'your-token'}`,
     `REPOSITORY_DETECTIVE_WEBHOOK_SECRET=${p.webhook_secret || 'your-webhook-secret'}`,
+    `# Automation API token (scripts / MCP / OpenClaw) — not the operator login password`,
     `REPOSITORY_DETECTIVE_API_KEY=${document.getElementById('apiKey').value.trim() || '<set-api-key>'}`,
     `REPOSITORY_DETECTIVE_PUBLIC_URL=${p.public_url}`,
     `REPOSITORY_DETECTIVE_PRIVACY_MODE=${p.privacy_mode}`,
@@ -61,6 +82,22 @@ function updateEnvExport() {
     `# Policy mode ${p.policy_mode} — map in UI/repo settings (Observe/Warn/Enforce)`,
     `REPOSITORY_DETECTIVE_REJECT_QUERY_STRING_API_KEY=true`,
   ];
+  if (recommendLocal) {
+    lines.push(
+      `# Operator UI auth (recommended for new installs)`,
+      `REPOSITORY_DETECTIVE_AUTH_MODE=local`,
+      `REPOSITORY_DETECTIVE_SESSION_SECRET=${ensureSessionSecret()}`,
+      `REPOSITORY_DETECTIVE_SESSION_TTL_HOURS=12`,
+      `REPOSITORY_DETECTIVE_CSRF_ENABLED=true`,
+      `REPOSITORY_DETECTIVE_LOCAL_ADMIN_BOOTSTRAP_ENABLED=true`,
+      `# After start: open /ui/bootstrap once to create the first operator account`,
+    );
+  } else {
+    lines.push(
+      `# Current install auth mode (unchanged — set AUTH_MODE=local only if you intentionally migrate)`,
+      `REPOSITORY_DETECTIVE_AUTH_MODE=${authDefaults.auth_mode || 'api_key_only'}`,
+    );
+  }
   if (p.ai_provider) {
     lines.push(
       `REPOSITORY_DETECTIVE_AI_PROVIDER=${p.ai_provider}`,
@@ -71,6 +108,33 @@ function updateEnvExport() {
   }
   const el = document.getElementById('envExport');
   if (el) el.textContent = lines.join('\n');
+}
+
+function renderAuthRecommendation(d) {
+  const box = document.getElementById('authRecommend');
+  if (!box) return;
+  authDefaults = {
+    recommend_local_auth: !!d.recommend_local_auth,
+    auth_mode: d.auth_mode || 'api_key_only',
+    auth_recommendation: d.auth_recommendation || null,
+  };
+  const show = !!d.recommend_local_auth || !!d.fresh_install;
+  box.hidden = !show;
+  const rec = d.auth_recommendation || {};
+  const summary = document.getElementById('authRecommendSummary');
+  if (summary) {
+    summary.textContent = rec.summary ||
+      'New installs should use operator login (local session). Keep the API token for scripts/MCP/OpenClaw only.';
+  }
+  const compat = document.getElementById('authCompatNote');
+  if (compat) {
+    compat.textContent = rec.compat_note ||
+      'Existing api_key_only installs are unchanged until you set AUTH_MODE=local.';
+  }
+  const boot = document.getElementById('authBootstrapLink');
+  if (boot && rec.bootstrap) boot.setAttribute('href', rec.bootstrap);
+  const login = document.getElementById('authLoginLink');
+  if (login && rec.login) login.setAttribute('href', rec.login);
 }
 
 function renderRepoList(repos) {
@@ -143,6 +207,7 @@ async function loadDefaults() {
     if (d.ai_base_url) document.getElementById('aiBaseUrl').value = d.ai_base_url;
     if (d.ai_model) document.getElementById('aiModel').value = d.ai_model;
     defaultScanOrgs = d.gitea_scan_orgs || [];
+    renderAuthRecommendation(d);
     updateEnvExport();
   } catch (err) {
     console.warn('Failed to load onboarding defaults', err);

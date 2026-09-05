@@ -201,7 +201,8 @@ Acceptance: [docs/release/ACCEPTANCE_v0.1.0-beta.3.md](docs/release/ACCEPTANCE_v
 | Setting | Variable |
 |---------|----------|
 | HTTP port | `REPOSITORY_DETECTIVE_PORT` (compose default **8081**) |
-| API key | `REPOSITORY_DETECTIVE_API_KEY` |
+| API key (automation) | `REPOSITORY_DETECTIVE_API_KEY` |
+| UI auth (new installs) | `REPOSITORY_DETECTIVE_AUTH_MODE=local` + `REPOSITORY_DETECTIVE_SESSION_SECRET` — see [AUTH_LOCAL.md](docs/AUTH_LOCAL.md) |
 | Public URL | `REPOSITORY_DETECTIVE_PUBLIC_URL` |
 | Gitea | `REPOSITORY_DETECTIVE_GITEA_URL`, `REPOSITORY_DETECTIVE_GITEA_TOKEN` |
 | Webhook secret | `REPOSITORY_DETECTIVE_WEBHOOK_SECRET` |
@@ -211,7 +212,10 @@ Acceptance: [docs/release/ACCEPTANCE_v0.1.0-beta.3.md](docs/release/ACCEPTANCE_v
 | `GET /health` | none |
 | `GET /onboard` | none |
 | `POST /webhook` | HMAC (`X-Gitea-Signature`) |
-| `/api/v1/*`, `/ui/*` | API key (or local session) |
+| `/api/v1/*` | API key (scripts / MCP / OpenClaw) |
+| `/ui/*` | **Operator login** session when `auth_mode=local`; otherwise API key |
+
+New installs should create the first operator at `/ui/bootstrap`, then use `/ui/login`. Keep the API key for automation — do not paste it into the operator login form. Existing `api_key_only` installs are unchanged until you opt in.
 
 Full index: [docs/README.md](docs/README.md) · [docs/CONFIGURATION.md](docs/CONFIGURATION.md) · [docs/API_ROUTES.md](docs/API_ROUTES.md).
 

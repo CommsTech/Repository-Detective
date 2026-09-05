@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"errors"
 	"net/http"
 	"strings"
 	"time"
@@ -131,6 +132,11 @@ func (h *Handler) BootstrapSubmit(c *gin.Context) {
 		c.String(http.StatusForbidden, "bootstrap is not available")
 		return
 	}
+	if h.loginLimiter != nil && !h.loginLimiter.Allow(c.ClientIP()) {
+		c.Header("Retry-After", "2")
+		c.String(http.StatusTooManyRequests, "too many attempts — try again shortly")
+		return
+	}
 	if h.auth.CSRFEnabled && !h.requireAuthCSRF(c, 0, "") {
 		return
 	}
@@ -156,7 +162,7 @@ func (h *Handler) BootstrapSubmit(c *gin.Context) {
 		h.renderAuth(c, "bootstrap.html", "Create admin account", data)
 		return
 	}
-	user, err := h.store.CreateUser(c.Request.Context(), store.User{
+	user, err := h.store.CreateFirstOwner(c.Request.Context(), store.User{
 		DisplayName:  displayName,
 		Email:        email,
 		PasswordHash: hash,
@@ -164,6 +170,10 @@ func (h *Handler) BootstrapSubmit(c *gin.Context) {
 		Enabled:      true,
 	})
 	if err != nil {
+		if errors.Is(err, store.ErrBootstrapClosed) {
+			c.String(http.StatusForbidden, "bootstrap is not available")
+			return
+		}
 		h.logger.Errorf("bootstrap create user: %v", err)
 		data["Error"] = "Could not create account. Try again."
 		h.renderAuth(c, "bootstrap.html", "Create admin account", data)
@@ -208,6 +218,11 @@ func (h *Handler) LoginPage(c *gin.Context) {
 func (h *Handler) LoginSubmit(c *gin.Context) {
 	if h.bootstrapAllowed(c) {
 		c.Redirect(http.StatusFound, h.basePath+"/bootstrap")
+		return
+	}
+	if h.loginLimiter != nil && !h.loginLimiter.Allow(c.ClientIP()) {
+		c.Header("Retry-After", "2")
+		c.String(http.StatusTooManyRequests, "too many attempts — try again shortly")
 		return
 	}
 	if h.auth.CSRFEnabled && !h.requireAuthCSRF(c, 0, "") {

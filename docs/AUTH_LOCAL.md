@@ -8,21 +8,35 @@ Slice 1 adds **optional local admin login** with secure browser sessions while k
 
 ---
 
-## Recommended new installs (RD-010)
+## Recommended new installs (RD-010 / RD-032)
 
-For **new** Community installs, prefer:
+For **new** Community installs, prefer operator login (local session) for humans:
 
 ```yaml
 auth_mode: local
-session_secret: "<long random>"
+session_secret: "<long random>"   # e.g. openssl rand -hex 32
 database_enabled: true
 csrf_enabled: true
 local_admin_bootstrap_enabled: true
 ```
 
-Then open `/ui/bootstrap` to create the first owner account.
+Or via `.env` / compose (see `.env.example`):
 
-**Existing** deployments keep working on `api_key_only` until you opt in. The runtime default remains `api_key_only` so upgrades never lock operators out.
+```bash
+REPOSITORY_DETECTIVE_AUTH_MODE=local
+REPOSITORY_DETECTIVE_SESSION_SECRET=$(openssl rand -hex 32)
+```
+
+Onboarding (`/onboard`) recommends this for fresh installs and exports `AUTH_MODE=local` plus a generated session secret. Then open `/ui/bootstrap` once to create the first **owner** account (no default username/password).
+
+**Existing** deployments that omit these variables keep the runtime default `api_key_only` — **no silent migration**. Opt in by setting `AUTH_MODE=local` intentionally.
+
+| Human UI | Automation |
+|----------|------------|
+| Operator login (`/ui/login`) | `X-Repository-Detective-API-Key` / Bearer |
+| Bootstrap (`/ui/bootstrap`) once | MCP / OpenClaw / scripts / CI |
+
+Do **not** paste the automation API token into the operator login form when local auth is configured.
 
 Automation (scripts, MCP, CI) continues to use `X-Repository-Detective-API-Key` in both modes.
 
@@ -30,10 +44,10 @@ Automation (scripts, MCP, CI) continues to use `X-Repository-Detective-API-Key` 
 
 | Mode | Config | UI | API |
 |------|--------|----|-----|
-| `api_key_only` | **Default** | Global API key (query/header) | API key headers |
-| `local` | Requires `session_secret` | Session cookie login | API key headers unchanged |
+| `api_key_only` | **Runtime default** (upgrade-safe) | Global API key (query/header) | API key headers |
+| `local` | **Recommended new install** (requires `session_secret`) | Session cookie login | API key headers unchanged |
 
-Rollback: set `auth_mode: api_key_only` and restart. Session tables remain but are unused.
+Rollback: set `auth_mode=api_key_only` and restart. Session tables remain but are unused.
 
 ---
 
@@ -71,22 +85,23 @@ local_admin_bootstrap_enabled: true
 
 When `auth_mode=local`, `local_admin_bootstrap_enabled=true`, and the `users` table is empty:
 
-1. Open `GET /ui/bootstrap`
-2. Create the first **owner** account (strong password required)
+1. Open `GET /ui/bootstrap` (no bootstrap secret in the URL)
+2. Create the first **owner** account (strong password required; no default credentials)
 3. Receive a signed session cookie and redirect to the dashboard
-4. Bootstrap is **permanently disabled** once any user exists
+4. Bootstrap is **permanently closed** once any user exists (`CreateFirstOwner` uses an exclusive SQLite transaction so concurrent first-admin races cannot create two owners)
+5. Login/bootstrap form posts are rate-limited per client IP
 
 Routes:
 
 | Method | Path | Auth |
 |--------|------|------|
 | GET | `/ui/bootstrap` | Public (only when no users) |
-| POST | `/ui/bootstrap` | Public + CSRF |
+| POST | `/ui/bootstrap` | Public + CSRF + rate limit |
 | GET | `/ui/login` | Public |
-| POST | `/ui/login` | Public + CSRF |
+| POST | `/ui/login` | Public + CSRF + rate limit |
 | POST | `/ui/logout` | Session + CSRF |
 
-Login errors use **generic messaging** (no email-existence leak).
+Login errors use **generic messaging** (no email-existence leak). Credentials must never appear in URLs or durable logs.
 
 ---
 

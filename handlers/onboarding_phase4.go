@@ -259,18 +259,35 @@ func nextOnboardAction(r doctor.Report) string {
 
 func (h *OnboardingHandler) handleDefaultsExtended(c *gin.Context) {
 	webhookURL := strings.TrimSuffix(h.publicURL, "/") + "/webhook"
+	authMode := h.authMode
+	if authMode == "" {
+		authMode = "api_key_only"
+	}
+	fresh := h.isFreshInstall(c.Request.Context())
+	recommendLocal := fresh || authMode == "local"
 	c.JSON(200, gin.H{
-		"gitea_url":       h.giteaURL,
-		"public_url":      h.publicURL,
-		"webhook_url":     webhookURL,
-		"gitea_scan_orgs": h.giteaScanOrgs,
-		"ai_provider":     h.aiConfig.Provider,
-		"ai_model":        h.aiConfig.Model,
-		"ai_base_url":     h.aiConfig.BaseURL,
-		"privacy_mode":    "hybrid",
-		"scan_profile":    "standard",
-		"policy_mode":     "Observe",
-		"stages":          []string{"connect", "select", "protect", "verify", "ready"},
+		"gitea_url":            h.giteaURL,
+		"public_url":           h.publicURL,
+		"webhook_url":          webhookURL,
+		"gitea_scan_orgs":      h.giteaScanOrgs,
+		"ai_provider":          h.aiConfig.Provider,
+		"ai_model":             h.aiConfig.Model,
+		"ai_base_url":          h.aiConfig.BaseURL,
+		"privacy_mode":         "hybrid",
+		"scan_profile":         "standard",
+		"policy_mode":          "Observe",
+		"auth_mode":            authMode,
+		"fresh_install":        fresh,
+		"recommend_local_auth": recommendLocal,
+		"auth_recommendation": gin.H{
+			"mode":        "local",
+			"summary":     "New installs should use operator login (local session). Keep the API key for scripts/MCP/OpenClaw only.",
+			"bootstrap":   "/ui/bootstrap",
+			"login":       "/ui/login",
+			"password":    "Minimum 12 characters with letters and numbers. No default username/password.",
+			"compat_note": "Existing api_key_only installs are unchanged until you set AUTH_MODE=local.",
+		},
+		"stages": []string{"connect", "select", "protect", "verify", "ready"},
 		"policy_modes": []gin.H{
 			{"id": "Observe", "summary": "Monitor only — no forge issue filing from policy gates"},
 			{"id": "Warn", "summary": "File issues when policy requires (Community default-safe)"},
@@ -282,6 +299,36 @@ func (h *OnboardingHandler) handleDefaultsExtended(c *gin.Context) {
 			{"id": "external_ai_enabled", "summary": "External AI intentionally enabled"},
 		},
 	})
+}
+
+func (h *OnboardingHandler) isFreshInstall(ctx context.Context) bool {
+	if h.userCounter == nil {
+		return true // soft recommend when we cannot observe state yet
+	}
+	users, err := h.userCounter(ctx)
+	if err != nil {
+		return true
+	}
+	if users > 0 {
+		return false
+	}
+	if h.repoCounter == nil {
+		return true
+	}
+	repos, err := h.repoCounter(ctx)
+	if err != nil {
+		return users == 0
+	}
+	return users == 0 && repos == 0
+}
+
+// SetInstallCounters wires optional DB counters used for fresh-install detection (RD-032).
+func (h *OnboardingHandler) SetInstallCounters(users, repos func(context.Context) (int, error)) {
+	if h == nil {
+		return
+	}
+	h.userCounter = users
+	h.repoCounter = repos
 }
 
 // Register extended onboarding routes (called from RegisterRoutes).

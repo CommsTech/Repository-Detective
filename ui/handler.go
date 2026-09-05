@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"git.commsnet.org/commstech/repository-detective/closure"
+	"git.commsnet.org/commstech/repository-detective/internal/auth"
 	"git.commsnet.org/commstech/repository-detective/internal/security"
 	"git.commsnet.org/commstech/repository-detective/notify"
 	"git.commsnet.org/commstech/repository-detective/operator"
@@ -54,6 +55,7 @@ type Handler struct {
 	readinessFn           func() operator.Readiness
 	platform              PlatformContext
 	applyPlatformSettings PlatformSettingsApplier
+	loginLimiter          *auth.LoginLimiter
 }
 
 // CalibrationBackend applies learning calibration actions from the UI.
@@ -116,6 +118,10 @@ func NewHandler(s store.QueryStore, global store.GlobalSettingsSnapshot, basePat
 func (h *Handler) SetAuthConfig(cfg AuthConfig) {
 	if h != nil {
 		h.auth = cfg
+		if h.loginLimiter == nil {
+			// ~1 request/sec sustained, burst 5 — login and bootstrap only.
+			h.loginLimiter = auth.NewLoginLimiter(1, 5, 4096)
+		}
 	}
 }
 

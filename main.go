@@ -855,6 +855,7 @@ func setupRoutes(router *gin.Engine) {
 		GiteaURL:      config.GiteaURL,
 		PublicURL:     config.PublicURL,
 		GiteaScanOrgs: parseCommaSeparatedOrgs(os.Getenv("GITEA_SCAN_ORGS")),
+		AuthMode:      config.AuthMode,
 		AIConfig: ai.Config{
 			Provider: ai.ProviderType(config.AIProvider),
 			BaseURL:  firstNonEmpty(config.AIBaseURL, config.OpenWebUIURL),
@@ -964,6 +965,20 @@ func initializeComponents() error {
 		rdStore = s
 		scanRecorder = store.NewRecorder(s, logger)
 		initSuppressionMatcher()
+		if onboardingHandler != nil {
+			onboardingHandler.SetInstallCounters(
+				func(ctx context.Context) (int, error) {
+					return s.CountUsers(ctx)
+				},
+				func(ctx context.Context) (int, error) {
+					repos, err := s.ListRepositories(ctx)
+					if err != nil {
+						return 0, err
+					}
+					return len(repos), nil
+				},
+			)
+		}
 		logger.Infof("Local database enabled (driver=%s path=%s)", config.DatabaseDriver, config.DatabasePath)
 	} else {
 		scanRecorder = store.NewRecorder(nil, logger)
