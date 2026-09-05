@@ -3,6 +3,14 @@
 **Last updated:** 2026-09-05  
 **Program:** Product Hardening & Public Beta Improvement Backlog (RD-001…RD-030)
 
+### Phase 8A (2026-09-05) — Tech-debt duplicate-path audit (RD-030) — COMPLETE (docs)
+
+| Task | Status | Notes |
+|------|--------|-------|
+| RD-030 Architecture duplicate-path audit | **Done** | [docs/TECH_DEBT_AUDIT.md](docs/TECH_DEBT_AUDIT.md) — classifications only; **no code deleted** |
+| DEAD_PROVEN candidates | **Documented** | `RunAllCandidates`, `BuildWorkflowTrigger`, `handleDefaults`, `Recorder.RecordIssues`, `ComputeOverallScore`, `store.PolicyOutcome*` |
+| Forgejo estimate | **Optional note** | Recommend Forgejo **15 LTS** first; no support claim |
+
 ### Phase 7 (2026-09-05) — Public trust, presentation, release supply chain — COMPLETE
 
 | Task | Status | Notes |

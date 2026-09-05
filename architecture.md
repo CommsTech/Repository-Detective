@@ -1,5 +1,11 @@
 # Repository Detective Architecture
 
+## Tech-debt / duplicate paths (Phase 8A)
+
+- Inventory only (no code deleted): [docs/TECH_DEBT_AUDIT.md](docs/TECH_DEBT_AUDIT.md) (RD-030).
+- Classifications: ACTIVE_CANONICAL | ACTIVE_COMPATIBILITY | DEPRECATED | DEAD_PROVEN | UNKNOWN.
+- Primary scan pipeline remains `analyzers.Engine`; multiple entry points (webhook, API, UI, scheduler, runner delegate) are intentional.
+
 ## Public trust / release supply chain (Phase 7)
 
 - Public README identity + limitations: root `README.md`.
