@@ -661,14 +661,16 @@ PY
     record_scenario "policy_action_required_finding" "FAIL" "no secret finding with ACTION_REQUIRED fixture"
   fi
 
-  # POLICY_MET: same analyzers, clean file only. Never equals "secure".
+  # POLICY_MET: orphan clean tree so head commit has no gated findings from main fixtures.
   rd_api PUT "/api/v1/repos/${REPO_ID}/settings" -d "$SETTINGS_MET" \
     >"$OUT_DIR/settings-policy-met.json" || true
   cd "$WORKDIR"
-  git checkout main >/dev/null 2>&1 || true
-  git checkout -B e2e/policy-met
+  git checkout --orphan e2e/policy-met >/dev/null 2>&1 || { git checkout -B e2e/policy-met; git rm -rf . >/dev/null 2>&1 || true; }
+  git rm -rf . >/dev/null 2>&1 || true
   echo "# policy-met clean fixture $(date -u +%s)" > POLICY_MET.md
-  git add POLICY_MET.md && git commit -m "policy POLICY_MET clean fixture" && git push -u origin e2e/policy-met
+  git add POLICY_MET.md
+  git -c user.email=rdaccept@example.com -c user.name=rdaccept commit -m "policy POLICY_MET clean fixture" || git commit -m "policy POLICY_MET clean fixture"
+  git push -u origin e2e/policy-met --force
   PR_MET="$(curl -fsS -X POST "${GITEA_URL}/api/v1/repos/$GITEA_USER/$REPO_NAME/pulls" \
     -H "Authorization: token $GITEA_TOKEN" -H "Content-Type: application/json" \
     -d '{"title":"E2E POLICY_MET","head":"e2e/policy-met","base":"main","body":"clean"}')"
