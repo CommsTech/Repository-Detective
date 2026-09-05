@@ -1,0 +1,14 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Public beta guide
+    url: https://github.com/CommsTech/Repository-Detective/blob/main/docs/PUBLIC_BETA.md
+    about: How to try Repository Detective and what feedback we want
+  - name: Security vulnerability (private)
+    url: https://github.com/CommsTech/Repository-Detective/security/advisories/new
+    about: Report product vulnerabilities privately — do not paste exploits or secrets in public issues
+  - name: Security policy
+    url: https://github.com/CommsTech/Repository-Detective/blob/main/SECURITY.md
+    about: Responsible disclosure process and supported versions
+  - name: Canonical Gitea project
+    url: https://git.commsnet.org/commstech/Repository-Detective
+    about: Primary CI, wiki, and maintainer development (Gitea)

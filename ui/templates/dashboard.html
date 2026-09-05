@@ -1,0 +1,393 @@
+{{define "dashboard.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>{{template "head" .}}</head>
+<body class="rd-app rd-page-dashboard">
+{{template "nav" .}}
+
+{{with .Data.Summary}}
+<section class="rd-hero rd-hero-dashboard">
+  <div class="rd-hero-copy">
+    <p class="rd-hero-kicker">Operator command center</p>
+    <h2>{{.Backlog.OpenUnique}} open unique findings across {{.TotalRepositories}} repositories</h2>
+    <p class="rd-muted">Visual intelligence below — severity, categories, scan velocity, and repo risk. Raw detector hits stay in the secondary panel.</p>
+  </div>
+  <div class="rd-hero-metrics">
+    <div class="rd-hero-metric rd-hero-metric-danger">
+      <span class="rd-hero-metric-value">{{add .Backlog.CriticalOpen .Backlog.HighOpen}}</span>
+      <span class="rd-hero-metric-label">Critical + high</span>
+    </div>
+    <div class="rd-hero-metric">
+      <span class="rd-hero-metric-value">{{.Backlog.OpenUnique}}</span>
+      <span class="rd-hero-metric-label">Unique backlog</span>
+    </div>
+    <div class="rd-hero-metric {{if gt $.Data.ActiveScans 0}}rd-hero-metric-warn{{end}}">
+      <span class="rd-hero-metric-value">{{$.Data.ActiveScans}}</span>
+      <span class="rd-hero-metric-label">Active scans</span>
+    </div>
+    <div class="rd-hero-metric {{if gt .UnhealthyReposCount 0}}rd-hero-metric-warn{{else if gt .ActionableFailedScansCount 0}}rd-hero-metric-warn{{end}}">
+      <span class="rd-hero-metric-value">{{.UnhealthyReposCount}}</span>
+      <span class="rd-hero-metric-label">Unhealthy repos</span>
+    </div>
+  </div>
+  <div class="rd-hero-actions">
+    <a class="rd-btn rd-btn-light" href="{{$.BasePath}}/findings?severity=critical&amp;status=open{{if $.APIKey}}&amp;api_key={{$.APIKey}}{{end}}">Triage critical/high</a>
+    <a class="rd-btn rd-btn-ghost" href="{{$.BasePath}}/preinstall{{apiKeyQS $.APIKey}}">Pre-install audit</a>
+    <a class="rd-btn rd-btn-ghost" href="{{$.BasePath}}/configure{{apiKeyQS $.APIKey}}#scan_profile">AI / Deep scan</a>
+    <a class="rd-btn rd-btn-ghost" href="{{$.BasePath}}/health{{apiKeyQS $.APIKey}}">Platform health</a>
+  </div>
+</section>
+
+<section class="rd-chart-text-summary" aria-labelledby="rd-chart-summary-heading">
+  <h2 id="rd-chart-summary-heading" class="rd-visually-hidden">Chart data text summary</h2>
+  <p class="rd-muted">Numeric summary (charts are supplementary): {{.Backlog.OpenUnique}} open unique findings;
+    {{.Backlog.CriticalOpen}} critical, {{.Backlog.HighOpen}} high, {{.Backlog.MediumOpen}} medium, {{.Backlog.LowOpen}} low;
+    {{.TotalRepositories}} repositories monitored.</p>
+</section>
+
+<section class="rd-charts-grid" aria-label="Security intelligence charts">
+  <div class="rd-chart-card">
+    <div class="rd-card-head"><h2>Severity mix</h2><span class="rd-chip">Open backlog</span></div>
+    <div class="rd-chart-canvas-wrap rd-chart-donut">
+      <canvas id="rd-chart-severity" role="img" aria-label="Open findings by severity"></canvas>
+    </div>
+  </div>
+  <div class="rd-chart-card">
+    <div class="rd-card-head"><h2>Category radar</h2><span class="rd-chip">Interactive</span></div>
+    <div class="rd-chart-canvas-wrap rd-chart-radar">
+      <canvas id="rd-chart-radar" role="img" aria-label="Finding categories radar"></canvas>
+    </div>
+  </div>
+  <div class="rd-chart-card rd-chart-card-wide">
+    <div class="rd-card-head"><h2>Scan activity (14 days)</h2><span class="rd-chip">Scans + remediation</span></div>
+    <p class="rd-muted rd-chart-hint">Teal = completed scans. Blue dashed = remediation plans generated. Green = findings with an auto-remediation PR opened or merged.</p>
+    <div class="rd-chart-canvas-wrap rd-chart-trend">
+      <canvas id="rd-chart-trend" role="img" aria-label="Completed scans, remediation plans, and auto-remediated findings over 14 days"></canvas>
+    </div>
+  </div>
+  <div class="rd-chart-card">
+    <div class="rd-card-head"><h2>Top categories</h2></div>
+    <div class="rd-chart-canvas-wrap rd-chart-bar">
+      <canvas id="rd-chart-category" role="img" aria-label="Open findings by category"></canvas>
+    </div>
+  </div>
+  <div class="rd-chart-card rd-chart-card-wide">
+    <div class="rd-card-head">
+      <h2>Repository risk map</h2>
+      <a class="rd-link" href="{{$.BasePath}}/repos{{apiKeyQS $.APIKey}}">All repositories →</a>
+    </div>
+    <p class="rd-muted rd-chart-hint">Stacked bar = open findings by category (security, dependency, graph, quality…). Red border = last scan failed.</p>
+    <div class="rd-chart-canvas-wrap rd-chart-repos">
+      <canvas id="rd-chart-repos" role="img" aria-label="Repository risk by open findings"></canvas>
+    </div>
+  </div>
+</section>
+
+<section class="rd-report-strip">
+  <div class="rd-card rd-report-preview">
+    <div class="rd-card-head">
+      <h2>Executive report</h2>
+      <a class="rd-btn rd-btn-sm" href="{{$.BasePath}}/reports{{apiKeyQS $.APIKey}}">Open full report →</a>
+    </div>
+    <p class="rd-report-exec">
+      <strong>{{.TotalRepositories}}</strong> repositories monitored ·
+      <strong>{{.OpenFindingsCount}}</strong> total open ·
+      <strong>{{index .OpenFindingsBySeverity "critical"}}</strong> critical ·
+      <strong>{{index .OpenFindingsBySeverity "high"}}</strong> high ·
+      <strong>{{.Lifecycle.ResolvedVerified}}</strong> verified resolved
+    </p>
+  </div>
+  <div class="rd-card rd-report-quicklinks">
+    <h3>Quick exports</h3>
+    <ul class="rd-quicklink-list">
+      <li><a href="{{$.BasePath}}/reports{{apiKeyQS $.APIKey}}">Fleet executive summary</a></li>
+      <li><a href="{{$.BasePath}}/scans{{apiKeyQS $.APIKey}}">Scan history &amp; drill-down</a></li>
+      <li><a href="{{$.BasePath}}/findings{{apiKeyQS $.APIKey}}">Full findings queue</a></li>
+      {{range $.Data.TopRiskyRepos}}{{if gt .OpenFindingsCount 0}}
+      <li><a href="{{$.BasePath}}/repos/{{.ID}}/report{{apiKeyQS $.APIKey}}">Report: {{.FullName}}</a></li>
+      {{end}}{{end}}
+    </ul>
+  </div>
+</section>
+{{end}}
+
+{{if .Notice}}<div class="rd-alert info" role="status">{{.Notice}}</div>{{end}}
+
+{{if .Data.Actions}}
+<div class="rd-card rd-actions-panel">
+  <div class="rd-card-head">
+    <h2>Top actions</h2>
+    <span class="rd-chip">Do this first</span>
+  </div>
+  <ul class="rd-action-list">
+    {{range .Data.Actions}}
+    <li class="rd-action-item rd-action-{{.Priority}}">
+      <div>
+        <strong>{{.Title}}</strong>
+        <p class="rd-muted">{{.Detail}}</p>
+        {{if .Command}}<p class="rd-muted"><code>{{.Command}}</code></p>{{end}}
+      </div>
+      <div class="rd-actions">
+        {{if .LinkPath}}<a class="rd-btn rd-btn-sm" href="{{$.BasePath}}{{.LinkPath}}{{apiKeySuffix .LinkPath $.APIKey}}">Open</a>{{end}}
+      </div>
+    </li>
+    {{end}}
+  </ul>
+</div>
+{{end}}
+
+{{with $.Data.Calibration}}
+<div class="rd-card">
+  <div class="rd-card-head">
+    <h2>Calibration maturity</h2>
+    <span class="rd-chip">{{index . "pending_recommendations"}} pending</span>
+  </div>
+  <p class="rd-muted">Recommendations require human approval — nothing auto-applies by default.</p>
+  <div class="rd-grid rd-grid-stats">
+    <div class="rd-stat info">
+      <div class="rd-stat-value">{{index . "proposed_recommendations"}}</div>
+      <div class="rd-stat-label">Proposed rules</div>
+    </div>
+    <div class="rd-stat success">
+      <div class="rd-stat-value">{{index . "accepted_recommendations"}}</div>
+      <div class="rd-stat-label">Accepted</div>
+    </div>
+  </div>
+  {{with index . "noisy_rules"}}
+  <h3>Top noisy rules</h3>
+  <ul class="rd-quicklink-list">
+    {{range .}}
+    <li><code>{{.RuleID}}</code> ({{.Source}}) — {{printf "%.0f" (mul .FalsePositiveRate 100)}}% FP/suppression · {{.TotalFindings}} findings</li>
+    {{else}}<li class="rd-muted">No rule stats yet — run calibration recompute.</li>{{end}}
+  </ul>
+  {{end}}
+  {{with index . "actionable_rules"}}
+  <h3>Top actionable rules</h3>
+  <ul class="rd-quicklink-list">
+    {{range .}}
+    <li><code>{{.RuleID}}</code> ({{.Source}}) — {{printf "%.0f" (mul .ActionableRate 100)}}% verified-fix rate</li>
+    {{else}}<li class="rd-muted">No actionable rule stats yet.</li>{{end}}
+  </ul>
+  {{end}}
+</div>
+{{end}}
+
+{{with .Data.LearningHealth}}
+<div class="rd-card">
+  <div class="rd-card-head">
+    <h2>Learning health</h2>
+    <a class="rd-link" href="{{$.BasePath}}/learning{{apiKeyQS $.APIKey}}">Learning &amp; calibration →</a>
+  </div>
+  <p class="rd-muted">Evidence-backed continuous improvement — repo-scoped calibration, structural grouping, optional LLM gate off by default.</p>
+  <div class="rd-grid rd-grid-stats">
+    <div class="rd-stat info">
+      <div class="rd-stat-value">{{.EventsTotal}}</div>
+      <div class="rd-stat-label">Learning events</div>
+    </div>
+    <div class="rd-stat {{if gt .PendingRecommendations 0}}warn{{end}}">
+      <div class="rd-stat-value">{{.PendingRecommendations}}</div>
+      <div class="rd-stat-label">Pending recommendations</div>
+    </div>
+    <div class="rd-stat info">
+      <div class="rd-stat-value">{{.ActiveRepoRules}}</div>
+      <div class="rd-stat-label">Active repo rules</div>
+    </div>
+    <div class="rd-stat info">
+      <div class="rd-stat-value">{{.GroupedFindings}}</div>
+      <div class="rd-stat-label">Structurally grouped</div>
+    </div>
+  </div>
+</div>
+{{end}}
+
+{{with .Data.Summary}}
+<div class="rd-card">
+  <div class="rd-card-head"><h2>Finding backlog</h2><span class="rd-chip">Deduplicated</span></div>
+  <div class="rd-grid rd-grid-stats">
+    <div class="rd-stat success">
+      <div class="rd-stat-value">{{.Backlog.OpenUnique}}</div>
+      <div class="rd-stat-label">Open unique findings</div>
+      <p class="rd-stat-hint">Primary security backlog (fingerprint-deduped)</p>
+    </div>
+    <div class="rd-stat info">
+      <div class="rd-stat-value">{{.SuppressedFindingsCount}}</div>
+      <div class="rd-stat-label">Suppressed / false positive</div>
+      <p class="rd-stat-hint"><a class="rd-link" href="{{$.BasePath}}/findings?only_suppressed=1{{if $.APIKey}}&amp;api_key={{$.APIKey}}{{end}}">Review calibration →</a></p>
+    </div>
+    <div class="rd-stat info">
+      <div class="rd-stat-value">{{.Backlog.NewLast7Days}}</div>
+      <div class="rd-stat-label">New (7d)</div>
+    </div>
+    <div class="rd-stat {{if gt .Backlog.RegressionsLast7Days 0}}warn{{end}}">
+      <div class="rd-stat-value">{{.Backlog.RegressionsLast7Days}}</div>
+      <div class="rd-stat-label">Regressions (7d)</div>
+    </div>
+    <div class="rd-stat success">
+      <div class="rd-stat-value">{{.Backlog.ResolvedVerified}}</div>
+      <div class="rd-stat-label">Verified resolved</div>
+    </div>
+    <div class="rd-stat {{if gt .Backlog.CriticalOpen 0}}danger{{else if gt .Backlog.HighOpen 0}}warn{{end}}">
+      <div class="rd-stat-value">{{.Backlog.CriticalOpen}} / {{.Backlog.HighOpen}}</div>
+      <div class="rd-stat-label">Critical / high open</div>
+    </div>
+    <div class="rd-stat neutral">
+      <div class="rd-stat-value">{{.Backlog.LowOpen}}</div>
+      <div class="rd-stat-label">Low severity backlog</div>
+    </div>
+  </div>
+  <details class="rd-secondary-metrics">
+    <summary>Raw detector output (secondary)</summary>
+    <div class="rd-kpi-row">
+      <div class="rd-kpi"><strong>{{.Backlog.RawDetectorHits7d}}</strong><span>Raw hits in scans (7d)</span></div>
+      <div class="rd-kpi"><strong>{{.Backlog.RawInstances7d}}</strong><span>Raw instances (7d)</span></div>
+    </div>
+  </details>
+</div>
+
+{{if $.Data.RecentSevereFindings}}
+<div class="rd-card">
+  <div class="rd-card-head">
+    <h2>Critical &amp; high — triage now</h2>
+    <a class="rd-link" href="{{$.BasePath}}/findings?severity=critical&amp;status=open{{if $.APIKey}}&amp;api_key={{$.APIKey}}{{end}}">Full queue →</a>
+  </div>
+  <table class="rd-table rd-table-compact">
+    <tr><th scope="col">Severity</th><th scope="col">Finding</th><th scope="col">Repository</th><th scope="col">Scanner</th><th scope="col">Confidence</th><th scope="col"></th></tr>
+    {{range $.Data.RecentSevereFindings}}
+    <tr>
+      <td><span class="rd-badge {{severityBadge .Severity}}">{{.Severity}}</span></td>
+      <td><strong>{{.Title}}</strong>{{if .FilePath}}<br><span class="rd-muted">{{displayPath .FilePath}}</span>{{end}}</td>
+      <td>{{.RepoFullName}}</td>
+      <td><span class="rd-badge skipped">{{.Source}}</span></td>
+      <td>{{printf "%.0f%%" (mul .Confidence 100)}}</td>
+      <td><a class="rd-btn rd-btn-sm rd-btn-ghost" href="{{$.BasePath}}/findings/{{.ID}}{{apiKeyQS $.APIKey}}">Triage</a></td>
+    </tr>
+    {{end}}
+  </table>
+</div>
+{{end}}
+
+<div class="rd-split">
+  <div class="rd-card">
+    <div class="rd-card-head"><h2>Scan health</h2><a class="rd-link" href="{{$.BasePath}}/health{{apiKeyQS $.APIKey}}#failed-scans">Details →</a></div>
+    <div class="rd-kpi-row">
+      <div class="rd-kpi"><strong>{{.ScanHealth.CompletedScans}}</strong><span>Completed</span></div>
+      <div class="rd-kpi"><strong>{{.ScanHealth.UnhealthyRepos}}</strong><span>Unhealthy repos</span></div>
+      <div class="rd-kpi"><strong>{{.ScanHealth.ActionableFailedScans}}</strong><span>Failed ({{.ScanHealth.FailureWindowDays}}d)</span></div>
+      <div class="rd-kpi"><strong>{{.ScanHealth.StaleReapedScans}}</strong><span>Stale (lifetime)</span></div>
+      <div class="rd-kpi"><strong>{{$.Data.ActiveScans}}</strong><span>Active</span></div>
+    </div>
+    <p class="rd-muted">Lifetime total failed scans: {{.FailedScansCount}} (includes recovered historical outages).</p>
+    {{if gt .ScannerParseFailedCount 0}}
+    <div class="rd-alert warn" role="status">
+      <strong>{{.ScannerParseFailedCount}}</strong> scanner parse failures in the last {{.ScanHealth.FailureWindowDays}} days
+      ({{.ScanHealth.ParseFailedScanners}} scanner{{if gt .ScanHealth.ParseFailedScanners 1}}s{{end}}).
+      <a class="rd-link" href="{{$.BasePath}}/health{{apiKeyQS $.APIKey}}#scanner-failures">Review parse/run failures →</a>
+    </div>
+    {{end}}
+    {{if .ScanHealth.FailureBuckets}}
+    <p class="rd-muted">Failure reasons (last {{.ScanHealth.FailureWindowDays}} days):</p>
+    <table class="rd-table rd-table-compact">
+      <tr><th scope="col">Failure reason</th><th scope="col">Count</th></tr>
+      {{range .ScanHealth.FailureBuckets}}
+      <tr>
+        <td>{{.Label}}</td>
+        <td><strong>{{.Count}}</strong></td>
+      </tr>
+      {{end}}
+    </table>
+    {{end}}
+    {{if .ScanHealth.RecentFailedScans}}
+    <h3 class="rd-section-title">Recent actionable failures</h3>
+    <table class="rd-table rd-table-compact">
+      {{range .ScanHealth.RecentFailedScans}}
+      <tr>
+        <td><a class="rd-link" href="{{$.BasePath}}/scans/{{.ScanID}}{{apiKeyQS $.APIKey}}">{{.RepoFullName}}</a></td>
+        <td><span class="rd-badge failed">{{.Bucket}}</span></td>
+      </tr>
+      {{end}}
+    </table>
+    {{else}}<p class="rd-muted">No actionable failed scans in the last {{.ScanHealth.FailureWindowDays}} days.</p>{{end}}
+    {{if .ScanHealth.RecentStaleScans}}
+    <details class="rd-muted">
+      <summary>{{len .ScanHealth.RecentStaleScans}} stale reaped scans hidden from the main list</summary>
+      <p>These were interrupted by restarts and auto-closed. They do not indicate a scanner defect.</p>
+    </details>
+    {{end}}
+  </div>
+  <div class="rd-card">
+    <div class="rd-card-head"><h2>Remediation lifecycle</h2></div>
+    <p class="rd-muted"><strong>{{.RemediationInsight.Summary}}</strong></p>
+    <table class="rd-table rd-table-compact">
+      <tr><td>Open findings</td><td><strong>{{.Lifecycle.OpenFindings}}</strong></td></tr>
+      <tr><td>Remediation candidates</td><td>{{.Lifecycle.RemediationCandidates}}</td></tr>
+      <tr><td>Verified resolved</td><td>{{.Lifecycle.ResolvedVerified}}</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="rd-card">
+  <div class="rd-card-head"><h2>Scanner coverage</h2><a class="rd-link" href="{{$.BasePath}}/health{{apiKeyQS $.APIKey}}">Full health →</a></div>
+  {{if .Platform.DegradedCoverage}}
+  <div class="rd-alert warn" role="status"><strong>Degraded coverage</strong> — {{.Platform.ConfiguredMissingRuntime}} configured scanner(s) missing from this runtime. The app is healthy; install tools or disable scanners in config.</div>
+  {{else if gt .Platform.UniqueMissingTools 0}}
+  <div class="rd-alert info" role="status">{{.Platform.UniqueMissingTools}} scanner(s) reported missing in recent scan results (historical signal).</div>
+  {{end}}
+  <table class="rd-table rd-table-compact">
+    <tr><th scope="col">Scanner</th><th scope="col">Enabled</th><th scope="col">Installed</th><th scope="col">Status</th><th scope="col">Version</th></tr>
+    {{range .Platform.Rollups}}
+    <tr>
+      <td><strong>{{.Name}}</strong></td>
+      <td>{{if .Configured}}<span class="rd-badge completed">yes</span>{{else}}<span class="rd-badge skipped">no</span>{{end}}</td>
+      <td>{{if .Available}}<span class="rd-badge found">yes</span>{{else if .Configured}}<span class="rd-badge binary_missing">no</span>{{else}}<span class="rd-muted">—</span>{{end}}</td>
+      <td class="rd-muted">{{if .StatusLabel}}{{.StatusLabel}}{{else}}{{.StatusState}}{{end}}</td>
+      <td class="rd-muted">{{.VersionDisplay}}</td>
+    </tr>
+    {{if .Action}}<tr><td colspan="5" class="rd-muted rd-scanner-hint">{{.Action}}</td></tr>{{else if .RecommendedFix}}<tr><td colspan="5" class="rd-muted rd-scanner-hint">{{.RecommendedFix}}</td></tr>{{end}}
+    {{end}}
+  </table>
+</div>
+
+{{if $.Data.TopRiskyRepos}}
+<div class="rd-card">
+  <div class="rd-card-head">
+    <h2>Repositories needing attention</h2>
+    <a class="rd-link" href="{{$.BasePath}}/repos{{apiKeyQS $.APIKey}}">All repos →</a>
+  </div>
+  <table class="rd-table rd-table-compact">
+    <tr><th scope="col">Repository</th><th scope="col">Open</th><th scope="col">Last scan</th><th scope="col"></th></tr>
+    {{range $.Data.TopRiskyRepos}}{{if gt .OpenFindingsCount 0}}
+    <tr>
+      <td><a class="rd-link" href="{{$.BasePath}}/repos/{{.ID}}{{apiKeyQS $.APIKey}}">{{.FullName}}</a></td>
+      <td><strong>{{.OpenFindingsCount}}</strong></td>
+      <td><span class="rd-badge {{scanBadge .LastScanStatus}}">{{.LastScanStatus}}</span></td>
+      <td><a class="rd-btn rd-btn-sm" href="{{$.BasePath}}/repos/{{.ID}}/report{{apiKeyQS $.APIKey}}">Report</a></td>
+    </tr>
+    {{end}}{{end}}
+  </table>
+</div>
+{{end}}
+
+<div class="rd-card">
+  <div class="rd-card-head"><h2>Recent scans</h2></div>
+  <table class="rd-table rd-table-compact">
+    <tr><th scope="col">Scan</th><th scope="col">Repository</th><th scope="col">Status</th><th scope="col">Findings</th><th scope="col">Started</th></tr>
+    {{range .RecentScans}}
+    <tr>
+      <td><a class="rd-link" href="{{$.BasePath}}/scans/{{.ID}}{{apiKeyQS $.APIKey}}">{{shortID .ID 8}}</a></td>
+      <td>{{.RepoFullName}}</td>
+      <td><span class="rd-badge {{scanBadge .Status}}">{{.Status}}</span></td>
+      <td>{{issuesFromScan .SummaryJSON}}</td>
+      <td class="rd-muted">{{.StartedAt.Format "2006-01-02 15:04"}}</td>
+    </tr>
+    {{else}}<tr><td colspan="5" class="rd-muted">No scans yet.</td></tr>{{end}}
+  </table>
+</div>
+{{end}}
+
+<script type="application/json" id="rd-dashboard-data">{{jsonScript .Data.ChartJSON}}</script>
+<script src="{{.BasePath}}/static/chart.umd.min.js" defer></script>
+<script src="{{.BasePath}}/static/dashboard-charts.js" defer></script>
+{{template "foot" .}}
+</body>
+</html>
+{{end}}

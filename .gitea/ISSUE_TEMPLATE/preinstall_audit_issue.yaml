@@ -1,0 +1,38 @@
+name: Pre-install audit issue
+about: Third-party repo trust audit report-only workflow
+labels:
+  - type/bug
+  - area/preinstall
+  - status/needs-triage
+body:
+  - type: markdown
+    attributes:
+      value: Pre-install audits are **report-only** — no upstream issues are filed automatically.
+  - type: input
+    id: version
+    attributes:
+      label: Repository Detective commit / version
+    validations:
+      required: true
+  - type: input
+    id: target_url
+    attributes:
+      label: Audited repo URL (HTTPS)
+    validations:
+      required: true
+  - type: input
+    id: audit_id
+    attributes:
+      label: Audit / scan ID (if shown in UI)
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected audit behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true

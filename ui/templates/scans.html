@@ -1,0 +1,64 @@
+{{define "scans.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>{{template "head" .}}</head>
+<body class="rd-app">
+{{template "nav" .}}
+
+<div class="rd-grid rd-grid-stats">
+  <div class="rd-stat {{if gt .Data.ActiveScans 0}}warn{{else}}success{{end}}">
+    <div class="rd-stat-value">{{.Data.ActiveScans}}</div>
+    <div class="rd-stat-label">Active scans</div>
+  </div>
+  <div class="rd-stat info">
+    <div class="rd-stat-value">{{len .Data.Scans}}</div>
+    <div class="rd-stat-label">Recent scans shown</div>
+  </div>
+</div>
+
+<div class="rd-filter-pills" role="navigation" aria-label="Filter scans by status">
+  <a class="rd-filter-pill {{if eq .Data.StatusFilter ""}}active{{end}}" href="{{.BasePath}}/scans{{apiKeyQS .APIKey}}">All</a>
+  <a class="rd-filter-pill {{if eq .Data.StatusFilter "completed"}}active{{end}}" href="{{.BasePath}}/scans?status=completed{{if .APIKey}}&amp;api_key={{.APIKey}}{{end}}">Completed</a>
+  <a class="rd-filter-pill {{if eq .Data.StatusFilter "running"}}active{{end}}" href="{{.BasePath}}/scans?status=running{{if .APIKey}}&amp;api_key={{.APIKey}}{{end}}">Running</a>
+  <a class="rd-filter-pill {{if eq .Data.StatusFilter "failed"}}active{{end}}" href="{{.BasePath}}/scans?status=failed{{if .APIKey}}&amp;api_key={{.APIKey}}{{end}}">Failed</a>
+</div>
+
+<div class="rd-card">
+  <div class="rd-card-head">
+    <h2>Scan history</h2>
+    <span class="rd-chip">Last 100 runs</span>
+  </div>
+  <table class="rd-table">
+    <thead>
+      <tr>
+        <th scope="col">Scan ID</th>
+        <th scope="col">Repository</th>
+        <th scope="col">Trigger</th>
+        <th scope="col">Ref</th>
+        <th scope="col">Status</th>
+        <th scope="col">Findings</th>
+        <th scope="col">Duration</th>
+        <th scope="col">Started</th>
+      </tr>
+    </thead>
+    <tbody>
+    {{range .Data.Scans}}
+    <tr>
+      <td><a class="rd-link" href="{{$.BasePath}}/scans/{{.ID}}{{apiKeyQS $.APIKey}}">{{shortID .ID 10}}</a></td>
+      <td><a class="rd-link" href="{{$.BasePath}}/repos/{{.RepositoryID}}{{apiKeyQS $.APIKey}}">{{.RepoFullName}}</a></td>
+      <td>{{.TriggerType}}</td>
+      <td><code>{{.Ref}}</code></td>
+      <td><span class="rd-badge {{scanBadge .Status}}">{{.Status}}</span></td>
+      <td>{{issuesFromScan .SummaryJSON}}</td>
+      <td class="rd-muted">{{formatDuration .StartedAt .FinishedAt}}</td>
+      <td class="rd-muted">{{.StartedAt.Format "2006-01-02 15:04"}}</td>
+    </tr>
+    {{else}}
+    <tr><td colspan="8"><div class="rd-empty"><h3>No scans match this filter</h3><p class="rd-muted">Trigger a scan via webhook, API, or scheduler.</p></div></td></tr>
+    {{end}}
+    </tbody>
+  </table>
+</div>
+{{template "foot" .}}
+</body></html>
+{{end}}

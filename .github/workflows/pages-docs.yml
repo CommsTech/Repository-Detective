@@ -1,0 +1,68 @@
+name: Deploy docs to GitHub Pages
+
+# Public documentation site from docs/wiki (GitHub Wiki git remote needs a
+# one-time UI-created page before scripts/publish-github-wiki.sh can push).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/wiki/**'
+      - 'docs/PUBLIC_BETA.md'
+      - '.github/workflows/pages-docs.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630cea67142f7c5e5a614249 # v4.2.2
+      - name: Build static wiki site
+        run: |
+          set -euo pipefail
+          mkdir -p _site
+          cp docs/wiki/*.md _site/ 2>/dev/null || true
+          cp docs/wiki/_Sidebar.md _site/ 2>/dev/null || true
+          # Simple HTML index linking all pages (GitHub renders .md in browse UI;
+          # Pages serves raw + a readable index).
+          {
+            echo '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">'
+            echo '<meta name="viewport" content="width=device-width, initial-scale=1">'
+            echo '<title>Repository Detective docs</title>'
+            echo '<style>body{font-family:system-ui,sans-serif;max-width:52rem;margin:2rem auto;padding:0 1rem;line-height:1.5}'
+            echo 'a{color:#0969da} code{background:#f6f8fa;padding:.1rem .3rem;border-radius:4px}</style></head><body>'
+            echo '<h1>Repository Detective documentation</h1>'
+            echo '<p>Public community beta docs. Source: <code>docs/wiki/</code> in the repository.</p>'
+            echo '<p>Also see the <a href="https://github.com/CommsTech/Repository-Detective/tree/main/docs/wiki">docs/wiki tree</a>'
+            echo 'and <a href="https://github.com/CommsTech/Repository-Detective/blob/main/docs/PUBLIC_BETA.md">public beta guide</a>.</p>'
+            echo '<ul>'
+            echo '<li><a href="Home.md">Home</a></li>'
+            for f in docs/wiki/*.md; do
+              b=$(basename "$f")
+              [[ "$b" == "Home.md" ]] && continue
+              echo "<li><a href=\"$b\">${b%.md}</a></li>"
+            done
+            echo '</ul></body></html>'
+          } > _site/index.html
+      - uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4.0.0
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@331238a9e608348ef106531664a08166763f0a0 # v4.0.4

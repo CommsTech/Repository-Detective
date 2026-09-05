@@ -1,0 +1,46 @@
+{{define "findings_table"}}
+<table class="rd-table rd-table-triage">
+  <thead>
+    <tr>
+      <th scope="col">Severity</th>
+      <th scope="col">Category</th>
+      <th scope="col">Finding</th>
+      {{if $.ShowRepo}}<th scope="col">Repository</th>{{end}}
+      <th scope="col">Source</th>
+      <th scope="col">Confidence</th>
+      <th scope="col">Status</th>
+      <th scope="col">Last seen</th>
+      <th scope="col">Forge issue</th>
+    </tr>
+  </thead>
+  <tbody>
+  {{range .Findings}}
+  <tr>
+    <td><span class="rd-badge {{severityBadge .Severity}}">{{.Severity}}</span></td>
+    <td><span class="rd-badge {{categoryBadge .Category}}">{{.Category}}</span></td>
+    <td class="rd-finding-cell">
+      <a class="rd-link" href="{{$.BasePath}}/findings/{{.ID}}{{apiKeyQS $.APIKey}}"><strong>{{.Title}}</strong></a>
+      {{if .Suppressed}}<span class="rd-badge skipped">suppressed</span>{{end}}
+      {{if .FilePath}}<div class="rd-muted rd-finding-loc">{{displayPath .FilePath}}{{if .Line}}:{{.Line}}{{end}}</div>{{end}}
+      {{if .RuleID}}<div class="rd-muted rd-finding-meta">{{.RuleID}}</div>{{end}}
+    </td>
+    {{if $.ShowRepo}}<td>{{.RepoFullName}}</td>{{end}}
+    <td><span class="rd-badge skipped">{{.Source}}</span></td>
+    <td class="rd-muted">{{printf "%.0f" (mul .Confidence 100)}}%</td>
+    <td><span class="rd-badge {{statusBadge .Status}}">{{.Status}}</span></td>
+    <td class="rd-muted">{{.LastSeenAt.Format "2006-01-02 15:04"}}</td>
+    <td>{{if .ExternalIssueURL}}<a class="rd-link" href="{{.ExternalIssueURL}}" target="_blank" rel="noopener">#{{.ExternalIssueNumber}}</a>{{else}}<span class="rd-muted">—</span>{{end}}</td>
+  </tr>
+  {{else}}
+  <tr>
+    {{if $.ShowRepo}}<td colspan="9">{{else}}<td colspan="8">{{end}}
+      <div class="rd-empty">
+        <h3>No findings match filters</h3>
+        <p class="rd-muted">Adjust filters or run a scan to populate the findings list.</p>
+      </div>
+    </td>
+  </tr>
+  {{end}}
+  </tbody>
+</table>
+{{end}}

@@ -1,0 +1,41 @@
+# Repository Detective — one native runner worker (example only).
+#
+# Usage:
+#   cp docker-compose.runner.example.yml docker-compose.runner.yml
+#   cp config/runner.example.yaml config/runner.local.yaml   # edit paths only, no secrets in git
+#   export REPOSITORY_DETECTIVE_RUNNER_SHARED_SECRET="$(openssl rand -hex 32)"  # set in .env, not git
+#   docker compose -f docker-compose.runner.example.yml up -d
+#
+# Requires core service with runner_delegation_enabled=true and matching shared secret.
+
+name: repository-detective-runner
+
+services:
+  rd-native-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner
+      args:
+        INSTALL_EXTERNAL_TOOLS: "true"
+    image: repository-detective:runner
+    container_name: rd-native-runner-1
+    restart: unless-stopped
+    network_mode: host
+    env_file:
+      - .env
+    environment:
+      REPOSITORY_DETECTIVE_CORE_URL: "http://127.0.0.1:8081"
+      REPOSITORY_DETECTIVE_RUNNER_MODE: worker
+      REPOSITORY_DETECTIVE_RUNNER_ID: rd-native-runner-1
+      REPOSITORY_DETECTIVE_WORKSPACE_ROOT: /tmp/rd-runner-workspaces
+      REPOSITORY_DETECTIVE_RUNNER_MAX_CONCURRENT_JOBS: "1"
+      REPOSITORY_DETECTIVE_RUNNER_ALLOWED_JOB_TYPES: "graph,sbom,remediation_verify"
+      REPOSITORY_DETECTIVE_RUNNER_POLL_INTERVAL_SECONDS: "5"
+      REPOSITORY_DETECTIVE_RUNNER_HEARTBEAT_SECONDS: "30"
+    entrypoint: ["/usr/local/bin/repository-detective-runner"]
+    command: ["--mode", "worker"]
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp/rd-runner-workspaces:size=2g,mode=1777

@@ -1,0 +1,74 @@
+# Dogfood — scan Repository Detective itself (Track A)
+# Copy relevant keys into config.yaml. No secrets included.
+#
+# Purpose: deterministic self-assessment before wider Gitea onboarding.
+# See docs/DOGFOODING.md and docs/DOGFOOD_REPORT_TEMPLATE.md.
+
+# --- Product identity ---
+# Repository Detective — Inspect. Analyze. Improve.
+
+# --- Scan profile (deterministic-first, AI off) ---
+scan_profile: standard
+analysis_depth: 2
+workspace_mode: api
+
+# Deterministic security scanners
+enable_trivy: true
+enable_grype: true
+enable_gitleaks: true
+enable_semgrep: true
+
+# Go scanner trio
+enable_govulncheck: true
+enable_gosec: true
+enable_staticcheck: true
+enable_linters: true
+
+# IaC / container (no-op if no Dockerfiles/IaC; skipped if binary missing)
+enable_hadolint: true
+enable_checkov: true
+
+# Health + repository map
+enable_health_checks: true
+enable_tech_debt_checks: true
+enable_reliability_checks: true
+enable_maintainability_checks: true
+enable_test_gap_checks: true
+enable_performance_checks: true
+enable_ai_risk_checks: false
+
+enable_code_graph: true
+graph_include_functions: true
+graph_include_findings: true
+
+# AI explicitly disabled for reproducible dogfood
+enable_llm_auditors: false
+ai_policy: disabled
+
+# --- Persistence + UI ---
+database_enabled: true
+ui_enabled: true
+scheduler_enabled: true
+
+# --- Safe remediation loop (planner only; no PR automation yet) ---
+remediation_planner_enabled: true
+remediation_pr_enabled: false
+remediation_pr_require_approval: true
+
+evidence_closure_enabled: true
+evidence_closure_close_issues: false
+evidence_closure_comment: true
+evidence_closure_require_scanner_success: true
+
+# --- Off for first dogfood pass ---
+notifications_enabled: false
+runner_delegation_enabled: false
+preinstall_audit_enabled: false
+
+# --- Issues (review before widening rollout) ---
+auto_create_issues: true
+group_similar_issues: true
+min_issue_confidence: 0.5
+
+# Set separately (not in this file):
+# api_key, gitea_url, gitea_token, webhook_secret, public_url

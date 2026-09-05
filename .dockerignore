@@ -1,0 +1,36 @@
+.git
+.gitignore
+.env
+.env.*
+data/
+build/
+bin/
+dist/
+state/
+reports/
+tmp/
+restore-drill-test/
+repository-detective-build/
+# Stale locally built binaries; the builder stage compiles its own.
+/bugbot
+/repository-detective
+/repository-detective-runner
+.cargo-home/
+*.db
+coverage.out
+coverage.html
+docs/dogfood-reports/
+deployment-backups/
+e2e/results/
+# vendor/ included when present (run ./scripts/vendor-deps.sh for offline/DNS-filtered builds)
+certs/
+status.md
+*.md
+!DEPLOYMENT.md
+Repository Detective Theme and Logo.png
+# Never bake live operator config / backups into published images
+config/config.yaml
+config/config.yaml.bak*
+config/*.local.yaml
+config/*secret*
+config/*credential*

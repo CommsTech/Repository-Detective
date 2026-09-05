@@ -1,0 +1,33 @@
+{{define "unlock.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>{{template "head" .}}</head>
+<body class="rd-app rd-page-auth">
+<div class="rd-auth-wrap">
+  <div class="rd-auth-card">
+    <img src="{{.BasePath}}/static/logo.svg" alt="Repository Detective" width="64" height="64">
+    <h1>Unlock dashboard</h1>
+    <p class="rd-muted">Repository Detective — Inspect · Analyze · Improve</p>
+    {{with .Data.Error}}{{if .}}<p class="rd-alert danger rd-alert-danger" role="alert">{{.}}</p>{{end}}{{end}}
+    <p class="rd-muted">An API key is required to access the operator dashboard in <code>api_key_only</code> mode.</p>
+    <ul class="rd-muted rd-auth-hint">
+      <li>Preferred header for API calls: <code>X-Repository-Detective-API-Key</code></li>
+      <li>Authorization Bearer tokens are also accepted</li>
+      <li>Paste your key below to unlock this browser session (HttpOnly cookie, 7 days)</li>
+    </ul>
+    {{if not .Data.SetupComplete}}
+    <p class="rd-alert info">First-time setup may be incomplete. See <a href="https://git.commsnet.org/commstech/Repository-Detective/src/branch/main/docs/DEPLOYMENT.md">deployment docs</a> for configuration.</p>
+    {{end}}
+    <form method="post" action="{{.BasePath}}/unlock" class="rd-auth-form">
+      <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+      {{with .Data.Next}}{{if .}}<input type="hidden" name="next" value="{{.}}">{{end}}{{end}}
+      <label>API key
+        <input type="password" name="api_key" required autocomplete="off" autofocus placeholder="Paste API key">
+      </label>
+      <button type="submit" class="rd-btn">Unlock dashboard</button>
+    </form>
+  </div>
+</div>
+</body>
+</html>
+{{end}}

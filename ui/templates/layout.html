@@ -1,0 +1,105 @@
+{{define "head"}}
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0d1b2a">
+<title>{{.Title}} — Repository Detective — Inspect. Analyze. Improve.</title>
+<link rel="icon" href="{{.BasePath}}/static/favicon.svg?v=2" type="image/svg+xml">
+<link rel="shortcut icon" href="{{.BasePath}}/static/favicon.svg?v=2">
+<link rel="apple-touch-icon" href="{{.BasePath}}/static/favicon.svg?v=2">
+<script>
+(function () {
+  try {
+    var key = "rd-theme";
+    var valid = { system: 1, light: 1, dark: 1 };
+    var stored = localStorage.getItem(key);
+    var theme = valid[stored] ? stored : "system";
+    var dark = theme === "dark" || (theme === "system" && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.style.colorScheme = dark ? "dark" : "light";
+    document.documentElement.style.backgroundColor = dark ? "#0a1018" : "#f0f4f8";
+  } catch (e) {
+    document.documentElement.dataset.theme = "system";
+  }
+})();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{.BasePath}}/static/theme.css">
+{{end}}
+
+{{define "nav"}}
+<a class="rd-skip-link" href="#main-content">Skip to main content</a>
+<div class="rd-layout">
+  <aside class="rd-sidebar" aria-label="Main navigation">
+    <a class="rd-brand" href="{{.BasePath}}{{apiKeyQS .APIKey}}">
+      <img src="{{.BasePath}}/static/logo.svg" alt="Repository Detective logo" width="52" height="52">
+      <div class="rd-brand-text">
+        <strong>Repository<br>Detective</strong>
+        <span>Inspect · Analyze · Improve</span>
+      </div>
+    </a>
+    <nav class="rd-nav" aria-label="Primary">
+      <span class="rd-nav-label">Operations</span>
+      <a href="{{.BasePath}}{{apiKeyQS .APIKey}}" class="{{navActive "dashboard" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">◉</span> Dashboard</a>
+      <a href="{{.BasePath}}/repos{{apiKeyQS .APIKey}}" class="{{navActive "repos" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">▣</span> Repositories</a>
+      <a href="{{.BasePath}}/scans{{apiKeyQS .APIKey}}" class="{{navActive "scans" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">◎</span> Scans</a>
+      <a href="{{.BasePath}}/findings{{apiKeyQS .APIKey}}" class="{{navActive "findings" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">◇</span> Findings</a>
+      <span class="rd-nav-label">Intelligence</span>
+      <a href="{{.BasePath}}/reports{{apiKeyQS .APIKey}}" class="{{navActive "reports" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">▤</span> Reports</a>
+      <a href="{{.BasePath}}/learning{{apiKeyQS .APIKey}}" class="{{navActive "learning" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">↻</span> Learning</a>
+      <span class="rd-nav-label">Platform</span>
+      <a href="{{.BasePath}}/health{{apiKeyQS .APIKey}}" class="{{navActive "health" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">♥</span> System Health</a>
+      <a href="{{.BasePath}}/doctor{{apiKeyQS .APIKey}}" class="{{navActive "doctor" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">⌖</span> Doctor</a>
+      <a href="{{.BasePath}}/preinstall{{apiKeyQS .APIKey}}" class="{{navActive "preinstall" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">⌕</span> Pre-install audit</a>
+      <a href="{{.BasePath}}/projects{{apiKeyQS .APIKey}}" class="{{navActive "projects" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">◫</span> Project groups</a>
+      {{if .SetupComplete}}
+      <a href="{{.BasePath}}/configure{{apiKeyQS .APIKey}}" class="{{navActive "settings" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">☰</span> Configure</a>
+      {{else}}
+      <a href="/onboard/" target="_blank" rel="noopener"><span class="rd-nav-icon" aria-hidden="true">↗</span> Setup wizard</a>
+      {{end}}
+    </nav>
+    <div class="rd-sidebar-foot">
+      Repository Detective<br>
+      Enterprise code audit &amp; vulnerability management
+    </div>
+  </aside>
+  <div class="rd-main">
+    <header class="rd-topbar">
+      <div>
+        <p class="rd-topbar-kicker">Control center</p>
+        <h1>{{.Title}}</h1>
+      </div>
+      <div class="rd-topbar-meta">
+        {{if .CurrentUser}}
+        <div class="rd-user-meta">
+          <span class="rd-user-name" title="{{.CurrentUser.Email}}">{{.CurrentUser.DisplayName}}</span>
+          <span class="rd-user-role">{{.CurrentUser.Role}}</span>
+          <form method="post" action="{{.BasePath}}/logout" class="rd-logout-form">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+            <button type="submit" class="rd-btn rd-btn-sm rd-btn-ghost">Sign out</button>
+          </form>
+        </div>
+        {{end}}
+        <div class="rd-theme-switch" role="group" aria-label="Theme" id="rd-theme-toggle">
+          <span class="rd-theme-label" id="rd-theme-label">Theme</span>
+          <button type="button" class="rd-theme-btn" data-theme-choice="system" aria-pressed="false" aria-labelledby="rd-theme-label">System</button>
+          <button type="button" class="rd-theme-btn" data-theme-choice="light" aria-pressed="false" aria-labelledby="rd-theme-label">Light</button>
+          <button type="button" class="rd-theme-btn" data-theme-choice="dark" aria-pressed="false" aria-labelledby="rd-theme-label">Dark</button>
+        </div>
+        <span class="rd-status-pill" title="Operator UI connected to this control plane">
+          <span class="rd-status-dot" aria-hidden="true"></span>
+          <span class="rd-status-text">Control plane</span>
+        </span>
+      </div>
+    </header>
+    <main class="rd-content" id="main-content">
+{{end}}
+
+{{define "foot"}}
+    </main>
+  </div>
+</div>
+<script src="{{.BasePath}}/static/theme.js" defer></script>
+<script src="{{.BasePath}}/static/app.js" defer></script>
+{{end}}

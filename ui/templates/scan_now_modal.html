@@ -1,0 +1,23 @@
+{{define "scan_now_modal.html"}}
+<div class="rd-modal" id="rd-scan-now-modal" hidden aria-hidden="true">
+  <div class="rd-modal-backdrop" data-scan-cancel tabindex="-1"></div>
+  <div class="rd-modal-panel" role="dialog" aria-modal="true" aria-labelledby="rd-scan-now-title">
+    <div class="rd-modal-head">
+      <h2 id="rd-scan-now-title">Scan now</h2>
+      <button type="button" class="rd-modal-close" data-scan-cancel aria-label="Close">&times;</button>
+    </div>
+    <div class="rd-alert info rd-modal-beta-note">
+      {{if eq .Data.ScanForm.ScanPolicyMode "private_beta_safe"}}
+      Private beta safe mode: issue filing is off globally.
+      {{else}}
+      Uncheck report-only to file or update Gitea issues when repo policy allows.
+      {{end}}
+    </div>
+    {{if not .Data.ScanForm.ScanEnabled}}
+    <div class="rd-alert">Manual scan is unavailable — the scan engine is not configured.</div>
+    {{else}}
+    {{template "scan_now_form.html" .}}
+    {{end}}
+  </div>
+</div>
+{{end}}

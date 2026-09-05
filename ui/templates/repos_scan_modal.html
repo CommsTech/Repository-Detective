@@ -1,0 +1,33 @@
+{{define "repos_scan_modal.html"}}
+<div class="rd-modal" id="rd-repos-scan-modal" hidden aria-hidden="true"
+  data-scan-policy-mode="{{.Data.ControlPage.ScanPolicyMode}}"
+  data-backlog-active="{{if .Data.ControlPage.BacklogControlEnabled}}true{{else}}false{{end}}"
+  data-remediation-pr="{{if .Data.ControlPage.RemediationPREnabled}}true{{else}}false{{end}}"
+  data-llm-gate="{{if .Data.ControlPage.LLMSanityGateEnabled}}true{{else}}false{{end}}">
+  <div class="rd-modal-backdrop" data-scan-cancel tabindex="-1"></div>
+  <div class="rd-modal-panel" role="dialog" aria-modal="true" aria-labelledby="rd-repos-scan-title">
+    <div class="rd-modal-head">
+      <h2 id="rd-repos-scan-title">Scan now</h2>
+      <button type="button" class="rd-modal-close" data-scan-cancel aria-label="Close">&times;</button>
+    </div>
+    {{if eq .Data.ControlPage.ScanPolicyMode "private_beta_safe"}}
+    <div class="rd-alert info rd-modal-beta-note">Private beta safe mode: issue filing is off globally. Enable <code>auto_create_issues</code> or per-repo issue policy to file forge issues.</div>
+    {{else}}
+    <div class="rd-alert info rd-modal-beta-note">Uncheck report-only to file or update Gitea issues when repo policy allows.</div>
+    {{end}}
+
+    <form class="rd-scan-form" id="rd-repos-scan-form" method="post" data-scan-form data-base-path="{{.BasePath}}" data-confirm="">
+      <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+      <input type="hidden" name="format" value="json">
+
+      {{template "scan_form_body.html" dict "Form" .Data.FleetScanForm "Page" .}}
+
+      <div class="rd-scan-form-actions">
+        <button type="submit" class="rd-btn rd-btn-primary">Start scan</button>
+        <button type="button" class="rd-btn rd-btn-ghost" data-scan-cancel>Cancel</button>
+      </div>
+      <div class="rd-scan-result" data-scan-result hidden></div>
+    </form>
+  </div>
+</div>
+{{end}}

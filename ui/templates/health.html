@@ -1,0 +1,257 @@
+{{define "health.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>{{template "head" .}}</head>
+<body class="rd-app">
+{{template "nav" .}}
+{{$page := .Data.Page}}
+
+{{with $page.Readiness}}
+<div class="rd-grid rd-grid-stats">
+  <div class="rd-stat success">
+    <div class="rd-stat-value"><span class="rd-badge completed">{{.Status}}</span></div>
+    <div class="rd-stat-label">Service status</div>
+    <p class="rd-stat-hint">{{.ProductName}} v{{.Version}}</p>
+  </div>
+  <div class="rd-stat {{if .Features.DatabaseHealthy}}success{{else}}danger{{end}}">
+    <div class="rd-stat-value">{{if .Features.DatabaseHealthy}}OK{{else}}Degraded{{end}}</div>
+    <div class="rd-stat-label">Database</div>
+    <p class="rd-stat-hint">{{if .Features.DatabaseEnabled}}SQLite enabled{{else}}Disabled{{end}}</p>
+  </div>
+  <div class="rd-stat {{if .Features.SchedulerEnabled}}info{{else}}neutral{{end}}">
+    <div class="rd-stat-value">{{if .Features.SchedulerEnabled}}On{{else}}Off{{end}}</div>
+    <div class="rd-stat-label">Scheduler</div>
+  </div>
+  <div class="rd-stat">
+    <div class="rd-stat-value">{{$page.ActiveScans}}</div>
+    <div class="rd-stat-label">Active scans</div>
+  </div>
+</div>
+
+<div class="rd-card">
+  <div class="rd-card-head">
+    <h2>Feature flags</h2>
+    <span class="rd-chip">{{.Tagline}}</span>
+  </div>
+  <table class="rd-table">
+    <tr><th scope="col">Feature</th><th scope="col">Status</th></tr>
+    <tr><td>Database</td><td>{{if .Features.DatabaseEnabled}}<span class="rd-badge completed">enabled</span>{{else}}<span class="rd-badge skipped">disabled</span>{{end}}</td></tr>
+    <tr><td>Scheduler</td><td>{{if .Features.SchedulerEnabled}}<span class="rd-badge completed">enabled</span>{{else}}<span class="rd-badge skipped">disabled</span>{{end}}</td></tr>
+    <tr><td>Runner delegation</td><td>{{if .Features.RunnerDelegationEnabled}}<span class="rd-badge completed">enabled</span>{{else}}<span class="rd-badge skipped">disabled</span>{{end}}</td></tr>
+    <tr><td>Notifications</td><td>{{if .Features.NotificationsEnabled}}<span class="rd-badge completed">enabled</span>{{else}}<span class="rd-badge skipped">disabled</span>{{end}}</td></tr>
+    <tr><td>Pre-install audit</td><td>{{if .Features.PreinstallAuditEnabled}}<span class="rd-badge completed">enabled</span>{{else}}<span class="rd-badge skipped">disabled</span>{{end}}</td></tr>
+    <tr><td>Remediation planner</td><td>{{if .Features.RemediationPlannerEnabled}}<span class="rd-badge completed">enabled</span>{{else}}<span class="rd-badge skipped">disabled</span>{{end}}</td></tr>
+    <tr><td>Remediation PR</td><td>{{if .Features.RemediationPREnabled}}<span class="rd-badge completed">enabled</span>{{else}}<span class="rd-badge skipped">disabled</span>{{end}}</td></tr>
+    <tr><td>Evidence closure</td><td>{{if .Features.EvidenceClosureEnabled}}<span class="rd-badge completed">enabled</span>{{else}}<span class="rd-badge skipped">disabled</span>{{end}}</td></tr>
+    <tr><td>Operator UI</td><td>{{if .Features.UIEnabled}}<span class="rd-badge completed">enabled</span>{{else}}<span class="rd-badge skipped">disabled</span>{{end}}</td></tr>
+    <tr><td>Scan profile</td><td><span class="rd-badge medium">{{profileLabel .Features.ScanProfile}}</span></td></tr>
+  </table>
+  <p class="rd-muted"><strong>AI Analysis: {{if .AIAnalysis}}{{.AIAnalysis}}{{else if eq .AIProvider "disabled"}}Disabled{{else if .AIProvider}}Enabled{{else}}Disabled{{end}}</strong>{{if and .AIProvider (ne .AIProvider "disabled")}} · provider {{.AIProvider}}{{if .AIModel}} · model {{.AIModel}}{{end}}{{end}}</p>
+  {{if .PrivacyMode}}<p class="rd-muted"><strong>Privacy mode:</strong> {{.PrivacyMode}} · <strong>Code-content egress:</strong> {{.CodeEgressPolicy}}{{if .AIEndpointClass}} · AI endpoint {{.AIEndpointClass}}{{end}}</p>{{end}}
+</div>
+{{else}}
+<div class="rd-alert info">Readiness telemetry is not available from this instance. Check <code>/health</code> API for basic status.</div>
+{{end}}
+
+{{if $page.CapabilityRows}}
+<div class="rd-card" id="capabilities">
+  <div class="rd-card-head"><h2>Platform capabilities</h2><span class="rd-chip">Actionable status</span></div>
+  <p class="rd-muted">Each capability reports why it is enabled, disabled, or degraded. Click <strong>Report issue</strong> to open a prefilled Gitea issue (not submitted automatically).</p>
+  <table class="rd-table">
+    <tr><th scope="col">Capability</th><th scope="col">Status</th><th scope="col">Reason</th><th scope="col">Action</th></tr>
+    {{range $i, $row := $page.CapabilityRows}}
+    <tr>
+      <td><strong>{{$row.Capability.Name}}</strong></td>
+      <td><span class="rd-badge {{if eq $row.Capability.State "enabled"}}completed{{else if eq $row.Capability.State "degraded"}}medium{{else}}skipped{{end}}">{{$row.Capability.State}}</span></td>
+      <td class="rd-muted">{{$row.Capability.Reason}}{{if $row.Capability.SafetyNote}} <em>{{$row.Capability.SafetyNote}}</em>{{end}}</td>
+      <td class="rd-health-actions">
+        {{if $row.Capability.SettingsURL}}<a class="rd-link" href="{{$row.Capability.SettingsURL}}{{apiKeyQS $.APIKey}}">{{$row.Capability.SettingsLabel}}</a>{{end}}
+        {{if $row.Report}}
+        <a class="rd-btn rd-btn-sm rd-btn-ghost" href="{{$row.Report.URL}}" target="_blank" rel="noopener">{{$row.Report.Label}}</a>
+        <button type="button" class="rd-btn rd-btn-sm rd-btn-ghost" data-copy-target="health-cap-{{$i}}">Copy details</button>
+        <textarea id="health-cap-{{$i}}" class="rd-copy-source" readonly hidden>{{$row.Report.Body}}</textarea>
+        {{else if not $row.Capability.SettingsURL}}—{{end}}
+        {{if $row.Capability.ConfigKeys}}<p class="rd-muted rd-scanner-hint">Config: {{join $row.Capability.ConfigKeys ", "}}</p>{{end}}
+      </td>
+    </tr>
+    {{end}}
+  </table>
+</div>
+{{end}}
+
+{{if $page.ToolRows}}
+<div class="rd-card" id="scanners">
+  <div class="rd-card-head"><h2>Scanner availability</h2><span class="rd-chip">Cached probe · versions refresh every 5m</span></div>
+  <p class="rd-muted">Configured = enabled in effective profile. Installed = binary on PATH. Version is read from each binary in parallel (cached 5 minutes). Missing configured scanners reduce coverage but do not stop the service.</p>
+  <table class="rd-table">
+    <tr><th scope="col">Scanner</th><th scope="col">Enabled</th><th scope="col">Installed</th><th scope="col">Status</th><th scope="col">Version</th><th scope="col">Report</th></tr>
+    {{range $i, $row := $page.ToolRows}}
+    <tr>
+      <td><strong>{{$row.Tool.Name}}</strong></td>
+      <td>{{if $row.Tool.EnabledInConfig}}<span class="rd-badge completed">yes</span>{{else}}<span class="rd-badge skipped">no</span>{{end}}</td>
+      <td>{{if $row.Tool.BinaryInstalled}}<span class="rd-badge found">yes</span>{{else}}<span class="rd-badge binary_missing">no</span>{{end}}</td>
+      <td><span class="rd-badge {{if eq $row.Tool.StatusState "enabled_available"}}completed{{else if eq $row.Tool.StatusState "enabled_missing_binary"}}binary_missing{{else}}skipped{{end}}">{{$row.Tool.StatusState}}</span></td>
+      <td class="rd-muted"><code>{{$row.Tool.VersionDisplay}}</code></td>
+      <td class="rd-health-actions">
+        {{if $row.Report}}
+        <a class="rd-btn rd-btn-sm rd-btn-ghost" href="{{$row.Report.URL}}" target="_blank" rel="noopener">{{$row.Report.Label}}</a>
+        <button type="button" class="rd-btn rd-btn-sm rd-btn-ghost" data-copy-target="health-tool-{{$i}}">Copy</button>
+        <textarea id="health-tool-{{$i}}" class="rd-copy-source" readonly hidden>{{$row.Report.Body}}</textarea>
+        {{else}}—{{end}}
+      </td>
+    </tr>
+    {{if $row.Tool.Action}}<tr><td colspan="6" class="rd-muted rd-scanner-hint"><strong>Action:</strong> {{$row.Tool.Action}}</td></tr>{{end}}
+    {{end}}
+  </table>
+</div>
+{{end}}
+
+{{with $page.Summary}}
+<div class="rd-card" id="ops-metrics">
+  <div class="rd-card-head"><h2>Operational metrics</h2></div>
+  <table class="rd-table rd-table-compact">
+    <tr>
+      <td>Scanner run failures</td>
+      <td><strong>{{.ScannerFailuresCount}}</strong></td>
+      <td>{{if gt .ScannerFailuresCount 0}}<a class="rd-link" href="#scanner-failures">View recent →</a>{{else}}—{{end}}</td>
+    </tr>
+    <tr>
+      <td>Scanner parse failures</td>
+      <td><strong>{{.ScannerParseFailedCount}}</strong></td>
+      <td>{{if gt .ScannerParseFailedCount 0}}<a class="rd-link" href="#scanner-failures">View recent →</a>{{else}}—{{end}}</td>
+    </tr>
+    <tr>
+      <td>Failed repository scans (last 14d, actionable)</td>
+      <td><strong>{{.ActionableFailedScansCount}}</strong></td>
+      <td>{{if gt .ActionableFailedScansCount 0}}<a class="rd-link" href="#failed-scans">View recent →</a>{{else}}—{{end}}</td>
+    </tr>
+    <tr>
+      <td>Repos with failed latest scan</td>
+      <td><strong>{{.UnhealthyReposCount}}</strong></td>
+      <td>{{if gt .UnhealthyReposCount 0}}<a class="rd-link" href="#failed-scans">Investigate →</a>{{else}}—{{end}}</td>
+    </tr>
+    <tr>
+      <td>Stale reaped scans (lifetime noise)</td>
+      <td><strong>{{.StaleReapedScansCount}}</strong></td>
+      <td class="rd-muted">Hidden from primary failure list</td>
+    </tr>
+    <tr>
+      <td>Lifetime failed scans</td>
+      <td><strong>{{.FailedScansCount}}</strong></td>
+      <td class="rd-muted">Includes recovered historical outages</td>
+    </tr>
+    <tr>
+      <td>Tools not in container</td>
+      <td><strong>{{.ScannerToolsMissingCount}}</strong></td>
+      <td>{{if gt .ScannerToolsMissingCount 0}}<a class="rd-link" href="#scanners">Scanner availability →</a>{{else}}—{{end}}</td>
+    </tr>
+    <tr>
+      <td>Scheduled scans (7d)</td>
+      <td><strong>{{.ScheduledScansCount}}</strong></td>
+      <td>—</td>
+    </tr>
+  </table>
+</div>
+{{end}}
+
+<div class="rd-card" id="scanner-failures">
+  <div class="rd-card-head">
+    <h2>Scanner run failures</h2>
+    <span class="rd-chip">{{len $page.ScannerFailures}} recent</span>
+  </div>
+  <p class="rd-muted">Recent <code>scanner_results</code> rows with failed / timed_out / parse_failed / error. Open the scan for full context, or report a prefilled product issue.</p>
+  {{if $page.ScannerFailures}}
+  <table class="rd-table">
+    <tr>
+      <th scope="col">When</th>
+      <th scope="col">Scanner</th>
+      <th scope="col">Status</th>
+      <th scope="col">Repository</th>
+      <th scope="col">Error</th>
+      <th scope="col">Actions</th>
+    </tr>
+    {{range $i, $row := $page.ScannerFailures}}
+    <tr>
+      <td class="rd-muted">{{formatTimeValue $row.Event.StartedAt}}</td>
+      <td><strong>{{$row.Event.ScannerName}}</strong></td>
+      <td><span class="rd-badge binary_missing">{{$row.Event.Status}}</span></td>
+      <td>{{$row.Event.RepoFullName}}</td>
+      <td class="rd-muted rd-health-error">{{if $row.Event.Error}}{{displayBrand $row.Event.Error}}{{else if $row.Event.Detail}}{{displayBrand $row.Event.Detail}}{{else}}—{{end}}</td>
+      <td class="rd-health-actions">
+        <a class="rd-link" href="{{$row.ScanURL}}{{apiKeyQS $.APIKey}}">Open scan</a>
+        <a class="rd-btn rd-btn-sm rd-btn-ghost" href="{{$row.Report.URL}}" target="_blank" rel="noopener">{{$row.Report.Label}}</a>
+        <button type="button" class="rd-btn rd-btn-sm rd-btn-ghost" data-copy-target="health-fail-{{$i}}">Copy details</button>
+        <textarea id="health-fail-{{$i}}" class="rd-copy-source" readonly hidden>{{$row.Report.Body}}</textarea>
+      </td>
+    </tr>
+    {{end}}
+  </table>
+  {{else}}
+  <div class="rd-empty"><p class="rd-muted">No recent scanner run failures recorded.</p></div>
+  {{end}}
+</div>
+
+<div class="rd-card" id="failed-scans">
+  <div class="rd-card-head">
+    <h2>Failed repository scans</h2>
+    <span class="rd-chip">{{len $page.FailedScans}} recent</span>
+  </div>
+  <p class="rd-muted">Whole-scan failures (distinct from a single scanner tool failing inside an otherwise completed scan).</p>
+  {{if $page.FailedScans}}
+  <table class="rd-table">
+    <tr>
+      <th scope="col">When</th>
+      <th scope="col">Repository</th>
+      <th scope="col">Bucket</th>
+      <th scope="col">Error</th>
+      <th scope="col">Actions</th>
+    </tr>
+    {{range $i, $row := $page.FailedScans}}
+    <tr>
+      <td class="rd-muted">{{formatTimeValue $row.Brief.StartedAt}}</td>
+      <td><strong>{{$row.Brief.RepoFullName}}</strong></td>
+      <td><code>{{$row.Brief.Bucket}}</code></td>
+      <td class="rd-muted rd-health-error">{{if $row.Brief.Error}}{{displayBrand $row.Brief.Error}}{{else}}—{{end}}</td>
+      <td class="rd-health-actions">
+        <a class="rd-link" href="{{$row.ScanURL}}{{apiKeyQS $.APIKey}}">Open scan</a>
+        <a class="rd-btn rd-btn-sm rd-btn-ghost" href="{{$row.Report.URL}}" target="_blank" rel="noopener">{{$row.Report.Label}}</a>
+        <button type="button" class="rd-btn rd-btn-sm rd-btn-ghost" data-copy-target="health-scan-{{$i}}">Copy details</button>
+        <textarea id="health-scan-{{$i}}" class="rd-copy-source" readonly hidden>{{$row.Report.Body}}</textarea>
+      </td>
+    </tr>
+    {{end}}
+  </table>
+  {{else}}
+  <div class="rd-empty"><p class="rd-muted">No recent failed repository scans.</p></div>
+  {{end}}
+</div>
+
+<div class="rd-card">
+  <div class="rd-card-head"><h2>Runner job queue</h2></div>
+  {{with $page.RunnerTelemetry}}
+  <p><strong>{{.Title}}</strong></p>
+  <p class="rd-muted">{{.Message}}</p>
+  {{if .Detail}}<p class="rd-muted">{{.Detail}}</p>{{end}}
+  {{if .Action}}<p class="rd-muted"><strong>Next:</strong> {{.Action}} · <a class="rd-link" href="https://git.commsnet.org/commstech/Repository-Detective/src/branch/main/docs/RUNNERS.md" target="_blank" rel="noopener">docs/RUNNERS.md</a></p>{{end}}
+  {{if .JobsByStatus}}
+  <table class="rd-table rd-table-compact">
+    {{range $status, $count := .JobsByStatus}}
+    <tr><td>{{$status}}</td><td><strong>{{$count}}</strong></td></tr>
+    {{end}}
+  </table>
+  {{if .LastError}}<p class="rd-muted">Last error: {{.LastError}}</p>{{end}}
+  {{end}}
+  {{else}}
+  <div class="rd-empty"><p class="rd-muted">Runner telemetry unavailable.</p></div>
+  {{end}}
+</div>
+
+<div class="rd-card">
+  <div class="rd-card-head"><h2>API health &amp; reporting</h2></div>
+  <p class="rd-muted">Live health endpoint: <a class="rd-link" href="/health" target="_blank" rel="noopener">/health</a></p>
+  <p class="rd-muted">Product issues open on <a class="rd-link" href="{{$page.ProductIssueBase}}" target="_blank" rel="noopener">{{$page.ProductIssueBase}}</a>. Report buttons prefill the <code>system_health</code> template — review and edit before submitting.</p>
+</div>
+
+{{template "foot" .}}
+</body></html>
+{{end}}
