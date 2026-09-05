@@ -66,6 +66,7 @@ func (h *SuppressionsHandler) RegisterRoutes(g *gin.RouterGroup) {
 	g.GET("/suppressions", h.ListSuppressions)
 	g.POST("/suppressions/:id/disable", h.DisableSuppression)
 	g.GET("/analytics/scan-quality", h.ScanQualityReport)
+	g.GET("/analytics/finding-quality", h.FindingQualityMetrics)
 }
 
 func (h *SuppressionsHandler) requireService(c *gin.Context) bool {
@@ -186,6 +187,19 @@ func (h *SuppressionsHandler) ScanQualityReport(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, toScanQualityReportResponse(report))
+}
+
+func (h *SuppressionsHandler) FindingQualityMetrics(c *gin.Context) {
+	if !h.requireStore(c) {
+		return
+	}
+	window := store.ParseFindingQualityWindow(c.DefaultQuery("window", "all"))
+	metrics, err := h.store.FindingQualityMetrics(c.Request.Context(), window)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to build finding quality metrics"})
+		return
+	}
+	c.JSON(http.StatusOK, metrics)
 }
 
 type suppressionResponse struct {

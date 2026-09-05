@@ -280,6 +280,20 @@ func (s *SQLiteStore) ExpireRepoCalibrationRule(ctx context.Context, ruleID int6
 	return err
 }
 
+// ExpireRepoCalibrationRulesByRecommendation deactivates rules created from a recommendation (RD-025 revert).
+func (s *SQLiteStore) ExpireRepoCalibrationRulesByRecommendation(ctx context.Context, recommendationID int64) (int, error) {
+	now := time.Now().UTC().Format(time.RFC3339)
+	res, err := s.db.ExecContext(ctx, `
+		UPDATE repo_calibration_rules SET active = 0, expires_at = ?, updated_at = ?
+		WHERE recommendation_id = ? AND active = 1
+	`, now, now, recommendationID)
+	if err != nil {
+		return 0, err
+	}
+	n, _ := res.RowsAffected()
+	return int(n), nil
+}
+
 // GenerateRepoScopedRecommendations proposes calibration changes per repository.
 func (s *SQLiteStore) GenerateRepoScopedRecommendations(ctx context.Context, repositoryID int64, minFindings int) (int, error) {
 	if minFindings <= 0 {

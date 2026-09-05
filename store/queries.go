@@ -189,6 +189,7 @@ type QueryStore interface {
 	ListActiveSuppressionsForRepository(ctx context.Context, repositoryID int64) ([]FindingSuppression, error)
 	CountSuppressedFindings(ctx context.Context) (int, error)
 	ScanQualityReport(ctx context.Context) (ScanQualityReport, error)
+	FindingQualityMetrics(ctx context.Context, window FindingQualityWindow) (FindingQualityMetrics, error)
 	ListPatchAttemptsByRepositoryAndStatus(ctx context.Context, repositoryID int64, status string) ([]PatchAttemptRecord, error)
 	GetPatchAttemptForClosure(ctx context.Context, attemptID string) (PatchAttemptRecord, Finding, error)
 	UpdatePatchAttemptMerged(ctx context.Context, attemptID, mergeSHA string, mergedAt time.Time) error
@@ -223,6 +224,7 @@ type QueryStore interface {
 	CreateRepoCalibrationRule(ctx context.Context, rule RepoCalibrationRule) (RepoCalibrationRule, error)
 	ListRepoCalibrationRules(ctx context.Context, repositoryID int64, activeOnly bool) ([]RepoCalibrationRule, error)
 	ExpireRepoCalibrationRule(ctx context.Context, ruleID int64) error
+	ExpireRepoCalibrationRulesByRecommendation(ctx context.Context, recommendationID int64) (int, error)
 	BackfillFalsePositiveLearningEvents(ctx context.Context, limit int) (int, error)
 	PurgePoisonedScannerFailureLearningEvents(ctx context.Context, scannerNames []string, before time.Time) (int, error)
 	GenerateRepoScopedRecommendations(ctx context.Context, repositoryID int64, minFindings int) (int, error)

@@ -34,7 +34,10 @@ func (calibrationBridge) ListRecommendations(c *gin.Context, status string) ([]s
 	if status == "" {
 		status = "proposed"
 	}
-	return rdStore.ListCalibrationRecommendations(c.Request.Context(), status, 100)
+	if strings.EqualFold(status, "all") {
+		status = ""
+	}
+	return rdStore.ListCalibrationRecommendations(c.Request.Context(), status, 200)
 }
 
 func (calibrationBridge) AcceptRecommendation(c *gin.Context, id int64) error {
@@ -44,6 +47,10 @@ func (calibrationBridge) AcceptRecommendation(c *gin.Context, id int64) error {
 
 func (calibrationBridge) RejectRecommendation(c *gin.Context, id int64) error {
 	return rejectCalibrationRecommendation(c.Request.Context(), id)
+}
+
+func (calibrationBridge) RevertRecommendation(c *gin.Context, id int64) (map[string]any, error) {
+	return revertCalibrationRecommendation(c.Request.Context(), id)
 }
 
 func (calibrationBridge) Recompute(c *gin.Context) (map[string]any, error) {
@@ -172,6 +179,37 @@ func rejectCalibrationRecommendation(ctx context.Context, id int64) error {
 	}
 	emitRecommendationLearning(ctx, repoIDFromRec(rec), id, false, rec.Source, rec.RuleID)
 	return rdStore.UpdateCalibrationRecommendationStatus(ctx, id, "rejected")
+}
+
+func revertCalibrationRecommendation(ctx context.Context, id int64) (map[string]any, error) {
+	if rdStore == nil {
+		return nil, fmt.Errorf("database disabled")
+	}
+	rec, err := findCalibrationRecommendation(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if !strings.EqualFold(rec.Status, "accepted") {
+		return nil, fmt.Errorf("only accepted calibrations can be reverted (status=%s)", rec.Status)
+	}
+	expired, err := rdStore.ExpireRepoCalibrationRulesByRecommendation(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if err := rdStore.UpdateCalibrationRecommendationStatus(ctx, id, "reverted"); err != nil {
+		return nil, err
+	}
+	if suppressionMatcher != nil && rec.RepositoryID != nil {
+		suppressionMatcher.Invalidate(*rec.RepositoryID)
+	}
+	return map[string]any{
+		"status":            "reverted",
+		"recommendation_id": id,
+		"rules_expired":     expired,
+		"previous_behavior": rec.RecommendedAction,
+		"restored_behavior": rec.CurrentAction,
+		"note":              "Linked repo_calibration_rules were deactivated. Findings were never hidden by accept; forge issues are unchanged.",
+	}, nil
 }
 
 func recomputeCalibration(ctx context.Context) (map[string]any, error) {
