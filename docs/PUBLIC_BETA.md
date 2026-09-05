@@ -1,78 +1,68 @@
 # Public community beta
 
-**Audience:** Self-hosters and invitees moving from private trials onto the public GitHub mirror.  
-**Edition:** Repository Detective Community (AGPL-3.0-or-later)  
-**Status:** Public beta — expect rough edges; please file issues.
+**Audience:** Self-hosters discovering Repository Detective via the public GitHub mirror.  
+**Edition:** Community (AGPL-3.0-or-later)  
+**Status:** Public beta — expect rough edges.  
+**Accepted baseline:** [`v0.1.0-beta.3`](release/ACCEPTANCE_v0.1.0-beta.3.md)
+
+## Start here
+
+| Resource | Link |
+|----------|------|
+| Screenshots | [assets/screenshots/README.md](assets/screenshots/README.md) |
+| Demo walkthrough | [DEMO.md](DEMO.md) |
+| Doctor / diagnostics | [DOCTOR.md](DOCTOR.md) · `/ui/doctor` · `/api/v1/doctor` |
+| Acceptance evidence | [release/ACCEPTANCE_v0.1.0-beta.3.md](release/ACCEPTANCE_v0.1.0-beta.3.md) |
+| Verify release | [VERIFY_RELEASE.md](VERIFY_RELEASE.md) |
+| Known limitations | [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) |
+| Bug reports | [GitHub Issues](https://github.com/CommsTech/Repository-Detective/issues/new/choose) |
+| Security reports | [SECURITY.md](../SECURITY.md) |
 
 ## What you get
 
 - Deterministic scanning first (Trivy, Grype, gitleaks, linters, …)
 - Operator UI + API (`X-Repository-Detective-API-Key`)
 - Gitea-first webhooks and issue filing
-- Docker all-in-one / minimal compose
-- Docs + wiki source under `docs/` / `docs/wiki/`
+- Docker all-in-one compose (port **8081**)
+- Optional local LLM path; AI off by default
 
 ## What to expect (honest)
 
 | Area | Reality |
 |------|---------|
-| Forge | **Gitea is first-class**; GitHub issue filing is present but not as proven |
-| Scale | Single-operator / SQLite — not multi-tenant SaaS |
-| LLM | **Off by default** (`enable_llm_auditors: false`) |
-| Image | Prefer a build that matches `go.mod` (Go **1.25**); older toolchains degrade some SBOM/linter paths |
-| Backlog | Busy fleets accumulate findings — use Learning / suppressions / focus export |
+| Forge | **Gitea 1.22.3** is E2E-proven; Forgejo not proven; GitHub issue filing experimental |
+| Scale | Single-operator / SQLite — not multi-tenant SaaS / RBAC |
+| LLM | **Off by default** |
+| Remediation PRs | **Disabled by default**; Class-B sandbox **NOT_PROVEN** |
+| Upgrade E2E | **NOT_PROVEN** |
+| Image | Prefer `v0.1.0-beta.3` or its immutable digest |
 
-Full constraints: [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md).
-
-What ships in git (Gitea + GitHub):
-
-| Included | Not included (gitignored / local only) |
-|----------|------------------------------------------|
-| `.env.example`, `config/*.example.yaml` | Live `.env`, `config/config.yaml` |
-| Compose files that read `env_file: .env` | Your forge tokens, API keys, webhook secrets |
-| Docs + wiki source | SQLite DB under `data/` |
-
-Copy examples, then fill **your** forge URL/token:
-
-```bash
-cp .env.example .env
-cp config/config.yaml.example config/config.yaml
-# edit .env — never commit it
-```
-
-Before publishing mirrors, operators run `./scripts/check-public-release-secrets.sh`.
-
-### Recommended installation (port 8081)
+### Recommended installation
 
 ```bash
 git clone https://github.com/CommsTech/Repository-Detective.git
 cd Repository-Detective
 cp .env.example .env
-cp config/config.yaml.example config/config.yaml
-# Required: REPOSITORY_DETECTIVE_API_KEY
-# For forge/webhooks: GITEA_URL, GITEA_TOKEN, WEBHOOK_SECRET
-# AI is optional — ENABLE_LLM_AUDITORS defaults to false
+# REPOSITORY_DETECTIVE_API_KEY required; forge vars for webhooks
 docker compose pull && docker compose up -d
 curl -s http://127.0.0.1:8081/health
 # open http://127.0.0.1:8081/onboard
 ```
 
-Deeper install: [QUICKSTART.md](QUICKSTART.md) · [SETUP.md](SETUP.md) · smoke: [BETA_SMOKE_TEST.md](BETA_SMOKE_TEST.md).  
-Advanced (build-from-source / port 8080): `docker compose -f docker-compose.minimal.yml up -d --build`.
+Deeper: [QUICKSTART.md](QUICKSTART.md) · [SETUP.md](SETUP.md).
 
 ## Feedback we want most
 
-1. Install friction (compose, tools missing, docs gaps)
-2. Scanner false positives / parser failures (rule ID + fingerprint)
-3. UI/workflow confusion on first scan → first triage
-4. Gitea webhook / issue-filing surprises
+1. Install friction  
+2. Scanner false positives (rule ID + fingerprint)  
+3. First-scan → first-triage confusion  
+4. Gitea webhook / issue surprises  
 
-Never paste secrets. Prefer scan ID + fingerprint.
+Never paste secrets.
 
-**Public bug / feature reports:** [GitHub Issues](https://github.com/CommsTech/Repository-Detective/issues/new/choose) (templates: bug, feature, installation, scanner).  
-**Security vulnerabilities:** [SECURITY.md](../SECURITY.md) — private advisory preferred; do not file exploit details as normal issues.  
-**Canonical development forge:** [Gitea](https://git.commsnet.org/commstech/Repository-Detective) (CI, wiki, maintainers).
+**Canonical forge:** [Gitea](https://git.commsnet.org/commstech/Repository-Detective).  
+**GitHub** is a sanitized snapshot — [GITHUB_MIRROR.md](GITHUB_MIRROR.md).
 
 ## License
 
-Community builds are **AGPL-3.0-or-later** — see root [LICENSE](../LICENSE) and [LICENSING_STRATEGY.md](LICENSING_STRATEGY.md). Commercial terms: [EDITIONS.md](EDITIONS.md).
+**AGPL-3.0-or-later** — [LICENSE](../LICENSE) · [LICENSING_STRATEGY.md](LICENSING_STRATEGY.md). Commercial: [EDITIONS.md](EDITIONS.md).

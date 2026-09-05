@@ -1,5 +1,15 @@
 # Development Issues Log
 
+## Fixed (2026-09-05) — Phase 7 public trust / release supply chain
+
+| Priority | Issue | Resolution |
+|----------|-------|------------|
+| P1 | README buried install / unclear public-beta identity | RD-019 first-screen hierarchy + honest limitations |
+| P1 | No disposable public screenshots | RD-020 synthetic captures; quarantined private fleet shots |
+| P1 | No GitHub Release/tag for beta.3 | RD-021 release notes + snapshot tag process (`RELEASE_MIRROR.md`) |
+| P1 | No container SBOM for published digest | RD-022 Syft SPDX+CycloneDX for `sha256:6a615548…` |
+| P1 | No release verification guide / signing honesty | RD-023 VERIFY_RELEASE + CHECKSUM_ONLY decision |
+
 ## Fixed (2026-09-05) — Phase 6B release alignment
 
 | Priority | Issue | Resolution |

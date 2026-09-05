@@ -65,19 +65,34 @@ SSH host alias: `github.com-repository-detective` (see `~/.ssh/config`).
 
 The script never stores tokens in `git remote` URLs.
 
-## History note (public seed)
+## History note (public snapshot)
 
-The first GitHub `main` was seeded as a **clean public snapshot** (single commit) because GitHub push protection blocked a full-history mirror on a Stripe-shaped string inside an old analyzer *test* fixture (`analyzers/hardcoded_secret_test.go`). That fixture is fixed on Gitea `main`; the historical blob remains in Gitea history.
+The public GitHub `main` is refreshed as a **sanitized tree snapshot** (often appearing as a short history / low commit count). That is intentional.
 
-To replace the GitHub seed with full Gitea history later:
+### Why does GitHub show limited history?
 
-1. Allow the false-positive at GitHub → Settings → Secret scanning alerts / the unblock link from the rejected push, **or**
-2. Coordinate a history rewrite of that test string on Gitea (force-push) and then `./scripts/sync-gitea-to-github.sh --github-only` (may need `--force` once).
+**Gitea** is the canonical development repository (full history, CI, wiki, maintainer work).
 
-Until then, refresh GitHub with:
+**GitHub** is a sanitized public snapshot used for:
+
+- discovery
+- public issue feedback
+- documentation
+- releases
+- public source review
+
+Do **not** treat GitHub’s commit count as the product’s development history.
+
+Refresh with:
 
 ```bash
 ./scripts/sync-gitea-to-github.sh --github-snapshot
 ```
+
+**Release tags** (`v*`) on GitHub are preserved separately from `main` snapshot force-updates — see [RELEASE_MIRROR.md](RELEASE_MIRROR.md).
+
+### Historical seed note
+
+The first GitHub `main` was seeded as a clean public snapshot partly because GitHub push protection blocked a full-history mirror on a Stripe-shaped string inside an old analyzer *test* fixture. That fixture is fixed on Gitea `main`; the historical blob may remain in Gitea history.
 
 (rewrites GitHub `main` to match the current Gitea tree as a fresh snapshot — for tester-facing updates without full history).

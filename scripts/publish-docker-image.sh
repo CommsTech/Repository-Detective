@@ -130,3 +130,20 @@ echo "  docker compose pull && docker compose up -d"
 if [[ "$MIRROR_GHCR" -eq 1 ]]; then
   echo "Mirrored to GHCR: ${GHCR_REGISTRY}/${IMAGE_NAME}"
 fi
+
+# Container SBOM for the exact published artifact (fail loudly if missing).
+DIGEST_REF="$(docker image inspect "$SOURCE" --format '{{index .RepoDigests 0}}' 2>/dev/null || true)"
+SBOM_IMAGE="${DIGEST_REF:-$SOURCE}"
+if [[ "${RD_SKIP_SBOM:-0}" == "1" ]]; then
+  echo "WARNING: RD_SKIP_SBOM=1 — skipping container SBOM generation"
+elif [[ -x "$ROOT/scripts/generate-release-sbom.sh" ]] && command -v syft >/dev/null 2>&1; then
+  echo "==> generating container SBOM for $SBOM_IMAGE"
+  if ! "$ROOT/scripts/generate-release-sbom.sh" "$SBOM_IMAGE" "$TAG"; then
+    echo "ERROR: container SBOM generation failed for $SBOM_IMAGE" >&2
+    echo "Set RD_SKIP_SBOM=1 only for emergency publishes; do not ship without SBOM in normal releases." >&2
+    exit 1
+  fi
+else
+  echo "WARNING: syft or generate-release-sbom.sh unavailable — container SBOM not produced"
+  echo "Future releases should fail closed once tooling is present on the release host."
+fi

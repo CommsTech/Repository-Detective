@@ -1,7 +1,18 @@
 # Repository Detective - Implementation Status
 
-**Last updated:** 2026-09-04  
+**Last updated:** 2026-09-05  
 **Program:** Product Hardening & Public Beta Improvement Backlog (RD-001…RD-030)
+
+### Phase 7 (2026-09-05) — Public trust, presentation, release supply chain — COMPLETE
+
+| Task | Status | Notes |
+|------|--------|-------|
+| RD-019 Public first impression | **Done** | README hierarchy, POLICY_*, privacy honesty, limitations, GitHub history |
+| RD-020 Screenshots + DEMO | **Done** | Disposable synthetic captures under `docs/assets/screenshots/`; DEMO.md |
+| RD-021 Public release surface | **Done** | Release notes + mirror process; GitHub tag/Release for beta.3 |
+| RD-022 Container SBOM | **Done** | SPDX + CycloneDX for digest `sha256:6a615548…`; Syft 1.45.1 |
+| RD-023 Integrity / signing | **CHECKSUM_ONLY** | VERIFY_RELEASE.md; SIGNING_NOT_IMPLEMENTED for cosign |
+| Class-B / RD-015–016 | **Excluded** | RD-008B Option C unchanged |
 
 ### Phase 6B (2026-09-05) — Release alignment & proof closure — COMPLETE
 

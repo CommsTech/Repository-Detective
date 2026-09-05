@@ -1,5 +1,13 @@
 # Repository Detective Architecture
 
+## Public trust / release supply chain (Phase 7)
+
+- Public README identity + limitations: root `README.md`.
+- Screenshots / DEMO: `docs/assets/screenshots/`, `docs/DEMO.md` (disposable synthetic only).
+- Release mirror tags: `docs/RELEASE_MIRROR.md`, `scripts/publish-github-release-snapshot.sh`.
+- Container SBOM (SPDX + CycloneDX) for exact digest: `docs/release/sbom/` via `scripts/generate-release-sbom.sh`.
+- Verify / signing: `docs/VERIFY_RELEASE.md` — beta.3 = **CHECKSUM_ONLY**.
+
 ## Gitea E2E acceptance (Phase 6A/6B)
 
 - Disposable topology: `docker-compose.e2e.yml` (Gitea **1.22.3** + RD all-in-one).

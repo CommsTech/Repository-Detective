@@ -69,6 +69,9 @@ scanner-workspace/
 runner-artifacts/
 runner-work/
 
+# Private / production screenshot quarantine — never publish
+docs/assets/screenshots/_quarantine_private/
+
 # Dogfood reports (may contain operator-specific details — keep local by default)
 docs/dogfood-reports/*
 # Local runtime state (nightly learner)
