@@ -112,11 +112,11 @@ func (r *Recorder) FinishScan(ctx context.Context, scanID string, data *ScanComp
 	}
 
 	summary := map[string]any{
-		"issues_found":        0,
-		"files_analyzed":      0,
-		"analysis_time_ms":    0,
-		"persistence_status":  PersistenceStatusPending,
-		"issue_sync_status":   IssueSyncStatusPending,
+		"issues_found":       0,
+		"files_analyzed":     0,
+		"analysis_time_ms":   0,
+		"persistence_status": PersistenceStatusPending,
+		"issue_sync_status":  IssueSyncStatusPending,
 	}
 	workspaceMode := ""
 	commitPinned := false
@@ -228,10 +228,10 @@ func (r *Recorder) RecordFindings(ctx context.Context, repositoryID int64, scanI
 	if err != nil {
 		_ = bs.UpdateScanPipelineState(ctx, scanID, ScanStatusPersistenceIncomplete, map[string]any{
 			"persistence_status":          PersistenceStatusFailed,
-			"persistence_expected_count":    expected,
-			"persistence_persisted_count":   persisted,
+			"persistence_expected_count":  expected,
+			"persistence_persisted_count": persisted,
 			"persistence_error":           err.Error(),
-			"issue_sync_status":             IssueSyncStatusSkipped,
+			"issue_sync_status":           IssueSyncStatusSkipped,
 		})
 		return nil, err
 	}
@@ -240,7 +240,7 @@ func (r *Recorder) RecordFindings(ctx context.Context, repositoryID int64, scanI
 		"persistence_status":          PersistenceStatusComplete,
 		"persistence_expected_count":  expected,
 		"persistence_persisted_count": persisted,
-		"persistence_error":         "",
+		"persistence_error":           "",
 	}
 	if err := bs.UpdateScanPipelineState(ctx, scanID, ScanStatusCompleted, fields); err != nil {
 		return byFingerprint, fmt.Errorf("mark persistence complete: %w", err)
@@ -263,7 +263,7 @@ func (r *Recorder) MarkPersistenceFailed(ctx context.Context, scanID string, exp
 		"persistence_expected_count":  expected,
 		"persistence_persisted_count": persisted,
 		"persistence_error":           msg,
-		"issue_sync_status":             IssueSyncStatusSkipped,
+		"issue_sync_status":           IssueSyncStatusSkipped,
 	})
 }
 

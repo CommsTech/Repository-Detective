@@ -5,8 +5,8 @@ import (
 )
 
 var (
-	deterministicMu      sync.RWMutex
-	deterministicSources   = map[string]struct{}{}
+	deterministicMu           sync.RWMutex
+	deterministicSources      = map[string]struct{}{}
 	deterministicBootstrapped bool
 )
 

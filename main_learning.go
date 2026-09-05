@@ -43,12 +43,12 @@ func recordScannerHealthFromScan(ctx context.Context, repositoryID int64, scanID
 		})
 		if isScannerFailureStatus(r.Status) {
 			emitLearning(ctx, store.LearningEvent{
-				RepositoryID: repositoryID,
-				ScanID:       scanID,
-				Source:       r.Scanner,
-				RuleID:       r.Scanner,
-				EventType:    learning.EventScannerFailed,
-				CreatedBy:    "scanner",
+				RepositoryID:   repositoryID,
+				ScanID:         scanID,
+				Source:         r.Scanner,
+				RuleID:         r.Scanner,
+				EventType:      learning.EventScannerFailed,
+				CreatedBy:      "scanner",
 				IdempotencyKey: scanID + ":scanner_failed:" + r.Scanner,
 			})
 		}
@@ -81,9 +81,9 @@ func min(a, b int) int {
 func emitReportOnlyDryRun(ctx context.Context, repositoryID int64, scanID string, findings int) {
 	emitLearningEvidence(ctx, store.LearningEvent{
 		RepositoryID:   repositoryID,
-		ScanID:       scanID,
-		EventType:    learning.EventReportOnlyDryRun,
-		CreatedBy:    "dry-run",
+		ScanID:         scanID,
+		EventType:      learning.EventReportOnlyDryRun,
+		CreatedBy:      "dry-run",
 		IdempotencyKey: scanID + ":report_only_dry_run",
 	}, map[string]any{"findings": findings})
 }
@@ -91,14 +91,14 @@ func emitReportOnlyDryRun(ctx context.Context, repositoryID int64, scanID string
 func emitClosureVerified(ctx context.Context, repositoryID int64, scanID string, findingID int64, fp, source, ruleID string) {
 	fid := findingID
 	emitLearning(ctx, store.LearningEvent{
-		RepositoryID: repositoryID,
-		ScanID:       scanID,
-		FindingID:    &fid,
-		Fingerprint:  fp,
-		Source:       source,
-		RuleID:       ruleID,
-		EventType:    learning.EventResolvedVerified,
-		CreatedBy:    "closure",
+		RepositoryID:   repositoryID,
+		ScanID:         scanID,
+		FindingID:      &fid,
+		Fingerprint:    fp,
+		Source:         source,
+		RuleID:         ruleID,
+		EventType:      learning.EventResolvedVerified,
+		CreatedBy:      "closure",
 		IdempotencyKey: scanID + ":resolved:" + fp,
 	})
 }
@@ -106,13 +106,13 @@ func emitClosureVerified(ctx context.Context, repositoryID int64, scanID string,
 func emitFalsePositiveMarked(ctx context.Context, repositoryID int64, findingID int64, fp, source, ruleID, by string) {
 	fid := findingID
 	emitLearning(ctx, store.LearningEvent{
-		RepositoryID: repositoryID,
-		FindingID:    &fid,
-		Fingerprint:  fp,
-		Source:       source,
-		RuleID:       ruleID,
-		EventType:    learning.EventUserMarkedFalsePositive,
-		CreatedBy:    by,
+		RepositoryID:   repositoryID,
+		FindingID:      &fid,
+		Fingerprint:    fp,
+		Source:         source,
+		RuleID:         ruleID,
+		EventType:      learning.EventUserMarkedFalsePositive,
+		CreatedBy:      by,
 		IdempotencyKey: "fp:" + fp,
 	})
 }
@@ -123,11 +123,11 @@ func emitRecommendationLearning(ctx context.Context, repositoryID int64, recID i
 		typ = learning.EventRecommendationAccepted
 	}
 	emitLearningEvidence(ctx, store.LearningEvent{
-		RepositoryID: repositoryID,
-		Source:       source,
-		RuleID:       ruleID,
-		EventType:    typ,
-		CreatedBy:    "operator",
+		RepositoryID:   repositoryID,
+		Source:         source,
+		RuleID:         ruleID,
+		EventType:      typ,
+		CreatedBy:      "operator",
 		IdempotencyKey: typ + ":rec:" + jsonString(recID),
 	}, map[string]any{"recommendation_id": recID})
 }

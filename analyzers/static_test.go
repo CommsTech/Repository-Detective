@@ -120,7 +120,7 @@ func TestRunStaticAnalysisSkipsModelEvalMethod(t *testing.T) {
 
 func TestRunStaticAnalysisSkipsEvalMentionsInDocstrings(t *testing.T) {
 	findings := RunStaticAnalysis([]FileContent{{
-		Path: "helpers.py",
+		Path:    "helpers.py",
 		Content: "def _safe():\n    \"\"\"Evaluate without using eval().\"\"\"\n    return True\n",
 	}}, true, false)
 	for _, f := range findings {
@@ -132,7 +132,7 @@ func TestRunStaticAnalysisSkipsEvalMentionsInDocstrings(t *testing.T) {
 
 func TestRunStaticAnalysisSkipsStoreINClauseSprintf(t *testing.T) {
 	findings := RunStaticAnalysis([]FileContent{{
-		Path: "store/findings_batch_sqlite.go",
+		Path:    "store/findings_batch_sqlite.go",
 		Content: "query := fmt.Sprintf(`SELECT id FROM findings WHERE id IN (%s)`, strings.Join(placeholders, \",\"))",
 	}}, true, false)
 	for _, f := range findings {
@@ -144,7 +144,7 @@ func TestRunStaticAnalysisSkipsStoreINClauseSprintf(t *testing.T) {
 
 func TestRunStaticAnalysisSkipsStoreINClauseJoin(t *testing.T) {
 	findings := RunStaticAnalysis([]FileContent{{
-		Path: "store/findings_batch_sqlite.go",
+		Path:    "store/findings_batch_sqlite.go",
 		Content: "query := \"SELECT id FROM findings WHERE id IN (\" + strings.Join(placeholders, \",\") + \")\"",
 	}}, true, false)
 	for _, f := range findings {

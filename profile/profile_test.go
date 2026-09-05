@@ -117,11 +117,11 @@ func TestNormalizeHighSeveritySourceAutoIssue(t *testing.T) {
 		Confidence: 0.85,
 	}}
 	out := profile.NormalizeIssues(raw, profile.NormalizeInput{
-		Repository: "org/repo",
-		Profile:    profile.RepoProfile{Layout: profile.LayoutSingleApp, PrimaryEcosystem: profile.EcosystemGo},
-		Reporting:  profile.DefaultReportingConfig(),
+		Repository:    "org/repo",
+		Profile:       profile.RepoProfile{Layout: profile.LayoutSingleApp, PrimaryEcosystem: profile.EcosystemGo},
+		Reporting:     profile.DefaultReportingConfig(),
 		FalsePositive: profile.FalsePositiveReductionConfig{Enabled: true},
-		KnownPaths: map[string]struct{}{"internal/api/handler.go": {}},
+		KnownPaths:    map[string]struct{}{"internal/api/handler.go": {}},
 	})
 	if out[0].ReportingAction != profile.ActionAutoIssue {
 		t.Fatalf("expected auto_issue, got %s", out[0].ReportingAction)

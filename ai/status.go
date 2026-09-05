@@ -14,20 +14,20 @@ import (
 type ConnectionTestMode string
 
 const (
-	TestModeMetadataOnly    ConnectionTestMode = "metadata_only"
-	TestModeManual          ConnectionTestMode = "manual"
-	TestModeChatCompletion  ConnectionTestMode = "chat_completion"
+	TestModeMetadataOnly   ConnectionTestMode = "metadata_only"
+	TestModeManual         ConnectionTestMode = "manual"
+	TestModeChatCompletion ConnectionTestMode = "chat_completion"
 )
 
 // UsageRecord tracks approximate AI usage for a scan or test.
 type UsageRecord struct {
-	Provider    string    `json:"provider"`
-	Model       string    `json:"model"`
-	CallCount   int       `json:"call_count"`
-	InputTokens int       `json:"input_tokens,omitempty"`
-	OutputTokens int      `json:"output_tokens,omitempty"`
-	TestedAt    time.Time `json:"tested_at,omitempty"`
-	Source      string    `json:"source"`
+	Provider     string    `json:"provider"`
+	Model        string    `json:"model"`
+	CallCount    int       `json:"call_count"`
+	InputTokens  int       `json:"input_tokens,omitempty"`
+	OutputTokens int       `json:"output_tokens,omitempty"`
+	TestedAt     time.Time `json:"tested_at,omitempty"`
+	Source       string    `json:"source"`
 }
 
 // ProviderStatus is exposed via /api/v1/ai/status without secrets.
@@ -45,10 +45,10 @@ type ProviderStatus struct {
 }
 
 var (
-	statusMu       sync.RWMutex
-	cachedStatus   ProviderStatus
-	lastTestTime   time.Time
-	testCacheTTL   = 60 * time.Minute
+	statusMu     sync.RWMutex
+	cachedStatus ProviderStatus
+	lastTestTime time.Time
+	testCacheTTL = 60 * time.Minute
 )
 
 // SetInitialProviderStatus seeds status before startup tests run.

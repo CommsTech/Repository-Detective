@@ -62,8 +62,8 @@ func NewOpenAICompatibleTransport(name, baseURL, apiKey string, extraHeaders map
 		endpointURL:  endpoint,
 		apiKey:       apiKey,
 		extraHeaders: headers,
-		httpClient:            NewHTTPClient(insecureSkipTLSVerify),
-		logger:                logger,
+		httpClient:   NewHTTPClient(insecureSkipTLSVerify),
+		logger:       logger,
 	}
 }
 

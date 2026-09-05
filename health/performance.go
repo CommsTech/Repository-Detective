@@ -6,9 +6,9 @@ import (
 )
 
 var (
-	regexInLoop   = regexp.MustCompile(`(?i)for\s+.*\{[\s\S]{0,400}regexp\.MustCompile`)
-	longSleep     = regexp.MustCompile(`time\.Sleep\s*\(\s*[5-9]\d{8,}|\d{3,}\s*\*\s*time\.(Minute|Hour)`)
-	readAllFile   = regexp.MustCompile(`(?i)(ioutil\.ReadAll|io\.ReadAll|os\.ReadFile)\s*\(`)
+	regexInLoop = regexp.MustCompile(`(?i)for\s+.*\{[\s\S]{0,400}regexp\.MustCompile`)
+	longSleep   = regexp.MustCompile(`time\.Sleep\s*\(\s*[5-9]\d{8,}|\d{3,}\s*\*\s*time\.(Minute|Hour)`)
+	readAllFile = regexp.MustCompile(`(?i)(ioutil\.ReadAll|io\.ReadAll|os\.ReadFile)\s*\(`)
 )
 
 func runPerformanceChecks(files []FileInput) []Finding {

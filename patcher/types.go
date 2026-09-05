@@ -39,23 +39,23 @@ type TestResult struct {
 
 // PatchAttempt is a remediation PR attempt record.
 type PatchAttempt struct {
-	ID               string
-	PlanID           string
-	RepositoryID     int64
-	FindingID        int64
-	BranchName       string
-	BaseRef          string
-	CommitSHA        string
-	Status           string
-	DiffSummary      string
-	FilesChanged     []string
-	TestsRun         []TestResult
+	ID                string
+	PlanID            string
+	RepositoryID      int64
+	FindingID         int64
+	BranchName        string
+	BaseRef           string
+	CommitSHA         string
+	Status            string
+	DiffSummary       string
+	FilesChanged      []string
+	TestsRun          []TestResult
 	ValidationSummary string
 	PullRequestNumber *int
-	PullRequestURL   string
-	Error            string
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
+	PullRequestURL    string
+	Error             string
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
 }
 
 // EligibilityResult explains whether a plan may attempt a PR.

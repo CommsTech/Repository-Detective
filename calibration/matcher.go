@@ -22,7 +22,7 @@ type Matcher struct {
 }
 
 type cacheEntry struct {
-	loadedAt    time.Time
+	loadedAt     time.Time
 	suppressions []store.FindingSuppression
 }
 
@@ -96,4 +96,3 @@ func (m *Matcher) FilterIssues(repositoryID int64, issues []ai.CodeIssue) []ai.C
 	}
 	return out
 }
-

@@ -12,22 +12,22 @@ import (
 
 // dashboardChartPayload is embedded in the dashboard for Chart.js initialization.
 type dashboardChartPayload struct {
-	SeverityLabels  []string `json:"severityLabels"`
-	SeverityValues  []int    `json:"severityValues"`
-	CategoryLabels  []string `json:"categoryLabels"`
-	CategoryValues  []int    `json:"categoryValues"`
-	ScanTrendLabels           []string `json:"scanTrendLabels"`
-	ScanTrendValues           []int    `json:"scanTrendValues"`
-	RemediationTrendValues    []int    `json:"remediationTrendValues"`
-	PlanTrendValues           []int    `json:"planTrendValues"`
-	RepoMapLabels             []string `json:"repoMapLabels"`
-	RepoMapValues      []int    `json:"repoMapValues"`
-	RepoMapFailed      []bool   `json:"repoMapFailed"`
-	RepoMapStackLabels []string `json:"repoMapStackLabels"`
-	RepoMapStacks      [][]int  `json:"repoMapStacks"`
-	BacklogOpen     int      `json:"backlogOpen"`
-	BacklogCritical int      `json:"backlogCritical"`
-	BacklogHigh     int      `json:"backlogHigh"`
+	SeverityLabels         []string `json:"severityLabels"`
+	SeverityValues         []int    `json:"severityValues"`
+	CategoryLabels         []string `json:"categoryLabels"`
+	CategoryValues         []int    `json:"categoryValues"`
+	ScanTrendLabels        []string `json:"scanTrendLabels"`
+	ScanTrendValues        []int    `json:"scanTrendValues"`
+	RemediationTrendValues []int    `json:"remediationTrendValues"`
+	PlanTrendValues        []int    `json:"planTrendValues"`
+	RepoMapLabels          []string `json:"repoMapLabels"`
+	RepoMapValues          []int    `json:"repoMapValues"`
+	RepoMapFailed          []bool   `json:"repoMapFailed"`
+	RepoMapStackLabels     []string `json:"repoMapStackLabels"`
+	RepoMapStacks          [][]int  `json:"repoMapStacks"`
+	BacklogOpen            int      `json:"backlogOpen"`
+	BacklogCritical        int      `json:"backlogCritical"`
+	BacklogHigh            int      `json:"backlogHigh"`
 }
 
 func buildDashboardChartJSON(summary store.DashboardSummary, repos []store.RepositorySummary) string {

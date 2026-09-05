@@ -14,16 +14,16 @@ func TestRunAllDisabledScanners(t *testing.T) {
 	logger.SetLevel(logrus.WarnLevel)
 
 	summary := scanners.RunAll(context.Background(), logger, t.TempDir(), nil, scanners.Config{
-		EnableTrivy:         false,
-		EnableGrype:         false,
-		EnableGitleaks:      false,
-		EnableSemgrep:       false,
-		EnableGovulncheck:   false,
-		EnableGosec:         false,
-		EnableStaticcheck:   false,
-		EnableHadolint:      false,
-		EnableCheckov:       false,
-		EnableLinters:       false,
+		EnableTrivy:       false,
+		EnableGrype:       false,
+		EnableGitleaks:    false,
+		EnableSemgrep:     false,
+		EnableGovulncheck: false,
+		EnableGosec:       false,
+		EnableStaticcheck: false,
+		EnableHadolint:    false,
+		EnableCheckov:     false,
+		EnableLinters:     false,
 	}, true, true)
 
 	if len(summary.Results) != 10 {

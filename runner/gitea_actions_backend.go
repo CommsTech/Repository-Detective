@@ -28,12 +28,12 @@ func (c GiteaActionsBackendConfig) Normalized() GiteaActionsBackendConfig {
 
 // WorkflowTriggerRequest describes a workflow_dispatch verification request.
 type WorkflowTriggerRequest struct {
-	Owner      string         `json:"owner"`
-	Repository string         `json:"repository"`
-	Ref        string         `json:"ref"`
-	Workflow   string         `json:"workflow"`
-	Inputs     map[string]any `json:"inputs,omitempty"`
-	RequestedAt time.Time     `json:"requested_at"`
+	Owner       string         `json:"owner"`
+	Repository  string         `json:"repository"`
+	Ref         string         `json:"ref"`
+	Workflow    string         `json:"workflow"`
+	Inputs      map[string]any `json:"inputs,omitempty"`
+	RequestedAt time.Time      `json:"requested_at"`
 }
 
 // BuildWorkflowTrigger builds a workflow dispatch payload for remediation verification.

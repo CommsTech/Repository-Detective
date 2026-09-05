@@ -18,17 +18,17 @@ type builder struct {
 }
 
 type parsedFile struct {
-	path       string
-	language   string
+	path        string
+	language    string
 	packageName string
-	imports    []importRef
-	functions  []funcRef
-	isTest     bool
-	isEntry    bool
+	imports     []importRef
+	functions   []funcRef
+	isTest      bool
+	isEntry     bool
 }
 
 type importRef struct {
-	target string
+	target   string
 	external bool
 }
 
@@ -336,7 +336,7 @@ func truncateGraph(nodes []Node, edges []Edge, maxNodes, maxEdges int) ([]Node, 
 	return outNodes, outEdges
 }
 
-func nodeIDFile(path string) string   { return "file:" + filepath.ToSlash(path) }
+func nodeIDFile(path string) string      { return "file:" + filepath.ToSlash(path) }
 func nodeIDDirectory(path string) string { return "dir:" + filepath.ToSlash(path) }
 func nodeIDPackage(name string) string   { return "pkg:" + name }
 func nodeIDFunction(file, name string) string {

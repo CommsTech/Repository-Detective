@@ -54,11 +54,11 @@ func (h *Handler) setRepoScanEnabled(c *gin.Context, enabled bool) {
 		eventType = "repo_scan_enabled"
 	}
 	_, _ = h.store.RecordLearningEvent(c.Request.Context(), store.LearningEvent{
-		RepositoryID: id,
-		EventType:    eventType,
-		Source:       "operator_ui",
-		CreatedBy:    "ui/repos",
-		EvidenceJSON: []byte(fmt.Sprintf(`{"enabled":%t}`, enabled)),
+		RepositoryID:   id,
+		EventType:      eventType,
+		Source:         "operator_ui",
+		CreatedBy:      "ui/repos",
+		EvidenceJSON:   []byte(fmt.Sprintf(`{"enabled":%t}`, enabled)),
 		IdempotencyKey: fmt.Sprintf("%d:%s:%d", id, eventType, time.Now().UnixNano()),
 	})
 

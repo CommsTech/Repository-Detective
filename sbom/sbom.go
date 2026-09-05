@@ -17,12 +17,12 @@ import (
 type Status string
 
 const (
-	StatusGenerated          Status = "sbom_generated"
-	StatusNoSupportedManifest Status = "sbom_no_supported_manifest"
-	StatusToolMissing        Status = "sbom_tool_missing"
-	StatusCheckClean         Status = "sbom_check_clean"
+	StatusGenerated            Status = "sbom_generated"
+	StatusNoSupportedManifest  Status = "sbom_no_supported_manifest"
+	StatusToolMissing          Status = "sbom_tool_missing"
+	StatusCheckClean           Status = "sbom_check_clean"
 	StatusVulnerabilitiesFound Status = "sbom_vulnerabilities_found"
-	StatusCheckFailed        Status = "sbom_check_failed"
+	StatusCheckFailed          Status = "sbom_check_failed"
 )
 
 // Result is the outcome of generate + optional grype check.

@@ -4,19 +4,19 @@ import "strings"
 
 // Formal issue categories used in labels and templates.
 const (
-	CategorySecurity        = "security"
-	CategorySecret          = "secret"
-	CategoryDependency      = "dependency"
+	CategorySecurity         = "security"
+	CategorySecret           = "secret"
+	CategoryDependency       = "dependency"
 	CategoryMisconfiguration = "misconfiguration"
-	CategoryCodeQuality     = "code_quality"
-	CategoryTechDebt        = "tech_debt"
-	CategoryReliability     = "reliability"
-	CategoryPerformance     = "performance"
-	CategoryMaintainability = "maintainability"
-	CategoryTestGap         = "test_gap"
-	CategoryAIGeneratedRisk = "ai_generated_risk"
-	CategoryArchitecture    = "architecture"
-	CategoryUnknown         = "unknown"
+	CategoryCodeQuality      = "code_quality"
+	CategoryTechDebt         = "tech_debt"
+	CategoryReliability      = "reliability"
+	CategoryPerformance      = "performance"
+	CategoryMaintainability  = "maintainability"
+	CategoryTestGap          = "test_gap"
+	CategoryAIGeneratedRisk  = "ai_generated_risk"
+	CategoryArchitecture     = "architecture"
+	CategoryUnknown          = "unknown"
 )
 
 // NormalizeCategory maps legacy/scanner categories to formal Repository Detective categories.

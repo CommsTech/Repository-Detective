@@ -189,27 +189,27 @@ func parseReportID(c *gin.Context) (int64, bool) {
 }
 
 type auditResponse struct {
-	AuditID           string  `json:"audit_id"`
-	RepoURL           string  `json:"repo_url"`
-	NormalizedRepoURL string  `json:"normalized_repo_url"`
-	RepoHost          string  `json:"repo_host"`
-	RepoOwner         string  `json:"repo_owner"`
-	RepoName          string  `json:"repo_name"`
-	CommitSHA         string  `json:"commit_sha"`
-	DefaultBranch     string  `json:"default_branch"`
-	AuditDepth        string  `json:"audit_depth"`
-	Status            string  `json:"status"`
-	RiskScore         int     `json:"risk_score"`
-	RiskScoreDisplay  string  `json:"risk_score_display"`
-	RiskUnavailable   bool    `json:"risk_unavailable"`
-	Recommendation    string  `json:"recommendation"`
-	RecommendationDisplay string `json:"recommendation_display"`
-	FailureStage      string  `json:"failure_stage,omitempty"`
-	NextAction          string  `json:"next_action,omitempty"`
-	StartedAt         string  `json:"started_at"`
-	FinishedAt        *string `json:"finished_at,omitempty"`
-	SummaryJSON       any     `json:"summary_json"`
-	Error             string  `json:"error,omitempty"`
+	AuditID               string  `json:"audit_id"`
+	RepoURL               string  `json:"repo_url"`
+	NormalizedRepoURL     string  `json:"normalized_repo_url"`
+	RepoHost              string  `json:"repo_host"`
+	RepoOwner             string  `json:"repo_owner"`
+	RepoName              string  `json:"repo_name"`
+	CommitSHA             string  `json:"commit_sha"`
+	DefaultBranch         string  `json:"default_branch"`
+	AuditDepth            string  `json:"audit_depth"`
+	Status                string  `json:"status"`
+	RiskScore             int     `json:"risk_score"`
+	RiskScoreDisplay      string  `json:"risk_score_display"`
+	RiskUnavailable       bool    `json:"risk_unavailable"`
+	Recommendation        string  `json:"recommendation"`
+	RecommendationDisplay string  `json:"recommendation_display"`
+	FailureStage          string  `json:"failure_stage,omitempty"`
+	NextAction            string  `json:"next_action,omitempty"`
+	StartedAt             string  `json:"started_at"`
+	FinishedAt            *string `json:"finished_at,omitempty"`
+	SummaryJSON           any     `json:"summary_json"`
+	Error                 string  `json:"error,omitempty"`
 }
 
 type auditFindingResponse struct {

@@ -14,47 +14,47 @@ import (
 
 func templateFuncs() template.FuncMap {
 	return template.FuncMap{
-		"join":           joinStrings,
-		"scannerBadge":   scannerStatusBadgeClass,
-		"scanBadge":      scanStatusBadgeClass,
-		"severityBadge":  severityBadgeClass,
-		"categoryBadge":  categoryBadgeClass,
-		"statusBadge":    findingStatusBadgeClass,
-		"formatTime":     formatTimePtr,
-		"formatTimeValue": formatTimeValue,
-		"formatDuration": formatDurationBetween,
-		"jsonPretty":     jsonPretty,
-		"shortID":        shortID,
-		"mul":            func(a, b float64) float64 { return a * b },
-		"profileLabel":   store.ScanProfileLabel,
-		"profileDesc":    store.ScanProfileDescription,
+		"join":             joinStrings,
+		"scannerBadge":     scannerStatusBadgeClass,
+		"scanBadge":        scanStatusBadgeClass,
+		"severityBadge":    severityBadgeClass,
+		"categoryBadge":    categoryBadgeClass,
+		"statusBadge":      findingStatusBadgeClass,
+		"formatTime":       formatTimePtr,
+		"formatTimeValue":  formatTimeValue,
+		"formatDuration":   formatDurationBetween,
+		"jsonPretty":       jsonPretty,
+		"shortID":          shortID,
+		"mul":              func(a, b float64) float64 { return a * b },
+		"profileLabel":     store.ScanProfileLabel,
+		"profileDesc":      store.ScanProfileDescription,
 		"enforcementLabel": store.EnforcementModeLabel,
-		"pct":            func(f float64) int { return int(f*100 + 0.5) },
-		"rateClass":      rateMeterClass,
-		"rateWidth":      rateMeterWidth,
-		"radarBarWidth":  radarBarWidth,
-		"navActive":      navActiveClass,
-		"apiKeyQS":       apiKeyQueryString,
-		"apiKeySuffix":   apiKeyQuerySuffix,
-		"issuesFromScan": issuesFromScanSummary,
-		"add":            func(a, b int) int { return a + b },
-		"sub":            func(a, b int) int { return a - b },
+		"pct":              func(f float64) int { return int(f*100 + 0.5) },
+		"rateClass":        rateMeterClass,
+		"rateWidth":        rateMeterWidth,
+		"radarBarWidth":    radarBarWidth,
+		"navActive":        navActiveClass,
+		"apiKeyQS":         apiKeyQueryString,
+		"apiKeySuffix":     apiKeyQuerySuffix,
+		"issuesFromScan":   issuesFromScanSummary,
+		"add":              func(a, b int) int { return a + b },
+		"sub":              func(a, b int) int { return a - b },
 		"min": func(a, b int) int {
 			if a < b {
 				return a
 			}
 			return b
 		},
-		"gt":         func(a, b int) bool { return a > b },
-		"lt":         func(a, b int) bool { return a < b },
-		"eq":         func(a, b interface{}) bool { return a == b },
-		"dict":       templateDict,
-		"jsonScript": jsonScriptContent,
-		"preinstallRiskDisplay":     preinstallRiskDisplay,
-		"preinstallRecDisplay":      preinstallRecDisplay,
-		"preinstallFailureStage":    preinstallFailureStage,
-		"displayBrand":              displayBrandText,
-		"displayPath":               displayPath,
+		"gt":                     func(a, b int) bool { return a > b },
+		"lt":                     func(a, b int) bool { return a < b },
+		"eq":                     func(a, b interface{}) bool { return a == b },
+		"dict":                   templateDict,
+		"jsonScript":             jsonScriptContent,
+		"preinstallRiskDisplay":  preinstallRiskDisplay,
+		"preinstallRecDisplay":   preinstallRecDisplay,
+		"preinstallFailureStage": preinstallFailureStage,
+		"displayBrand":           displayBrandText,
+		"displayPath":            displayPath,
 	}
 }
 
@@ -298,18 +298,18 @@ func buildGraphFindingView(detail store.FindingDetail) GraphFindingView {
 }
 
 type scanDetailView struct {
-	IssuesFound              int
-	FilesAnalyzed            int
-	AnalysisTimeMS           int64
-	GraphNodes               int
-	GraphEdges               int
-	ScanProfile              string
-	PersistenceStatus        string
-	PersistenceExpectedCount int
+	IssuesFound               int
+	FilesAnalyzed             int
+	AnalysisTimeMS            int64
+	GraphNodes                int
+	GraphEdges                int
+	ScanProfile               string
+	PersistenceStatus         string
+	PersistenceExpectedCount  int
 	PersistencePersistedCount int
-	PersistenceError         string
-	IssueSyncStatus          string
-	PersistenceIncomplete    bool
+	PersistenceError          string
+	IssueSyncStatus           string
+	PersistenceIncomplete     bool
 }
 
 func sbomStatusFromSummary(raw json.RawMessage) string {

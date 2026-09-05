@@ -208,7 +208,7 @@ func recomputeCalibration(ctx context.Context) (map[string]any, error) {
 	}
 	return map[string]any{
 		"learning_events_backfilled":     backfilled,
-		"learning_events_purged":       purged,
+		"learning_events_purged":         purged,
 		"rules_updated":                  stats,
 		"recommendations_generated":      recs,
 		"repo_recommendations_generated": repoRecs,

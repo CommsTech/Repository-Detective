@@ -6,8 +6,8 @@ import (
 )
 
 var (
-	jsImportRE  = regexp.MustCompile(`(?m)(?:import\s+(?:[\w*{}\s,]+\s+from\s+)?['"]([^'"]+)['"]|require\s*\(\s*['"]([^'"]+)['"]\s*\))`)
-	jsExportFn  = regexp.MustCompile(`(?m)(?:export\s+(?:async\s+)?function\s+(\w+)|export\s+const\s+(\w+)\s*=)`)
+	jsImportRE = regexp.MustCompile(`(?m)(?:import\s+(?:[\w*{}\s,]+\s+from\s+)?['"]([^'"]+)['"]|require\s*\(\s*['"]([^'"]+)['"]\s*\))`)
+	jsExportFn = regexp.MustCompile(`(?m)(?:export\s+(?:async\s+)?function\s+(\w+)|export\s+const\s+(\w+)\s*=)`)
 )
 
 func parseJSFile(content string, info *parsedFile) {

@@ -51,9 +51,9 @@ func TestHealthSettingsOverrideGlobal(t *testing.T) {
 	reliabilityOff := false
 	largeFile := 200
 	effective := store.ResolveEffectiveSettings(global, store.RepoSettings{
-		EnableHealthChecks:   &healthOff,
+		EnableHealthChecks:      &healthOff,
 		EnableReliabilityChecks: &reliabilityOff,
-		HealthLargeFileLines: &largeFile,
+		HealthLargeFileLines:    &largeFile,
 	})
 	if effective.EnableHealthChecks {
 		t.Fatal("repo should disable health checks")

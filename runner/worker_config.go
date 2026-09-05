@@ -11,17 +11,17 @@ import (
 
 // WorkerConfig controls a native Repository Detective runner worker process.
 type WorkerConfig struct {
-	CoreURL          string
-	SharedSecret     string
-	RunnerID         string
-	Version          string
-	WorkspaceRoot    string
-	PollInterval     time.Duration
-	HeartbeatEvery   time.Duration
-	JobTimeout       time.Duration
-	MaxConcurrent    int
-	AllowedJobTypes  []string
-	CloneTimeout     time.Duration
+	CoreURL         string
+	SharedSecret    string
+	RunnerID        string
+	Version         string
+	WorkspaceRoot   string
+	PollInterval    time.Duration
+	HeartbeatEvery  time.Duration
+	JobTimeout      time.Duration
+	MaxConcurrent   int
+	AllowedJobTypes []string
+	CloneTimeout    time.Duration
 }
 
 // LoadWorkerConfigFromEnv reads worker settings from environment variables.

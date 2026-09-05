@@ -22,15 +22,15 @@ const (
 
 // ToolStatus describes whether an external tool binary is configured and available.
 type ToolStatus struct {
-	Name              string `json:"name"`
-	Configured        bool   `json:"configured"`
-	EnabledInConfig   bool   `json:"enabled_in_config"`
-	BinaryInstalled   bool   `json:"binary_installed"`
-	Available         bool   `json:"available"`
-	StatusState       string `json:"status_state"`
-	Action            string `json:"action,omitempty"`
-	Version           string `json:"version,omitempty"`
-	LastChecked       string `json:"last_checked"`
+	Name            string `json:"name"`
+	Configured      bool   `json:"configured"`
+	EnabledInConfig bool   `json:"enabled_in_config"`
+	BinaryInstalled bool   `json:"binary_installed"`
+	Available       bool   `json:"available"`
+	StatusState     string `json:"status_state"`
+	Action          string `json:"action,omitempty"`
+	Version         string `json:"version,omitempty"`
+	LastChecked     string `json:"last_checked"`
 }
 
 // ScannerConfig toggles which tools are enabled in configuration.
@@ -240,4 +240,3 @@ func pickVersionLine(stdout, stderr string) string {
 	}
 	return prefer(stderr)
 }
-

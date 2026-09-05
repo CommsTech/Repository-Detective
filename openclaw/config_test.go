@@ -8,9 +8,9 @@ import (
 
 func TestLegacyConfigKeysMerge(t *testing.T) {
 	cfg := openclaw.Config{
-		LegacyEnabled:           true,
-		LegacyEndpoint:          "http://legacy.example/v1",
-		LegacyMaxTokensPerScan:  500,
+		LegacyEnabled:            true,
+		LegacyEndpoint:           "http://legacy.example/v1",
+		LegacyMaxTokensPerScan:   500,
 		LegacyMaxFindingsPerScan: 10,
 	}.Normalized()
 	if !cfg.Enabled {

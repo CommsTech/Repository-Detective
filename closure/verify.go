@@ -4,10 +4,10 @@ import "fmt"
 
 // VerifyInput bundles evidence and scan data for closure verification.
 type VerifyInput struct {
-	Evidence           Evidence
-	Scan               ScanContext
-	RequireScanner     bool
-	PRMerged           bool
+	Evidence       Evidence
+	Scan           ScanContext
+	RequireScanner bool
+	PRMerged       bool
 }
 
 // VerifyResult is the outcome of closure verification.

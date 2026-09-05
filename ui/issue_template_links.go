@@ -12,15 +12,15 @@ const defaultProductIssueBase = "https://git.commsnet.org/commstech/Repository-D
 
 // IssueTemplateLinks surfaces Gitea issue template URLs and copy guidance for beta feedback.
 type IssueTemplateLinks struct {
-	FalsePositiveURL    string
-	BetaFeedbackURL     string
-	MissedDetectionURL  string
-	ScannerBugURL       string
-	UIIssueURL          string
-	DocsGapURL          string
-	SecurityReviewURL   string
-	TemplateGuidance    string
-	ProductIssueBase    string
+	FalsePositiveURL   string
+	BetaFeedbackURL    string
+	MissedDetectionURL string
+	ScannerBugURL      string
+	UIIssueURL         string
+	DocsGapURL         string
+	SecurityReviewURL  string
+	TemplateGuidance   string
+	ProductIssueBase   string
 }
 
 // BuildFindingIssueTemplateLinks builds safe template links for a finding detail page.

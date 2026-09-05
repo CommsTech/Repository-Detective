@@ -18,10 +18,10 @@ const (
 
 // Deployment scan modes (global posture).
 const (
-	ScanModePrivateBetaSafe       = "private_beta_safe"
-	ScanModeProductionSelfHosted  = "production_self_hosted"
-	ScanModeReportOnlyDryRun      = "report_only_dry_run"
-	ScanModePreinstallAudit       = "preinstall_audit"
+	ScanModePrivateBetaSafe      = "private_beta_safe"
+	ScanModeProductionSelfHosted = "production_self_hosted"
+	ScanModeReportOnlyDryRun     = "report_only_dry_run"
+	ScanModePreinstallAudit      = "preinstall_audit"
 )
 
 // ScanFilingInput captures request + settings for filing resolution.

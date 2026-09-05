@@ -17,10 +17,10 @@ type semgrepReport struct {
 }
 
 type semgrepMatch struct {
-	CheckID string           `json:"check_id"`
-	Path    string           `json:"path"`
-	Start   semgrepPosition  `json:"start"`
-	End     semgrepPosition  `json:"end"`
+	CheckID string            `json:"check_id"`
+	Path    string            `json:"path"`
+	Start   semgrepPosition   `json:"start"`
+	End     semgrepPosition   `json:"end"`
 	Extra   semgrepMatchExtra `json:"extra"`
 }
 

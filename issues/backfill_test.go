@@ -56,5 +56,9 @@ func (p *paginatingForge) ListOpenIssues(_ context.Context, _, _ string, limit, 
 func (p *paginatingForge) CreateIssue(context.Context, string, string, string, string, []string) (*issues.ForgeIssue, error) {
 	return nil, nil
 }
-func (p *paginatingForge) CreateIssueComment(context.Context, string, string, int, string) error { return nil }
-func (p *paginatingForge) AddIssueLabels(context.Context, string, string, int, []string) error   { return nil }
+func (p *paginatingForge) CreateIssueComment(context.Context, string, string, int, string) error {
+	return nil
+}
+func (p *paginatingForge) AddIssueLabels(context.Context, string, string, int, []string) error {
+	return nil
+}

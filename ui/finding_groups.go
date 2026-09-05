@@ -21,12 +21,12 @@ type FindingGroup struct {
 
 // ScanFindingsBreakdown separates actionable findings from grouped informational noise.
 type ScanFindingsBreakdown struct {
-	TotalRaw         int
-	ActionableCount  int
-	GroupedCount     int
-	Grouped          []FindingGroup
-	SeverityCounts   map[string]int
-	ActionableBySev  map[string]int
+	TotalRaw        int
+	ActionableCount int
+	GroupedCount    int
+	Grouped         []FindingGroup
+	SeverityCounts  map[string]int
+	ActionableBySev map[string]int
 }
 
 func isGroupableInformationalFinding(f store.Finding) bool {
@@ -60,8 +60,8 @@ func BuildScanFindingsBreakdown(findings map[int64]store.Finding) ScanFindingsBr
 		ActionableBySev: make(map[string]int),
 	}
 	type acc struct {
-		count      int
-		sample     store.Finding
+		count  int
+		sample store.Finding
 	}
 	buckets := make(map[string]*acc)
 	for _, f := range findings {

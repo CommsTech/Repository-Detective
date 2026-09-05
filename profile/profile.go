@@ -9,16 +9,16 @@ import (
 
 // RepoProfile captures repository structure before scanners run.
 type RepoProfile struct {
-	Layout            string            `json:"layout"`
-	PrimaryEcosystem  string            `json:"primary_ecosystem"`
-	Ecosystems        []string          `json:"ecosystems"`
-	Manifests         []string          `json:"manifests"`
-	IgnorePaths       []string          `json:"ignore_paths"`
-	ReportingHints    ReportingHints    `json:"reporting_hints"`
-	FileCount         int               `json:"file_count"`
-	LanguageCounts    map[string]int    `json:"language_counts,omitempty"`
-	Subpaths          []SubpathProfile  `json:"subpaths,omitempty"`
-	ProfileVersion    string            `json:"profile_version"`
+	Layout           string           `json:"layout"`
+	PrimaryEcosystem string           `json:"primary_ecosystem"`
+	Ecosystems       []string         `json:"ecosystems"`
+	Manifests        []string         `json:"manifests"`
+	IgnorePaths      []string         `json:"ignore_paths"`
+	ReportingHints   ReportingHints   `json:"reporting_hints"`
+	FileCount        int              `json:"file_count"`
+	LanguageCounts   map[string]int   `json:"language_counts,omitempty"`
+	Subpaths         []SubpathProfile `json:"subpaths,omitempty"`
+	ProfileVersion   string           `json:"profile_version"`
 }
 
 // SubpathProfile describes a nested app/service within a monorepo.
@@ -31,13 +31,13 @@ type SubpathProfile struct {
 
 // ReportingHints captures repo-specific issue filing conventions.
 type ReportingHints struct {
-	GiteaIssueTemplates []string `json:"gitea_issue_templates,omitempty"`
+	GiteaIssueTemplates  []string `json:"gitea_issue_templates,omitempty"`
 	GithubIssueTemplates []string `json:"github_issue_templates,omitempty"`
-	HasContributing     bool     `json:"has_contributing"`
-	HasSecurity         bool     `json:"has_security"`
-	HasCodeowners       bool     `json:"has_codeowners"`
-	DocsBugReport       bool     `json:"docs_bug_report"`
-	DocsSecurity        bool     `json:"docs_security"`
+	HasContributing      bool     `json:"has_contributing"`
+	HasSecurity          bool     `json:"has_security"`
+	HasCodeowners        bool     `json:"has_codeowners"`
+	DocsBugReport        bool     `json:"docs_bug_report"`
+	DocsSecurity         bool     `json:"docs_security"`
 }
 
 // DetectProfile builds a repository profile from indexed file paths.

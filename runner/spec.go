@@ -150,9 +150,9 @@ func BuildJobSpecForType(cfg Config, jobID, jobType string, repo store.Repositor
 		}
 	}
 	return JobSpec{
-		Version:           ContractVersion,
-		JobID:             jobID,
-		JobType:           jobType,
+		Version: ContractVersion,
+		JobID:   jobID,
+		JobType: jobType,
 		Repository: RepositoryInfo{
 			ForgeType:     repo.ForgeType,
 			Owner:         repo.Owner,

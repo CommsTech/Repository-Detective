@@ -132,7 +132,6 @@ func sanitizeGitError(out []byte, err error) error {
 	return fmt.Errorf("git operation failed")
 }
 
-
 // SensitiveEnvKeys lists env vars that must never appear in audit workspaces.
 var SensitiveEnvKeys = security.SensitiveEnvKeys
 

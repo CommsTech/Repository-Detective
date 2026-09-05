@@ -39,9 +39,9 @@ func TestFinishScanPersistsGraphStateSmoke(t *testing.T) {
 	_, _ = s.CreateScan(ctx, store.Scan{ID: scanID, RepositoryID: repo.ID, TriggerType: store.TriggerManual})
 
 	g := graph.Graph{
-		ScanID: scanID,
-		Nodes:  []graph.Node{{ID: "n1", Type: "file", Label: "main.go"}},
-		Edges:  []graph.Edge{{ID: "e1", From: "n1", To: "n1", Type: "contains"}},
+		ScanID:  scanID,
+		Nodes:   []graph.Node{{ID: "n1", Type: "file", Label: "main.go"}},
+		Edges:   []graph.Edge{{ID: "e1", From: "n1", To: "n1", Type: "contains"}},
 		Metrics: graph.GraphMetrics{NodeCount: 1, EdgeCount: 1},
 	}
 	raw, _ := json.Marshal(g)

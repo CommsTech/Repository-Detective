@@ -91,11 +91,11 @@ func TestEnrichIssueSetsFingerprintAndLabelsMetadata(t *testing.T) {
 
 func TestNormalizeCategoryMappings(t *testing.T) {
 	cases := map[string]string{
-		"hardcoded_secret":          CategorySecret,
-		"dependency_vulnerability":  CategoryDependency,
-		"sql_injection":             CategorySecurity,
-		"quality":                   CategoryCodeQuality,
-		"lint":                      CategoryMaintainability,
+		"hardcoded_secret":         CategorySecret,
+		"dependency_vulnerability": CategoryDependency,
+		"sql_injection":            CategorySecurity,
+		"quality":                  CategoryCodeQuality,
+		"lint":                     CategoryMaintainability,
 	}
 	for input, want := range cases {
 		source := ""

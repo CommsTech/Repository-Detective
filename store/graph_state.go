@@ -19,34 +19,34 @@ const (
 
 // GraphStatus is the structured repository map state for a scan or repository.
 type GraphStatus struct {
-	State          string          `json:"state"`
-	ScanID         string          `json:"scan_id,omitempty"`
-	RepoID         int64           `json:"repo_id,omitempty"`
-	GraphEnabled   bool            `json:"graph_enabled"`
-	AnalysisDepth  int             `json:"analysis_depth"`
-	NodeCount      int             `json:"node_count"`
-	EdgeCount      int             `json:"edge_count"`
-	Truncated      bool            `json:"truncated"`
-	FailureReason  string          `json:"failure_reason,omitempty"`
-	NextAction     string          `json:"next_action,omitempty"`
-	Graph          json.RawMessage `json:"graph"`
+	State         string          `json:"state"`
+	ScanID        string          `json:"scan_id,omitempty"`
+	RepoID        int64           `json:"repo_id,omitempty"`
+	GraphEnabled  bool            `json:"graph_enabled"`
+	AnalysisDepth int             `json:"analysis_depth"`
+	NodeCount     int             `json:"node_count"`
+	EdgeCount     int             `json:"edge_count"`
+	Truncated     bool            `json:"truncated"`
+	FailureReason string          `json:"failure_reason,omitempty"`
+	NextAction    string          `json:"next_action,omitempty"`
+	Graph         json.RawMessage `json:"graph"`
 }
 
 // GraphStatusInput collects scan, settings, and persistence facts for state resolution.
 type GraphStatusInput struct {
-	ScanFound      bool
-	RepoFound      bool
-	ScanID         string
-	RepoID         int64
-	ScanStatus     string
-	GraphEnabled   bool
-	AnalysisDepth  int
-	GraphJSON      []byte
-	NodeCount      int
-	EdgeCount      int
-	Truncated      bool
-	GraphError     string
-	SummaryJSON    json.RawMessage
+	ScanFound     bool
+	RepoFound     bool
+	ScanID        string
+	RepoID        int64
+	ScanStatus    string
+	GraphEnabled  bool
+	AnalysisDepth int
+	GraphJSON     []byte
+	NodeCount     int
+	EdgeCount     int
+	Truncated     bool
+	GraphError    string
+	SummaryJSON   json.RawMessage
 }
 
 // ResolveGraphStatus returns a single truthful graph state with optional graph payload.

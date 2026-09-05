@@ -24,25 +24,25 @@ type LearningEvent struct {
 
 // RepoCalibrationRule is an operator-approved per-repo calibration rule.
 type RepoCalibrationRule struct {
-	ID               int64      `json:"id"`
-	RepositoryID     *int64     `json:"repository_id,omitempty"`
-	ProjectGroupID   *int64     `json:"project_group_id,omitempty"`
-	Scope            string     `json:"scope"`
-	Source           string     `json:"source"`
-	RuleID           string     `json:"rule_id"`
-	PathPattern      string     `json:"path_pattern"`
-	FindingCategory  string     `json:"finding_category"`
-	Action           string     `json:"action"`
-	Reason           string     `json:"reason"`
-	EvidenceCount    int        `json:"evidence_count"`
-	FalsePositiveRate float64   `json:"false_positive_rate"`
-	TruePositiveRate  float64   `json:"true_positive_rate"`
-	DuplicateRate     float64   `json:"duplicate_rate"`
-	ExpiresAt        *time.Time `json:"expires_at,omitempty"`
-	Active           bool       `json:"active"`
-	CreatedAt        time.Time  `json:"created_at"`
-	UpdatedAt        time.Time  `json:"updated_at"`
-	RecommendationID *int64     `json:"recommendation_id,omitempty"`
+	ID                int64      `json:"id"`
+	RepositoryID      *int64     `json:"repository_id,omitempty"`
+	ProjectGroupID    *int64     `json:"project_group_id,omitempty"`
+	Scope             string     `json:"scope"`
+	Source            string     `json:"source"`
+	RuleID            string     `json:"rule_id"`
+	PathPattern       string     `json:"path_pattern"`
+	FindingCategory   string     `json:"finding_category"`
+	Action            string     `json:"action"`
+	Reason            string     `json:"reason"`
+	EvidenceCount     int        `json:"evidence_count"`
+	FalsePositiveRate float64    `json:"false_positive_rate"`
+	TruePositiveRate  float64    `json:"true_positive_rate"`
+	DuplicateRate     float64    `json:"duplicate_rate"`
+	ExpiresAt         *time.Time `json:"expires_at,omitempty"`
+	Active            bool       `json:"active"`
+	CreatedAt         time.Time  `json:"created_at"`
+	UpdatedAt         time.Time  `json:"updated_at"`
+	RecommendationID  *int64     `json:"recommendation_id,omitempty"`
 }
 
 // RuleReliabilityStat is per-repo (or global when RepositoryID nil) rule metrics.
@@ -83,11 +83,11 @@ type ScannerHealthRecord struct {
 
 // LearningHealthSummary aggregates operator-facing learning metrics.
 type LearningHealthSummary struct {
-	EventsTotal              int     `json:"events_total"`
-	PendingRecommendations   int     `json:"pending_recommendations"`
-	ActiveRepoRules          int     `json:"active_repo_rules"`
-	ExpiredRepoRules         int     `json:"expired_repo_rules"`
-	GroupedFindings          int     `json:"grouped_findings"`
-	AvgFalsePositiveRate     float64 `json:"avg_false_positive_rate"`
-	ScannerFailureRate       float64 `json:"scanner_failure_rate"`
+	EventsTotal            int     `json:"events_total"`
+	PendingRecommendations int     `json:"pending_recommendations"`
+	ActiveRepoRules        int     `json:"active_repo_rules"`
+	ExpiredRepoRules       int     `json:"expired_repo_rules"`
+	GroupedFindings        int     `json:"grouped_findings"`
+	AvgFalsePositiveRate   float64 `json:"avg_false_positive_rate"`
+	ScannerFailureRate     float64 `json:"scanner_failure_rate"`
 }

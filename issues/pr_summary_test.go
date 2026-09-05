@@ -9,15 +9,15 @@ import (
 )
 
 type fakePRComments struct {
-	mu       sync.Mutex
-	nextID   int64
-	byPR     map[int][]CommentRef
-	listErr  error
+	mu        sync.Mutex
+	nextID    int64
+	byPR      map[int][]CommentRef
+	listErr   error
 	createErr error
-	editErr  error
+	editErr   error
 	deleteErr error
-	creates  int
-	edits    int
+	creates   int
+	edits     int
 }
 
 func newFakePRComments() *fakePRComments {

@@ -10,17 +10,17 @@ import (
 )
 
 type learningChartPayload struct {
-	EventLabels        []string  `json:"eventLabels"`
-	EventValues        []int     `json:"eventValues"`
-	NoisyRuleLabels    []string  `json:"noisyRuleLabels"`
-	NoisyRuleFPRates   []float64 `json:"noisyRuleFPRates"`
-	NoisyRuleFindings  []int     `json:"noisyRuleFindings"`
-	FPRatePct          float64   `json:"fpRatePct"`
-	ScannerFailurePct  float64   `json:"scannerFailurePct"`
-	EventsTotal        int       `json:"eventsTotal"`
-	PendingRecs        int       `json:"pendingRecs"`
-	ActiveRules        int       `json:"activeRules"`
-	GroupedFindings    int       `json:"groupedFindings"`
+	EventLabels       []string  `json:"eventLabels"`
+	EventValues       []int     `json:"eventValues"`
+	NoisyRuleLabels   []string  `json:"noisyRuleLabels"`
+	NoisyRuleFPRates  []float64 `json:"noisyRuleFPRates"`
+	NoisyRuleFindings []int     `json:"noisyRuleFindings"`
+	FPRatePct         float64   `json:"fpRatePct"`
+	ScannerFailurePct float64   `json:"scannerFailurePct"`
+	EventsTotal       int       `json:"eventsTotal"`
+	PendingRecs       int       `json:"pendingRecs"`
+	ActiveRules       int       `json:"activeRules"`
+	GroupedFindings   int       `json:"groupedFindings"`
 }
 
 func buildLearningChartJSON(

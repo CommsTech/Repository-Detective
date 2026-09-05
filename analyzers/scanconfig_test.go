@@ -97,7 +97,7 @@ func TestConfigFromPolicyLargeFileThreshold(t *testing.T) {
 	policy := analyzers.ScanPolicy{
 		AnalysisDepth: 2, EnableHealthChecks: true,
 		EnableMaintainabilityChecks: true,
-		HealthLargeFileLines: 10,
+		HealthLargeFileLines:        10,
 	}
 	cfg := analyzers.ConfigFromPolicy(base, policy, false)
 	if cfg.Health.LargeFileLines != 10 {

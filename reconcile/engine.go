@@ -23,13 +23,13 @@ type ForgeActions interface {
 
 // Config controls reconciliation behavior.
 type Config struct {
-	Enabled              bool
-	Comment              bool
-	CloseVerified        bool
-	CloseDuplicates      bool
-	MaxCommentsPerIssue  int
-	PublicBasePath       string
-	BetaNoiseRuleIDs     map[string]bool
+	Enabled             bool
+	Comment             bool
+	CloseVerified       bool
+	CloseDuplicates     bool
+	MaxCommentsPerIssue int
+	PublicBasePath      string
+	BetaNoiseRuleIDs    map[string]bool
 }
 
 // Engine reconciles tracked external issues against current scan data.
@@ -55,12 +55,12 @@ func NewEngine(s store.QueryStore, matcher *calibration.Matcher, forge ForgeActi
 }
 
 type issueContext struct {
-	ext      store.ExternalIssue
-	finding  store.Finding
-	scanID   string
-	inScan   bool
-	scanner  string
-	scanOK   bool
+	ext        store.ExternalIssue
+	finding    store.Finding
+	scanID     string
+	inScan     bool
+	scanner    string
+	scanOK     bool
 	scannerRan bool
 }
 
@@ -213,18 +213,18 @@ func (e *Engine) run(ctx context.Context, repositoryID int64, preview bool) (Res
 func (e *Engine) classify(ic issueContext, dupes []store.ExternalIssue) Item {
 	f := ic.finding
 	item := Item{
-		IssueNumber:   ic.ext.IssueNumber,
-		IssueURL:      ic.ext.IssueURL,
-		FindingID:     f.ID,
-		Title:         f.Title,
-		Fingerprint:   f.Fingerprint,
-		Source:        f.Source,
-		RuleID:        f.RuleID,
-		Severity:     f.Severity,
-		Category:      f.Category,
-		FindingStatus: f.Status,
-		LatestScanID:  ic.scanID,
-		InLatestScan:  ic.inScan,
+		IssueNumber:    ic.ext.IssueNumber,
+		IssueURL:       ic.ext.IssueURL,
+		FindingID:      f.ID,
+		Title:          f.Title,
+		Fingerprint:    f.Fingerprint,
+		Source:         f.Source,
+		RuleID:         f.RuleID,
+		Severity:       f.Severity,
+		Category:       f.Category,
+		FindingStatus:  f.Status,
+		LatestScanID:   ic.scanID,
+		InLatestScan:   ic.inScan,
 		ProposedAction: ActionNone,
 	}
 

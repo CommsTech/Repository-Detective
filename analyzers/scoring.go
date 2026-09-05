@@ -18,13 +18,13 @@ type ScoreInput struct {
 
 // ScoreResult is a transparent 0–100 repository health score.
 type ScoreResult struct {
-	Percent           float64
-	Complete          bool
-	IncompleteReason  string
-	Explanation       string
-	ScoredFindings    int
-	IgnoredFindings   int
-	ScannerFailures   []string
+	Percent          float64
+	Complete         bool
+	IncompleteReason string
+	Explanation      string
+	ScoredFindings   int
+	IgnoredFindings  int
+	ScannerFailures  []string
 }
 
 // ComputeScoreResult calculates a repository health score from issue-worthy findings.
@@ -93,12 +93,12 @@ func ComputeScoreResult(issues []ai.CodeIssue, input ScoreInput) ScoreResult {
 	}
 
 	return ScoreResult{
-		Percent:          score,
-		Complete:         true,
-		Explanation:      explanation,
-		ScoredFindings:   scored,
-		IgnoredFindings:  ignored,
-		ScannerFailures:  failures,
+		Percent:         score,
+		Complete:        true,
+		Explanation:     explanation,
+		ScoredFindings:  scored,
+		IgnoredFindings: ignored,
+		ScannerFailures: failures,
 	}
 }
 

@@ -13,13 +13,13 @@ import (
 
 // Failure stage labels for operator debugging.
 const (
-	FailureStageURLValidation   = "url_validation"
-	FailureStageClone           = "clone"
-	FailureStageSandboxSetup    = "sandbox_setup"
-	FailureStageScannerSetup    = "scanner_setup"
-	FailureStageScannerTimeout  = "scanner_timeout"
+	FailureStageURLValidation    = "url_validation"
+	FailureStageClone            = "clone"
+	FailureStageSandboxSetup     = "sandbox_setup"
+	FailureStageScannerSetup     = "scanner_setup"
+	FailureStageScannerTimeout   = "scanner_timeout"
 	FailureStageReportGeneration = "report_generation"
-	FailureStageUnknown         = "unknown"
+	FailureStageUnknown          = "unknown"
 )
 
 // RiskScoreUnavailable marks audits that did not complete scoring.

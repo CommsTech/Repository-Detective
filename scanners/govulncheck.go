@@ -84,12 +84,12 @@ type govulncheckMessage struct {
 }
 
 type govulncheckFindingJSON struct {
-	OSV          json.RawMessage          `json:"osv"`
-	FixedVersion string                   `json:"fixed_version"`
-	Trace        []govulncheckTraceFrame  `json:"trace"`
-	Symbol       string                   `json:"symbol"`
-	Module       string                   `json:"module"`
-	Package      string                   `json:"package"`
+	OSV          json.RawMessage         `json:"osv"`
+	FixedVersion string                  `json:"fixed_version"`
+	Trace        []govulncheckTraceFrame `json:"trace"`
+	Symbol       string                  `json:"symbol"`
+	Module       string                  `json:"module"`
+	Package      string                  `json:"package"`
 }
 
 type govulncheckTraceFrame struct {

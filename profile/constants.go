@@ -2,13 +2,13 @@ package profile
 
 // Repository layout classifications.
 const (
-	LayoutSingleApp        = "single_app"
-	LayoutMonorepo         = "monorepo"
-	LayoutNestedServices   = "nested_services"
-	LayoutLibrary          = "library"
-	LayoutInfrastructure   = "infrastructure"
-	LayoutDocumentation    = "documentation"
-	LayoutMixed            = "mixed"
+	LayoutSingleApp      = "single_app"
+	LayoutMonorepo       = "monorepo"
+	LayoutNestedServices = "nested_services"
+	LayoutLibrary        = "library"
+	LayoutInfrastructure = "infrastructure"
+	LayoutDocumentation  = "documentation"
+	LayoutMixed          = "mixed"
 )
 
 // Language/ecosystem tags.

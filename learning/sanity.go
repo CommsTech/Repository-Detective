@@ -7,10 +7,10 @@ import (
 
 // SanityConfig controls optional LLM false-positive gate (disabled by default).
 type SanityConfig struct {
-	Enabled         bool
+	Enabled          bool
 	MaxTokensPerScan int
-	ApplyActions    bool
-	LowMediumOnly   bool
+	ApplyActions     bool
+	LowMediumOnly    bool
 }
 
 // DefaultSanityConfig returns safe defaults (off).
@@ -20,10 +20,10 @@ func DefaultSanityConfig() SanityConfig {
 
 // SanityDecision is strict JSON output from optional LLM gate.
 type SanityDecision struct {
-	RealIssue   string  `json:"real_issue"` // true | false | unknown
-	Confidence  float64 `json:"confidence"`
-	Rationale   string  `json:"rationale"`
-	SafeAction  string  `json:"safe_action"`
+	RealIssue  string  `json:"real_issue"` // true | false | unknown
+	Confidence float64 `json:"confidence"`
+	Rationale  string  `json:"rationale"`
+	SafeAction string  `json:"safe_action"`
 }
 
 // SanityGate evaluates low/medium findings when enabled.

@@ -32,18 +32,18 @@ type repositorySummaryResponse struct {
 }
 
 type settingsResponse struct {
-	RepositoryID int64              `json:"repository_id"`
-	ScanProfile  string             `json:"scan_profile"`
-	ProfileModified bool            `json:"profile_modified"`
-	ProfileSource string            `json:"profile_source"`
+	RepositoryID            int64                           `json:"repository_id"`
+	ScanProfile             string                          `json:"scan_profile"`
+	ProfileModified         bool                            `json:"profile_modified"`
+	ProfileSource           string                          `json:"profile_source"`
 	EffectiveProfileSummary effectiveProfileSummaryResponse `json:"effective_profile_summary"`
 	NotificationGlobal      notificationGlobalResponse      `json:"notification_global"`
 	EffectiveNotifications  effectiveNotificationResponse   `json:"effective_notifications"`
-	Stored       repoSettingsFields `json:"stored"`
-	Effective    repoSettingsFields `json:"effective"`
-	Notice       string             `json:"notice"`
-	UpdatedAt    *time.Time         `json:"updated_at,omitempty"`
-	ScheduleCron *store.CronDescription `json:"schedule_cron_info,omitempty"`
+	Stored                  repoSettingsFields              `json:"stored"`
+	Effective               repoSettingsFields              `json:"effective"`
+	Notice                  string                          `json:"notice"`
+	UpdatedAt               *time.Time                      `json:"updated_at,omitempty"`
+	ScheduleCron            *store.CronDescription          `json:"schedule_cron_info,omitempty"`
 }
 
 type effectiveProfileSummaryResponse struct {
@@ -57,59 +57,59 @@ type effectiveProfileSummaryResponse struct {
 }
 
 type repoSettingsFields struct {
-	ScanProfile       *string  `json:"scan_profile,omitempty"`
-	Enabled           *bool    `json:"enabled,omitempty"`
-	PolicyLevel       *string  `json:"policy_level,omitempty"`
-	WorkspaceMode     *string  `json:"workspace_mode,omitempty"`
-	AnalysisDepth     *int     `json:"analysis_depth,omitempty"`
-	EnableLLMAuditors *bool    `json:"enable_llm_auditors,omitempty"`
-	EnableTrivy       *bool    `json:"enable_trivy,omitempty"`
-	EnableGrype       *bool    `json:"enable_grype,omitempty"`
-	EnableGitleaks    *bool    `json:"enable_gitleaks,omitempty"`
-	EnableSemgrep     *bool    `json:"enable_semgrep,omitempty"`
-	EnableGovulncheck *bool    `json:"enable_govulncheck,omitempty"`
-	EnableGosec       *bool    `json:"enable_gosec,omitempty"`
-	EnableStaticcheck *bool    `json:"enable_staticcheck,omitempty"`
-	EnableHadolint    *bool    `json:"enable_hadolint,omitempty"`
-	EnableCheckov     *bool    `json:"enable_checkov,omitempty"`
-	EnableLinters     *bool    `json:"enable_linters,omitempty"`
-	SeverityGate      *string  `json:"severity_gate,omitempty"`
-	ConfidenceGate    *float64 `json:"confidence_gate,omitempty"`
-	IssuePolicy       *string  `json:"issue_policy,omitempty"`
-	RemediationPolicy *string  `json:"remediation_policy,omitempty"`
-	RunnerPolicy      *string  `json:"runner_policy,omitempty"`
-	ScheduleEnabled   *bool    `json:"schedule_enabled,omitempty"`
-	ScheduleCron      *string  `json:"schedule_cron,omitempty"`
-	AIPolicy          *string  `json:"ai_policy,omitempty"`
-	EnableHealthChecks          *bool `json:"enable_health_checks,omitempty"`
-	EnableTechDebtChecks        *bool `json:"enable_tech_debt_checks,omitempty"`
-	EnableReliabilityChecks     *bool `json:"enable_reliability_checks,omitempty"`
-	EnableMaintainabilityChecks *bool `json:"enable_maintainability_checks,omitempty"`
-	EnableTestGapChecks         *bool `json:"enable_test_gap_checks,omitempty"`
-	EnablePerformanceChecks     *bool `json:"enable_performance_checks,omitempty"`
-	EnableAIRiskChecks          *bool `json:"enable_ai_risk_checks,omitempty"`
-	HealthMaxFindings           *int  `json:"health_max_findings,omitempty"`
-	HealthLargeFileLines        *int  `json:"health_large_file_lines,omitempty"`
-	HealthLargeFunctionLines    *int  `json:"health_large_function_lines,omitempty"`
-	HealthMaxNestingDepth       *int  `json:"health_max_nesting_depth,omitempty"`
-	HealthMaxFunctionParams     *int  `json:"health_max_function_params,omitempty"`
-	EnableCodeGraph             *bool `json:"enable_code_graph,omitempty"`
-	GraphMaxNodes               *int  `json:"graph_max_nodes,omitempty"`
-	GraphMaxEdges               *int  `json:"graph_max_edges,omitempty"`
-	GraphTimeoutSeconds         *int  `json:"graph_timeout_seconds,omitempty"`
-	GraphIncludeFunctions       *bool `json:"graph_include_functions,omitempty"`
-	GraphIncludeFindings        *bool `json:"graph_include_findings,omitempty"`
-	GovulncheckTimeoutSeconds   *int  `json:"govulncheck_timeout_seconds,omitempty"`
-	GosecTimeoutSeconds         *int  `json:"gosec_timeout_seconds,omitempty"`
-	StaticcheckTimeoutSeconds   *int  `json:"staticcheck_timeout_seconds,omitempty"`
-	GoScannerMaxFindings        *int  `json:"go_scanner_max_findings,omitempty"`
-	HadolintTimeoutSeconds      *int  `json:"hadolint_timeout_seconds,omitempty"`
-	CheckovTimeoutSeconds       *int  `json:"checkov_timeout_seconds,omitempty"`
-	IACScannerMaxFindings       *int  `json:"iac_scanner_max_findings,omitempty"`
-	NotificationsEnabled          *bool   `json:"notifications_enabled,omitempty"`
-	NotificationMinSeverity       *string `json:"notification_min_severity,omitempty"`
-	NotificationEvents            *string `json:"notification_events,omitempty"`
-	NotificationCooldownSeconds   *int    `json:"notification_cooldown_seconds,omitempty"`
+	ScanProfile                 *string  `json:"scan_profile,omitempty"`
+	Enabled                     *bool    `json:"enabled,omitempty"`
+	PolicyLevel                 *string  `json:"policy_level,omitempty"`
+	WorkspaceMode               *string  `json:"workspace_mode,omitempty"`
+	AnalysisDepth               *int     `json:"analysis_depth,omitempty"`
+	EnableLLMAuditors           *bool    `json:"enable_llm_auditors,omitempty"`
+	EnableTrivy                 *bool    `json:"enable_trivy,omitempty"`
+	EnableGrype                 *bool    `json:"enable_grype,omitempty"`
+	EnableGitleaks              *bool    `json:"enable_gitleaks,omitempty"`
+	EnableSemgrep               *bool    `json:"enable_semgrep,omitempty"`
+	EnableGovulncheck           *bool    `json:"enable_govulncheck,omitempty"`
+	EnableGosec                 *bool    `json:"enable_gosec,omitempty"`
+	EnableStaticcheck           *bool    `json:"enable_staticcheck,omitempty"`
+	EnableHadolint              *bool    `json:"enable_hadolint,omitempty"`
+	EnableCheckov               *bool    `json:"enable_checkov,omitempty"`
+	EnableLinters               *bool    `json:"enable_linters,omitempty"`
+	SeverityGate                *string  `json:"severity_gate,omitempty"`
+	ConfidenceGate              *float64 `json:"confidence_gate,omitempty"`
+	IssuePolicy                 *string  `json:"issue_policy,omitempty"`
+	RemediationPolicy           *string  `json:"remediation_policy,omitempty"`
+	RunnerPolicy                *string  `json:"runner_policy,omitempty"`
+	ScheduleEnabled             *bool    `json:"schedule_enabled,omitempty"`
+	ScheduleCron                *string  `json:"schedule_cron,omitempty"`
+	AIPolicy                    *string  `json:"ai_policy,omitempty"`
+	EnableHealthChecks          *bool    `json:"enable_health_checks,omitempty"`
+	EnableTechDebtChecks        *bool    `json:"enable_tech_debt_checks,omitempty"`
+	EnableReliabilityChecks     *bool    `json:"enable_reliability_checks,omitempty"`
+	EnableMaintainabilityChecks *bool    `json:"enable_maintainability_checks,omitempty"`
+	EnableTestGapChecks         *bool    `json:"enable_test_gap_checks,omitempty"`
+	EnablePerformanceChecks     *bool    `json:"enable_performance_checks,omitempty"`
+	EnableAIRiskChecks          *bool    `json:"enable_ai_risk_checks,omitempty"`
+	HealthMaxFindings           *int     `json:"health_max_findings,omitempty"`
+	HealthLargeFileLines        *int     `json:"health_large_file_lines,omitempty"`
+	HealthLargeFunctionLines    *int     `json:"health_large_function_lines,omitempty"`
+	HealthMaxNestingDepth       *int     `json:"health_max_nesting_depth,omitempty"`
+	HealthMaxFunctionParams     *int     `json:"health_max_function_params,omitempty"`
+	EnableCodeGraph             *bool    `json:"enable_code_graph,omitempty"`
+	GraphMaxNodes               *int     `json:"graph_max_nodes,omitempty"`
+	GraphMaxEdges               *int     `json:"graph_max_edges,omitempty"`
+	GraphTimeoutSeconds         *int     `json:"graph_timeout_seconds,omitempty"`
+	GraphIncludeFunctions       *bool    `json:"graph_include_functions,omitempty"`
+	GraphIncludeFindings        *bool    `json:"graph_include_findings,omitempty"`
+	GovulncheckTimeoutSeconds   *int     `json:"govulncheck_timeout_seconds,omitempty"`
+	GosecTimeoutSeconds         *int     `json:"gosec_timeout_seconds,omitempty"`
+	StaticcheckTimeoutSeconds   *int     `json:"staticcheck_timeout_seconds,omitempty"`
+	GoScannerMaxFindings        *int     `json:"go_scanner_max_findings,omitempty"`
+	HadolintTimeoutSeconds      *int     `json:"hadolint_timeout_seconds,omitempty"`
+	CheckovTimeoutSeconds       *int     `json:"checkov_timeout_seconds,omitempty"`
+	IACScannerMaxFindings       *int     `json:"iac_scanner_max_findings,omitempty"`
+	NotificationsEnabled        *bool    `json:"notifications_enabled,omitempty"`
+	NotificationMinSeverity     *string  `json:"notification_min_severity,omitempty"`
+	NotificationEvents          *string  `json:"notification_events,omitempty"`
+	NotificationCooldownSeconds *int     `json:"notification_cooldown_seconds,omitempty"`
 }
 
 type notificationGlobalResponse struct {
@@ -214,34 +214,34 @@ type lifecycleEventResponse struct {
 }
 
 type dashboardSummaryResponse struct {
-	TotalRepositories        int                      `json:"total_repositories"`
-	FailedScansCount         int                      `json:"failed_scans_count"`
-	ActionableFailedScansCount int                    `json:"actionable_failed_scans_count"`
-	StaleReapedScansCount    int                      `json:"stale_reaped_scans_count"`
-	UnhealthyReposCount     int                      `json:"unhealthy_repos_count"`
-	ScannerFailuresCount     int                      `json:"scanner_failures_count"`
-	ScannerParseFailedCount  int                      `json:"scanner_parse_failed_count"`
-	ScannerToolsMissingCount int                      `json:"scanner_tools_missing_count"`
-	OpenFindingsCount        int                      `json:"open_findings_count"`
-	SuppressedFindingsCount  int                      `json:"suppressed_findings_count"`
-	IssuesDetectedInScans    int                      `json:"issues_detected_in_scans"`
-	OpenFindingsBySeverity   map[string]int           `json:"open_findings_by_severity"`
-	RecentScans            []scanResponse           `json:"recent_scans"`
-	RecentLifecycleEvents  []lifecycleEventResponse `json:"recent_lifecycle_events"`
-	ScheduledScansCount    int                      `json:"scheduled_scans_count"`
-	LastScheduledScanAt    *time.Time               `json:"last_scheduled_scan_at,omitempty"`
-	RecentScheduledScans   []scanResponse           `json:"recent_scheduled_scans"`
-	RunnerJobsByStatus     map[string]int           `json:"runner_jobs_by_status,omitempty"`
-	RemediationCandidates  int                      `json:"remediation_candidates,omitempty"`
-	RemediationHumanReview int                    `json:"remediation_human_review,omitempty"`
-	RemediationApproved    int                      `json:"remediation_approved,omitempty"`
-	OpenUniqueFindings     int                      `json:"open_unique_findings,omitempty"`
-	NewFindingsLast7Days   int                      `json:"new_findings_last_7_days,omitempty"`
-	RegressionsLast7Days   int                      `json:"regressions_last_7_days,omitempty"`
-	RawDetectorHits7d      int                      `json:"raw_detector_hits_7d,omitempty"`
-	RawInstances7d         int                      `json:"raw_instances_7d,omitempty"`
-	UniqueMissingScanners  int                      `json:"unique_missing_scanners,omitempty"`
-	RawMissingToolEvents   int                      `json:"raw_missing_tool_events,omitempty"`
+	TotalRepositories          int                      `json:"total_repositories"`
+	FailedScansCount           int                      `json:"failed_scans_count"`
+	ActionableFailedScansCount int                      `json:"actionable_failed_scans_count"`
+	StaleReapedScansCount      int                      `json:"stale_reaped_scans_count"`
+	UnhealthyReposCount        int                      `json:"unhealthy_repos_count"`
+	ScannerFailuresCount       int                      `json:"scanner_failures_count"`
+	ScannerParseFailedCount    int                      `json:"scanner_parse_failed_count"`
+	ScannerToolsMissingCount   int                      `json:"scanner_tools_missing_count"`
+	OpenFindingsCount          int                      `json:"open_findings_count"`
+	SuppressedFindingsCount    int                      `json:"suppressed_findings_count"`
+	IssuesDetectedInScans      int                      `json:"issues_detected_in_scans"`
+	OpenFindingsBySeverity     map[string]int           `json:"open_findings_by_severity"`
+	RecentScans                []scanResponse           `json:"recent_scans"`
+	RecentLifecycleEvents      []lifecycleEventResponse `json:"recent_lifecycle_events"`
+	ScheduledScansCount        int                      `json:"scheduled_scans_count"`
+	LastScheduledScanAt        *time.Time               `json:"last_scheduled_scan_at,omitempty"`
+	RecentScheduledScans       []scanResponse           `json:"recent_scheduled_scans"`
+	RunnerJobsByStatus         map[string]int           `json:"runner_jobs_by_status,omitempty"`
+	RemediationCandidates      int                      `json:"remediation_candidates,omitempty"`
+	RemediationHumanReview     int                      `json:"remediation_human_review,omitempty"`
+	RemediationApproved        int                      `json:"remediation_approved,omitempty"`
+	OpenUniqueFindings         int                      `json:"open_unique_findings,omitempty"`
+	NewFindingsLast7Days       int                      `json:"new_findings_last_7_days,omitempty"`
+	RegressionsLast7Days       int                      `json:"regressions_last_7_days,omitempty"`
+	RawDetectorHits7d          int                      `json:"raw_detector_hits_7d,omitempty"`
+	RawInstances7d             int                      `json:"raw_instances_7d,omitempty"`
+	UniqueMissingScanners      int                      `json:"unique_missing_scanners,omitempty"`
+	RawMissingToolEvents       int                      `json:"raw_missing_tool_events,omitempty"`
 }
 
 func toRepositoryResponse(repo store.Repository) repositoryResponse {
@@ -271,10 +271,10 @@ func toSettingsResponse(id int64, settings store.RepoSettings, global store.Glob
 		updatedAt = &t
 	}
 	resp := settingsResponse{
-		RepositoryID: id,
-		ScanProfile:  meta.ScanProfile,
+		RepositoryID:    id,
+		ScanProfile:     meta.ScanProfile,
 		ProfileModified: meta.ProfileModified,
-		ProfileSource: meta.ProfileSource,
+		ProfileSource:   meta.ProfileSource,
 		EffectiveProfileSummary: effectiveProfileSummaryResponse{
 			SecurityScanners: meta.EffectiveProfileSummary.SecurityScanners,
 			GoScanners:       meta.EffectiveProfileSummary.GoScanners,
@@ -286,10 +286,10 @@ func toSettingsResponse(id int64, settings store.RepoSettings, global store.Glob
 		},
 		NotificationGlobal:     toNotificationGlobalResponse(notifyGlobal),
 		EffectiveNotifications: toEffectiveNotificationResponse(notifyEff),
-		Stored:       fromRepoSettings(settings),
-		Effective:    fromEffectiveSettings(effective),
-		Notice:       settingsNotice,
-		UpdatedAt:    updatedAt,
+		Stored:                 fromRepoSettings(settings),
+		Effective:              fromEffectiveSettings(effective),
+		Notice:                 settingsNotice,
+		UpdatedAt:              updatedAt,
 	}
 	if effective.ScheduleEnabled && effective.ScheduleCron != "" {
 		desc := store.DescribeCron(effective.ScheduleCron, time.Now().UTC())
@@ -301,14 +301,14 @@ func toSettingsResponse(id int64, settings store.RepoSettings, global store.Glob
 func fromRepoSettings(s store.RepoSettings) repoSettingsFields {
 	return repoSettingsFields{
 		ScanProfile: s.ScanProfile,
-		Enabled: s.Enabled, PolicyLevel: s.PolicyLevel, WorkspaceMode: s.WorkspaceMode,
+		Enabled:     s.Enabled, PolicyLevel: s.PolicyLevel, WorkspaceMode: s.WorkspaceMode,
 		AnalysisDepth: s.AnalysisDepth, EnableLLMAuditors: s.EnableLLMAuditors,
 		EnableTrivy: s.EnableTrivy, EnableGrype: s.EnableGrype, EnableGitleaks: s.EnableGitleaks,
 		EnableSemgrep: s.EnableSemgrep, EnableGovulncheck: s.EnableGovulncheck,
 		EnableGosec: s.EnableGosec, EnableStaticcheck: s.EnableStaticcheck,
 		EnableHadolint: s.EnableHadolint, EnableCheckov: s.EnableCheckov,
 		EnableLinters: s.EnableLinters,
-		SeverityGate: s.SeverityGate, ConfidenceGate: s.ConfidenceGate,
+		SeverityGate:  s.SeverityGate, ConfidenceGate: s.ConfidenceGate,
 		IssuePolicy: s.IssuePolicy, RemediationPolicy: s.RemediationPolicy,
 		RunnerPolicy: s.RunnerPolicy, ScheduleEnabled: s.ScheduleEnabled,
 		ScheduleCron: s.ScheduleCron, AIPolicy: s.AIPolicy,
@@ -316,19 +316,19 @@ func fromRepoSettings(s store.RepoSettings) repoSettingsFields {
 		EnableReliabilityChecks: s.EnableReliabilityChecks, EnableMaintainabilityChecks: s.EnableMaintainabilityChecks,
 		EnableTestGapChecks: s.EnableTestGapChecks, EnablePerformanceChecks: s.EnablePerformanceChecks,
 		EnableAIRiskChecks: s.EnableAIRiskChecks,
-		HealthMaxFindings: s.HealthMaxFindings, HealthLargeFileLines: s.HealthLargeFileLines,
+		HealthMaxFindings:  s.HealthMaxFindings, HealthLargeFileLines: s.HealthLargeFileLines,
 		HealthLargeFunctionLines: s.HealthLargeFunctionLines, HealthMaxNestingDepth: s.HealthMaxNestingDepth,
 		HealthMaxFunctionParams: s.HealthMaxFunctionParams,
-		EnableCodeGraph: s.EnableCodeGraph, GraphMaxNodes: s.GraphMaxNodes, GraphMaxEdges: s.GraphMaxEdges,
+		EnableCodeGraph:         s.EnableCodeGraph, GraphMaxNodes: s.GraphMaxNodes, GraphMaxEdges: s.GraphMaxEdges,
 		GraphTimeoutSeconds: s.GraphTimeoutSeconds, GraphIncludeFunctions: s.GraphIncludeFunctions,
-		GraphIncludeFindings: s.GraphIncludeFindings,
-		GovulncheckTimeoutSeconds: s.GovulncheckTimeoutSeconds,
-		GosecTimeoutSeconds: s.GosecTimeoutSeconds,
-		StaticcheckTimeoutSeconds: s.StaticcheckTimeoutSeconds,
-		GoScannerMaxFindings: s.GoScannerMaxFindings,
-		HadolintTimeoutSeconds: s.HadolintTimeoutSeconds,
-		CheckovTimeoutSeconds: s.CheckovTimeoutSeconds,
-		IACScannerMaxFindings: s.IACScannerMaxFindings,
+		GraphIncludeFindings:        s.GraphIncludeFindings,
+		GovulncheckTimeoutSeconds:   s.GovulncheckTimeoutSeconds,
+		GosecTimeoutSeconds:         s.GosecTimeoutSeconds,
+		StaticcheckTimeoutSeconds:   s.StaticcheckTimeoutSeconds,
+		GoScannerMaxFindings:        s.GoScannerMaxFindings,
+		HadolintTimeoutSeconds:      s.HadolintTimeoutSeconds,
+		CheckovTimeoutSeconds:       s.CheckovTimeoutSeconds,
+		IACScannerMaxFindings:       s.IACScannerMaxFindings,
 		NotificationsEnabled:        s.NotificationsEnabled,
 		NotificationMinSeverity:     s.NotificationMinSeverity,
 		NotificationEvents:          s.NotificationEvents,
@@ -415,26 +415,26 @@ func fromEffectiveSettings(e store.EffectiveSettings) repoSettingsFields {
 		EnableGovulncheck: &govulncheck, EnableGosec: &gosec, EnableStaticcheck: &staticcheck,
 		EnableHadolint: &hadolint, EnableCheckov: &checkov,
 		EnableLinters: &linters,
-		SeverityGate: &severity, ConfidenceGate: &confidence, IssuePolicy: &issue,
+		SeverityGate:  &severity, ConfidenceGate: &confidence, IssuePolicy: &issue,
 		RemediationPolicy: &remediation, RunnerPolicy: &runner, ScheduleEnabled: &schedule,
 		ScheduleCron: &cron, AIPolicy: &ai,
 		EnableHealthChecks: &healthEnabled, EnableTechDebtChecks: &techDebt,
 		EnableReliabilityChecks: &reliability, EnableMaintainabilityChecks: &maintainability,
 		EnableTestGapChecks: &testGap, EnablePerformanceChecks: &performance,
 		EnableAIRiskChecks: &aiRisk,
-		HealthMaxFindings: &maxFindings, HealthLargeFileLines: &largeFile,
+		HealthMaxFindings:  &maxFindings, HealthLargeFileLines: &largeFile,
 		HealthLargeFunctionLines: &largeFunc, HealthMaxNestingDepth: &nesting,
 		HealthMaxFunctionParams: &maxParams,
-		EnableCodeGraph: &codeGraph, GraphMaxNodes: &graphNodes, GraphMaxEdges: &graphEdges,
+		EnableCodeGraph:         &codeGraph, GraphMaxNodes: &graphNodes, GraphMaxEdges: &graphEdges,
 		GraphTimeoutSeconds: &graphTimeout, GraphIncludeFunctions: &graphFunctions,
-		GraphIncludeFindings: &graphFindings,
+		GraphIncludeFindings:      &graphFindings,
 		GovulncheckTimeoutSeconds: &govulncheckTimeout,
-		GosecTimeoutSeconds: &gosecTimeout,
+		GosecTimeoutSeconds:       &gosecTimeout,
 		StaticcheckTimeoutSeconds: &staticcheckTimeout,
-		GoScannerMaxFindings: &goScannerMaxFindings,
-		HadolintTimeoutSeconds: &hadolintTimeout,
-		CheckovTimeoutSeconds: &checkovTimeout,
-		IACScannerMaxFindings: &iacScannerMaxFindings,
+		GoScannerMaxFindings:      &goScannerMaxFindings,
+		HadolintTimeoutSeconds:    &hadolintTimeout,
+		CheckovTimeoutSeconds:     &checkovTimeout,
+		IACScannerMaxFindings:     &iacScannerMaxFindings,
 	}
 }
 
@@ -506,17 +506,17 @@ func toDashboardSummaryResponse(s store.DashboardSummary) dashboardSummaryRespon
 	resp := dashboardSummaryResponse{
 		TotalRepositories: s.TotalRepositories, FailedScansCount: s.FailedScansCount,
 		ActionableFailedScansCount: s.ActionableFailedScansCount, StaleReapedScansCount: s.StaleReapedScansCount,
-		UnhealthyReposCount: s.UnhealthyReposCount,
+		UnhealthyReposCount:  s.UnhealthyReposCount,
 		ScannerFailuresCount: s.ScannerFailuresCount, ScannerParseFailedCount: s.ScannerParseFailedCount,
 		ScannerToolsMissingCount: s.ScannerToolsMissingCount,
-		OpenFindingsCount: s.OpenFindingsCount, SuppressedFindingsCount: s.SuppressedFindingsCount,
-		IssuesDetectedInScans: s.IssuesDetectedInScans,
+		OpenFindingsCount:        s.OpenFindingsCount, SuppressedFindingsCount: s.SuppressedFindingsCount,
+		IssuesDetectedInScans:  s.IssuesDetectedInScans,
 		OpenFindingsBySeverity: s.OpenFindingsBySeverity,
-		ScheduledScansCount: s.ScheduledScansCount, LastScheduledScanAt: s.LastScheduledScanAt,
-		RunnerJobsByStatus: s.RunnerJobsByStatus,
-		RemediationCandidates: s.Remediation.Candidates,
+		ScheduledScansCount:    s.ScheduledScansCount, LastScheduledScanAt: s.LastScheduledScanAt,
+		RunnerJobsByStatus:     s.RunnerJobsByStatus,
+		RemediationCandidates:  s.Remediation.Candidates,
 		RemediationHumanReview: s.Remediation.HumanReview,
-		RemediationApproved: s.Remediation.ApprovedWaiting,
+		RemediationApproved:    s.Remediation.ApprovedWaiting,
 		OpenUniqueFindings:     s.Backlog.OpenUnique,
 		NewFindingsLast7Days:   s.Backlog.NewLast7Days,
 		RegressionsLast7Days:   s.Backlog.RegressionsLast7Days,

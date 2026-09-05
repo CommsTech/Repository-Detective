@@ -18,12 +18,12 @@ var blockedHostSuffixes = []string{
 
 // ParsedRepoURL is a validated public HTTPS repository URL.
 type ParsedRepoURL struct {
-	Original     string
-	Normalized   string
-	CloneURL     string
-	Host         string
-	Owner        string
-	Name         string
+	Original      string
+	Normalized    string
+	CloneURL      string
+	Host          string
+	Owner         string
+	Name          string
 	DefaultBranch string
 }
 

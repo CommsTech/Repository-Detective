@@ -3,29 +3,29 @@ package preinstall
 import (
 	"time"
 
-	"git.commsnet.org/commstech/repository-detective/health"
 	"git.commsnet.org/commstech/repository-detective/graph"
+	"git.commsnet.org/commstech/repository-detective/health"
 )
 
 // Config controls third-party pre-install audit behavior.
 type Config struct {
-	Enabled                         bool
-	AllowPrivateNetworks            bool
-	MaxRepoSizeMB                   int
-	MaxFiles                        int
-	TimeoutSeconds                  int
-	MaxFindings                     int
-	AllowGitClone                   bool
-	ReportIncludeProjectLink        bool
-	RepositoryDetectiveProjectURL   string
-	SandboxEnabled                  bool
-	SandboxRetainOnFailure          bool
-	SandboxMaxFileSizeMB            int
-	SandboxAllowSubmodules          bool
-	SandboxNetworkMode              string
-	SandboxReadonlyWorkspace        bool
-	Health                          health.Config
-	Graph                           graph.Config
+	Enabled                       bool
+	AllowPrivateNetworks          bool
+	MaxRepoSizeMB                 int
+	MaxFiles                      int
+	TimeoutSeconds                int
+	MaxFindings                   int
+	AllowGitClone                 bool
+	ReportIncludeProjectLink      bool
+	RepositoryDetectiveProjectURL string
+	SandboxEnabled                bool
+	SandboxRetainOnFailure        bool
+	SandboxMaxFileSizeMB          int
+	SandboxAllowSubmodules        bool
+	SandboxNetworkMode            string
+	SandboxReadonlyWorkspace      bool
+	Health                        health.Config
+	Graph                         graph.Config
 }
 
 // DefaultConfig returns safe Phase 9 defaults.

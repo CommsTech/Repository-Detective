@@ -27,7 +27,7 @@ const (
 )
 
 var (
-	AllowedTasks = []string{"scanners", "health", "graph"}
+	AllowedTasks   = []string{"scanners", "health", "graph"}
 	ForbiddenTasks = []string{
 		"issue_create", "status_update", "pull_request_create",
 		"secret_access", "dependency_install", "repo_script_execution",

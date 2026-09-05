@@ -4,61 +4,61 @@ import "strings"
 
 // ReportingConfig controls how findings are routed to Gitea vs dashboard.
 type ReportingConfig struct {
-	Mode                         string            `mapstructure:"mode"`
-	DefaultIssueMinSeverity      string            `mapstructure:"default_issue_min_severity"`
-	DefaultIssueMinConfidence    string            `mapstructure:"default_issue_min_confidence"`
-	CreateIssuesForLow           bool              `mapstructure:"create_issues_for_low"`
-	CreateIssuesForTests         bool              `mapstructure:"create_issues_for_tests"`
-	CreateIssuesForDocs          bool              `mapstructure:"create_issues_for_docs"`
-	CreateIssuesForExamples      bool              `mapstructure:"create_issues_for_examples"`
-	CreateIssuesForGenerated     bool              `mapstructure:"create_issues_for_generated"`
-	CreateIssuesForVendor        bool              `mapstructure:"create_issues_for_vendor"`
-	IncludeRawScannerOutput      bool              `mapstructure:"include_raw_scanner_output_in_issue"`
-	MaxIssuesPerScan             int               `mapstructure:"max_issues_per_scan"`
-	GroupSimilarFindings         bool              `mapstructure:"group_similar_findings"`
-	AllowAllCategories           bool              `mapstructure:"allow_all_categories"`
-	PreserveAllFindings          bool              `mapstructure:"preserve_all_findings"`
-	DefaultActionBySeverity      map[string]string `mapstructure:"default_action_by_severity"`
-	CategoryOverrides            map[string]string `mapstructure:"category_overrides"`
-	RuleOverrides                map[string]string `mapstructure:"rule_overrides"`
-	SourceTypeOverrides          map[string]string `mapstructure:"source_type_overrides"`
-	ManualReviewCanCreateIssue   bool              `mapstructure:"manual_review_can_create_issue"`
-	SuppressedFindingsAuditable  bool              `mapstructure:"suppressed_findings_are_auditable"`
+	Mode                        string            `mapstructure:"mode"`
+	DefaultIssueMinSeverity     string            `mapstructure:"default_issue_min_severity"`
+	DefaultIssueMinConfidence   string            `mapstructure:"default_issue_min_confidence"`
+	CreateIssuesForLow          bool              `mapstructure:"create_issues_for_low"`
+	CreateIssuesForTests        bool              `mapstructure:"create_issues_for_tests"`
+	CreateIssuesForDocs         bool              `mapstructure:"create_issues_for_docs"`
+	CreateIssuesForExamples     bool              `mapstructure:"create_issues_for_examples"`
+	CreateIssuesForGenerated    bool              `mapstructure:"create_issues_for_generated"`
+	CreateIssuesForVendor       bool              `mapstructure:"create_issues_for_vendor"`
+	IncludeRawScannerOutput     bool              `mapstructure:"include_raw_scanner_output_in_issue"`
+	MaxIssuesPerScan            int               `mapstructure:"max_issues_per_scan"`
+	GroupSimilarFindings        bool              `mapstructure:"group_similar_findings"`
+	AllowAllCategories          bool              `mapstructure:"allow_all_categories"`
+	PreserveAllFindings         bool              `mapstructure:"preserve_all_findings"`
+	DefaultActionBySeverity     map[string]string `mapstructure:"default_action_by_severity"`
+	CategoryOverrides           map[string]string `mapstructure:"category_overrides"`
+	RuleOverrides               map[string]string `mapstructure:"rule_overrides"`
+	SourceTypeOverrides         map[string]string `mapstructure:"source_type_overrides"`
+	ManualReviewCanCreateIssue  bool              `mapstructure:"manual_review_can_create_issue"`
+	SuppressedFindingsAuditable bool              `mapstructure:"suppressed_findings_are_auditable"`
 }
 
 // FalsePositiveReductionConfig tunes confidence and suppression.
 type FalsePositiveReductionConfig struct {
-	Enabled                              bool `mapstructure:"enabled"`
-	SuppressGenerated                    bool `mapstructure:"suppress_generated"`
-	SuppressVendor                       bool `mapstructure:"suppress_vendor"`
-	SuppressMinified                     bool `mapstructure:"suppress_minified"`
-	SuppressTestFixtures                 bool `mapstructure:"suppress_test_fixtures"`
-	SuppressDocsExamples                 bool `mapstructure:"suppress_docs_examples"`
-	RequireFileExists                    bool `mapstructure:"require_file_exists"`
-	RequireLineMatch                     bool `mapstructure:"require_line_match"`
-	LowerConfidenceForDevDependencies    bool `mapstructure:"lower_confidence_for_dev_dependencies"`
-	LowerConfidenceForUnreachableCode      bool `mapstructure:"lower_confidence_for_unreachable_code"`
+	Enabled                                  bool `mapstructure:"enabled"`
+	SuppressGenerated                        bool `mapstructure:"suppress_generated"`
+	SuppressVendor                           bool `mapstructure:"suppress_vendor"`
+	SuppressMinified                         bool `mapstructure:"suppress_minified"`
+	SuppressTestFixtures                     bool `mapstructure:"suppress_test_fixtures"`
+	SuppressDocsExamples                     bool `mapstructure:"suppress_docs_examples"`
+	RequireFileExists                        bool `mapstructure:"require_file_exists"`
+	RequireLineMatch                         bool `mapstructure:"require_line_match"`
+	LowerConfidenceForDevDependencies        bool `mapstructure:"lower_confidence_for_dev_dependencies"`
+	LowerConfidenceForUnreachableCode        bool `mapstructure:"lower_confidence_for_unreachable_code"`
 	RaiseConfidenceWhenMultipleScannersAgree bool `mapstructure:"raise_confidence_when_multiple_scanners_agree"`
 }
 
 // DefaultReportingConfig returns high-signal defaults from the spec.
 func DefaultReportingConfig() ReportingConfig {
 	return ReportingConfig{
-		Mode:                      ModeHighSignal,
-		DefaultIssueMinSeverity:   "high",
-		DefaultIssueMinConfidence: "medium",
-		CreateIssuesForLow:        false,
-		CreateIssuesForTests:      false,
-		CreateIssuesForDocs:       false,
-		CreateIssuesForExamples:   false,
-		CreateIssuesForGenerated:  false,
-		CreateIssuesForVendor:     false,
-		IncludeRawScannerOutput:   false,
-		MaxIssuesPerScan:          25,
-		GroupSimilarFindings:      true,
-		AllowAllCategories:        true,
-		PreserveAllFindings:       true,
-		ManualReviewCanCreateIssue: true,
+		Mode:                        ModeHighSignal,
+		DefaultIssueMinSeverity:     "high",
+		DefaultIssueMinConfidence:   "medium",
+		CreateIssuesForLow:          false,
+		CreateIssuesForTests:        false,
+		CreateIssuesForDocs:         false,
+		CreateIssuesForExamples:     false,
+		CreateIssuesForGenerated:    false,
+		CreateIssuesForVendor:       false,
+		IncludeRawScannerOutput:     false,
+		MaxIssuesPerScan:            25,
+		GroupSimilarFindings:        true,
+		AllowAllCategories:          true,
+		PreserveAllFindings:         true,
+		ManualReviewCanCreateIssue:  true,
 		SuppressedFindingsAuditable: true,
 		DefaultActionBySeverity: map[string]string{
 			"critical": ActionAutoIssue,
@@ -95,16 +95,16 @@ func DefaultReportingConfig() ReportingConfig {
 // DefaultFalsePositiveReductionConfig returns conservative FP reduction defaults.
 func DefaultFalsePositiveReductionConfig() FalsePositiveReductionConfig {
 	return FalsePositiveReductionConfig{
-		Enabled:                              true,
-		SuppressGenerated:                    true,
-		SuppressVendor:                       true,
-		SuppressMinified:                     true,
-		SuppressTestFixtures:                 true,
-		SuppressDocsExamples:                 true,
-		RequireFileExists:                    true,
-		RequireLineMatch:                     false,
-		LowerConfidenceForDevDependencies:    true,
-		LowerConfidenceForUnreachableCode:    true,
+		Enabled:                                  true,
+		SuppressGenerated:                        true,
+		SuppressVendor:                           true,
+		SuppressMinified:                         true,
+		SuppressTestFixtures:                     true,
+		SuppressDocsExamples:                     true,
+		RequireFileExists:                        true,
+		RequireLineMatch:                         false,
+		LowerConfidenceForDevDependencies:        true,
+		LowerConfidenceForUnreachableCode:        true,
 		RaiseConfidenceWhenMultipleScannersAgree: true,
 	}
 }

@@ -11,19 +11,19 @@ func TestToolStatusDisplay(t *testing.T) {
 		version  string
 	}{
 		{
-			tool: ToolStatus{Name: "git", Configured: true, Available: true, Version: "git version 2.45.4", LastChecked: "now"},
+			tool:    ToolStatus{Name: "git", Configured: true, Available: true, Version: "git version 2.45.4", LastChecked: "now"},
 			install: "available", optional: false, impact: "none", version: "git version 2.45.4",
 		},
 		{
-			tool: ToolStatus{Name: "trivy", Configured: true, Available: false, LastChecked: "now"},
+			tool:    ToolStatus{Name: "trivy", Configured: true, Available: false, LastChecked: "now"},
 			install: "missing", optional: false, impact: "degraded", version: "—",
 		},
 		{
-			tool: ToolStatus{Name: "hadolint", Configured: false, Available: false, LastChecked: "now"},
+			tool:    ToolStatus{Name: "hadolint", Configured: false, Available: false, LastChecked: "now"},
 			install: "disabled", optional: true, impact: "inactive", version: "—",
 		},
 		{
-			tool: ToolStatus{Name: "semgrep", Configured: true, Available: true, LastChecked: "now"},
+			tool:    ToolStatus{Name: "semgrep", Configured: true, Available: true, LastChecked: "now"},
 			install: "available", optional: false, impact: "none", version: "unknown",
 		},
 	}

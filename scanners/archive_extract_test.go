@@ -36,8 +36,8 @@ func writeTestZip(t *testing.T, entries map[string]string) string {
 
 func TestExtractZipArchiveBlocksZipSlip(t *testing.T) {
 	zipPath := writeTestZip(t, map[string]string{
-		"repo-main/evil.txt":              "ok",
-		"repo-main/../../outside.txt":     "bad",
+		"repo-main/evil.txt":          "ok",
+		"repo-main/../../outside.txt": "bad",
 	})
 	dest := t.TempDir()
 
@@ -49,9 +49,9 @@ func TestExtractZipArchiveBlocksZipSlip(t *testing.T) {
 
 func TestExtractZipArchiveAcceptsNormalPaths(t *testing.T) {
 	zipPath := writeTestZip(t, map[string]string{
-		"repo-main/go.mod":         "module example.com/test\n\ngo 1.21\n",
-		"repo-main/cmd/main.go":    "package main\n",
-		"repo-main/README.md":      "# hi\n",
+		"repo-main/go.mod":      "module example.com/test\n\ngo 1.21\n",
+		"repo-main/cmd/main.go": "package main\n",
+		"repo-main/README.md":   "# hi\n",
 	})
 	dest := t.TempDir()
 

@@ -19,32 +19,32 @@ const (
 
 // Config holds global remediation planner settings.
 type Config struct {
-	Enabled          bool
-	MinSeverity      string
-	MinConfidence    float64
-	UseAI            bool
-	CommentOnIssue   bool
-	GlobalAIAllowed  bool
+	Enabled         bool
+	MinSeverity     string
+	MinConfidence   float64
+	UseAI           bool
+	CommentOnIssue  bool
+	GlobalAIAllowed bool
 }
 
 // FindingContext is sanitized finding input for planning.
 type FindingContext struct {
-	FindingID    int64
-	RepositoryID int64
-	AuditID      string
-	Fingerprint  string
-	Category     string
-	Severity     string
-	Source       string
-	RuleID       string
-	Title        string
-	Summary      string
-	Confidence   float64
-	FilePath     string
-	Line         int
-	PackageName  string
-	FromAI       bool
-	RepoFullName string
+	FindingID     int64
+	RepositoryID  int64
+	AuditID       string
+	Fingerprint   string
+	Category      string
+	Severity      string
+	Source        string
+	RuleID        string
+	Title         string
+	Summary       string
+	Confidence    float64
+	FilePath      string
+	Line          int
+	PackageName   string
+	FromAI        bool
+	RepoFullName  string
 	ConnectedRepo bool
 }
 

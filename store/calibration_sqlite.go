@@ -116,10 +116,10 @@ func (s *SQLiteStore) RecomputeCalibrationRuleStats(ctx context.Context) (int, e
 	defer rows.Close()
 
 	type statRow struct {
-		source, ruleID, category, lastSeen string
+		source, ruleID, category, lastSeen      string
 		total, issues, sup, fp, verified, still int
-		fpRate, actionableRate               float64
-		recAction                            string
+		fpRate, actionableRate                  float64
+		recAction                               string
 	}
 	var batch []statRow
 	for rows.Next() {
@@ -205,6 +205,7 @@ func (s *SQLiteStore) ListCalibrationRuleStats(ctx context.Context, limit int) (
 	defer rows.Close()
 	return scanCalibrationRuleStats(rows)
 }
+
 // GenerateCalibrationRecommendations creates proposed calibration changes from stats.
 func (s *SQLiteStore) GenerateCalibrationRecommendations(ctx context.Context, minFindings int) (int, error) {
 	if minFindings <= 0 {

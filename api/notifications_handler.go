@@ -44,10 +44,10 @@ func (h *NotificationHandler) NotificationStatus(c *gin.Context) {
 	}
 	cfg := h.manager.Config()
 	c.JSON(http.StatusOK, gin.H{
-		"enabled":         cfg.Enabled,
-		"min_severity":    cfg.MinSeverity,
+		"enabled":          cfg.Enabled,
+		"min_severity":     cfg.MinSeverity,
 		"cooldown_seconds": cfg.CooldownSeconds,
-		"channels":        h.manager.ChannelsConfigured(),
+		"channels":         h.manager.ChannelsConfigured(),
 		"telegram_enabled": cfg.TelegramEnabled,
 		"slack_enabled":    cfg.SlackEnabled,
 		"discord_enabled":  cfg.DiscordEnabled,

@@ -4,15 +4,15 @@ package store
 type FindingNoIssueReason string
 
 const (
-	NoIssueReasonAlreadyMapped   FindingNoIssueReason = "already_mapped"
-	NoIssueReasonReportOnly      FindingNoIssueReason = "report_only"
-	NoIssueReasonFilingDisabled  FindingNoIssueReason = "filing_disabled"
-	NoIssueReasonNoIssuePolicy   FindingNoIssueReason = "no_issue_policy"
-	NoIssueReasonBelowThreshold  FindingNoIssueReason = "below_threshold"
-	NoIssueReasonSuppressed      FindingNoIssueReason = "suppressed"
-	NoIssueReasonDuplicate       FindingNoIssueReason = "duplicate"
-	NoIssueReasonForgeError      FindingNoIssueReason = "forge_error"
-	NoIssueReasonUnknown         FindingNoIssueReason = "unknown"
+	NoIssueReasonAlreadyMapped  FindingNoIssueReason = "already_mapped"
+	NoIssueReasonReportOnly     FindingNoIssueReason = "report_only"
+	NoIssueReasonFilingDisabled FindingNoIssueReason = "filing_disabled"
+	NoIssueReasonNoIssuePolicy  FindingNoIssueReason = "no_issue_policy"
+	NoIssueReasonBelowThreshold FindingNoIssueReason = "below_threshold"
+	NoIssueReasonSuppressed     FindingNoIssueReason = "suppressed"
+	NoIssueReasonDuplicate      FindingNoIssueReason = "duplicate"
+	NoIssueReasonForgeError     FindingNoIssueReason = "forge_error"
+	NoIssueReasonUnknown        FindingNoIssueReason = "unknown"
 )
 
 // ClassifyFindingNoIssueReason returns why a finding lacks a mapped open forge issue.

@@ -30,11 +30,11 @@ func persistScanSBOM(ctx context.Context, scanID string, repositoryID int64, res
 		UpdateScanPipelineState(context.Context, string, string, map[string]any) error
 	}); ok {
 		_ = bs.UpdateScanPipelineState(ctx, scanID, "", map[string]any{
-			"sbom_status":       string(sb.Status),
-			"sbom_format":       sb.Format,
+			"sbom_status":        string(sb.Status),
+			"sbom_format":        sb.Format,
 			"sbom_package_count": sb.PackageCount,
-			"sbom_vuln_count":   sb.VulnCount,
-			"sbom_detail":       sb.Detail,
+			"sbom_vuln_count":    sb.VulnCount,
+			"sbom_detail":        sb.Detail,
 		})
 	}
 }

@@ -8,10 +8,10 @@ import (
 
 func TestBacklogControlBlocksLowSeverity(t *testing.T) {
 	bc := BacklogControlConfig{
-		Enabled:              true,
+		Enabled:               true,
 		AllowNewIssueSeverity: []string{"high", "critical"},
-		AllowMinConfidence:   0.85,
-		UpdateExistingOnly:   true,
+		AllowMinConfidence:    0.85,
+		UpdateExistingOnly:    true,
 	}
 	issue := &ai.CodeIssue{Severity: "medium", Confidence: 0.9}
 	blocked, reason := bc.ShouldBlockNewIssue(issue, 50)
@@ -25,9 +25,9 @@ func TestBacklogControlBlocksLowSeverity(t *testing.T) {
 
 func TestBacklogControlAllowsHighSeverity(t *testing.T) {
 	bc := BacklogControlConfig{
-		Enabled:              true,
+		Enabled:               true,
 		AllowNewIssueSeverity: []string{"high", "critical"},
-		AllowMinConfidence:   0.85,
+		AllowMinConfidence:    0.85,
 	}
 	issue := &ai.CodeIssue{Severity: "high", Confidence: 0.9}
 	blocked, _ := bc.ShouldBlockNewIssue(issue, 200)
@@ -38,9 +38,9 @@ func TestBacklogControlAllowsHighSeverity(t *testing.T) {
 
 func TestBacklogControlBlocksLowConfidenceHigh(t *testing.T) {
 	bc := BacklogControlConfig{
-		Enabled:              true,
+		Enabled:               true,
 		AllowNewIssueSeverity: []string{"high", "critical"},
-		AllowMinConfidence:   0.85,
+		AllowMinConfidence:    0.85,
 	}
 	issue := &ai.CodeIssue{Severity: "high", Confidence: 0.7}
 	blocked, _ := bc.ShouldBlockNewIssue(issue, 50)
@@ -51,10 +51,10 @@ func TestBacklogControlBlocksLowConfidenceHigh(t *testing.T) {
 
 func TestBacklogControlOpenCap(t *testing.T) {
 	bc := BacklogControlConfig{
-		Enabled:              true,
-		MaxOpenIssues:        100,
+		Enabled:               true,
+		MaxOpenIssues:         100,
 		AllowNewIssueSeverity: []string{"high", "critical"},
-		AllowMinConfidence:   0.85,
+		AllowMinConfidence:    0.85,
 	}
 	issue := &ai.CodeIssue{Severity: "medium", Confidence: 0.95}
 	blocked, _ := bc.ShouldBlockNewIssue(issue, 150)

@@ -10,25 +10,25 @@ import (
 
 // CAHConfig controls CAH-gated candidate selection for AI recommendations.
 type CAHConfig struct {
-	Enabled              bool    `mapstructure:"ai_recommendations_cah_enabled"`
-	MaxCandidates        int     `mapstructure:"ai_recommendations_cah_max_candidates"`
-	MinUncertaintyScore  float64 `mapstructure:"ai_recommendations_cah_min_uncertainty_score"`
-	TokenBudgetPerScan   int     `mapstructure:"ai_recommendations_token_budget_per_scan"`
-	FailClosedOnRedaction bool   `mapstructure:"ai_recommendations_fail_closed_on_redaction_error"`
-	RequireStrictJSON    bool    `mapstructure:"ai_recommendations_require_strict_json"`
-	UseCAHHarness        bool    `mapstructure:"ai_recommendations_use_cah_harness"`
+	Enabled               bool    `mapstructure:"ai_recommendations_cah_enabled"`
+	MaxCandidates         int     `mapstructure:"ai_recommendations_cah_max_candidates"`
+	MinUncertaintyScore   float64 `mapstructure:"ai_recommendations_cah_min_uncertainty_score"`
+	TokenBudgetPerScan    int     `mapstructure:"ai_recommendations_token_budget_per_scan"`
+	FailClosedOnRedaction bool    `mapstructure:"ai_recommendations_fail_closed_on_redaction_error"`
+	RequireStrictJSON     bool    `mapstructure:"ai_recommendations_require_strict_json"`
+	UseCAHHarness         bool    `mapstructure:"ai_recommendations_use_cah_harness"`
 }
 
 // DefaultCAHConfig returns safe CAH defaults.
 func DefaultCAHConfig() CAHConfig {
 	return CAHConfig{
-		Enabled:              true,
-		MaxCandidates:        10,
-		MinUncertaintyScore:  0.45,
-		TokenBudgetPerScan:   2000,
+		Enabled:               true,
+		MaxCandidates:         10,
+		MinUncertaintyScore:   0.45,
+		TokenBudgetPerScan:    2000,
 		FailClosedOnRedaction: true,
-		RequireStrictJSON:    true,
-		UseCAHHarness:        true,
+		RequireStrictJSON:     true,
+		UseCAHHarness:         true,
 	}
 }
 

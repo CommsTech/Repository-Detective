@@ -67,10 +67,10 @@ func buildConfigureSections(
 		},
 		{
 			ID: "runner-delegation", Title: "Runner delegation",
-			Status: runnerDelegationConfigureStatus(f.RunnerDelegationEnabled, platform),
+			Status:      runnerDelegationConfigureStatus(f.RunnerDelegationEnabled, platform),
 			StatusClass: runnerDelegationConfigureClass(f.RunnerDelegationEnabled, platform),
-			Summary: "Delegate heavy scans to authenticated Repository Detective native runners (optional Gitea Actions for repo-native tests).",
-			SafetyNote: "Disabled by default. Native runners use HMAC auth; Gitea act_runner registration tokens belong in secrets only — never in git.",
+			Summary:     "Delegate heavy scans to authenticated Repository Detective native runners (optional Gitea Actions for repo-native tests).",
+			SafetyNote:  "Disabled by default. Native runners use HMAC auth; Gitea act_runner registration tokens belong in secrets only — never in git.",
 			BetaDefault: "disabled", RestartRequired: true, DocPath: "docs/RUNNER_DELEGATION.md",
 			Settings: []ConfigureSetting{
 				boolSetting("runner_delegation_enabled", f.RunnerDelegationEnabled),
@@ -84,9 +84,9 @@ func buildConfigureSections(
 		},
 		{
 			ID: "notifications", Title: "Notifications",
-			Status: notificationsConfigureStatus(f.NotificationsEnabled, notifyCfg),
+			Status:      notificationsConfigureStatus(f.NotificationsEnabled, notifyCfg),
 			StatusClass: notificationsConfigureClass(f.NotificationsEnabled, notifyCfg),
-			Summary: "Webhook, Slack, Discord, or Telegram alerts on scan events.",
+			Summary:     "Webhook, Slack, Discord, or Telegram alerts on scan events.",
 			BetaDefault: "disabled until channel configured", RestartRequired: false,
 			DocPath: "docs/CONFIGURATION.md",
 			Settings: []ConfigureSetting{
@@ -99,10 +99,10 @@ func buildConfigureSections(
 		},
 		{
 			ID: "preinstall-audit", Title: "Pre-install audit",
-			Status: preinstallConfigureStatus(f.PreinstallAuditEnabled, platform),
+			Status:      preinstallConfigureStatus(f.PreinstallAuditEnabled, platform),
 			StatusClass: preinstallConfigureClass(f.PreinstallAuditEnabled, platform),
-			Summary: "Audit third-party repositories before install — marketing/on-ramp flow. Report-only; never files issues or PRs.",
-			SafetyNote: "HTTPS public repos only; private IPs blocked unless preinstall_allow_private_networks=true. Disclosure drafts require operator approval before external submission.",
+			Summary:     "Audit third-party repositories before install — marketing/on-ramp flow. Report-only; never files issues or PRs.",
+			SafetyNote:  "HTTPS public repos only; private IPs blocked unless preinstall_allow_private_networks=true. Disclosure drafts require operator approval before external submission.",
 			BetaDefault: "enabled (report-only)", RestartRequired: false, DocPath: "docs/PREINSTALL_AUDIT.md",
 			WorkflowURL: basePath + "/preinstall", WorkflowLabel: "Open pre-install audit workflow",
 			Settings: []ConfigureSetting{
@@ -123,10 +123,10 @@ func buildConfigureSections(
 		},
 		{
 			ID: "remediation-pr", Title: "Remediation PR",
-			Status: remediationPRConfigureStatus(f.RemediationPREnabled, f.RemediationPlannerEnabled, platform),
+			Status:      remediationPRConfigureStatus(f.RemediationPREnabled, f.RemediationPlannerEnabled, platform),
 			StatusClass: remediationPRConfigureClass(f.RemediationPREnabled, f.RemediationPlannerEnabled, platform),
-			Summary: "Create gated pull requests from approved remediation plans.",
-			SafetyNote: "Beta recommendation: keep disabled until planner output is reviewed. Requires operator approval and passing tests when enabled.",
+			Summary:     "Create gated pull requests from approved remediation plans.",
+			SafetyNote:  "Beta recommendation: keep disabled until planner output is reviewed. Requires operator approval and passing tests when enabled.",
 			BetaDefault: "disabled", RestartRequired: false, DocPath: "docs/REMEDIATION_PR.md",
 			Settings: []ConfigureSetting{
 				boolSetting("remediation_pr_enabled", f.RemediationPREnabled),
@@ -159,10 +159,10 @@ func buildConfigureSections(
 		},
 		{
 			ID: "ai-recommendations", Title: "AI recommendations",
-			Status: openclawConfigureStatus(platform),
+			Status:      openclawConfigureStatus(platform),
 			StatusClass: openclawConfigureClass(platform),
-			Summary: "Optional second-opinion advisory recommendations on redacted finding summaries — provider-neutral (OpenClaw, OpenAI-compatible, Ollama, custom HTTP JSON).",
-			SafetyNote: "Disabled by default. CAH harness selects uncertain findings only. No raw secrets, full source, or PHI/PII. Deterministic scanners remain source of truth.",
+			Summary:     "Optional second-opinion advisory recommendations on redacted finding summaries — provider-neutral (OpenClaw, OpenAI-compatible, Ollama, custom HTTP JSON).",
+			SafetyNote:  "Disabled by default. CAH harness selects uncertain findings only. No raw secrets, full source, or PHI/PII. Deterministic scanners remain source of truth.",
 			BetaDefault: "disabled", RestartRequired: false, DocPath: "docs/AI_RECOMMENDATIONS.md",
 			Settings: []ConfigureSetting{
 				boolSetting("ai_recommendations_enabled", platform.OpenClawAIReviewEnabled),
@@ -201,8 +201,8 @@ func buildConfigureSections(
 		{
 			ID: "secret-scanning", Title: "Secret scanning",
 			Status: statusLabel(global.EnableGitleaks), StatusClass: statusClass(global.EnableGitleaks),
-			Summary: "Gitleaks current-tree scan plus optional Git-history scan (labeled gitleaks-history; slower).",
-			SafetyNote: "History scanning clones the repository and may take several minutes on large repos. Raw secrets are never stored.",
+			Summary:     "Gitleaks current-tree scan plus optional Git-history scan (labeled gitleaks-history; slower).",
+			SafetyNote:  "History scanning clones the repository and may take several minutes on large repos. Raw secrets are never stored.",
 			BetaDefault: "tree + history on deep scans", RestartRequired: true,
 			DocPath: "docs/guides/SECRET_SCANNING_AND_GIT_HISTORY.md",
 			Settings: []ConfigureSetting{
@@ -215,12 +215,12 @@ func buildConfigureSections(
 		},
 		{
 			ID: "issue-filing", Title: "Issue filing policy",
-			Status: issueFilingConfigureStatus(global),
+			Status:      issueFilingConfigureStatus(global),
 			StatusClass: issueFilingConfigureClass(global),
-			Summary: "Connected repo scans file or update Gitea issues when policy allows. Dry run is an explicit per-scan choice.",
-			SafetyNote: "Private beta package defaults to report-only (auto_create_issues: false). Production/homelab uses auto_create_issues: true.",
+			Summary:     "Connected repo scans file or update Gitea issues when policy allows. Dry run is an explicit per-scan choice.",
+			SafetyNote:  "Private beta package defaults to report-only (auto_create_issues: false). Production/homelab uses auto_create_issues: true.",
 			BetaDefault: "report-only until auto_create_issues enabled",
-			DocPath: "docs/SCAN_POLICY.md",
+			DocPath:     "docs/SCAN_POLICY.md",
 			Settings: []ConfigureSetting{
 				{Key: "auto_create_issues", DisplayValue: issuePolicyDisplay(global), Source: "config", Hint: "Maps to global issue_policy all/off"},
 				{Key: "scan_policy_mode", DisplayValue: store.DeploymentScanMode(global), Source: "derived"},
@@ -231,9 +231,9 @@ func buildConfigureSections(
 		{
 			ID: "report-only-dry-run", Title: "Report-only dry run",
 			Status: "available", StatusClass: "completed",
-			Summary: "Explicit report_only_dry_run skips issue filing for one scan — findings still persist.",
+			Summary:    "Explicit report_only_dry_run skips issue filing for one scan — findings still persist.",
 			SafetyNote: "Required for calibration dry-runs; do not enable bulk issue filing without approval.",
-			DocPath: "docs/dogfood-reports/non-product-dry-run-next-gate.md",
+			DocPath:    "docs/dogfood-reports/non-product-dry-run-next-gate.md",
 			Settings: []ConfigureSetting{
 				{Key: "report_only_dry_run", DisplayValue: "API request field", Source: "api", Hint: "POST /api/v1/analyze with report_only_dry_run: true"},
 			},

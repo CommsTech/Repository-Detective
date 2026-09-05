@@ -24,10 +24,10 @@ func TestScannerForSourceHealthFamily(t *testing.T) {
 
 func TestScannerForSourceStaticAndExternal(t *testing.T) {
 	cases := map[string]string{
-		"static":      "static",
-		"hadolint":    "hadolint",
-		"checkov":     "checkov",
-		"semgrep":     "semgrep",
+		"static":        "static",
+		"hadolint":      "hadolint",
+		"checkov":       "checkov",
+		"semgrep":       "semgrep",
 		"golangci-lint": "staticcheck",
 	}
 	for source, want := range cases {

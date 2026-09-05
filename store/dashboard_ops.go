@@ -24,33 +24,33 @@ type FindingBacklogSummary struct {
 
 // ScannerPlatformRollup summarizes one scanner's runtime readiness (not a finding).
 type ScannerPlatformRollup struct {
-	Name            string
-	Configured      bool
-	Available       bool
-	Optional        bool
-	Required        bool
-	InstallState    string
-	StatusState     string
-	Action          string
-	Version         string
-	VersionDisplay  string
-	CoverageImpact  string
-	StatusLabel     string
-	AffectedScans   int
-	AffectedRepos   int
-	FailureScans    int
-	RecommendedFix  string
+	Name           string
+	Configured     bool
+	Available      bool
+	Optional       bool
+	Required       bool
+	InstallState   string
+	StatusState    string
+	Action         string
+	Version        string
+	VersionDisplay string
+	CoverageImpact string
+	StatusLabel    string
+	AffectedScans  int
+	AffectedRepos  int
+	FailureScans   int
+	RecommendedFix string
 }
 
 // ScannerPlatformSummary groups platform warnings separately from repo findings.
 type ScannerPlatformSummary struct {
-	UniqueMissingTools          int
-	UniqueFailedScanners        int
-	ConfiguredMissingRuntime    int
-	DegradedCoverage            bool
-	RawMissingEvents            int
-	RawFailureEvents            int
-	Rollups                     []ScannerPlatformRollup
+	UniqueMissingTools       int
+	UniqueFailedScanners     int
+	ConfiguredMissingRuntime int
+	DegradedCoverage         bool
+	RawMissingEvents         int
+	RawFailureEvents         int
+	Rollups                  []ScannerPlatformRollup
 }
 
 // ScanFailureBucket groups failed repository scans by coarse reason.
@@ -84,7 +84,7 @@ type ScanHealthSummary struct {
 	FailedScans           int
 	ActionableFailedScans int
 	StaleReapedScans      int
-	UnhealthyRepos       int
+	UnhealthyRepos        int
 	ActiveScans           int
 	ParseFailedEvents     int
 	ParseFailedScanners   int
@@ -270,10 +270,10 @@ func MergeScannerRollups(dbRollups map[string]scannerDBRollup, tools []operator.
 }
 
 type scannerDBRollup struct {
-	MissingScans  int
-	MissingRepos  int
-	FailureScans  int
-	FailureRepos  int
+	MissingScans int
+	MissingRepos int
+	FailureScans int
+	FailureRepos int
 }
 
 func scannerStatusLabel(r ScannerPlatformRollup, tool operator.ToolStatus) (status, fix string) {

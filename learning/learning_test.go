@@ -55,7 +55,6 @@ func TestValidateCalibrationAccept(t *testing.T) {
 	}
 }
 
-
 func TestReachabilityTestPathDowngrade(t *testing.T) {
 	in := learning.ClassifyPath("pkg/foo_test.go")
 	in.FromEntrypoint = false

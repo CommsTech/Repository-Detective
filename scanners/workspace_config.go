@@ -11,20 +11,20 @@ const (
 
 // WorkspaceConfig controls how scanner workspaces are built.
 type WorkspaceConfig struct {
-	Mode                     string
-	MaxSizeMB                int
-	MaxFiles                 int
-	ArchiveTimeoutSeconds    int
-	DefaultAnalysisTimeout   int
+	Mode                   string
+	MaxSizeMB              int
+	MaxFiles               int
+	ArchiveTimeoutSeconds  int
+	DefaultAnalysisTimeout int
 }
 
 // DefaultWorkspaceConfig returns backward-compatible defaults (API mode).
 func DefaultWorkspaceConfig() WorkspaceConfig {
 	return WorkspaceConfig{
-		Mode:                  WorkspaceModeAPI,
-		MaxSizeMB:             500,
-		MaxFiles:              5000,
-		ArchiveTimeoutSeconds: 0,
+		Mode:                   WorkspaceModeAPI,
+		MaxSizeMB:              500,
+		MaxFiles:               5000,
+		ArchiveTimeoutSeconds:  0,
 		DefaultAnalysisTimeout: 300,
 	}
 }

@@ -19,14 +19,14 @@ var (
 )
 
 var lockfilePairs = map[string]string{
-	"package.json":    "package-lock.json",
+	"package.json":     "package-lock.json",
 	"requirements.txt": "requirements.txt", // pip without lock is flagged via requirements only
-	"pyproject.toml":  "poetry.lock",
-	"Pipfile":         "Pipfile.lock",
-	"Cargo.toml":      "Cargo.lock",
-	"Gemfile":         "Gemfile.lock",
-	"composer.json":   "composer.lock",
-	"go.mod":          "go.sum",
+	"pyproject.toml":   "poetry.lock",
+	"Pipfile":          "Pipfile.lock",
+	"Cargo.toml":       "Cargo.lock",
+	"Gemfile":          "Gemfile.lock",
+	"composer.json":    "composer.lock",
+	"go.mod":           "go.sum",
 }
 
 // RunStaticChecks performs deterministic pre-install supply-chain checks.

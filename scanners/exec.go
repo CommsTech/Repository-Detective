@@ -14,9 +14,9 @@ import (
 
 // commandExitError wraps subprocess failures with timeout and output context.
 type commandExitError struct {
-	err     error
+	err      error
 	timedOut bool
-	output  []byte
+	output   []byte
 }
 
 func (e *commandExitError) Error() string {

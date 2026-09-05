@@ -4,9 +4,9 @@ package openclaw
 type ScanType string
 
 const (
-	ScanTypeRepo        ScanType = "repo"
-	ScanTypePreinstall  ScanType = "preinstall"
-	ScanTypeContainer   ScanType = "container"
+	ScanTypeRepo       ScanType = "repo"
+	ScanTypePreinstall ScanType = "preinstall"
+	ScanTypeContainer  ScanType = "container"
 )
 
 // ReviewPacket is the redacted payload sent to OpenClaw.
@@ -22,25 +22,25 @@ type ReviewPacket struct {
 
 // ReviewPolicy describes filing constraints visible to the reviewer.
 type ReviewPolicy struct {
-	IssueFiling    string `json:"issue_filing"`
-	RemediationPR  string `json:"remediation_pr"`
-	AdvisoryOnly   bool   `json:"advisory_only"`
+	IssueFiling   string `json:"issue_filing"`
+	RemediationPR string `json:"remediation_pr"`
+	AdvisoryOnly  bool   `json:"advisory_only"`
 }
 
 // ReviewSummary is high-level scan context without raw source.
 type ReviewSummary struct {
-	Languages        []string `json:"languages"`
-	ScannerCoverage  []string `json:"scanner_coverage"`
-	GraphState       string   `json:"graph_state"`
-	SBOMState        string   `json:"sbom_state"`
-	ContainerScanState string `json:"container_scan_state"`
+	Languages          []string `json:"languages"`
+	ScannerCoverage    []string `json:"scanner_coverage"`
+	GraphState         string   `json:"graph_state"`
+	SBOMState          string   `json:"sbom_state"`
+	ContainerScanState string   `json:"container_scan_state"`
 }
 
 // FindingHistory is prior lifecycle hints for a finding.
 type FindingHistory struct {
-	SeenBefore              bool `json:"seen_before"`
-	ClosedAsFalsePositive   bool `json:"closed_as_false_positive"`
-	ClosedAsFixed           bool `json:"closed_as_fixed"`
+	SeenBefore            bool `json:"seen_before"`
+	ClosedAsFalsePositive bool `json:"closed_as_false_positive"`
+	ClosedAsFixed         bool `json:"closed_as_fixed"`
 }
 
 // FindingInput is one redacted finding for advisory review.
@@ -60,34 +60,34 @@ type FindingInput struct {
 
 // ReviewResponse is strict JSON expected from OpenClaw.
 type ReviewResponse struct {
-	ReviewID           string             `json:"review_id"`
-	OverallAssessment  string             `json:"overall_assessment"`
-	Recommendations    []Recommendation   `json:"recommendations"`
+	ReviewID          string           `json:"review_id"`
+	OverallAssessment string           `json:"overall_assessment"`
+	Recommendations   []Recommendation `json:"recommendations"`
 }
 
 // Recommendation is one advisory suggestion (never auto-applied).
 type Recommendation struct {
-	Fingerprint          string   `json:"fingerprint"`
-	Classification       string   `json:"classification"`
-	SuggestedAction      string   `json:"suggested_action"`
-	SuggestedSeverity    string   `json:"suggested_severity"`
-	SuggestedConfidence  string   `json:"suggested_confidence"`
-	Reason               string   `json:"reason"`
-	EvidenceGaps         []string `json:"evidence_gaps"`
+	Fingerprint         string   `json:"fingerprint"`
+	Classification      string   `json:"classification"`
+	SuggestedAction     string   `json:"suggested_action"`
+	SuggestedSeverity   string   `json:"suggested_severity"`
+	SuggestedConfidence string   `json:"suggested_confidence"`
+	Reason              string   `json:"reason"`
+	EvidenceGaps        []string `json:"evidence_gaps"`
 }
 
 // ReviewResult is the outcome of a review invocation.
 type ReviewResult struct {
-	ReviewID              string
-	Status                string
-	Model                 string
-	FindingsSent          int
-	RedactionCount        int
-	RecommendationsCount  int
-	OverallAssessment     string
-	Response              *ReviewResponse
-	Error                 string
-	PromptStored          bool
+	ReviewID             string
+	Status               string
+	Model                string
+	FindingsSent         int
+	RedactionCount       int
+	RecommendationsCount int
+	OverallAssessment    string
+	Response             *ReviewResponse
+	Error                string
+	PromptStored         bool
 }
 
 // Classification values from OpenClaw output.

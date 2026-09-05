@@ -50,7 +50,7 @@ func PrepareWorkspace(ctx context.Context, cloneURL, token, baseRef string) (Wor
 	}
 
 	if baseRef != "" && baseRef != "HEAD" {
-		if out, err := runGit(ctx, []string{"-C", dest, "fetch", "origin", baseRef+":"+baseRef, "--depth=1"}); err != nil {
+		if out, err := runGit(ctx, []string{"-C", dest, "fetch", "origin", baseRef + ":" + baseRef, "--depth=1"}); err != nil {
 			_ = out
 			if out2, err2 := runGit(ctx, []string{"-C", dest, "checkout", baseRef}); err2 != nil {
 				cleanup()
@@ -125,7 +125,7 @@ func PushBranch(ctx context.Context, cloneURL, token, workspaceDir, branchName s
 	if err != nil {
 		return err
 	}
-	if out, err := runGit(ctx, []string{"-C", workspaceDir, "push", authURL, branchName+":"+branchName}); err != nil {
+	if out, err := runGit(ctx, []string{"-C", workspaceDir, "push", authURL, branchName + ":" + branchName}); err != nil {
 		return fmt.Errorf("git push: %w", sanitizeGitError(string(out), err))
 	}
 	return nil

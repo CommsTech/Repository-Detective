@@ -172,7 +172,7 @@ func (d *Dispatcher) CreateContainerImageScanJob(ctx context.Context, repo store
 	job := store.RunnerJob{
 		JobID: jobID, RepositoryID: repo.ID, ScanID: scanID,
 		JobType: store.RunnerJobTypeContainerImageScan,
-		Status: store.RunnerJobStatusQueued, RunnerMode: selectRunnerMode(d.cfg, JobTypeContainerImageScan),
+		Status:  store.RunnerJobStatusQueued, RunnerMode: selectRunnerMode(d.cfg, JobTypeContainerImageScan),
 		Ref: repo.DefaultBranch, PolicySnapshotJSON: policyJSON, JobSpecJSON: specJSON,
 		ResultSummaryJSON: json.RawMessage(`{}`), CreatedAt: now, ExpiresAt: &expires,
 	}

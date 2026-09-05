@@ -133,7 +133,7 @@ func analyzeGoFunctions(path string, lines []string, cfg Config) []Finding {
 				"code_quality", "maintainability", "HEALTH-MANY-PARAMS", "low", 0.85,
 				"Function has many parameters",
 				"High parameter count reduces readability; consider a struct or options object.",
-				path, i + 1, sampleLine(trimmed),
+				path, i+1, sampleLine(trimmed),
 			))
 		}
 		bodyStart := i + 1

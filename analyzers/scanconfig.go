@@ -3,8 +3,8 @@ package analyzers
 import (
 	"context"
 
-	"git.commsnet.org/commstech/repository-detective/health"
 	"git.commsnet.org/commstech/repository-detective/graph"
+	"git.commsnet.org/commstech/repository-detective/health"
 	"git.commsnet.org/commstech/repository-detective/scanners"
 )
 

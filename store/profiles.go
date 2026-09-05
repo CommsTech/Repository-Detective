@@ -34,12 +34,12 @@ var AllowedScanProfiles = []string{
 
 // ScanProfileOption is one labeled profile choice for UI/API docs.
 type ScanProfileOption struct {
-	ID          string `json:"id"`
-	Label       string `json:"label"`
-	Summary     string `json:"summary"`
-	Issues      string `json:"issues"`
-	AI          string `json:"ai"`
-	Speed       string `json:"speed"`
+	ID      string `json:"id"`
+	Label   string `json:"label"`
+	Summary string `json:"summary"`
+	Issues  string `json:"issues"`
+	AI      string `json:"ai"`
+	Speed   string `json:"speed"`
 }
 
 // PrimaryScanProfileOptions is the ordered operator picker.

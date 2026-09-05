@@ -15,7 +15,7 @@ const (
 	LifecycleNotReproduced        = "repository-detective/not-reproduced"
 	LifecycleFixed                = "repository-detective/fixed"
 	LifecycleFalsePositive        = "repository-detective/false-positive"
-	LifecycleSuppressed             = "repository-detective/suppressed"
+	LifecycleSuppressed           = "repository-detective/suppressed"
 	LifecycleNeedsHumanReview     = "repository-detective/needs-human-review"
 	LifecycleRemediationCandidate = "repository-detective/remediation-candidate"
 	LifecycleFixPROpened          = "repository-detective/fix-pr-opened"

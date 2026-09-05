@@ -191,26 +191,26 @@ func DiscoveryFindings(refs []ImageReference) []ScanFinding {
 	for _, ref := range refs {
 		out = append(out, ScanFinding{
 			RuleID: "CONTAINER-IMAGE-REFERENCE", Severity: "info", Confidence: 0.9,
-			Title: "Container image reference discovered",
+			Title:       "Container image reference discovered",
 			Description: "Image " + ref.Image + " referenced in " + ref.FilePath,
 		})
 		if ref.MutableTag {
 			out = append(out, ScanFinding{
 				RuleID: "CONTAINER-MUTABLE-TAG", Severity: "low", Confidence: 0.85,
-				Title: "Mutable container image tag",
+				Title:       "Mutable container image tag",
 				Description: "Image uses mutable tag; prefer digest pinning for production.",
 			})
 		}
 		if ref.Digest == "" {
 			out = append(out, ScanFinding{
 				RuleID: "CONTAINER-NO-DIGEST", Severity: "info", Confidence: 0.8,
-				Title: "Container image not digest-pinned",
+				Title:       "Container image not digest-pinned",
 				Description: "No digest pin detected in manifest reference.",
 			})
 		}
 		out = append(out, ScanFinding{
 			RuleID: "CONTAINER-UNSCANNED-IMAGE", Severity: "info", Confidence: 0.75,
-			Title: "Container image not yet scanned",
+			Title:       "Container image not yet scanned",
 			Description: "Run a container image scan via runner to assess vulnerabilities.",
 		})
 	}

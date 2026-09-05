@@ -28,31 +28,31 @@ const settingsNotice = "Per-repo settings are enforced on scans (Phase 8). Runne
 
 // Handler serves server-rendered operator UI pages.
 type Handler struct {
-	store                store.QueryStore
-	global               store.GlobalSettingsSnapshot
-	notifyGlobal         notify.Config
-	basePath             string
-	logger               *logrus.Logger
-	tmpl                 *template.Template
-	preinstallRunner     *preinstall.Runner
-	preinstallEnabled    bool
-	apiKeySecret         string
-	auth                 AuthConfig
-	remediationEnabled   bool
-	remediation          RemediationBackend
-	remediationPREnabled bool
-	remediationPR        RemediationPRBackend
-	closureEnabled       bool
-	closure              ClosureBackend
-	suppressionEnabled   bool
-	suppression          SuppressionBackend
-	calibrationEnabled   bool
-	calibration          CalibrationBackend
-	reconcileEnabled     bool
-	reconciler           IssueReconciler
-	scanTrigger          ScanTrigger
-	readinessFn          func() operator.Readiness
-	platform             PlatformContext
+	store                 store.QueryStore
+	global                store.GlobalSettingsSnapshot
+	notifyGlobal          notify.Config
+	basePath              string
+	logger                *logrus.Logger
+	tmpl                  *template.Template
+	preinstallRunner      *preinstall.Runner
+	preinstallEnabled     bool
+	apiKeySecret          string
+	auth                  AuthConfig
+	remediationEnabled    bool
+	remediation           RemediationBackend
+	remediationPREnabled  bool
+	remediationPR         RemediationPRBackend
+	closureEnabled        bool
+	closure               ClosureBackend
+	suppressionEnabled    bool
+	suppression           SuppressionBackend
+	calibrationEnabled    bool
+	calibration           CalibrationBackend
+	reconcileEnabled      bool
+	reconciler            IssueReconciler
+	scanTrigger           ScanTrigger
+	readinessFn           func() operator.Readiness
+	platform              PlatformContext
 	applyPlatformSettings PlatformSettingsApplier
 }
 
@@ -754,10 +754,10 @@ func (h *Handler) ContainerImages(c *gin.Context) {
 	scans, _ := h.store.ListContainerImageScans(c.Request.Context(), id, 20)
 	h.renderNav(c, "container_images.html", repo.FullName+" — Container Images", "repos", map[string]any{
 		"RepoID": id, "Repo": repo, "References": refs, "Scans": scans,
-		"Enabled":          h.platform.ContainerScanningEnabled,
-		"RequireRunner":    h.platform.ContainerScanRequireRunner,
-		"AllowCoreSocket":  h.platform.ContainerScanAllowCoreSocket,
-		"CreateIssues":     h.platform.ContainerScanCreateIssues,
+		"Enabled":         h.platform.ContainerScanningEnabled,
+		"RequireRunner":   h.platform.ContainerScanRequireRunner,
+		"AllowCoreSocket": h.platform.ContainerScanAllowCoreSocket,
+		"CreateIssues":    h.platform.ContainerScanCreateIssues,
 	})
 }
 
@@ -967,17 +967,17 @@ func (h *Handler) ScanDetail(c *gin.Context) {
 		aiRecs, _ = h.store.ListAIAdvisoryRecommendations(c.Request.Context(), aiReview.ReviewID)
 	}
 	h.renderNav(c, "scan_detail.html", "Scan "+scanID[:8], "scans", map[string]any{
-		"Scan":           scan,
-		"ScannerResults": results,
-		"Repo":           repo,
-		"RepoName":       repoName,
-		"RunnerJob":      runnerJob,
-		"Summary":        summaryView,
-		"Reconciliation": recon,
-		"ReconcileEnabled": h.reconcileEnabled,
-		"ScanTriggerEnabled": h.ScanTriggerEnabled() && repo.ID > 0,
-		"AIReview":       aiReview,
-		"AIRecommendations": aiRecs,
+		"Scan":                     scan,
+		"ScannerResults":           results,
+		"Repo":                     repo,
+		"RepoName":                 repoName,
+		"RunnerJob":                runnerJob,
+		"Summary":                  summaryView,
+		"Reconciliation":           recon,
+		"ReconcileEnabled":         h.reconcileEnabled,
+		"ScanTriggerEnabled":       h.ScanTriggerEnabled() && repo.ID > 0,
+		"AIReview":                 aiReview,
+		"AIRecommendations":        aiRecs,
 		"AIRecommendationsEnabled": h.platform.OpenClawAIReviewEnabled,
 		"OpenClawEnabled":          h.platform.OpenClawAIReviewEnabled,
 		"BetaFeedbackURL":          BuildScanBetaFeedbackLink(scanID, repoName),

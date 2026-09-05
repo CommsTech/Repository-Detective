@@ -7,14 +7,14 @@ import (
 )
 
 var (
-	ignoredError   = regexp.MustCompile(`_\s*=\s*(\w+\([^)]*\)|[\w.]+\([^)]*\))`)
-	panicCall      = regexp.MustCompile(`\bpanic\s*\(`)
-	logFatal       = regexp.MustCompile(`\b(log\.Fatal|log\.Fatalf|os\.Exit)\s*\(`)
-	httpNoTimeout  = regexp.MustCompile(`\bhttp\.(Get|Post|Head|Do)\s*\(`)
-	defaultClient  = regexp.MustCompile(`\bhttp\.DefaultClient\b`)
-	emptyCatchJS   = regexp.MustCompile(`catch\s*\([^)]*\)\s*\{\s*\}`)
-	emptyCatchPy   = regexp.MustCompile(`(?i)except\s*:\s*pass`)
-	retryNoSleep   = regexp.MustCompile(`(?i)for\s+.*retry|while\s+.*retry`)
+	ignoredError  = regexp.MustCompile(`_\s*=\s*(\w+\([^)]*\)|[\w.]+\([^)]*\))`)
+	panicCall     = regexp.MustCompile(`\bpanic\s*\(`)
+	logFatal      = regexp.MustCompile(`\b(log\.Fatal|log\.Fatalf|os\.Exit)\s*\(`)
+	httpNoTimeout = regexp.MustCompile(`\bhttp\.(Get|Post|Head|Do)\s*\(`)
+	defaultClient = regexp.MustCompile(`\bhttp\.DefaultClient\b`)
+	emptyCatchJS  = regexp.MustCompile(`catch\s*\([^)]*\)\s*\{\s*\}`)
+	emptyCatchPy  = regexp.MustCompile(`(?i)except\s*:\s*pass`)
+	retryNoSleep  = regexp.MustCompile(`(?i)for\s+.*retry|while\s+.*retry`)
 )
 
 func runReliabilityChecks(files []FileInput) []Finding {

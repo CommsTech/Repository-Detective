@@ -29,10 +29,10 @@ type RemediationPRService interface {
 
 // RemediationHandler serves remediation planning routes.
 type RemediationHandler struct {
-	store      store.QueryStore
-	service    RemediationService
-	prService  RemediationPRService
-	prEnabled  bool
+	store     store.QueryStore
+	service   RemediationService
+	prService RemediationPRService
+	prEnabled bool
 }
 
 // NewRemediationHandler creates a remediation API handler.
@@ -224,31 +224,31 @@ type eligibilityResponse struct {
 }
 
 type remediationPlanResponse struct {
-	PlanID              string   `json:"plan_id"`
-	FindingID           int64    `json:"finding_id,omitempty"`
-	RepositoryID        int64    `json:"repository_id,omitempty"`
-	AuditID             string   `json:"audit_id,omitempty"`
-	Fingerprint         string   `json:"fingerprint"`
-	Category            string   `json:"category"`
-	Severity            string   `json:"severity"`
-	Source              string   `json:"source"`
-	RuleID              string   `json:"rule_id,omitempty"`
-	Title               string   `json:"title"`
-	Summary             string   `json:"summary"`
-	FixStrategy         string   `json:"fix_strategy"`
-	AffectedFiles       []string `json:"affected_files"`
-	RequiredTests       []string `json:"required_tests"`
-	ValidationCommands  []string `json:"validation_commands"`
-	RegressionRisk      string   `json:"regression_risk"`
-	FixComplexity       string   `json:"fix_complexity"`
-	SafeForAutoPR       bool     `json:"safe_for_auto_pr"`
-	RequiresHumanReview bool     `json:"requires_human_review"`
-	BlockedReasons      []string `json:"blocked_reasons,omitempty"`
-	Advisory            bool     `json:"advisory"`
-	Status              string   `json:"status"`
-	CreatedAt           string   `json:"created_at"`
-	UpdatedAt           string   `json:"updated_at"`
-	Notice              string   `json:"notice"`
+	PlanID              string               `json:"plan_id"`
+	FindingID           int64                `json:"finding_id,omitempty"`
+	RepositoryID        int64                `json:"repository_id,omitempty"`
+	AuditID             string               `json:"audit_id,omitempty"`
+	Fingerprint         string               `json:"fingerprint"`
+	Category            string               `json:"category"`
+	Severity            string               `json:"severity"`
+	Source              string               `json:"source"`
+	RuleID              string               `json:"rule_id,omitempty"`
+	Title               string               `json:"title"`
+	Summary             string               `json:"summary"`
+	FixStrategy         string               `json:"fix_strategy"`
+	AffectedFiles       []string             `json:"affected_files"`
+	RequiredTests       []string             `json:"required_tests"`
+	ValidationCommands  []string             `json:"validation_commands"`
+	RegressionRisk      string               `json:"regression_risk"`
+	FixComplexity       string               `json:"fix_complexity"`
+	SafeForAutoPR       bool                 `json:"safe_for_auto_pr"`
+	RequiresHumanReview bool                 `json:"requires_human_review"`
+	BlockedReasons      []string             `json:"blocked_reasons,omitempty"`
+	Advisory            bool                 `json:"advisory"`
+	Status              string               `json:"status"`
+	CreatedAt           string               `json:"created_at"`
+	UpdatedAt           string               `json:"updated_at"`
+	Notice              string               `json:"notice"`
 	PREligibility       *eligibilityResponse `json:"pr_eligibility,omitempty"`
 }
 
@@ -283,23 +283,23 @@ func toRemediationPlanResponse(plan remediation.Plan) remediationPlanResponse {
 }
 
 type patchAttemptResponse struct {
-	AttemptID         string              `json:"attempt_id"`
-	PlanID            string              `json:"plan_id"`
-	RepositoryID      int64               `json:"repository_id,omitempty"`
-	FindingID         int64               `json:"finding_id,omitempty"`
-	BranchName        string              `json:"branch_name"`
-	BaseRef           string              `json:"base_ref"`
-	CommitSHA         string              `json:"commit_sha"`
-	Status            string              `json:"status"`
-	DiffSummary       string              `json:"diff_summary,omitempty"`
-	FilesChanged      []string            `json:"files_changed,omitempty"`
+	AttemptID         string               `json:"attempt_id"`
+	PlanID            string               `json:"plan_id"`
+	RepositoryID      int64                `json:"repository_id,omitempty"`
+	FindingID         int64                `json:"finding_id,omitempty"`
+	BranchName        string               `json:"branch_name"`
+	BaseRef           string               `json:"base_ref"`
+	CommitSHA         string               `json:"commit_sha"`
+	Status            string               `json:"status"`
+	DiffSummary       string               `json:"diff_summary,omitempty"`
+	FilesChanged      []string             `json:"files_changed,omitempty"`
 	TestsRun          []patcher.TestResult `json:"tests_run,omitempty"`
-	ValidationSummary string              `json:"validation_summary,omitempty"`
-	PullRequestNumber *int                `json:"pull_request_number,omitempty"`
-	PullRequestURL    string              `json:"pull_request_url,omitempty"`
-	Error             string              `json:"error,omitempty"`
-	CreatedAt         string              `json:"created_at"`
-	UpdatedAt         string              `json:"updated_at"`
+	ValidationSummary string               `json:"validation_summary,omitempty"`
+	PullRequestNumber *int                 `json:"pull_request_number,omitempty"`
+	PullRequestURL    string               `json:"pull_request_url,omitempty"`
+	Error             string               `json:"error,omitempty"`
+	CreatedAt         string               `json:"created_at"`
+	UpdatedAt         string               `json:"updated_at"`
 }
 
 func toPatchAttemptResponse(a patcher.PatchAttempt) patchAttemptResponse {

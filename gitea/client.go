@@ -121,24 +121,24 @@ type Milestone struct {
 
 // PullRequest represents a Gitea pull request
 type PullRequest struct {
-	ID         int64      `json:"id"`
-	Number     int        `json:"number"`
-	State      string     `json:"state"`
-	Title      string     `json:"title"`
-	Body       string     `json:"body"`
-	User       User       `json:"user"`
-	HTMLURL    string     `json:"html_url"`
-	DiffURL    string     `json:"diff_url"`
-	PatchURL   string     `json:"patch_url"`
-	Mergeable  bool       `json:"mergeable"`
-	Merged     bool       `json:"merged"`
-	MergedAt   string     `json:"merged_at,omitempty"`
-	MergedBy   *User      `json:"merged_by,omitempty"`
-	BaseBranch string     `json:"base_branch"`
-	HeadBranch string     `json:"head_branch"`
+	ID         int64             `json:"id"`
+	Number     int               `json:"number"`
+	State      string            `json:"state"`
+	Title      string            `json:"title"`
+	Body       string            `json:"body"`
+	User       User              `json:"user"`
+	HTMLURL    string            `json:"html_url"`
+	DiffURL    string            `json:"diff_url"`
+	PatchURL   string            `json:"patch_url"`
+	Mergeable  bool              `json:"mergeable"`
+	Merged     bool              `json:"merged"`
+	MergedAt   string            `json:"merged_at,omitempty"`
+	MergedBy   *User             `json:"merged_by,omitempty"`
+	BaseBranch string            `json:"base_branch"`
+	HeadBranch string            `json:"head_branch"`
 	Head       PullRequestGitRef `json:"head"`
-	BaseRepo   Repository `json:"base_repo"`
-	HeadRepo   Repository `json:"head_repo"`
+	BaseRepo   Repository        `json:"base_repo"`
+	HeadRepo   Repository        `json:"head_repo"`
 }
 
 // PullRequestGitRef identifies the head commit/branch of a pull request.

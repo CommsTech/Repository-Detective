@@ -467,29 +467,29 @@ func GlobalSnapshotFromConfig(cfg GlobalConfigInput) store.GlobalSettingsSnapsho
 
 func legacyGlobalSnapshot(cfg GlobalConfigInput) store.GlobalSettingsSnapshot {
 	return store.GlobalSettingsSnapshot{
-		ScanProfile:       cfg.ScanProfile,
-		Enabled:           true,
-		PolicyLevel:       "issue_only",
-		WorkspaceMode:     cfg.WorkspaceMode,
-		AnalysisDepth:     cfg.AnalysisDepth,
-		EnableLLMAuditors: cfg.EnableLLMAuditors,
-		EnableTrivy:       cfg.EnableTrivy,
-		EnableGrype:       cfg.EnableGrype,
-		EnableGitleaks:    cfg.EnableGitleaks,
-		EnableSemgrep:     cfg.EnableSemgrep,
-		EnableGovulncheck: cfg.EnableGovulncheck,
-		EnableGosec:       cfg.EnableGosec,
-		EnableStaticcheck: cfg.EnableStaticcheck,
-		EnableHadolint:    cfg.EnableHadolint,
-		EnableCheckov:     cfg.EnableCheckov,
-		EnableLinters:     cfg.EnableLinters,
-		SeverityGate:      cfg.GiteaStatusFailOn,
-		ConfidenceGate:    cfg.MinIssueConfidence,
-		IssuePolicy:       issuePolicyFromAutoCreate(cfg.AutoCreateIssues),
-		RemediationPolicy: "off",
-		RunnerPolicy:      "core",
-		ScheduleEnabled:   false,
-		AIPolicy:          aiPolicyFromLLM(cfg.EnableLLMAuditors),
+		ScanProfile:                 cfg.ScanProfile,
+		Enabled:                     true,
+		PolicyLevel:                 "issue_only",
+		WorkspaceMode:               cfg.WorkspaceMode,
+		AnalysisDepth:               cfg.AnalysisDepth,
+		EnableLLMAuditors:           cfg.EnableLLMAuditors,
+		EnableTrivy:                 cfg.EnableTrivy,
+		EnableGrype:                 cfg.EnableGrype,
+		EnableGitleaks:              cfg.EnableGitleaks,
+		EnableSemgrep:               cfg.EnableSemgrep,
+		EnableGovulncheck:           cfg.EnableGovulncheck,
+		EnableGosec:                 cfg.EnableGosec,
+		EnableStaticcheck:           cfg.EnableStaticcheck,
+		EnableHadolint:              cfg.EnableHadolint,
+		EnableCheckov:               cfg.EnableCheckov,
+		EnableLinters:               cfg.EnableLinters,
+		SeverityGate:                cfg.GiteaStatusFailOn,
+		ConfidenceGate:              cfg.MinIssueConfidence,
+		IssuePolicy:                 issuePolicyFromAutoCreate(cfg.AutoCreateIssues),
+		RemediationPolicy:           "off",
+		RunnerPolicy:                "core",
+		ScheduleEnabled:             false,
+		AIPolicy:                    aiPolicyFromLLM(cfg.EnableLLMAuditors),
 		EnableHealthChecks:          cfg.EnableHealthChecks,
 		EnableTechDebtChecks:        cfg.EnableTechDebtChecks,
 		EnableReliabilityChecks:     cfg.EnableReliabilityChecks,
@@ -520,23 +520,23 @@ func legacyGlobalSnapshot(cfg GlobalConfigInput) store.GlobalSettingsSnapshot {
 
 // GlobalConfigInput avoids importing main package.
 type GlobalConfigInput struct {
-	ScanProfile        string
-	WorkspaceMode      string
-	AnalysisDepth      int
-	EnableLLMAuditors  bool
-	EnableTrivy        bool
-	EnableGrype        bool
-	EnableGitleaks     bool
-	EnableSemgrep      bool
-	EnableGovulncheck  bool
-	EnableGosec        bool
-	EnableStaticcheck  bool
-	EnableHadolint     bool
-	EnableCheckov      bool
-	EnableLinters      bool
-	GiteaStatusFailOn  string
-	MinIssueConfidence float64
-	AutoCreateIssues   bool
+	ScanProfile                 string
+	WorkspaceMode               string
+	AnalysisDepth               int
+	EnableLLMAuditors           bool
+	EnableTrivy                 bool
+	EnableGrype                 bool
+	EnableGitleaks              bool
+	EnableSemgrep               bool
+	EnableGovulncheck           bool
+	EnableGosec                 bool
+	EnableStaticcheck           bool
+	EnableHadolint              bool
+	EnableCheckov               bool
+	EnableLinters               bool
+	GiteaStatusFailOn           string
+	MinIssueConfidence          float64
+	AutoCreateIssues            bool
 	EnableHealthChecks          bool
 	EnableTechDebtChecks        bool
 	EnableReliabilityChecks     bool

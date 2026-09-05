@@ -192,16 +192,16 @@ func (f *fakeIssues) AddLifecycleLabels(_ context.Context, _, _ string, _ int, l
 func (f *fakeIssues) CloseIssue(_ context.Context, _, _ string, _ int) error { return nil }
 
 type fixture struct {
-	ctx      context.Context
-	store    workflowStore
-	engine   *closure.Engine
-	issues   *fakeIssues
-	pr       *fakePRClient
-	repoID   int64
-	finding  int64
-	attempt  string
-	planID   string
-	fp       string
+	ctx     context.Context
+	store   workflowStore
+	engine  *closure.Engine
+	issues  *fakeIssues
+	pr      *fakePRClient
+	repoID  int64
+	finding int64
+	attempt string
+	planID  string
+	fp      string
 }
 
 func openFixture(t *testing.T) *fixture {

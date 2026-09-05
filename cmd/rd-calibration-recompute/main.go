@@ -13,7 +13,7 @@ import (
 
 func main() {
 	repoID := flag.Int64("repo", 0, "optional repository id to scope repo recommendations")
-	limit := flag.Int( "backfill-limit", 10000, "max findings to backfill per run")
+	limit := flag.Int("backfill-limit", 10000, "max findings to backfill per run")
 	flag.Parse()
 
 	path := os.Getenv("REPOSITORY_DETECTIVE_DATABASE_PATH")

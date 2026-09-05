@@ -54,4 +54,3 @@ func TestReachabilityExampleAndVendorPaths(t *testing.T) {
 		t.Fatal("expected ansible_collections vendor classification")
 	}
 }
-

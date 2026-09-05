@@ -29,4 +29,3 @@ func testSleepScript(seconds int) (string, []string) {
 	}
 	return testShell(fmt.Sprintf("sleep %d", seconds))
 }
-

@@ -69,17 +69,17 @@ type FindingOverlay struct {
 
 // Node is a graph vertex.
 type Node struct {
-	ID          string             `json:"id"`
-	Type        string             `json:"type"`
-	Label       string             `json:"label"`
-	Path        string             `json:"path,omitempty"`
-	Language    string             `json:"language,omitempty"`
-	PackageName string             `json:"package_name,omitempty"`
-	Severity    string             `json:"severity,omitempty"`
-	Category    string             `json:"category,omitempty"`
-	Metrics     map[string]float64 `json:"metrics,omitempty"`
-	Disconnected bool              `json:"disconnected,omitempty"`
-	Entrypoint  bool               `json:"entrypoint,omitempty"`
+	ID           string             `json:"id"`
+	Type         string             `json:"type"`
+	Label        string             `json:"label"`
+	Path         string             `json:"path,omitempty"`
+	Language     string             `json:"language,omitempty"`
+	PackageName  string             `json:"package_name,omitempty"`
+	Severity     string             `json:"severity,omitempty"`
+	Category     string             `json:"category,omitempty"`
+	Metrics      map[string]float64 `json:"metrics,omitempty"`
+	Disconnected bool               `json:"disconnected,omitempty"`
+	Entrypoint   bool               `json:"entrypoint,omitempty"`
 }
 
 // Edge is a graph relationship.
@@ -93,18 +93,18 @@ type Edge struct {
 
 // GraphMetrics summarizes graph statistics.
 type GraphMetrics struct {
-	NodeCount          int            `json:"node_count"`
-	EdgeCount          int            `json:"edge_count"`
-	OrphanFiles        int            `json:"orphan_files"`
-	OrphanFunctions    int            `json:"orphan_functions"`
-	DisconnectedPkgs   int            `json:"disconnected_packages"`
-	SuspiciousIslands  int            `json:"suspicious_islands"`
-	EntrypointCount    int            `json:"entrypoint_count"`
-	FindingsOverlay    int            `json:"findings_overlay"`
-	Truncated          bool           `json:"truncated,omitempty"`
-	AggregationMode    string         `json:"aggregation_mode,omitempty"`
-	ByType             map[string]int `json:"by_type,omitempty"`
-	GeneratedAt        time.Time      `json:"generated_at"`
+	NodeCount         int            `json:"node_count"`
+	EdgeCount         int            `json:"edge_count"`
+	OrphanFiles       int            `json:"orphan_files"`
+	OrphanFunctions   int            `json:"orphan_functions"`
+	DisconnectedPkgs  int            `json:"disconnected_packages"`
+	SuspiciousIslands int            `json:"suspicious_islands"`
+	EntrypointCount   int            `json:"entrypoint_count"`
+	FindingsOverlay   int            `json:"findings_overlay"`
+	Truncated         bool           `json:"truncated,omitempty"`
+	AggregationMode   string         `json:"aggregation_mode,omitempty"`
+	ByType            map[string]int `json:"by_type,omitempty"`
+	GeneratedAt       time.Time      `json:"generated_at"`
 }
 
 // Graph is the full repository map.

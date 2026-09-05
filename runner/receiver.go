@@ -162,12 +162,12 @@ func (r *Receiver) CheckNonce(ctx context.Context, nonce string) error {
 
 func policyToEffective(p analyzers.PolicySnapshot) store.EffectiveSettings {
 	return store.EffectiveSettings{
-		PolicyLevel:       p.PolicyLevel,
-		WorkspaceMode:     p.WorkspaceMode,
-		AnalysisDepth:     p.AnalysisDepth,
-		IssuePolicy:       p.IssuePolicy,
-		SeverityGate:      p.SeverityGate,
-		ConfidenceGate:    p.ConfidenceGate,
+		PolicyLevel:                 p.PolicyLevel,
+		WorkspaceMode:               p.WorkspaceMode,
+		AnalysisDepth:               p.AnalysisDepth,
+		IssuePolicy:                 p.IssuePolicy,
+		SeverityGate:                p.SeverityGate,
+		ConfidenceGate:              p.ConfidenceGate,
 		EnableHealthChecks:          p.EnableHealthChecks,
 		EnableTechDebtChecks:        p.EnableTechDebtChecks,
 		EnableReliabilityChecks:     p.EnableReliabilityChecks,

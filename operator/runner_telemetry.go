@@ -8,16 +8,16 @@ import (
 
 // RunnerTelemetryView explains runner job queue state for operators.
 type RunnerTelemetryView struct {
-	State          string         `json:"state"`
-	Title          string         `json:"title"`
-	Message        string         `json:"message"`
-	Detail         string         `json:"detail,omitempty"`
-	Action         string         `json:"action,omitempty"`
-	DocsURL        string         `json:"docs_url,omitempty"`
-	JobsByStatus   map[string]int `json:"jobs_by_status,omitempty"`
-	LastJobAt      *time.Time     `json:"last_job_at,omitempty"`
-	LastError      string         `json:"last_error,omitempty"`
-	TotalJobs      int            `json:"total_jobs"`
+	State        string         `json:"state"`
+	Title        string         `json:"title"`
+	Message      string         `json:"message"`
+	Detail       string         `json:"detail,omitempty"`
+	Action       string         `json:"action,omitempty"`
+	DocsURL      string         `json:"docs_url,omitempty"`
+	JobsByStatus map[string]int `json:"jobs_by_status,omitempty"`
+	LastJobAt    *time.Time     `json:"last_job_at,omitempty"`
+	LastError    string         `json:"last_error,omitempty"`
+	TotalJobs    int            `json:"total_jobs"`
 }
 
 const runnerDocsURL = "/ui/docs/RUNNER_DELEGATION.md"

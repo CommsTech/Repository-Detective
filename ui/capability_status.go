@@ -21,35 +21,35 @@ type CapabilityStatus struct {
 
 // PlatformContext holds non-secret wiring used for setup detection and capability status.
 type PlatformContext struct {
-	GiteaURLConfigured           bool
-	GiteaTokenConfigured         bool
-	APIKeyConfigured             bool
-	WebhookSecretConfigured      bool
-	RunnerSharedSecretSet        bool
-	RunnerCallbackBaseURL        string
-	PublicURL                    string
-	RemediationPRRequireApproval bool
-	RemediationPRMaxFiles        int
-	RemediationPRMaxDiffLines    int
-	RemediationPRBranchPrefix    string
-	LLMSanityGateEnabled         bool
-	BacklogControlEnabled        bool
-	MaxIssuesPerScan             int
-	ScanPolicyMode               string
-	NotificationsEnabled         bool
-	SchedulerEnabled             bool
-	RunnerDelegationEnabled      bool
-	RunnerRequireHMAC            bool
-	RunnerMode                   string
-	RemediationPRRequireTests    bool
+	GiteaURLConfigured                 bool
+	GiteaTokenConfigured               bool
+	APIKeyConfigured                   bool
+	WebhookSecretConfigured            bool
+	RunnerSharedSecretSet              bool
+	RunnerCallbackBaseURL              string
+	PublicURL                          string
+	RemediationPRRequireApproval       bool
+	RemediationPRMaxFiles              int
+	RemediationPRMaxDiffLines          int
+	RemediationPRBranchPrefix          string
+	LLMSanityGateEnabled               bool
+	BacklogControlEnabled              bool
+	MaxIssuesPerScan                   int
+	ScanPolicyMode                     string
+	NotificationsEnabled               bool
+	SchedulerEnabled                   bool
+	RunnerDelegationEnabled            bool
+	RunnerRequireHMAC                  bool
+	RunnerMode                         string
+	RemediationPRRequireTests          bool
 	RemediationPRUseRunnerVerification bool
-	GiteaActionsTestBackendEnabled bool
-	OpenClawAIReviewEnabled        bool
-	OpenClawEndpointConfigured     bool
-	ContainerScanningEnabled       bool
-	ContainerScanRequireRunner     bool
-	ContainerScanAllowCoreSocket   bool
-	ContainerScanCreateIssues      bool
+	GiteaActionsTestBackendEnabled     bool
+	OpenClawAIReviewEnabled            bool
+	OpenClawEndpointConfigured         bool
+	ContainerScanningEnabled           bool
+	ContainerScanRequireRunner         bool
+	ContainerScanAllowCoreSocket       bool
+	ContainerScanCreateIssues          bool
 }
 
 func buildCapabilityStatuses(

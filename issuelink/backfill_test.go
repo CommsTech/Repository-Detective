@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"git.commsnet.org/commstech/repository-detective/issues"
 	"git.commsnet.org/commstech/repository-detective/issuelink"
+	"git.commsnet.org/commstech/repository-detective/issues"
 	"git.commsnet.org/commstech/repository-detective/store"
 	"github.com/sirupsen/logrus"
 )
@@ -31,8 +31,10 @@ func (s *stubForge) ListOpenIssues(_ context.Context, _, _ string, limit, page i
 func (s *stubForge) CreateIssue(context.Context, string, string, string, string, []string) (*issues.ForgeIssue, error) {
 	return &issues.ForgeIssue{Number: 999}, nil
 }
-func (s *stubForge) CreateIssueComment(context.Context, string, string, int, string) error { return nil }
-func (s *stubForge) AddIssueLabels(context.Context, string, string, int, []string) error   { return nil }
+func (s *stubForge) CreateIssueComment(context.Context, string, string, int, string) error {
+	return nil
+}
+func (s *stubForge) AddIssueLabels(context.Context, string, string, int, []string) error { return nil }
 
 func TestBackfillExternalIssueMapping(t *testing.T) {
 	ctx := context.Background()
@@ -52,7 +54,7 @@ func TestBackfillExternalIssueMapping(t *testing.T) {
 
 	forge := &stubForge{issues: []issues.ForgeIssue{{
 		Number: 55, HTMLURL: "http://git/o/r/issues/55",
-		Body:    "## Tracking\n\n- Repository Detective fingerprint: rd-backfill1\n",
+		Body: "## Tracking\n\n- Repository Detective fingerprint: rd-backfill1\n",
 	}}}
 
 	result, err := issuelink.BackfillExternalIssueMappings(ctx, &issuelink.Store{Query: s}, forge, "o", "r", repo.ID, "gitea", "scan-bf", logrus.New())

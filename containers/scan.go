@@ -63,7 +63,7 @@ func RunImageScan(ctx context.Context, opts ScanOptions) (ScanResult, error) {
 				result.SBOMFormat = format
 				result.Findings = append(result.Findings, ScanFinding{
 					RuleID: "CONTAINER-SBOM-GENERATED", Severity: "info", Confidence: 0.95,
-					Title: "SBOM generated for container image",
+					Title:       "SBOM generated for container image",
 					Description: "Syft produced " + format + " SBOM for " + result.Image,
 				})
 			}
@@ -185,13 +185,13 @@ func parseTrivyImageJSON(data []byte, image string) ([]ScanFinding, error) {
 	if strings.Contains(text, "CRITICAL") || strings.Contains(text, "HIGH") {
 		out = append(out, ScanFinding{
 			RuleID: "CONTAINER-VULNERABLE-IMAGE", Severity: "high", Confidence: 0.88,
-			Title: "Vulnerable container image",
+			Title:       "Vulnerable container image",
 			Description: "Trivy reported vulnerabilities in " + image,
 		})
 	} else if strings.Contains(text, "MEDIUM") || strings.Contains(text, "LOW") {
 		out = append(out, ScanFinding{
 			RuleID: "CONTAINER-VULNERABLE-IMAGE", Severity: "medium", Confidence: 0.82,
-			Title: "Vulnerable container image",
+			Title:       "Vulnerable container image",
 			Description: "Trivy reported vulnerabilities in " + image,
 		})
 	}
@@ -206,7 +206,7 @@ func parseGrypeImageJSON(data []byte, image string) ([]ScanFinding, error) {
 	if strings.Contains(text, `"severity":"Critical"`) || strings.Contains(text, `"severity":"High"`) {
 		return []ScanFinding{{
 			RuleID: "CONTAINER-VULNERABLE-IMAGE", Severity: "high", Confidence: 0.86,
-			Title: "Vulnerable container image",
+			Title:       "Vulnerable container image",
 			Description: "Grype reported vulnerabilities in " + image,
 		}}, nil
 	}

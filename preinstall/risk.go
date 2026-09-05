@@ -70,11 +70,11 @@ func ComputeRiskScore(findings []store.AuditFinding, scannerResults []store.Audi
 		Score:          score,
 		Recommendation: rec,
 		Explanation: map[string]any{
-			"formula":           "critical +35, high +20, medium +10, low +3, scanner failure +5, secrets minimum caution",
-			"breakdown":         breakdown,
-			"finding_count":     len(findings),
-			"secret_finding":    secretSeen,
-			"scanner_failures":  countBadScanners(scannerResults),
+			"formula":          "critical +35, high +20, medium +10, low +3, scanner failure +5, secrets minimum caution",
+			"breakdown":        breakdown,
+			"finding_count":    len(findings),
+			"secret_finding":   secretSeen,
+			"scanner_failures": countBadScanners(scannerResults),
 		},
 	}
 }

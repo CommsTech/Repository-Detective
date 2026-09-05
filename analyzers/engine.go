@@ -11,7 +11,6 @@ import (
 	"git.commsnet.org/commstech/repository-detective/ai"
 	"git.commsnet.org/commstech/repository-detective/forge"
 	"git.commsnet.org/commstech/repository-detective/gitea"
-	"git.commsnet.org/commstech/repository-detective/store"
 	"git.commsnet.org/commstech/repository-detective/graph"
 	"git.commsnet.org/commstech/repository-detective/health"
 	"git.commsnet.org/commstech/repository-detective/internal/scanid"
@@ -20,6 +19,7 @@ import (
 	"git.commsnet.org/commstech/repository-detective/profile"
 	"git.commsnet.org/commstech/repository-detective/sbom"
 	"git.commsnet.org/commstech/repository-detective/scanners"
+	"git.commsnet.org/commstech/repository-detective/store"
 	"github.com/sirupsen/logrus"
 )
 
@@ -55,26 +55,26 @@ type CodeSuggestion struct {
 
 // AnalysisResult represents the complete result of analyzing a repository
 type AnalysisResult struct {
-	Repository     string
-	Commit         string
-	CommitSHA      string
-	ScanID         string
-	AnalysisTime   time.Duration
-	FilesAnalyzed  int
-	IssuesFound    int
-	Issues         []ai.CodeIssue
-	ScannerResults []scanners.RunResult
-	Suggestions    []CodeSuggestion
+	Repository            string
+	Commit                string
+	CommitSHA             string
+	ScanID                string
+	AnalysisTime          time.Duration
+	FilesAnalyzed         int
+	IssuesFound           int
+	Issues                []ai.CodeIssue
+	ScannerResults        []scanners.RunResult
+	Suggestions           []CodeSuggestion
 	OverallScore          float64
 	ScoreComplete         bool
 	ScoreIncompleteReason string
 	ScoreExplanation      string
 	Errors                []string
-	PolicySnapshot    *PolicySnapshot
-	WorkspaceModeUsed string
-	Graph             *graph.Graph
-	RepoProfile       profile.RepoProfile
-	Sbom              *sbom.Result
+	PolicySnapshot        *PolicySnapshot
+	WorkspaceModeUsed     string
+	Graph                 *graph.Graph
+	RepoProfile           profile.RepoProfile
+	Sbom                  *sbom.Result
 }
 
 // ============================================================================
@@ -1242,13 +1242,13 @@ func (e *Engine) analysisResultFromReport(ctx context.Context, owner, repo, ref,
 	}
 
 	result := &AnalysisResult{
-		Repository:     fmt.Sprintf("%s/%s", owner, repo),
-		Commit:         commitLabel,
-		ScanID:         report.ScanID,
-		AnalysisTime:   time.Duration(report.TotalTimeMs) * time.Millisecond,
-		FilesAnalyzed:  report.Stats.FilesAnalyzed,
-		IssuesFound:    len(report.Proven),
-		ScannerResults: report.ScannerResults,
+		Repository:        fmt.Sprintf("%s/%s", owner, repo),
+		Commit:            commitLabel,
+		ScanID:            report.ScanID,
+		AnalysisTime:      time.Duration(report.TotalTimeMs) * time.Millisecond,
+		FilesAnalyzed:     report.Stats.FilesAnalyzed,
+		IssuesFound:       len(report.Proven),
+		ScannerResults:    report.ScannerResults,
 		WorkspaceModeUsed: report.Workspace.ModeUsed,
 	}
 	if report.Sbom != nil {

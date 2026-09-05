@@ -11,12 +11,12 @@ import (
 type Status string
 
 const (
-	StatusDisabled      Status = "disabled"
-	StatusBinaryMissing Status = "binary_missing"
-	StatusClean           Status = "clean"
-	StatusFound           Status = "found"
-	StatusFailed          Status = "failed"
-	StatusTimedOut        Status = "timed_out"
+	StatusDisabled            Status = "disabled"
+	StatusBinaryMissing       Status = "binary_missing"
+	StatusClean               Status = "clean"
+	StatusFound               Status = "found"
+	StatusFailed              Status = "failed"
+	StatusTimedOut            Status = "timed_out"
 	StatusParseFailed         Status = "parse_failed"
 	StatusNoSupportedManifest Status = "no_supported_manifest"
 	StatusScannerUnavailable  Status = "scanner_unavailable"

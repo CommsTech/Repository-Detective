@@ -16,18 +16,18 @@ func init() {
 
 // Config controls deterministic repository health checks.
 type Config struct {
-	Enabled                 bool
-	EnableTechDebt          bool
-	EnableReliability       bool
-	EnableMaintainability   bool
-	EnableTestGap           bool
-	EnablePerformance       bool
-	EnableAIRisk            bool
-	MaxFindings             int
-	LargeFileLines          int
-	LargeFunctionLines      int
-	MaxNestingDepth         int
-	MaxFunctionParams       int
+	Enabled               bool
+	EnableTechDebt        bool
+	EnableReliability     bool
+	EnableMaintainability bool
+	EnableTestGap         bool
+	EnablePerformance     bool
+	EnableAIRisk          bool
+	MaxFindings           int
+	LargeFileLines        int
+	LargeFunctionLines    int
+	MaxNestingDepth       int
+	MaxFunctionParams     int
 }
 
 // DefaultConfig returns Phase 10 defaults (AI risk off by default).

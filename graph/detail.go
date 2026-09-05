@@ -37,8 +37,8 @@ type FindingDetail struct {
 }
 
 const (
-	entryYes    = "yes"
-	entryNo     = "no"
+	entryYes     = "yes"
+	entryNo      = "no"
 	entryUnknown = "unknown"
 )
 
@@ -101,7 +101,7 @@ func (b *builder) importTargetsFrom(path string) []string {
 	out := make([]string, 0, len(info.imports))
 	for _, imp := range info.imports {
 		if imp.external {
-			out = append(out, imp.target+ " (external)")
+			out = append(out, imp.target+" (external)")
 			continue
 		}
 		if t := b.resolveImport(path, imp.target); t != "" {
@@ -193,7 +193,7 @@ func formatOrphanFileFinding(b *builder, path string, info *parsedFile) GraphFin
 		NearestEntrypoints:  b.nearestEntrypoints(fileID, 5),
 		ImportsFrom:         b.importTargetsFrom(path),
 		ImportedBy:          b.importedByFiles(fileID),
-		PathClassification: classifyPath(path, info),
+		PathClassification:  classifyPath(path, info),
 		ExclusionReason:     "Not excluded: not marked test/entrypoint/generated/vendor/example; no inbound import edges detected.",
 		WhyFlagged:          why,
 		Troubleshooting:     defaultTroubleshooting(),

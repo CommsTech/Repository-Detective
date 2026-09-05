@@ -6,22 +6,22 @@ import (
 )
 
 const (
-	AuditStatusQueued     = "queued"
-	AuditStatusRunning    = "running"
-	AuditStatusCompleted  = "completed"
-	AuditStatusFailed     = "failed"
-	AuditStatusCancelled  = "cancelled"
+	AuditStatusQueued    = "queued"
+	AuditStatusRunning   = "running"
+	AuditStatusCompleted = "completed"
+	AuditStatusFailed    = "failed"
+	AuditStatusCancelled = "cancelled"
 
-	AuditRecommendationSafe          = "safe"
-	AuditRecommendationCaution       = "caution"
-	AuditRecommendationDoNotInstall  = "do_not_install"
-	AuditRecommendationUnknown       = "unknown"
-	AuditRecommendationAuditFailed   = "audit_failed"
+	AuditRecommendationSafe         = "safe"
+	AuditRecommendationCaution      = "caution"
+	AuditRecommendationDoNotInstall = "do_not_install"
+	AuditRecommendationUnknown      = "unknown"
+	AuditRecommendationAuditFailed  = "audit_failed"
 
-	ReportTypeInstallRiskSummary  = "install_risk_summary"
-	ReportTypeSecurityDisclosure  = "security_disclosure"
-	ReportTypeGeneralBug          = "general_bug"
-	ReportTypeSupplyChainRisk       = "supply_chain_risk"
+	ReportTypeInstallRiskSummary = "install_risk_summary"
+	ReportTypeSecurityDisclosure = "security_disclosure"
+	ReportTypeGeneralBug         = "general_bug"
+	ReportTypeSupplyChainRisk    = "supply_chain_risk"
 
 	ReportSensitivityPublic          = "public"
 	ReportSensitivityPrivateSecurity = "private_security"
@@ -30,22 +30,22 @@ const (
 
 // AuditRequest is a third-party pre-install audit job.
 type AuditRequest struct {
-	AuditID            string
-	RepoURL            string
-	NormalizedRepoURL  string
-	RepoHost           string
-	RepoOwner          string
-	RepoName           string
-	CommitSHA          string
-	DefaultBranch      string
-	AuditDepth         string
-	Status             string
-	RiskScore          int
-	Recommendation     string
-	StartedAt          time.Time
-	FinishedAt         *time.Time
-	SummaryJSON        json.RawMessage
-	Error              string
+	AuditID           string
+	RepoURL           string
+	NormalizedRepoURL string
+	RepoHost          string
+	RepoOwner         string
+	RepoName          string
+	CommitSHA         string
+	DefaultBranch     string
+	AuditDepth        string
+	Status            string
+	RiskScore         int
+	Recommendation    string
+	StartedAt         time.Time
+	FinishedAt        *time.Time
+	SummaryJSON       json.RawMessage
+	Error             string
 }
 
 // AuditFinding is a finding from a pre-install audit.

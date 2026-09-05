@@ -9,19 +9,19 @@ import (
 
 // SandboxMeta records isolation guarantees for an audit workspace.
 type SandboxMeta struct {
-	SandboxID           string
-	Enabled             bool
-	CloneMode           string
-	SubmodulesDisabled  bool
-	MaxRepoSizeMB       int
-	MaxFiles            int
-	MaxFileSizeMB       int
-	TimeoutSeconds      int
-	PrivateIPBlocked    bool
-	ReadOnlyWorkspace   bool
-	RetainOnFailure     bool
-	NetworkMode         string
-	WorkspacePath       string
+	SandboxID          string
+	Enabled            bool
+	CloneMode          string
+	SubmodulesDisabled bool
+	MaxRepoSizeMB      int
+	MaxFiles           int
+	MaxFileSizeMB      int
+	TimeoutSeconds     int
+	PrivateIPBlocked   bool
+	ReadOnlyWorkspace  bool
+	RetainOnFailure    bool
+	NetworkMode        string
+	WorkspacePath      string
 }
 
 func sandboxMetaFromConfig(cfg Config, sandboxID, workspace string) SandboxMeta {

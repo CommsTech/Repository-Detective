@@ -122,20 +122,20 @@ type CodeIssue struct {
 	FromAI                 bool    `json:"from_ai,omitempty"`
 	Fixable                string  `json:"fixable,omitempty"`
 	FixComplexity          string  `json:"fix_complexity,omitempty"`
-	RegressionRisk           string  `json:"regression_risk,omitempty"`
-	RequiredTests            string  `json:"required_tests,omitempty"`
+	RegressionRisk         string  `json:"regression_risk,omitempty"`
+	RequiredTests          string  `json:"required_tests,omitempty"`
 	SuggestedPatchStrategy string  `json:"suggested_patch_strategy,omitempty"`
-	SafeForAutoPR            bool    `json:"safe_for_auto_pr,omitempty"`
+	SafeForAutoPR          bool    `json:"safe_for_auto_pr,omitempty"`
 	// Normalized finding metadata (repo-structure aware reporting)
-	NormalizedPath      string  `json:"normalized_path,omitempty"`
-	SourceType          string  `json:"source_type,omitempty"`
-	ReportingAction     string  `json:"reporting_action,omitempty"`
-	FalsePositiveRisk   string  `json:"false_positive_risk,omitempty"`
-	SuppressionReason   string  `json:"suppression_reason,omitempty"`
-	RepoProfileSummary  string  `json:"repo_profile_summary,omitempty"`
-	CommitSHA           string  `json:"commit_sha,omitempty"`
-	Evidence            string  `json:"evidence,omitempty"`
-	Remediation         string  `json:"remediation,omitempty"`
+	NormalizedPath     string `json:"normalized_path,omitempty"`
+	SourceType         string `json:"source_type,omitempty"`
+	ReportingAction    string `json:"reporting_action,omitempty"`
+	FalsePositiveRisk  string `json:"false_positive_risk,omitempty"`
+	SuppressionReason  string `json:"suppression_reason,omitempty"`
+	RepoProfileSummary string `json:"repo_profile_summary,omitempty"`
+	CommitSHA          string `json:"commit_sha,omitempty"`
+	Evidence           string `json:"evidence,omitempty"`
+	Remediation        string `json:"remediation,omitempty"`
 }
 
 // CodeSuggestion represents a suggested improvement.

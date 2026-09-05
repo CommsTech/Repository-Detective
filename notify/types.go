@@ -6,22 +6,22 @@ import (
 )
 
 const (
-	EventScanFailed                  = "scan_failed"
-	EventScanCompletedWithFindings   = "scan_completed_with_findings"
-	EventCriticalFinding             = "critical_finding"
-	EventHighFinding                 = "high_finding"
-	EventPRGateFailed                = "pr_gate_failed"
-	EventScheduledScanFailed         = "scheduled_scan_failed"
-	EventRunnerJobFailed             = "runner_job_failed"
-	EventRunnerJobExpired            = "runner_job_expired"
-	EventPreinstallDoNotInstall      = "preinstall_do_not_install"
-	EventPreinstallCaution           = "preinstall_caution"
-	EventDisclosureReportGenerated   = "disclosure_report_generated"
-	EventFixPRMerged                 = "fix_pr_merged"
-	EventClosureVerified             = "closure_verified"
-	EventClosureBlocked              = "closure_blocked"
-	EventRemediationStillPresent     = "remediation_still_present"
-	EventTest                        = "test"
+	EventScanFailed                = "scan_failed"
+	EventScanCompletedWithFindings = "scan_completed_with_findings"
+	EventCriticalFinding           = "critical_finding"
+	EventHighFinding               = "high_finding"
+	EventPRGateFailed              = "pr_gate_failed"
+	EventScheduledScanFailed       = "scheduled_scan_failed"
+	EventRunnerJobFailed           = "runner_job_failed"
+	EventRunnerJobExpired          = "runner_job_expired"
+	EventPreinstallDoNotInstall    = "preinstall_do_not_install"
+	EventPreinstallCaution         = "preinstall_caution"
+	EventDisclosureReportGenerated = "disclosure_report_generated"
+	EventFixPRMerged               = "fix_pr_merged"
+	EventClosureVerified           = "closure_verified"
+	EventClosureBlocked            = "closure_blocked"
+	EventRemediationStillPresent   = "remediation_still_present"
+	EventTest                      = "test"
 )
 
 // DefaultEnabledEvents are notification types enabled when no explicit filter is set.

@@ -10,36 +10,36 @@ import (
 
 // ActionableFindingView enriches a finding for engineer-actionable UI sections.
 type ActionableFindingView struct {
-	Summary              string
-	WhyItMatters         string
-	EvidenceKind         string
-	CurrentInTree        string
-	CommitSHA            string
-	ImageDigest          string
-	PackageName          string
-	PackageVersion       string
-	FixedVersion         string
-	CVEID                string
-	SBOMRelation         string
-	ScannerCommand       string
-	ConfidenceReason     string
-	SeverityReason       string
-	WhyFlagged           string
-	RecommendedFix       string
-	VerificationSteps    []string
-	IssueFilingStatus    string
-	IssueFilingDetail    string
-	FalsePositiveGuide   string
-	RelatedRuleID        string
-	RawMetadataPretty    string
-	HasSecretEvidence    bool
+	Summary            string
+	WhyItMatters       string
+	EvidenceKind       string
+	CurrentInTree      string
+	CommitSHA          string
+	ImageDigest        string
+	PackageName        string
+	PackageVersion     string
+	FixedVersion       string
+	CVEID              string
+	SBOMRelation       string
+	ScannerCommand     string
+	ConfidenceReason   string
+	SeverityReason     string
+	WhyFlagged         string
+	RecommendedFix     string
+	VerificationSteps  []string
+	IssueFilingStatus  string
+	IssueFilingDetail  string
+	FalsePositiveGuide string
+	RelatedRuleID      string
+	RawMetadataPretty  string
+	HasSecretEvidence  bool
 }
 
 func buildActionableFindingView(detail store.FindingDetail) ActionableFindingView {
 	view := ActionableFindingView{
-		Summary:           detail.Title,
-		RelatedRuleID:     detail.RuleID,
-		PackageName:       detail.PackageName,
+		Summary:            detail.Title,
+		RelatedRuleID:      detail.RuleID,
+		PackageName:        detail.PackageName,
 		FalsePositiveGuide: "If this is noise or acceptable risk, mark false positive with a reason. Calibration drafts help suppress similar matches in future scans without deleting history.",
 	}
 	view.WhyItMatters = whyItMatters(detail)

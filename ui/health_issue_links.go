@@ -14,11 +14,11 @@ const systemHealthIssueTemplate = "system_health.md"
 
 // HealthReportLink is a prefilled Gitea new-issue URL plus copyable body text.
 type HealthReportLink struct {
-	Label       string
-	URL         string
-	Title       string
-	Body        string
-	Kind        string // tool | scanner_failure | failed_scan | capability | metric
+	Label string
+	URL   string
+	Title string
+	Body  string
+	Kind  string // tool | scanner_failure | failed_scan | capability | metric
 }
 
 // BuildScannerFailureReport builds a product-repo issue prefill for one scanner run failure.

@@ -68,14 +68,14 @@ func (h *ContainerHandler) GetConfig(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"enabled":                    cfg.Enabled,
-		"require_runner":             cfg.RequireRunner,
-		"allow_core_docker_socket":   cfg.AllowCoreDockerSocket,
-		"create_issues":              cfg.CreateIssues,
-		"default_policy":             cfg.DefaultPolicy,
-		"tools":                      cfg.Tools,
-		"allowed_runner_labels":      cfg.AllowedRunnerLabels,
-		"note":                       "Container scanning is opt-in. Core never mounts Docker socket by default.",
+		"enabled":                  cfg.Enabled,
+		"require_runner":           cfg.RequireRunner,
+		"allow_core_docker_socket": cfg.AllowCoreDockerSocket,
+		"create_issues":            cfg.CreateIssues,
+		"default_policy":           cfg.DefaultPolicy,
+		"tools":                    cfg.Tools,
+		"allowed_runner_labels":    cfg.AllowedRunnerLabels,
+		"note":                     "Container scanning is opt-in. Core never mounts Docker socket by default.",
 	})
 }
 

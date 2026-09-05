@@ -10,39 +10,39 @@ import (
 type PlatformSettings struct {
 	ScanProfile string `json:"scan_profile,omitempty"`
 
-	SchedulerEnabled     *bool  `json:"scheduler_enabled,omitempty"`
-	NotificationsEnabled *bool  `json:"notifications_enabled,omitempty"`
-	PreinstallAuditEnabled *bool `json:"preinstall_audit_enabled,omitempty"`
+	SchedulerEnabled          *bool `json:"scheduler_enabled,omitempty"`
+	NotificationsEnabled      *bool `json:"notifications_enabled,omitempty"`
+	PreinstallAuditEnabled    *bool `json:"preinstall_audit_enabled,omitempty"`
 	RemediationPlannerEnabled *bool `json:"remediation_planner_enabled,omitempty"`
-	RemediationPREnabled *bool `json:"remediation_pr_enabled,omitempty"`
-	EvidenceClosureEnabled *bool `json:"evidence_closure_enabled,omitempty"`
+	RemediationPREnabled      *bool `json:"remediation_pr_enabled,omitempty"`
+	EvidenceClosureEnabled    *bool `json:"evidence_closure_enabled,omitempty"`
 
-	AutoCreateIssues *bool   `json:"auto_create_issues,omitempty"`
-	IssuePolicy      string  `json:"issue_policy,omitempty"`
-	RemediationPolicy string `json:"remediation_policy,omitempty"`
-	SeverityGate     string  `json:"severity_gate,omitempty"`
-	ConfidenceGate   *float64 `json:"confidence_gate,omitempty"`
-	AnalysisDepth    *int    `json:"analysis_depth,omitempty"`
-	ScheduleCron     string  `json:"schedule_cron,omitempty"`
-	ScheduleEnabled  *bool   `json:"schedule_enabled,omitempty"`
+	AutoCreateIssues  *bool    `json:"auto_create_issues,omitempty"`
+	IssuePolicy       string   `json:"issue_policy,omitempty"`
+	RemediationPolicy string   `json:"remediation_policy,omitempty"`
+	SeverityGate      string   `json:"severity_gate,omitempty"`
+	ConfidenceGate    *float64 `json:"confidence_gate,omitempty"`
+	AnalysisDepth     *int     `json:"analysis_depth,omitempty"`
+	ScheduleCron      string   `json:"schedule_cron,omitempty"`
+	ScheduleEnabled   *bool    `json:"schedule_enabled,omitempty"`
 
-	EnableTrivy       *bool `json:"enable_trivy,omitempty"`
-	EnableGrype       *bool `json:"enable_grype,omitempty"`
-	EnableGitleaks    *bool `json:"enable_gitleaks,omitempty"`
-	EnableSemgrep     *bool `json:"enable_semgrep,omitempty"`
-	EnableGovulncheck *bool `json:"enable_govulncheck,omitempty"`
-	EnableGosec       *bool `json:"enable_gosec,omitempty"`
-	EnableStaticcheck *bool `json:"enable_staticcheck,omitempty"`
-	EnableHadolint    *bool `json:"enable_hadolint,omitempty"`
-	EnableCheckov     *bool `json:"enable_checkov,omitempty"`
-	EnableLinters     *bool `json:"enable_linters,omitempty"`
+	EnableTrivy             *bool `json:"enable_trivy,omitempty"`
+	EnableGrype             *bool `json:"enable_grype,omitempty"`
+	EnableGitleaks          *bool `json:"enable_gitleaks,omitempty"`
+	EnableSemgrep           *bool `json:"enable_semgrep,omitempty"`
+	EnableGovulncheck       *bool `json:"enable_govulncheck,omitempty"`
+	EnableGosec             *bool `json:"enable_gosec,omitempty"`
+	EnableStaticcheck       *bool `json:"enable_staticcheck,omitempty"`
+	EnableHadolint          *bool `json:"enable_hadolint,omitempty"`
+	EnableCheckov           *bool `json:"enable_checkov,omitempty"`
+	EnableLinters           *bool `json:"enable_linters,omitempty"`
 	EnablePerformanceChecks *bool `json:"enable_performance_checks,omitempty"`
-	EnableCodeGraph   *bool `json:"enable_code_graph,omitempty"`
+	EnableCodeGraph         *bool `json:"enable_code_graph,omitempty"`
 
-	AIRecommendationsEnabled           *bool `json:"ai_recommendations_enabled,omitempty"`
-	AIRecommendationsMaxTokensPerScan  *int  `json:"ai_recommendations_max_tokens_per_scan,omitempty"`
-	AIRecommendationsTokenBudgetPerScan *int `json:"ai_recommendations_token_budget_per_scan,omitempty"`
-	AIRecommendationsMaxFindingsPerScan *int `json:"ai_recommendations_max_findings_per_scan,omitempty"`
+	AIRecommendationsEnabled            *bool `json:"ai_recommendations_enabled,omitempty"`
+	AIRecommendationsMaxTokensPerScan   *int  `json:"ai_recommendations_max_tokens_per_scan,omitempty"`
+	AIRecommendationsTokenBudgetPerScan *int  `json:"ai_recommendations_token_budget_per_scan,omitempty"`
+	AIRecommendationsMaxFindingsPerScan *int  `json:"ai_recommendations_max_findings_per_scan,omitempty"`
 
 	UpdatedAt string `json:"-"`
 	UpdatedBy string `json:"-"`

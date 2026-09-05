@@ -20,17 +20,17 @@ const (
 type PullPolicy string
 
 const (
-	PullNever    PullPolicy = "never"
+	PullNever     PullPolicy = "never"
 	PullIfMissing PullPolicy = "if_missing"
-	PullAlways   PullPolicy = "always"
+	PullAlways    PullPolicy = "always"
 )
 
 // ScanTargets lists explicit scan targets from configuration.
 type ScanTargets struct {
-	Registries           []string `mapstructure:"registries" json:"registries"`
-	Images               []string `mapstructure:"images" json:"images"`
-	ComposeFiles         []string `mapstructure:"compose_files" json:"compose_files"`
-	KubernetesManifests  []string `mapstructure:"kubernetes_manifests" json:"kubernetes_manifests"`
+	Registries          []string `mapstructure:"registries" json:"registries"`
+	Images              []string `mapstructure:"images" json:"images"`
+	ComposeFiles        []string `mapstructure:"compose_files" json:"compose_files"`
+	KubernetesManifests []string `mapstructure:"kubernetes_manifests" json:"kubernetes_manifests"`
 }
 
 // ScanTools toggles which scanners run against an image.
@@ -42,25 +42,25 @@ type ScanTools struct {
 
 // Config controls container image scanning (opt-in, runner-first).
 type Config struct {
-	Enabled                    bool        `mapstructure:"container_scanning_enabled"`
-	Targets                    ScanTargets `mapstructure:"container_scan_targets"`
-	DefaultPolicy              string      `mapstructure:"container_scan_default_policy"`
-	CreateIssues               bool        `mapstructure:"container_scan_create_issues"`
-	RequireRunner              bool        `mapstructure:"container_scan_require_runner"`
-	AllowCoreDockerSocket      bool        `mapstructure:"container_scan_allow_core_docker_socket"`
-	Tools                      ScanTools   `mapstructure:"container_scan_tools"`
-	PullPolicy                 PullPolicy  `mapstructure:"container_scan_pull_policy"`
-	TimeoutSeconds             int         `mapstructure:"container_scan_timeout_seconds"`
-	MaxImageSizeMB             int         `mapstructure:"container_scan_max_image_size_mb"`
-	IncludeOSPackages          bool        `mapstructure:"container_scan_include_os_packages"`
-	IncludeLanguagePackages    bool        `mapstructure:"container_scan_include_language_packages"`
-	GenerateSBOM               bool        `mapstructure:"container_scan_generate_sbom"`
-	HistoryLayers              bool        `mapstructure:"container_scan_history_layers"`
-	FailOnScannerMissing       bool        `mapstructure:"container_scan_fail_on_scanner_missing"`
-	RegistryCredentialsEnv     []string    `mapstructure:"container_registry_credentials_env"`
-	AllowedRegistries          []string    `mapstructure:"container_scan_allowed_registries"`
-	BlockedRegistries          []string    `mapstructure:"container_scan_blocked_registries"`
-	AllowedRunnerLabels        []string    `mapstructure:"container_scan_allowed_runner_labels"`
+	Enabled                 bool        `mapstructure:"container_scanning_enabled"`
+	Targets                 ScanTargets `mapstructure:"container_scan_targets"`
+	DefaultPolicy           string      `mapstructure:"container_scan_default_policy"`
+	CreateIssues            bool        `mapstructure:"container_scan_create_issues"`
+	RequireRunner           bool        `mapstructure:"container_scan_require_runner"`
+	AllowCoreDockerSocket   bool        `mapstructure:"container_scan_allow_core_docker_socket"`
+	Tools                   ScanTools   `mapstructure:"container_scan_tools"`
+	PullPolicy              PullPolicy  `mapstructure:"container_scan_pull_policy"`
+	TimeoutSeconds          int         `mapstructure:"container_scan_timeout_seconds"`
+	MaxImageSizeMB          int         `mapstructure:"container_scan_max_image_size_mb"`
+	IncludeOSPackages       bool        `mapstructure:"container_scan_include_os_packages"`
+	IncludeLanguagePackages bool        `mapstructure:"container_scan_include_language_packages"`
+	GenerateSBOM            bool        `mapstructure:"container_scan_generate_sbom"`
+	HistoryLayers           bool        `mapstructure:"container_scan_history_layers"`
+	FailOnScannerMissing    bool        `mapstructure:"container_scan_fail_on_scanner_missing"`
+	RegistryCredentialsEnv  []string    `mapstructure:"container_registry_credentials_env"`
+	AllowedRegistries       []string    `mapstructure:"container_scan_allowed_registries"`
+	BlockedRegistries       []string    `mapstructure:"container_scan_blocked_registries"`
+	AllowedRunnerLabels     []string    `mapstructure:"container_scan_allowed_runner_labels"`
 }
 
 // DefaultConfig returns safe defaults (disabled, runner-required, no core socket).
@@ -136,16 +136,16 @@ type ScanPayload struct {
 
 // ImageReference is a discovered image in a repository.
 type ImageReference struct {
-	Image         string     `json:"image"`
-	Tag           string     `json:"tag"`
-	Digest        string     `json:"digest,omitempty"`
-	TargetType    TargetType `json:"target_type"`
-	FilePath      string     `json:"file_path"`
-	Line          int        `json:"line"`
-	ServiceName   string     `json:"service_name,omitempty"`
-	MutableTag    bool       `json:"mutable_tag"`
-	PrivateRegistry bool     `json:"private_registry"`
-	RepoID        int64      `json:"repository_id,omitempty"`
+	Image           string     `json:"image"`
+	Tag             string     `json:"tag"`
+	Digest          string     `json:"digest,omitempty"`
+	TargetType      TargetType `json:"target_type"`
+	FilePath        string     `json:"file_path"`
+	Line            int        `json:"line"`
+	ServiceName     string     `json:"service_name,omitempty"`
+	MutableTag      bool       `json:"mutable_tag"`
+	PrivateRegistry bool       `json:"private_registry"`
+	RepoID          int64      `json:"repository_id,omitempty"`
 }
 
 // ScanCoverage describes which tools ran successfully.
@@ -157,18 +157,18 @@ type ScanCoverage struct {
 
 // ScanResult is normalized output from a container image scan.
 type ScanResult struct {
-	Image          string       `json:"image"`
-	Digest         string       `json:"digest,omitempty"`
-	BaseImage      string       `json:"base_image,omitempty"`
-	Labels         []string     `json:"labels,omitempty"`
-	Coverage       ScanCoverage `json:"coverage"`
-	SBOMPath       string       `json:"sbom_path,omitempty"`
-	SBOMFormat     string       `json:"sbom_format,omitempty"`
-	VulnCount      int          `json:"vuln_count"`
-	Findings       []ScanFinding `json:"findings"`
-	Warnings       []string     `json:"warnings,omitempty"`
-	StartedAt      time.Time    `json:"started_at"`
-	FinishedAt     time.Time    `json:"finished_at"`
+	Image      string        `json:"image"`
+	Digest     string        `json:"digest,omitempty"`
+	BaseImage  string        `json:"base_image,omitempty"`
+	Labels     []string      `json:"labels,omitempty"`
+	Coverage   ScanCoverage  `json:"coverage"`
+	SBOMPath   string        `json:"sbom_path,omitempty"`
+	SBOMFormat string        `json:"sbom_format,omitempty"`
+	VulnCount  int           `json:"vuln_count"`
+	Findings   []ScanFinding `json:"findings"`
+	Warnings   []string      `json:"warnings,omitempty"`
+	StartedAt  time.Time     `json:"started_at"`
+	FinishedAt time.Time     `json:"finished_at"`
 }
 
 // ScanFinding is one vulnerability or policy finding on an image.

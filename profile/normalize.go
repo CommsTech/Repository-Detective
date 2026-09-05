@@ -8,13 +8,13 @@ import (
 
 // NormalizeInput carries context for finding normalization.
 type NormalizeInput struct {
-	Repository   string
-	CommitSHA    string
-	ScanID       string
-	Profile      RepoProfile
-	Reporting    ReportingConfig
-	FalsePositive FalsePositiveReductionConfig
-	KnownPaths   map[string]struct{}
+	Repository       string
+	CommitSHA        string
+	ScanID           string
+	Profile          RepoProfile
+	Reporting        ReportingConfig
+	FalsePositive    FalsePositiveReductionConfig
+	KnownPaths       map[string]struct{}
 	ScannerAgreement map[string]int // fingerprint -> scanner count
 }
 

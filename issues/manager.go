@@ -69,9 +69,9 @@ type IssueCreationRequest struct {
 	Context            string
 	Commit             string
 	PullRequest        int
-	ScanID               string
-	MinIssueConfidence   float64
-	ForceIssueCreation   bool
+	ScanID             string
+	MinIssueConfidence float64
+	ForceIssueCreation bool
 }
 
 // ProcessedIssueRecord links a finding fingerprint to a forge issue action.
@@ -85,15 +85,15 @@ type ProcessedIssueRecord struct {
 
 // IssueCreationResult represents the result of issue creation
 type IssueCreationResult struct {
-	IssuesCreated          int
-	IssuesSkipped          int
-	IssuesUpdated          int
-	BacklogControlBlocked  int
-	BacklogControlActive   bool
-	BacklogControlNote     string
-	Errors                 []string
-	IssueURLs              []string
-	ProcessedIssues        []ProcessedIssueRecord
+	IssuesCreated         int
+	IssuesSkipped         int
+	IssuesUpdated         int
+	BacklogControlBlocked int
+	BacklogControlActive  bool
+	BacklogControlNote    string
+	Errors                []string
+	IssueURLs             []string
+	ProcessedIssues       []ProcessedIssueRecord
 }
 
 // NewManager creates a new issue manager.

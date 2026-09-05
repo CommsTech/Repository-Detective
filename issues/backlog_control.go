@@ -10,23 +10,23 @@ const BacklogControlNote = "New issue filing paused by backlog-control mode."
 
 // BacklogControlConfig pauses low-priority new issue creation during dogfood burn-down.
 type BacklogControlConfig struct {
-	Enabled              bool
-	MaxOpenIssues        int
+	Enabled               bool
+	MaxOpenIssues         int
 	AllowNewIssueSeverity []string
-	AllowMinConfidence   float64
-	UpdateExistingOnly   bool
-	AllowedSources       map[string]bool
-	AllowedRuleIDs       map[string]bool
+	AllowMinConfidence    float64
+	UpdateExistingOnly    bool
+	AllowedSources        map[string]bool
+	AllowedRuleIDs        map[string]bool
 }
 
 // DefaultBacklogControlConfig returns conservative defaults (disabled).
 func DefaultBacklogControlConfig() BacklogControlConfig {
 	return BacklogControlConfig{
-		Enabled:              false,
-		MaxOpenIssues:        0,
+		Enabled:               false,
+		MaxOpenIssues:         0,
 		AllowNewIssueSeverity: []string{"high", "critical"},
-		AllowMinConfidence:   0.85,
-		UpdateExistingOnly:   true,
+		AllowMinConfidence:    0.85,
+		UpdateExistingOnly:    true,
 	}
 }
 

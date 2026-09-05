@@ -8,7 +8,7 @@ import (
 )
 
 type stubPR struct {
-	pr *gitea.PullRequest
+	pr  *gitea.PullRequest
 	err error
 }
 

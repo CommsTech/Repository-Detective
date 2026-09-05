@@ -48,7 +48,7 @@ func RemediationPlanFromDomain(plan remediation.Plan) RemediationPlanRecord {
 		SafeForAutoPR:          plan.SafeForAutoPR,
 		RequiresHumanReview:    plan.RequiresHumanReview,
 		BlockedReasonsJSON:     blocked,
-		Advisory:                 plan.Advisory,
+		Advisory:               plan.Advisory,
 		Status:                 plan.Status,
 		CreatedAt:              plan.CreatedAt,
 		UpdatedAt:              plan.UpdatedAt,

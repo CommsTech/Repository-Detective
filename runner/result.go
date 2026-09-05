@@ -13,18 +13,18 @@ import (
 
 // FindingResult is a deterministic finding from a runner scan.
 type FindingResult struct {
-	Fingerprint  string  `json:"fingerprint"`
-	Category     string  `json:"category"`
-	Severity     string  `json:"severity"`
-	Confidence   float64 `json:"confidence"`
-	Source       string  `json:"source"`
-	RuleID       string  `json:"rule_id"`
-	PackageName  string  `json:"package_name,omitempty"`
-	File         string  `json:"file"`
-	Line         int     `json:"line"`
-	Title        string  `json:"title"`
-	Description  string  `json:"description,omitempty"`
-	CodeSnippet  string  `json:"code_snippet,omitempty"`
+	Fingerprint string  `json:"fingerprint"`
+	Category    string  `json:"category"`
+	Severity    string  `json:"severity"`
+	Confidence  float64 `json:"confidence"`
+	Source      string  `json:"source"`
+	RuleID      string  `json:"rule_id"`
+	PackageName string  `json:"package_name,omitempty"`
+	File        string  `json:"file"`
+	Line        int     `json:"line"`
+	Title       string  `json:"title"`
+	Description string  `json:"description,omitempty"`
+	CodeSnippet string  `json:"code_snippet,omitempty"`
 }
 
 // ScannerResultDTO mirrors scanner run output for transport.
@@ -38,21 +38,21 @@ type ScannerResultDTO struct {
 
 // JobResult is the signed payload returned by a runner.
 type JobResult struct {
-	Version         int                `json:"version"`
-	JobID           string             `json:"job_id"`
-	ScanID          string             `json:"scan_id"`
-	Status          string             `json:"status"`
-	StartedAt       time.Time          `json:"started_at"`
-	FinishedAt      time.Time          `json:"finished_at"`
-	ScannerResults  []ScannerResultDTO `json:"scanner_results"`
-	Findings        []FindingResult    `json:"findings"`
-	Graph           *graph.Graph       `json:"graph,omitempty"`
+	Version         int                  `json:"version"`
+	JobID           string               `json:"job_id"`
+	ScanID          string               `json:"scan_id"`
+	Status          string               `json:"status"`
+	StartedAt       time.Time            `json:"started_at"`
+	FinishedAt      time.Time            `json:"finished_at"`
+	ScannerResults  []ScannerResultDTO   `json:"scanner_results"`
+	Findings        []FindingResult      `json:"findings"`
+	Graph           *graph.Graph         `json:"graph,omitempty"`
 	WorkspaceMeta   models.WorkspaceMeta `json:"workspace_meta,omitempty"`
-	FilesAnalyzed   int                `json:"files_analyzed"`
-	Errors          []string           `json:"errors,omitempty"`
-	Warnings        []string           `json:"warnings,omitempty"`
-	ForbiddenAction string             `json:"forbidden_action,omitempty"`
-	ContainerScan   *ContainerScanDTO  `json:"container_scan,omitempty"`
+	FilesAnalyzed   int                  `json:"files_analyzed"`
+	Errors          []string             `json:"errors,omitempty"`
+	Warnings        []string             `json:"warnings,omitempty"`
+	ForbiddenAction string               `json:"forbidden_action,omitempty"`
+	ContainerScan   *ContainerScanDTO    `json:"container_scan,omitempty"`
 }
 
 // ContainerScanDTO transports container scan metadata in job results.
@@ -100,18 +100,18 @@ func (r JobResult) ToAnalysisResult(repoFullName, ref string, policy *analyzers.
 	}
 	for _, f := range r.Findings {
 		out.Issues = append(out.Issues, ai.CodeIssue{
-			Fingerprint:  f.Fingerprint,
-			Category:     f.Category,
-			Severity:     f.Severity,
-			Confidence:   f.Confidence,
-			Source:       f.Source,
-			RuleID:       f.RuleID,
-			PackageName:  f.PackageName,
-			Title:        f.Title,
-			Description:  f.Description,
-			File:         f.File,
-			LineNumber:   f.Line,
-			CodeSnippet:  f.CodeSnippet,
+			Fingerprint: f.Fingerprint,
+			Category:    f.Category,
+			Severity:    f.Severity,
+			Confidence:  f.Confidence,
+			Source:      f.Source,
+			RuleID:      f.RuleID,
+			PackageName: f.PackageName,
+			Title:       f.Title,
+			Description: f.Description,
+			File:        f.File,
+			LineNumber:  f.Line,
+			CodeSnippet: f.CodeSnippet,
 		})
 	}
 	return out
@@ -120,12 +120,12 @@ func (r JobResult) ToAnalysisResult(repoFullName, ref string, policy *analyzers.
 // SummaryJSON builds a compact summary for runner_jobs.result_summary_json.
 func (r JobResult) SummaryJSON() json.RawMessage {
 	summary := map[string]any{
-		"status":          r.Status,
-		"findings_count":  len(r.Findings),
-		"files_analyzed":  r.FilesAnalyzed,
-		"scanner_count": len(r.ScannerResults),
-		"warnings":        len(r.Warnings),
-		"errors":          len(r.Errors),
+		"status":         r.Status,
+		"findings_count": len(r.Findings),
+		"files_analyzed": r.FilesAnalyzed,
+		"scanner_count":  len(r.ScannerResults),
+		"warnings":       len(r.Warnings),
+		"errors":         len(r.Errors),
 	}
 	if r.Graph != nil {
 		summary["graph_nodes"] = r.Graph.Metrics.NodeCount

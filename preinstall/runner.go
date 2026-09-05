@@ -207,15 +207,15 @@ func (r *Runner) runAudit(parent context.Context, auditID string, parsed ParsedR
 	finished := time.Now().UTC()
 
 	summaryPayload := map[string]any{
-		"audit_depth":       depth,
-		"workspace_bytes":   clone.TotalBytes,
-		"workspace_files":   clone.FileCount,
-		"scanner_results":   scannerResults,
-		"risk_explanation":  risk.Explanation,
-		"finding_count":     len(findings),
-		"sandbox":           clone.Sandbox,
-		"issues_created":    0,
-		"prs_created":       0,
+		"audit_depth":      depth,
+		"workspace_bytes":  clone.TotalBytes,
+		"workspace_files":  clone.FileCount,
+		"scanner_results":  scannerResults,
+		"risk_explanation": risk.Explanation,
+		"finding_count":    len(findings),
+		"sandbox":          clone.Sandbox,
+		"issues_created":   0,
+		"prs_created":      0,
 	}
 	if graphNodes > 0 {
 		summaryPayload["graph_nodes"] = graphNodes

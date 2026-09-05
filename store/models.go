@@ -6,16 +6,16 @@ import (
 )
 
 const (
-	ForgeTypeGitea   = "gitea"
-	ForgeTypeGitHub  = "github"
+	ForgeTypeGitea  = "gitea"
+	ForgeTypeGitHub = "github"
 
-	ScanStatusStarted              = "started"
-	ScanStatusAnalysisComplete     = "analysis_complete"
-	ScanStatusCompleted            = "completed"
+	ScanStatusStarted               = "started"
+	ScanStatusAnalysisComplete      = "analysis_complete"
+	ScanStatusCompleted             = "completed"
 	ScanStatusPersistenceIncomplete = "persistence_incomplete"
-	ScanStatusFailed               = "failed"
-	ScanStatusCancelled = "cancelled"
-	ScanStatusSkipped   = "skipped"
+	ScanStatusFailed                = "failed"
+	ScanStatusCancelled             = "cancelled"
+	ScanStatusSkipped               = "skipped"
 
 	TriggerPush       = "push"
 	TriggerPR         = "pr"
@@ -31,13 +31,13 @@ const (
 	FindingStatusClosureBlocked   = "closure_blocked"
 	FindingStatusPendingRescan    = "pending_rescan"
 
-	SuppressionScopeRepo    = "repo"
-	SuppressionScopeGlobal  = "global"
+	SuppressionScopeRepo   = "repo"
+	SuppressionScopeGlobal = "global"
 
-	LifecycleEventSuppressed          = "suppressed"
-	LifecycleEventUnsuppressed          = "unsuppressed"
-	LifecycleEventFalsePositiveMarked   = "false_positive_marked"
-	LifecycleEventReconciled                    = "reconciled"
+	LifecycleEventSuppressed                     = "suppressed"
+	LifecycleEventUnsuppressed                   = "unsuppressed"
+	LifecycleEventFalsePositiveMarked            = "false_positive_marked"
+	LifecycleEventReconciled                     = "reconciled"
 	LifecycleEventExternalIssueMappingBackfilled = "external_issue_mapping_backfilled"
 )
 
@@ -58,31 +58,31 @@ type Repository struct {
 // RepoSettings holds per-repository control-plane settings.
 // Nullable pointer fields mean "inherit global config" when nil.
 type RepoSettings struct {
-	RepositoryID      int64
-	ScanProfile       *string
-	Enabled           *bool
-	PolicyLevel       *string
-	WorkspaceMode     *string
-	AnalysisDepth     *int
-	EnableLLMAuditors *bool
-	EnableTrivy       *bool
-	EnableGrype       *bool
-	EnableGitleaks    *bool
-	EnableSemgrep     *bool
-	EnableGovulncheck *bool
-	EnableGosec       *bool
-	EnableStaticcheck *bool
-	EnableHadolint    *bool
-	EnableCheckov     *bool
-	EnableLinters     *bool
-	SeverityGate      *string
-	ConfidenceGate    *float64
-	IssuePolicy       *string
-	RemediationPolicy *string
-	RunnerPolicy      *string
-	ScheduleEnabled   *bool
-	ScheduleCron      *string
-	AIPolicy          *string
+	RepositoryID                int64
+	ScanProfile                 *string
+	Enabled                     *bool
+	PolicyLevel                 *string
+	WorkspaceMode               *string
+	AnalysisDepth               *int
+	EnableLLMAuditors           *bool
+	EnableTrivy                 *bool
+	EnableGrype                 *bool
+	EnableGitleaks              *bool
+	EnableSemgrep               *bool
+	EnableGovulncheck           *bool
+	EnableGosec                 *bool
+	EnableStaticcheck           *bool
+	EnableHadolint              *bool
+	EnableCheckov               *bool
+	EnableLinters               *bool
+	SeverityGate                *string
+	ConfidenceGate              *float64
+	IssuePolicy                 *string
+	RemediationPolicy           *string
+	RunnerPolicy                *string
+	ScheduleEnabled             *bool
+	ScheduleCron                *string
+	AIPolicy                    *string
 	EnableHealthChecks          *bool
 	EnableTechDebtChecks        *bool
 	EnableReliabilityChecks     *bool
@@ -108,39 +108,39 @@ type RepoSettings struct {
 	HadolintTimeoutSeconds      *int
 	CheckovTimeoutSeconds       *int
 	IACScannerMaxFindings       *int
-	NotificationsEnabled          *bool
-	NotificationMinSeverity       *string
-	NotificationEvents            *string
-	NotificationCooldownSeconds   *int
-	UpdatedAt         time.Time
+	NotificationsEnabled        *bool
+	NotificationMinSeverity     *string
+	NotificationEvents          *string
+	NotificationCooldownSeconds *int
+	UpdatedAt                   time.Time
 }
 
 // EffectiveSettings is the resolved configuration for a repository scan.
 type EffectiveSettings struct {
-	ScanProfile       string
-	Enabled           bool
-	PolicyLevel       string
-	WorkspaceMode     string
-	AnalysisDepth     int
-	EnableLLMAuditors bool
-	EnableTrivy       bool
-	EnableGrype       bool
-	EnableGitleaks    bool
-	EnableSemgrep     bool
-	EnableGovulncheck bool
-	EnableGosec       bool
-	EnableStaticcheck bool
-	EnableHadolint    bool
-	EnableCheckov     bool
-	EnableLinters     bool
-	SeverityGate      string
-	ConfidenceGate    float64
-	IssuePolicy       string
-	RemediationPolicy string
-	RunnerPolicy      string
-	ScheduleEnabled   bool
-	ScheduleCron      string
-	AIPolicy          string
+	ScanProfile                 string
+	Enabled                     bool
+	PolicyLevel                 string
+	WorkspaceMode               string
+	AnalysisDepth               int
+	EnableLLMAuditors           bool
+	EnableTrivy                 bool
+	EnableGrype                 bool
+	EnableGitleaks              bool
+	EnableSemgrep               bool
+	EnableGovulncheck           bool
+	EnableGosec                 bool
+	EnableStaticcheck           bool
+	EnableHadolint              bool
+	EnableCheckov               bool
+	EnableLinters               bool
+	SeverityGate                string
+	ConfidenceGate              float64
+	IssuePolicy                 string
+	RemediationPolicy           string
+	RunnerPolicy                string
+	ScheduleEnabled             bool
+	ScheduleCron                string
+	AIPolicy                    string
 	EnableHealthChecks          bool
 	EnableTechDebtChecks        bool
 	EnableReliabilityChecks     bool
@@ -170,30 +170,30 @@ type EffectiveSettings struct {
 
 // GlobalSettingsSnapshot captures global YAML/env defaults for merge.
 type GlobalSettingsSnapshot struct {
-	ScanProfile       string
-	Enabled           bool
-	PolicyLevel       string
-	WorkspaceMode     string
-	AnalysisDepth     int
-	EnableLLMAuditors bool
-	EnableTrivy       bool
-	EnableGrype       bool
-	EnableGitleaks    bool
-	EnableSemgrep     bool
-	EnableGovulncheck bool
-	EnableGosec       bool
-	EnableStaticcheck bool
-	EnableHadolint    bool
-	EnableCheckov     bool
-	EnableLinters     bool
-	SeverityGate      string
-	ConfidenceGate    float64
-	IssuePolicy       string
-	RemediationPolicy string
-	RunnerPolicy      string
-	ScheduleEnabled   bool
-	ScheduleCron      string
-	AIPolicy          string
+	ScanProfile                 string
+	Enabled                     bool
+	PolicyLevel                 string
+	WorkspaceMode               string
+	AnalysisDepth               int
+	EnableLLMAuditors           bool
+	EnableTrivy                 bool
+	EnableGrype                 bool
+	EnableGitleaks              bool
+	EnableSemgrep               bool
+	EnableGovulncheck           bool
+	EnableGosec                 bool
+	EnableStaticcheck           bool
+	EnableHadolint              bool
+	EnableCheckov               bool
+	EnableLinters               bool
+	SeverityGate                string
+	ConfidenceGate              float64
+	IssuePolicy                 string
+	RemediationPolicy           string
+	RunnerPolicy                string
+	ScheduleEnabled             bool
+	ScheduleCron                string
+	AIPolicy                    string
 	EnableHealthChecks          bool
 	EnableTechDebtChecks        bool
 	EnableReliabilityChecks     bool
@@ -275,26 +275,26 @@ type ScannerFailureEvent struct {
 
 // Finding is a deduplicated finding indexed by fingerprint.
 type Finding struct {
-	ID              int64
-	RepositoryID    int64
-	Fingerprint     string
-	Category        string
-	Severity        string
-	Confidence      float64
-	Source          string
-	RuleID          string
-	PackageName     string
-	FilePath        string
-	Line            int
-	Title           string
-	Status          string
-	FirstSeenScanID string
-	LastSeenScanID  string
-	FirstSeenAt     time.Time
-	LastSeenAt      time.Time
-	StructuralHash      string
-	CanonicalFindingID  *int64
-	CalibrationNote     string
+	ID                 int64
+	RepositoryID       int64
+	Fingerprint        string
+	Category           string
+	Severity           string
+	Confidence         float64
+	Source             string
+	RuleID             string
+	PackageName        string
+	FilePath           string
+	Line               int
+	Title              string
+	Status             string
+	FirstSeenScanID    string
+	LastSeenScanID     string
+	FirstSeenAt        time.Time
+	LastSeenAt         time.Time
+	StructuralHash     string
+	CanonicalFindingID *int64
+	CalibrationNote    string
 }
 
 // FindingInstance is one occurrence of a finding in a scan.
@@ -413,19 +413,19 @@ type ScannerStatusCount struct {
 
 // CalibrationRuleStat aggregates deterministic learning metrics per rule.
 type CalibrationRuleStat struct {
-	Source                  string    `json:"source"`
-	RuleID                  string    `json:"rule_id"`
-	Category                string    `json:"category"`
-	TotalFindings           int       `json:"total_findings"`
-	IssuesCreated           int       `json:"issues_created"`
-	Suppressions            int       `json:"suppressions"`
-	FalsePositives          int       `json:"false_positives"`
-	VerifiedFixes           int       `json:"verified_fixes"`
-	StillPresent            int       `json:"still_present"`
-	LastSeenAt              time.Time `json:"last_seen_at"`
-	ActionableRate          float64   `json:"actionable_rate"`
-	FalsePositiveRate       float64   `json:"false_positive_rate"`
-	RecommendedDefaultAction string   `json:"recommended_default_action"`
+	Source                   string    `json:"source"`
+	RuleID                   string    `json:"rule_id"`
+	Category                 string    `json:"category"`
+	TotalFindings            int       `json:"total_findings"`
+	IssuesCreated            int       `json:"issues_created"`
+	Suppressions             int       `json:"suppressions"`
+	FalsePositives           int       `json:"false_positives"`
+	VerifiedFixes            int       `json:"verified_fixes"`
+	StillPresent             int       `json:"still_present"`
+	LastSeenAt               time.Time `json:"last_seen_at"`
+	ActionableRate           float64   `json:"actionable_rate"`
+	FalsePositiveRate        float64   `json:"false_positive_rate"`
+	RecommendedDefaultAction string    `json:"recommended_default_action"`
 }
 
 // CalibrationRecommendation is a proposed calibration change.

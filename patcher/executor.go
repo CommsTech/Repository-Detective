@@ -20,10 +20,10 @@ type GiteaAPI interface {
 
 // Executor runs safe remediation PR attempts.
 type Executor struct {
-	Config     Config
-	Gitea      GiteaAPI
-	GiteaToken string
-	CloneURL   string
+	Config      Config
+	Gitea       GiteaAPI
+	GiteaToken  string
+	CloneURL    string
 	IssueNumber int
 }
 

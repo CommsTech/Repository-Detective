@@ -64,7 +64,7 @@ func PrepareGitHistoryWorkspace(ctx context.Context, cloneURL, token, ref string
 
 	ref = strings.TrimSpace(ref)
 	if ref != "" && ref != "HEAD" && !looksLikeCommitSHA(ref) {
-		if out, err := runGitHistory(cloneCtx, []string{"-C", dest, "fetch", "origin", ref+":"+ref, "--depth=1"}); err == nil {
+		if out, err := runGitHistory(cloneCtx, []string{"-C", dest, "fetch", "origin", ref + ":" + ref, "--depth=1"}); err == nil {
 			_, _ = out, err
 			if out2, err2 := runGitHistory(cloneCtx, []string{"-C", dest, "checkout", ref}); err2 != nil {
 				cleanup()

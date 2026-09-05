@@ -52,8 +52,8 @@ func EnforcementModeLabel(policyLevel string) string {
 
 // PolicyOutcome values describe owner-defined policy evaluation — never "secure"/"safe".
 const (
-	PolicyOutcomeMet               = "POLICY_MET"
-	PolicyOutcomeActionRequired    = "ACTION_REQUIRED"
+	PolicyOutcomeMet                  = "POLICY_MET"
+	PolicyOutcomeActionRequired       = "ACTION_REQUIRED"
 	PolicyOutcomeEvaluationIncomplete = "EVALUATION_INCOMPLETE"
-	PolicyOutcomeObservationOnly   = "OBSERVATION_ONLY"
+	PolicyOutcomeObservationOnly      = "OBSERVATION_ONLY"
 )

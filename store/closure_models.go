@@ -5,7 +5,7 @@ import "time"
 const (
 	ClosureStatusPendingRescan = "pending_rescan"
 	ClosureStatusVerified      = "verified"
-	ClosureStatusBlocked         = "blocked"
+	ClosureStatusBlocked       = "blocked"
 	ClosureStatusStillPresent  = "still_present"
 )
 

@@ -148,10 +148,10 @@ func TestIACScannerTruncation(t *testing.T) {
 
 func TestIsDockerfilePath(t *testing.T) {
 	cases := map[string]bool{
-		"Dockerfile":           true,
-		"docker/Dockerfile":    true,
-		"svc/app.Dockerfile":   true,
-		"main.go":              false,
+		"Dockerfile":         true,
+		"docker/Dockerfile":  true,
+		"svc/app.Dockerfile": true,
+		"main.go":            false,
 	}
 	for path, want := range cases {
 		if scanners.IsDockerfilePath(path) != want {

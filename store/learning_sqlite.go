@@ -392,7 +392,7 @@ func (s *SQLiteStore) BackfillFalsePositiveLearningEvents(ctx context.Context, l
 	defer rows.Close()
 
 	type backfillRow struct {
-		findingID, repoID int64
+		findingID, repoID                           int64
 		scanID, fingerprint, source, ruleID, status string
 	}
 	var batch []backfillRow

@@ -14,17 +14,17 @@ const maxEvidenceSnippetLen = 500
 
 // IssueRenderInput carries context for structured issue bodies.
 type IssueRenderInput struct {
-	Issue       *ai.CodeIssue
-	Repository  string
-	Owner       string
-	RepoName    string
+	Issue        *ai.CodeIssue
+	Repository   string
+	Owner        string
+	RepoName     string
 	GiteaBaseURL string
-	Context     string
-	Commit      string
-	Ref         string
-	PullRequest int
-	ScanID      string
-	Now         time.Time
+	Context      string
+	Commit       string
+	Ref          string
+	PullRequest  int
+	ScanID       string
+	Now          time.Time
 	// Extended metadata for actionable forge issues
 	FindingID      int64
 	Provider       string

@@ -56,8 +56,8 @@ func TestGoScannerSettingsOverrideGlobal(t *testing.T) {
 	timeout := 45
 	maxFindings := 50
 	effective := store.ResolveRepoSettings(global, store.RepoSettings{
-		EnableGosec:         &on,
-		GosecTimeoutSeconds: &timeout,
+		EnableGosec:          &on,
+		GosecTimeoutSeconds:  &timeout,
 		GoScannerMaxFindings: &maxFindings,
 	})
 	if !effective.EnableGosec {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 )
+
 var (
 	AllowedPolicyLevels = []string{
 		"monitor_only", "issue_only", "gate_pr", "suggest_fix",
@@ -19,28 +20,28 @@ var (
 )
 
 const (
-	HealthMaxFindingsMin         = 1
-	HealthMaxFindingsMax         = 1000
-	HealthLargeFileLinesMin      = 100
-	HealthLargeFileLinesMax      = 50000
-	HealthLargeFunctionLinesMin  = 20
-	HealthLargeFunctionLinesMax  = 5000
-	HealthMaxNestingDepthMin     = 2
-	HealthMaxNestingDepthMax     = 50
-	HealthMaxFunctionParamsMin   = 1
-	HealthMaxFunctionParamsMax   = 50
+	HealthMaxFindingsMin        = 1
+	HealthMaxFindingsMax        = 1000
+	HealthLargeFileLinesMin     = 100
+	HealthLargeFileLinesMax     = 50000
+	HealthLargeFunctionLinesMin = 20
+	HealthLargeFunctionLinesMax = 5000
+	HealthMaxNestingDepthMin    = 2
+	HealthMaxNestingDepthMax    = 50
+	HealthMaxFunctionParamsMin  = 1
+	HealthMaxFunctionParamsMax  = 50
 
-	GraphMaxNodesMin         = 100
-	GraphMaxNodesMax         = 50000
-	GraphMaxEdgesMin         = 100
-	GraphMaxEdgesMax         = 200000
-	GraphTimeoutSecondsMin   = 5
-	GraphTimeoutSecondsMax   = 1800
+	GraphMaxNodesMin       = 100
+	GraphMaxNodesMax       = 50000
+	GraphMaxEdgesMin       = 100
+	GraphMaxEdgesMax       = 200000
+	GraphTimeoutSecondsMin = 5
+	GraphTimeoutSecondsMax = 1800
 
-	GoScannerTimeoutMin      = 0
-	GoScannerTimeoutMax      = 3600
-	GoScannerMaxFindingsMin  = 1
-	GoScannerMaxFindingsMax  = 1000
+	GoScannerTimeoutMin     = 0
+	GoScannerTimeoutMax     = 3600
+	GoScannerMaxFindingsMin = 1
+	GoScannerMaxFindingsMax = 1000
 
 	IACScannerTimeoutMin     = 0
 	IACScannerTimeoutMax     = 3600
@@ -50,59 +51,59 @@ const (
 
 // SettingsUpdate is the API payload for updating repo settings.
 type SettingsUpdate struct {
-	ScanProfile       *string  `json:"scan_profile"`
-	Enabled           *bool    `json:"enabled"`
-	PolicyLevel       *string  `json:"policy_level"`
-	WorkspaceMode     *string  `json:"workspace_mode"`
-	AnalysisDepth     *int     `json:"analysis_depth"`
-	EnableLLMAuditors *bool    `json:"enable_llm_auditors"`
-	EnableTrivy       *bool    `json:"enable_trivy"`
-	EnableGrype       *bool    `json:"enable_grype"`
-	EnableGitleaks    *bool    `json:"enable_gitleaks"`
-	EnableSemgrep     *bool    `json:"enable_semgrep"`
-	EnableGovulncheck *bool    `json:"enable_govulncheck"`
-	EnableGosec       *bool    `json:"enable_gosec"`
-	EnableStaticcheck *bool    `json:"enable_staticcheck"`
-	EnableHadolint    *bool    `json:"enable_hadolint"`
-	EnableCheckov     *bool    `json:"enable_checkov"`
-	EnableLinters     *bool    `json:"enable_linters"`
-	SeverityGate      *string  `json:"severity_gate"`
-	ConfidenceGate    *float64 `json:"confidence_gate"`
-	IssuePolicy       *string  `json:"issue_policy"`
-	RemediationPolicy *string  `json:"remediation_policy"`
-	RunnerPolicy      *string  `json:"runner_policy"`
-	ScheduleEnabled   *bool    `json:"schedule_enabled"`
-	ScheduleCron      *string  `json:"schedule_cron"`
-	AIPolicy          *string  `json:"ai_policy"`
-	EnableHealthChecks          *bool `json:"enable_health_checks"`
-	EnableTechDebtChecks        *bool `json:"enable_tech_debt_checks"`
-	EnableReliabilityChecks     *bool `json:"enable_reliability_checks"`
-	EnableMaintainabilityChecks *bool `json:"enable_maintainability_checks"`
-	EnableTestGapChecks         *bool `json:"enable_test_gap_checks"`
-	EnablePerformanceChecks     *bool `json:"enable_performance_checks"`
-	EnableAIRiskChecks          *bool `json:"enable_ai_risk_checks"`
-	HealthMaxFindings           *int  `json:"health_max_findings"`
-	HealthLargeFileLines        *int  `json:"health_large_file_lines"`
-	HealthLargeFunctionLines    *int  `json:"health_large_function_lines"`
-	HealthMaxNestingDepth       *int  `json:"health_max_nesting_depth"`
-	HealthMaxFunctionParams     *int  `json:"health_max_function_params"`
-	EnableCodeGraph             *bool `json:"enable_code_graph"`
-	GraphMaxNodes               *int  `json:"graph_max_nodes"`
-	GraphMaxEdges               *int  `json:"graph_max_edges"`
-	GraphTimeoutSeconds         *int  `json:"graph_timeout_seconds"`
-	GraphIncludeFunctions       *bool `json:"graph_include_functions"`
-	GraphIncludeFindings        *bool `json:"graph_include_findings"`
-	GovulncheckTimeoutSeconds   *int  `json:"govulncheck_timeout_seconds"`
-	GosecTimeoutSeconds         *int  `json:"gosec_timeout_seconds"`
-	StaticcheckTimeoutSeconds   *int  `json:"staticcheck_timeout_seconds"`
-	GoScannerMaxFindings        *int  `json:"go_scanner_max_findings"`
-	HadolintTimeoutSeconds      *int  `json:"hadolint_timeout_seconds"`
-	CheckovTimeoutSeconds       *int  `json:"checkov_timeout_seconds"`
-	IACScannerMaxFindings       *int    `json:"iac_scanner_max_findings"`
-	NotificationsEnabled          *bool   `json:"notifications_enabled"`
-	NotificationMinSeverity       *string `json:"notification_min_severity"`
-	NotificationEvents            *string `json:"notification_events"`
-	NotificationCooldownSeconds   *int    `json:"notification_cooldown_seconds"`
+	ScanProfile                 *string  `json:"scan_profile"`
+	Enabled                     *bool    `json:"enabled"`
+	PolicyLevel                 *string  `json:"policy_level"`
+	WorkspaceMode               *string  `json:"workspace_mode"`
+	AnalysisDepth               *int     `json:"analysis_depth"`
+	EnableLLMAuditors           *bool    `json:"enable_llm_auditors"`
+	EnableTrivy                 *bool    `json:"enable_trivy"`
+	EnableGrype                 *bool    `json:"enable_grype"`
+	EnableGitleaks              *bool    `json:"enable_gitleaks"`
+	EnableSemgrep               *bool    `json:"enable_semgrep"`
+	EnableGovulncheck           *bool    `json:"enable_govulncheck"`
+	EnableGosec                 *bool    `json:"enable_gosec"`
+	EnableStaticcheck           *bool    `json:"enable_staticcheck"`
+	EnableHadolint              *bool    `json:"enable_hadolint"`
+	EnableCheckov               *bool    `json:"enable_checkov"`
+	EnableLinters               *bool    `json:"enable_linters"`
+	SeverityGate                *string  `json:"severity_gate"`
+	ConfidenceGate              *float64 `json:"confidence_gate"`
+	IssuePolicy                 *string  `json:"issue_policy"`
+	RemediationPolicy           *string  `json:"remediation_policy"`
+	RunnerPolicy                *string  `json:"runner_policy"`
+	ScheduleEnabled             *bool    `json:"schedule_enabled"`
+	ScheduleCron                *string  `json:"schedule_cron"`
+	AIPolicy                    *string  `json:"ai_policy"`
+	EnableHealthChecks          *bool    `json:"enable_health_checks"`
+	EnableTechDebtChecks        *bool    `json:"enable_tech_debt_checks"`
+	EnableReliabilityChecks     *bool    `json:"enable_reliability_checks"`
+	EnableMaintainabilityChecks *bool    `json:"enable_maintainability_checks"`
+	EnableTestGapChecks         *bool    `json:"enable_test_gap_checks"`
+	EnablePerformanceChecks     *bool    `json:"enable_performance_checks"`
+	EnableAIRiskChecks          *bool    `json:"enable_ai_risk_checks"`
+	HealthMaxFindings           *int     `json:"health_max_findings"`
+	HealthLargeFileLines        *int     `json:"health_large_file_lines"`
+	HealthLargeFunctionLines    *int     `json:"health_large_function_lines"`
+	HealthMaxNestingDepth       *int     `json:"health_max_nesting_depth"`
+	HealthMaxFunctionParams     *int     `json:"health_max_function_params"`
+	EnableCodeGraph             *bool    `json:"enable_code_graph"`
+	GraphMaxNodes               *int     `json:"graph_max_nodes"`
+	GraphMaxEdges               *int     `json:"graph_max_edges"`
+	GraphTimeoutSeconds         *int     `json:"graph_timeout_seconds"`
+	GraphIncludeFunctions       *bool    `json:"graph_include_functions"`
+	GraphIncludeFindings        *bool    `json:"graph_include_findings"`
+	GovulncheckTimeoutSeconds   *int     `json:"govulncheck_timeout_seconds"`
+	GosecTimeoutSeconds         *int     `json:"gosec_timeout_seconds"`
+	StaticcheckTimeoutSeconds   *int     `json:"staticcheck_timeout_seconds"`
+	GoScannerMaxFindings        *int     `json:"go_scanner_max_findings"`
+	HadolintTimeoutSeconds      *int     `json:"hadolint_timeout_seconds"`
+	CheckovTimeoutSeconds       *int     `json:"checkov_timeout_seconds"`
+	IACScannerMaxFindings       *int     `json:"iac_scanner_max_findings"`
+	NotificationsEnabled        *bool    `json:"notifications_enabled"`
+	NotificationMinSeverity     *string  `json:"notification_min_severity"`
+	NotificationEvents          *string  `json:"notification_events"`
+	NotificationCooldownSeconds *int     `json:"notification_cooldown_seconds"`
 }
 
 // ValidateSettingsUpdate returns an error describing the first invalid field.
