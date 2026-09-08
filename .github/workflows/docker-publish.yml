@@ -57,19 +57,31 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Preferred path: copy the already-built Gitea digest. Do not rebuild on
+      # missing credentials — fallback rebuilds are slow and can drift from the
+      # published acceptance digest.
       - name: Pull from Gitea and mirror (preferred)
-        if: ${{ inputs.source_gitea != false }}
+        id: mirror
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.source_gitea }}
         env:
           GITEA_USER: ${{ secrets.GITEA_PACKAGE_USER }}
           GITEA_TOKEN: ${{ secrets.GITEA_PACKAGE_TOKEN }}
           VERSION: ${{ steps.meta.outputs.version }}
         run: |
           set -eu
+          GHCR_REF="${GHCR_IMAGE}:${VERSION}"
+
           if [ -z "${GITEA_TOKEN:-}" ]; then
-            echo "GITEA_PACKAGE_TOKEN not set — falling through to rebuild on GHCR."
-            echo "skip=true" >> "$GITHUB_ENV"
-            exit 0
+            echo "GITEA_PACKAGE_TOKEN is not configured."
+            if docker manifest inspect "$GHCR_REF" >/dev/null 2>&1; then
+              echo "GHCR already has ${GHCR_REF} — mirror satisfied without rebuild."
+              echo "result=already_present" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "::error::Set repository secrets GITEA_PACKAGE_USER / GITEA_PACKAGE_TOKEN to pull from Gitea, or re-run with source_gitea=false to rebuild on GHCR."
+            exit 1
           fi
+
           echo "$GITEA_TOKEN" | docker login git.commsnet.org -u "${GITEA_USER:-commstech}" --password-stdin
           SRC="${GITEA_IMAGE}:${VERSION}"
           docker pull "$SRC"
@@ -78,14 +90,14 @@ jobs:
             docker push "${GHCR_IMAGE}:${t}"
           done
           echo "Mirrored ${SRC} → ${GHCR_IMAGE}"
-          echo "skip=false" >> "$GITHUB_ENV"
+          echo "result=mirrored" >> "$GITHUB_OUTPUT"
 
-      - name: Build and push on GHCR (fallback rebuild)
-        if: ${{ env.skip == 'true' || inputs.source_gitea == false }}
+      - name: Build and push on GHCR (explicit rebuild only)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.source_gitea == false }}
         uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
 
       - name: Build all-in-one for GHCR fallback
-        if: ${{ env.skip == 'true' || inputs.source_gitea == false }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.source_gitea == false }}
         uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
         with:
           context: .
@@ -101,3 +113,4 @@ jobs:
             ${{ env.GHCR_IMAGE }}:all-in-one
             ${{ env.GHCR_IMAGE }}:${{ steps.meta.outputs.version }}
             ${{ env.GHCR_IMAGE }}:latest
+            ${{ env.GHCR_IMAGE }}:${{ steps.meta.outputs.version }}-all-in-one

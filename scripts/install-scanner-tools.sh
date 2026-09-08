@@ -2,8 +2,10 @@
 # Install pinned external scanner binaries (Alpine Linux / musl amd64).
 # Used by Dockerfile scanner-tools stage. Versions documented in docs/DOCKER.md.
 set -eu
+# Fail on curl|tar pipelines when the download is missing/corrupt (e.g. deleted GitHub release).
+set -o pipefail 2>/dev/null || true
 
-TRIVY_VERSION="${TRIVY_VERSION:-0.57.1}"
+TRIVY_VERSION="${TRIVY_VERSION:-0.74.0}"
 GRYPE_VERSION="${GRYPE_VERSION:-0.84.0}"
 GITLEAKS_VERSION="${GITLEAKS_VERSION:-8.21.2}"
 SEMGREP_VERSION="${SEMGREP_VERSION:-1.76.0}"
@@ -12,13 +14,32 @@ CHECKOV_VERSION="${CHECKOV_VERSION:-3.2.254}"
 GOLANGCI_VERSION="${GOLANGCI_VERSION:-1.55.2}"
 SYFT_VERSION="${SYFT_VERSION:-1.18.1}"
 
+# Download a URL to a temp file, verify non-empty, then run a consumer command.
+# Avoids `curl | tar` succeeding with HTML/404 bodies when pipefail is unavailable.
+download_to() {
+  dest="$1"
+  url="$2"
+  curl -sfL --connect-timeout 30 --max-time 300 -o "$dest" "$url" || {
+    echo "download failed: $url" >&2
+    return 1
+  }
+  if [ ! -s "$dest" ]; then
+    echo "download empty: $url" >&2
+    return 1
+  fi
+}
+
 install_trivy() {
   if [ -x /tmp/deploy-bin/trivy ]; then
     install -m 0755 /tmp/deploy-bin/trivy /usr/local/bin/trivy
     return
   fi
-  curl -sfL "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" \
-    | tar xz -C /usr/local/bin trivy
+  tmp="/tmp/trivy_${TRIVY_VERSION}.tar.gz"
+  download_to "$tmp" \
+    "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+  tar xz -C /usr/local/bin -f "$tmp" trivy
+  rm -f "$tmp"
+  chmod 0755 /usr/local/bin/trivy
 }
 
 install_grype() {
@@ -29,12 +50,15 @@ install_grype() {
   # Direct release tarball — the upstream install.sh can hang on slow networks.
   grype_tgz="grype_${GRYPE_VERSION}_linux_amd64.tar.gz"
   for attempt in 1 2 3 4 5; do
-    if curl -sfL --connect-timeout 30 --max-time 300 \
+    tmp="/tmp/${grype_tgz}"
+    if download_to "$tmp" \
       "https://github.com/anchore/grype/releases/download/v${GRYPE_VERSION}/${grype_tgz}" \
-      | tar xz -C /usr/local/bin grype 2>/dev/null; then
+      && tar xz -C /usr/local/bin -f "$tmp" grype; then
+      rm -f "$tmp"
       chmod 0755 /usr/local/bin/grype
       return
     fi
+    rm -f "$tmp"
     echo "grype download attempt $attempt failed; retrying..." >&2
     sleep $((attempt * 5))
   done
@@ -49,12 +73,15 @@ install_syft() {
   fi
   syft_tgz="syft_${SYFT_VERSION}_linux_amd64.tar.gz"
   for attempt in 1 2 3 4 5; do
-    if curl -sfL --connect-timeout 30 --max-time 300 \
+    tmp="/tmp/${syft_tgz}"
+    if download_to "$tmp" \
       "https://github.com/anchore/syft/releases/download/v${SYFT_VERSION}/${syft_tgz}" \
-      | tar xz -C /usr/local/bin syft 2>/dev/null; then
+      && tar xz -C /usr/local/bin -f "$tmp" syft; then
+      rm -f "$tmp"
       chmod 0755 /usr/local/bin/syft
       return
     fi
+    rm -f "$tmp"
     echo "syft download attempt $attempt failed; retrying..." >&2
     sleep $((attempt * 5))
   done
@@ -67,8 +94,11 @@ install_gitleaks() {
     install -m 0755 /tmp/deploy-bin/gitleaks /usr/local/bin/gitleaks
     return
   fi
-  curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
-    | tar xz -C /usr/local/bin gitleaks
+  tmp="/tmp/gitleaks_${GITLEAKS_VERSION}.tar.gz"
+  download_to "$tmp" \
+    "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+  tar xz -C /usr/local/bin -f "$tmp" gitleaks
+  rm -f "$tmp"
 }
 
 install_hadolint() {
@@ -76,8 +106,8 @@ install_hadolint() {
     install -m 0755 /tmp/deploy-bin/hadolint /usr/local/bin/hadolint
     return
   fi
-  curl -sSfL "https://github.com/hadolint/hadolint/releases/download/v${HADOLINT_VERSION}/hadolint-Linux-x86_64" \
-    -o /usr/local/bin/hadolint
+  download_to /usr/local/bin/hadolint \
+    "https://github.com/hadolint/hadolint/releases/download/v${HADOLINT_VERSION}/hadolint-Linux-x86_64"
   chmod +x /usr/local/bin/hadolint
 }
 
