@@ -3,6 +3,17 @@
 **Last updated:** 2026-09-08  
 **Program:** Product Hardening & Public Beta Improvement Backlog + RD-PRODUCT/COMMERCIAL/GROWTH
 
+### Reviewer follow-up (2026-09-08) — posture / aging / GitHub trust
+
+| Item | Status | Notes |
+|------|--------|-------|
+| Aging stages (14→30→60→90 then silence) | **Done** | Persist `**Aging:**` via body patch; no 14-day repeat spam |
+| Confidence comment delta | **Done** | `ConfidenceCommentDelta = 0.15`; tiny 0.90→0.91 silent |
+| Posture trigger (risk not volume) | **Done** | critical>0 OR high≥3 OR regression/jump — not ≥20 AND high |
+| Exclusive scoped Gitea labels | **Done** | `exclusive: true` on create/update for `scope/*` names |
+| History-preserving GitHub mirror | **In progress** | Docs prefer `--github`; snapshot emergency-only |
+| Dogfood sample bodies | **Done** | `docs/dogfood-issue-samples/` (G201, ShellCheck, dep, posture) |
+
 ### Product value sprint (2026-09-08) — five tickets
 
 | Ticket | Status | Notes |

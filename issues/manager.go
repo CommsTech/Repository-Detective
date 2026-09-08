@@ -251,21 +251,6 @@ func (m *Manager) CreateIssuesFromAnalysis(ctx context.Context, req *IssueCreati
 	return result, nil
 }
 
-// shouldCreateSummaryIssue is intentionally rare: scan history belongs in Repository Detective.
-// A forge summary issue is only created when high/critical findings exist and grouping is enabled
-// (legacy GroupSimilarIssues). Prefer dashboard posture over backlog pollution.
-func shouldCreateSummaryIssue(issues []ai.CodeIssue) bool {
-	hasMaterial := false
-	for _, issue := range issues {
-		sev := strings.ToLower(strings.TrimSpace(issue.Severity))
-		if sev == "critical" || sev == "high" {
-			hasMaterial = true
-			break
-		}
-	}
-	return hasMaterial && len(issues) >= 20
-}
-
 func (m *Manager) createOrUpdateIssue(ctx context.Context, req *IssueCreationRequest, issue *ai.CodeIssue, result *IssueCreationResult) (string, error) {
 	forge := m.forgeFor(req.ForgeType)
 	if forge == nil {
@@ -307,6 +292,12 @@ func (m *Manager) updateExistingIssue(ctx context.Context, forge IssueForge, req
 	if decision.Comment && decision.Body != "" {
 		if err := forge.CreateIssueComment(ctx, req.Owner, req.Repository, match.IssueNumber, decision.Body); err != nil {
 			return fmt.Errorf("comment on existing issue #%d: %w", match.IssueNumber, err)
+		}
+	}
+
+	if decision.BodyPatch != "" {
+		if err := forge.EditIssueBody(ctx, req.Owner, req.Repository, match.IssueNumber, decision.BodyPatch); err != nil {
+			m.logger.Warnf("Failed to persist body update on issue #%d: %v", match.IssueNumber, err)
 		}
 	}
 
@@ -485,6 +476,9 @@ func formatAnalysisOverallScore(result *ai.CodeAnalysisResult) string {
 
 func (m *Manager) createSummaryIssueBody(req *IssueCreationRequest) string {
 	posture := BuildRepositoryPosture(req.AnalysisResult)
+	if ok, reason := ShouldCreatePostureIssue(posture, nil, DefaultPostureTriggerConfig()); ok {
+		posture.TriggerReason = reason
+	}
 	var body strings.Builder
 	body.WriteString(RenderRepositoryPostureMarkdown(posture))
 	body.WriteString("\n## Context\n\n")

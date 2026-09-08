@@ -17,7 +17,7 @@ The same policy applies to **container images**:
 | Host | Role | When to push |
 |------|------|--------------|
 | **Gitea** | Canonical — day-to-day commits, Actions, wiki, **container packages**, maintainer issues | Keep `main` / packages updated continuously |
-| **GitHub** | Public community mirror (git + optional GHCR) + **public feedback Issues** | After each publish-ready `main` update (or batch with `--github`) |
+| **GitHub** | Public community mirror (git + optional GHCR) + **public feedback Issues** | After each publish-ready `main` update via **history-preserving** `--github` |
 
 Day-to-day development stays on Gitea. Public bug/feature reports should use [GitHub Issues](https://github.com/CommsTech/Repository-Detective/issues/new/choose). Security: [SECURITY.md](../SECURITY.md).
 
@@ -41,9 +41,11 @@ Or a normal `git push origin main` after committing.
 
 ## Publish / refresh the public GitHub mirror
 
+**Prefer full history** so GitHub looks like a real repository (not a one-commit orphan):
+
 ```bash
 set -a && source .env && set +a
-./scripts/sync-gitea-to-github.sh --github        # Gitea + GitHub
+./scripts/sync-gitea-to-github.sh --github        # Gitea + history-preserving GitHub push
 # or, if Gitea is already current:
 ./scripts/sync-gitea-to-github.sh --github-only
 ```
@@ -65,34 +67,17 @@ SSH host alias: `github.com-repository-detective` (see `~/.ssh/config`).
 
 The script never stores tokens in `git remote` URLs.
 
-## History note (public snapshot)
+## History policy (storefront trust)
 
-The public GitHub `main` is refreshed as a **sanitized tree snapshot** (often appearing as a short history / low commit count). That is intentional.
+GitHub is part of the public storefront. Buyers evaluating a security product expect a **conventional commit graph**, not a single orphan snapshot labeled “1 Commit.”
 
-### Why does GitHub show limited history?
+| Mode | Flag | When to use |
+|------|------|-------------|
+| **History-preserving** (default for public refresh) | `--github` / `--github-only` | Normal releases and discovery updates |
+| **Orphan tree snapshot** (emergency only) | `--github-snapshot` | Only if push protection still blocks full history; document why |
 
-**Gitea** is the canonical development repository (full history, CI, wiki, maintainer work).
+### Emergency snapshot (`--github-snapshot`)
 
-**GitHub** is a sanitized public snapshot used for:
+Force-pushes an orphan commit of the current tree. This damages trust (GitHub shows ~1 commit). Prefer rewriting/allowlisting the historical blob that blocked the first full mirror (legacy Stripe-shaped test fixture) and returning to `--github`.
 
-- discovery
-- public issue feedback
-- documentation
-- releases
-- public source review
-
-Do **not** treat GitHub’s commit count as the product’s development history.
-
-Refresh with:
-
-```bash
-./scripts/sync-gitea-to-github.sh --github-snapshot
-```
-
-**Release tags** (`v*`) on GitHub are preserved separately from `main` snapshot force-updates — see [RELEASE_MIRROR.md](RELEASE_MIRROR.md).
-
-### Historical seed note
-
-The first GitHub `main` was seeded as a clean public snapshot partly because GitHub push protection blocked a full-history mirror on a Stripe-shaped string inside an old analyzer *test* fixture. That fixture is fixed on Gitea `main`; the historical blob may remain in Gitea history.
-
-(rewrites GitHub `main` to match the current Gitea tree as a fresh snapshot — for tester-facing updates without full history).
+Release tags (`v*`) must remain immutable once published — see [RELEASE_MIRROR.md](RELEASE_MIRROR.md).

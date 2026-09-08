@@ -2,6 +2,7 @@ package issues
 
 import (
 	"fmt"
+	"math"
 	"regexp"
 	"strings"
 	"time"
@@ -27,24 +28,44 @@ const (
 	LifecycleDuplicate            = "repository-detective/duplicate"
 )
 
-const agingReminderDays = 14
+// Aging stages advance once each; after long-lived, stay silent unless other signals fire.
+const (
+	AgingStageNone      = ""
+	AgingStageAging     = "aging"      // 14d
+	AgingStageOverdue   = "overdue"    // 30d
+	AgingStageStale     = "stale"      // 60d
+	AgingStageLongLived = "long-lived" // 90d — final escalation
+)
+
+const (
+	agingDaysAging     = 14
+	agingDaysOverdue   = 30
+	agingDaysStale     = 60
+	agingDaysLongLived = 90
+	// ConfidenceCommentDelta is the minimum absolute confidence change that warrants a comment.
+	ConfidenceCommentDelta = 0.15
+)
 
 var (
-	bodySeverityRe = regexp.MustCompile(`(?i)\*\*Severity:\*\*\s*([A-Za-z]+)`)
-	bodyLocationRe = regexp.MustCompile("(?m)^`([^`]+)`\\s*$")
-	bodyLastSeenRe = regexp.MustCompile(`(?i)\*\*Last seen:\*\*\s*([^\n]+)`)
+	bodySeverityRe   = regexp.MustCompile(`(?i)\*\*Severity:\*\*\s*([A-Za-z]+)`)
+	bodyLocationRe   = regexp.MustCompile("(?m)^`([^`]+)`\\s*$")
+	bodyLastSeenRe   = regexp.MustCompile(`(?i)\*\*Last seen:\*\*\s*([^\n]+)`)
+	bodyFirstSeenRe  = regexp.MustCompile(`(?i)\*\*First seen:\*\*\s*([^\n]+)`)
+	bodyAgingStageRe = regexp.MustCompile(`(?i)\*\*Aging:\*\*\s*([a-z-]+)`)
+	bodyConfidenceRe = regexp.MustCompile(`(?i)\*\*Detection confidence:\*\*\s*([0-9.]+)%`)
 )
 
 // UpdateDecision describes whether a rescan should comment on an existing forge issue.
 type UpdateDecision struct {
-	Comment bool
-	Body    string
-	Labels  []string
-	Reason  string // still_present_silent | severity_changed | location_changed | needs_review | aging_reminder
+	Comment   bool
+	Body      string
+	BodyPatch string // when set, replace the forge issue body (persist aging markers)
+	Labels    []string
+	Reason    string
 }
 
 // DecideExistingIssueUpdate suppresses routine "still present" noise.
-// Comments only for meaningful changes (severity/location/confidence/aging).
+// Comments only when the developer should care that RD is talking again.
 func DecideExistingIssueUpdate(issue *ai.CodeIssue, match *ExistingIssueMatch, scanID string, now time.Time) UpdateDecision {
 	if issue == nil {
 		return UpdateDecision{Reason: "still_present_silent"}
@@ -55,15 +76,6 @@ func DecideExistingIssueUpdate(issue *ai.CodeIssue, match *ExistingIssueMatch, s
 	prevBody := ""
 	if match != nil {
 		prevBody = match.Body
-	}
-
-	if ConfidenceNeedsHumanReview(issue.Confidence) {
-		return UpdateDecision{
-			Comment: true,
-			Body:    NeedsHumanReviewCommentBody(issue, scanID),
-			Labels:  ExpandLifecycleLabels(LifecycleNeedsHumanReview),
-			Reason:  "needs_review",
-		}
 	}
 
 	prevSev := strings.ToLower(extractBodySeverity(prevBody))
@@ -87,21 +99,113 @@ func DecideExistingIssueUpdate(issue *ai.CodeIssue, match *ExistingIssueMatch, s
 		}
 	}
 
-	if lastSeen, ok := extractBodyLastSeen(prevBody); ok {
-		if now.Sub(lastSeen) >= agingReminderDays*24*time.Hour {
-			return UpdateDecision{
-				Comment: true,
-				Body: fmt.Sprintf(
-					"Repository Detective aging reminder: this finding has remained open for %d+ days (scan `%s`).\n\n**Location:** `%s`\n**Severity:** %s",
-					agingReminderDays, scanID, curLoc, issue.Severity,
-				),
-				Reason: "aging_reminder",
-			}
-		}
+	if d := decideConfidenceComment(issue, prevBody, scanID); d.Comment {
+		return d
 	}
 
-	// Silent: last-seen is tracked in Repository Detective; do not comment every nightly scan.
+	if d := decideAgingComment(issue, prevBody, curLoc, scanID, now); d.Comment {
+		return d
+	}
+
 	return UpdateDecision{Reason: "still_present_silent"}
+}
+
+func decideConfidenceComment(issue *ai.CodeIssue, prevBody, scanID string) UpdateDecision {
+	prevConf, hasPrev := extractBodyConfidence(prevBody)
+	cur := issue.Confidence
+	crossedIntoReview := ConfidenceNeedsHumanReview(cur) && (!hasPrev || !ConfidenceNeedsHumanReview(prevConf))
+	materialDrop := hasPrev && prevConf-cur >= ConfidenceCommentDelta
+	if crossedIntoReview || (materialDrop && ConfidenceNeedsHumanReview(cur)) {
+		return UpdateDecision{
+			Comment: true,
+			Body:    NeedsHumanReviewCommentBody(issue, scanID),
+			Labels:  ExpandLifecycleLabels(LifecycleNeedsHumanReview),
+			Reason:  "needs_review",
+		}
+	}
+	return UpdateDecision{}
+}
+
+func decideAgingComment(issue *ai.CodeIssue, prevBody, curLoc, scanID string, now time.Time) UpdateDecision {
+	firstSeen, ok := extractBodyFirstSeen(prevBody)
+	if !ok {
+		// Fall back to last-seen as open-age proxy for legacy bodies.
+		firstSeen, ok = extractBodyLastSeen(prevBody)
+	}
+	if !ok {
+		return UpdateDecision{}
+	}
+	ageDays := int(now.Sub(firstSeen).Hours() / 24)
+	want := agingStageForDays(ageDays)
+	if want == AgingStageNone {
+		return UpdateDecision{}
+	}
+	prevStage := extractBodyAgingStage(prevBody)
+	if !agingStageAdvances(prevStage, want) {
+		return UpdateDecision{} // already at or past this stage — no spam
+	}
+	return UpdateDecision{
+		Comment: true,
+		Body: fmt.Sprintf(
+			"Repository Detective aging transition: **%s** (%d days open).\n\n**Aging:** %s\nScan: `%s`\n**Location:** `%s`\n**Severity:** %s\n\nWhy you should care: this finding has remained unresolved long enough to warrant another look.",
+			want, ageDays, want, scanID, curLoc, issue.Severity,
+		),
+		BodyPatch: UpsertAgingMarker(prevBody, want),
+		Reason:    "aging_" + want,
+	}
+}
+
+// UpsertAgingMarker writes or replaces **Aging:** in the issue body so stage advances persist.
+func UpsertAgingMarker(body, stage string) string {
+	stage = strings.TrimSpace(strings.ToLower(stage))
+	if stage == "" {
+		return body
+	}
+	line := "**Aging:** " + stage
+	if bodyAgingStageRe.MatchString(body) {
+		return bodyAgingStageRe.ReplaceAllString(body, line)
+	}
+	if bodyFirstSeenRe.MatchString(body) {
+		return bodyFirstSeenRe.ReplaceAllString(body, "${0}\n"+line)
+	}
+	if bodyLastSeenRe.MatchString(body) {
+		return bodyLastSeenRe.ReplaceAllString(body, "${0}\n"+line)
+	}
+	return strings.TrimRight(body, "\n") + "\n\n" + line + "\n"
+}
+
+func agingStageForDays(days int) string {
+	switch {
+	case days >= agingDaysLongLived:
+		return AgingStageLongLived
+	case days >= agingDaysStale:
+		return AgingStageStale
+	case days >= agingDaysOverdue:
+		return AgingStageOverdue
+	case days >= agingDaysAging:
+		return AgingStageAging
+	default:
+		return AgingStageNone
+	}
+}
+
+func agingStageRank(stage string) int {
+	switch stage {
+	case AgingStageAging:
+		return 1
+	case AgingStageOverdue:
+		return 2
+	case AgingStageStale:
+		return 3
+	case AgingStageLongLived:
+		return 4
+	default:
+		return 0
+	}
+}
+
+func agingStageAdvances(prev, want string) bool {
+	return agingStageRank(want) > agingStageRank(prev)
 }
 
 func extractBodySeverity(body string) string {
@@ -121,17 +225,49 @@ func extractBodyLocation(body string) string {
 }
 
 func extractBodyLastSeen(body string) (time.Time, bool) {
-	m := bodyLastSeenRe.FindStringSubmatch(body)
+	return parseBodyDate(bodyLastSeenRe, body)
+}
+
+func extractBodyFirstSeen(body string) (time.Time, bool) {
+	return parseBodyDate(bodyFirstSeenRe, body)
+}
+
+func parseBodyDate(re *regexp.Regexp, body string) (time.Time, bool) {
+	m := re.FindStringSubmatch(body)
 	if len(m) < 2 {
 		return time.Time{}, false
 	}
 	raw := strings.TrimSpace(m[1])
 	for _, layout := range []string{"Jan 2, 2006", time.RFC3339, "2006-01-02"} {
 		if t, err := time.Parse(layout, raw); err == nil {
-			return t, true
+			return t.UTC(), true
 		}
 	}
 	return time.Time{}, false
+}
+
+func extractBodyAgingStage(body string) string {
+	matches := bodyAgingStageRe.FindAllStringSubmatch(body, -1)
+	if len(matches) == 0 {
+		return ""
+	}
+	last := matches[len(matches)-1]
+	if len(last) > 1 {
+		return strings.ToLower(strings.TrimSpace(last[1]))
+	}
+	return ""
+}
+
+func extractBodyConfidence(body string) (float64, bool) {
+	m := bodyConfidenceRe.FindStringSubmatch(body)
+	if len(m) < 2 {
+		return 0, false
+	}
+	var pct float64
+	if _, err := fmt.Sscanf(m[1], "%f", &pct); err != nil {
+		return 0, false
+	}
+	return pct / 100.0, true
 }
 
 // StillPresentCommentBody formats an update when a fingerprint is detected again (legacy; prefer DecideExistingIssueUpdate).
@@ -166,15 +302,13 @@ func NotReproducedCommentBody(scanID string) string {
 // NeedsHumanReviewCommentBody formats a low-confidence update without creating noise.
 func NeedsHumanReviewCommentBody(issue *ai.CodeIssue, scanID string) string {
 	title := ""
-	if issue != nil {
-		title = issue.Title
-	}
 	conf := 0.0
 	if issue != nil {
+		title = issue.Title
 		conf = issue.Confidence
 	}
 	return fmt.Sprintf(
-		"Repository Detective confidence is borderline (%.0f%%) in scan `%s`. Please triage manually before acting.\n\n**Finding:** %s",
+		"Repository Detective confidence warrants human triage (%.0f%%) in scan `%s`.\n\n**Finding:** %s",
 		conf*100,
 		scanID,
 		title,
@@ -184,4 +318,9 @@ func NeedsHumanReviewCommentBody(issue *ai.CodeIssue, scanID string) string {
 // ConfidenceNeedsHumanReview reports whether confidence is low enough to flag manual review.
 func ConfidenceNeedsHumanReview(confidence float64) bool {
 	return confidence > 0 && confidence < 0.65
+}
+
+// ConfidenceDelta reports absolute change (exported for tests).
+func ConfidenceDelta(a, b float64) float64 {
+	return math.Abs(a - b)
 }

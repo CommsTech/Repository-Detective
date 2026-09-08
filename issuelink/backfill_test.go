@@ -34,6 +34,7 @@ func (s *stubForge) CreateIssue(context.Context, string, string, string, string,
 func (s *stubForge) CreateIssueComment(context.Context, string, string, int, string) error {
 	return nil
 }
+func (s *stubForge) EditIssueBody(context.Context, string, string, int, string) error { return nil }
 func (s *stubForge) AddIssueLabels(context.Context, string, string, int, []string) error { return nil }
 
 func TestBackfillExternalIssueMapping(t *testing.T) {

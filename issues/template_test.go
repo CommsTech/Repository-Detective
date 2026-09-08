@@ -280,6 +280,45 @@ func TestDecideExistingIssueUpdateSeverityChange(t *testing.T) {
 	}
 }
 
+func TestDecideExistingIssueUpdateAgingStagesOnce(t *testing.T) {
+	issue := &ai.CodeIssue{Severity: "medium", Confidence: 0.9, File: "a.go", LineNumber: 1}
+	now := time.Date(2026, 9, 8, 12, 0, 0, 0, time.UTC)
+	base := "**Severity:** Medium\n\n`a.go:1`\n\n**First seen:** Aug 1, 2026\n" // 38 days → overdue
+	d := DecideExistingIssueUpdate(issue, &ExistingIssueMatch{Body: base}, "scan-a", now)
+	if !d.Comment || d.Reason != "aging_overdue" {
+		t.Fatalf("expected aging_overdue at 38d, got %+v", d)
+	}
+	// Body already recorded overdue — next rescan at same age must stay silent.
+	withStage := UpsertAgingMarker(base, AgingStageOverdue)
+	d2 := DecideExistingIssueUpdate(issue, &ExistingIssueMatch{Body: withStage}, "scan-b", now)
+	if d2.Comment {
+		t.Fatalf("expected silent after stage already posted, got %+v", d2)
+	}
+	// 95 days → long-lived advances from overdue
+	later := time.Date(2026, 11, 5, 12, 0, 0, 0, time.UTC)
+	d3 := DecideExistingIssueUpdate(issue, &ExistingIssueMatch{Body: withStage}, "scan-c", later)
+	if !d3.Comment || d3.Reason != "aging_long-lived" {
+		t.Fatalf("expected aging_long-lived, got %+v", d3)
+	}
+	if !strings.Contains(d3.BodyPatch, "**Aging:** long-lived") {
+		t.Fatalf("expected BodyPatch to persist long-lived stage: %q", d3.BodyPatch)
+	}
+	final := UpsertAgingMarker(withStage, AgingStageLongLived)
+	d4 := DecideExistingIssueUpdate(issue, &ExistingIssueMatch{Body: final}, "scan-d", later.Add(30*24*time.Hour))
+	if d4.Comment {
+		t.Fatalf("expected permanent silence after long-lived, got %+v", d4)
+	}
+}
+
+func TestDecideExistingIssueUpdateConfidenceTinyDeltaSilent(t *testing.T) {
+	issue := &ai.CodeIssue{Severity: "medium", Confidence: 0.91, File: "a.go", LineNumber: 1}
+	match := &ExistingIssueMatch{Body: "**Severity:** Medium\n\n`a.go:1`\n\n**Detection confidence:** 90%\n"}
+	d := DecideExistingIssueUpdate(issue, match, "scan-9", time.Now().UTC())
+	if d.Comment {
+		t.Fatalf("0.90→0.91 must not comment, got %+v", d)
+	}
+}
+
 func TestRepositoryPostureNoPercentScore(t *testing.T) {
 	result := &ai.CodeAnalysisResult{
 		Issues: []ai.CodeIssue{
@@ -298,20 +337,46 @@ func TestRepositoryPostureNoPercentScore(t *testing.T) {
 	}
 }
 
-func TestShouldCreateSummaryIssueRare(t *testing.T) {
-	small := make([]ai.CodeIssue, 10)
-	for i := range small {
-		small[i] = ai.CodeIssue{Severity: "medium"}
+func TestShouldCreateSummaryIssueRiskNotVolume(t *testing.T) {
+	// 23 medium + 1 high used to fire on volume; high alone under threshold must NOT.
+	noisy := make([]ai.CodeIssue, 23)
+	for i := range noisy {
+		noisy[i] = ai.CodeIssue{Severity: "medium"}
 	}
-	if shouldCreateSummaryIssue(small) {
-		t.Fatal("medium-only small sets must not create summary issues")
+	noisy[0].Severity = "high"
+	if shouldCreateSummaryIssue(noisy) {
+		t.Fatal("1 high + volume must not create posture issue (high threshold is 3)")
 	}
-	big := make([]ai.CodeIssue, 20)
-	for i := range big {
-		big[i] = ai.CodeIssue{Severity: "medium"}
+	// 1 critical must fire regardless of volume
+	critical := []ai.CodeIssue{{Severity: "critical"}}
+	if !shouldCreateSummaryIssue(critical) {
+		t.Fatal("critical-only set must create posture issue")
 	}
-	big[0].Severity = "high"
-	if !shouldCreateSummaryIssue(big) {
-		t.Fatal("large sets with high findings may create rare posture issues")
+	// 3+ high fires
+	highs := []ai.CodeIssue{
+		{Severity: "high"}, {Severity: "high"}, {Severity: "high"},
+	}
+	if !shouldCreateSummaryIssue(highs) {
+		t.Fatal("high count at threshold must create posture issue")
+	}
+}
+
+func TestShouldCreatePostureIssueRegression(t *testing.T) {
+	prev := RepositoryPosture{Critical: 0, High: 1, Medium: 2}
+	cur := RepositoryPosture{Critical: 1, High: 1, Medium: 2}
+	ok, reason := ShouldCreatePostureIssue(cur, &prev, DefaultPostureTriggerConfig())
+	if !ok || reason != "critical_present" {
+		// critical_present wins over regression when critical > 0
+		t.Fatalf("expected critical_present, got ok=%v reason=%s", ok, reason)
+	}
+	cur2 := RepositoryPosture{Critical: 0, High: 2, Medium: 2}
+	ok, reason = ShouldCreatePostureIssue(cur2, &prev, DefaultPostureTriggerConfig())
+	if !ok || reason != "high_regression" {
+		t.Fatalf("expected high_regression, got ok=%v reason=%s", ok, reason)
+	}
+	cur3 := RepositoryPosture{Critical: 0, High: 1, Medium: 20}
+	ok, reason = ShouldCreatePostureIssue(cur3, &prev, DefaultPostureTriggerConfig())
+	if !ok || reason != "actionable_jump" {
+		t.Fatalf("expected actionable_jump, got ok=%v reason=%s", ok, reason)
 	}
 }

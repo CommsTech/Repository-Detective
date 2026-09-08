@@ -21,6 +21,7 @@ type IssueForge interface {
 	ListOpenIssues(ctx context.Context, owner, repo string, limit, page int) ([]ForgeIssue, error)
 	CreateIssue(ctx context.Context, owner, repo, title, body string, labelNames []string) (*ForgeIssue, error)
 	CreateIssueComment(ctx context.Context, owner, repo string, issueNumber int, body string) error
+	EditIssueBody(ctx context.Context, owner, repo string, issueNumber int, body string) error
 	AddIssueLabels(ctx context.Context, owner, repo string, issueNumber int, labelNames []string) error
 }
 
@@ -92,6 +93,11 @@ func (f *GiteaForge) CreateIssueComment(ctx context.Context, owner, repo string,
 	return f.Client.CreateIssueComment(ctx, owner, repo, issueNumber, body)
 }
 
+func (f *GiteaForge) EditIssueBody(ctx context.Context, owner, repo string, issueNumber int, body string) error {
+	_, err := f.Client.EditIssue(ctx, owner, repo, issueNumber, &gitea.EditIssueRequest{Body: body})
+	return err
+}
+
 func (f *GiteaForge) AddIssueLabels(ctx context.Context, owner, repo string, issueNumber int, labelNames []string) error {
 	if len(labelNames) == 0 {
 		return nil
@@ -160,6 +166,10 @@ func (f *GitHubForge) CreateIssue(ctx context.Context, owner, repo, title, body 
 
 func (f *GitHubForge) CreateIssueComment(ctx context.Context, owner, repo string, issueNumber int, body string) error {
 	return f.Client.CreateIssueComment(ctx, owner, repo, issueNumber, body)
+}
+
+func (f *GitHubForge) EditIssueBody(ctx context.Context, owner, repo string, issueNumber int, body string) error {
+	return f.Client.EditIssueBody(ctx, owner, repo, issueNumber, body)
 }
 
 func (f *GitHubForge) AddIssueLabels(ctx context.Context, owner, repo string, issueNumber int, labelNames []string) error {

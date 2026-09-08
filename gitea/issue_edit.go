@@ -12,6 +12,7 @@ import (
 // EditIssueRequest updates issue fields.
 type EditIssueRequest struct {
 	State string `json:"state,omitempty"`
+	Body  string `json:"body,omitempty"`
 }
 
 // EditIssue updates an existing issue.

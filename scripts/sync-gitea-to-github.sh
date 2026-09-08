@@ -8,9 +8,8 @@
 #   ./scripts/sync-gitea-to-github.sh --github-snapshot  # Gitea + tree snapshot → GitHub
 #   ./scripts/sync-gitea-to-github.sh --dry-run
 #
-# Prefer --github-snapshot while GitHub push protection blocks full history
-# (historical Stripe-shaped test fixture). After allowlisting or history rewrite,
-# use --github for a normal fast-forward mirror.
+# Prefer --github (full history). --github-snapshot is emergency-only: it rebuilds
+# GitHub main as an orphan tree and shows "1 Commit", which damages storefront trust.
 #
 # GitHub auth (first match wins):
 #   1) SSH deploy key ~/.ssh/repository-detective-github-deploy
@@ -31,9 +30,9 @@ Keep Gitea (canonical) up to date. Refresh GitHub for public testers.
 
 Usage:
   ./scripts/sync-gitea-to-github.sh                    # push main → Gitea only
-  ./scripts/sync-gitea-to-github.sh --github-snapshot  # Gitea + clean tree snapshot → GitHub
-  ./scripts/sync-gitea-to-github.sh --github           # Gitea + full-history GitHub (after allowlist)
-  ./scripts/sync-gitea-to-github.sh --github-only
+  ./scripts/sync-gitea-to-github.sh --github           # Gitea + history-preserving GitHub (preferred)
+  ./scripts/sync-gitea-to-github.sh --github-only      # GitHub full history only
+  ./scripts/sync-gitea-to-github.sh --github-snapshot  # emergency orphan tree (avoid)
   ./scripts/sync-gitea-to-github.sh --dry-run
 EOF
   exit 0
@@ -164,7 +163,7 @@ if $PUSH_GITHUB; then
     fi
   fi
 else
-  log "skipping GitHub — use --github-snapshot (testers) or --github (full history)"
+  log "skipping GitHub — use --github (history-preserving) or --github-snapshot (emergency only)"
 fi
 
 log "done"

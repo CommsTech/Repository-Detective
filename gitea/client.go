@@ -104,6 +104,7 @@ type Label struct {
 	Name        string `json:"name"`
 	Color       string `json:"color"`
 	Description string `json:"description"`
+	Exclusive   bool   `json:"exclusive"`
 	URL         string `json:"url"`
 }
 

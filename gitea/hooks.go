@@ -178,11 +178,15 @@ func (c *Client) ListRepositoryLabels(ctx context.Context, owner, repo string) (
 }
 
 // CreateRepositoryLabel creates a label on a repository.
+// Scoped labels (name contains "/") are created with Exclusive=true so Gitea
+// enforces at-most-one label per scope (severity/, triage/, etc.).
 func (c *Client) CreateRepositoryLabel(ctx context.Context, owner, repo, name, color string) (*Label, error) {
 	url := fmt.Sprintf("%s/api/v1/repos/%s/%s/labels", c.baseURL, owner, repo)
-	payload, _ := json.Marshal(map[string]string{
-		"name":  name,
-		"color": color,
+	exclusive := strings.Contains(name, "/")
+	payload, _ := json.Marshal(map[string]any{
+		"name":      name,
+		"color":     color,
+		"exclusive": exclusive,
 	})
 
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(payload))
@@ -210,12 +214,14 @@ func (c *Client) CreateRepositoryLabel(ctx context.Context, owner, repo, name, c
 	return &label, nil
 }
 
-// UpdateRepositoryLabel updates an existing repository label's color.
+// UpdateRepositoryLabel updates an existing repository label (color + exclusivity for scoped names).
 func (c *Client) UpdateRepositoryLabel(ctx context.Context, owner, repo string, labelID int64, name, color string) error {
 	url := fmt.Sprintf("%s/api/v1/repos/%s/%s/labels/%d", c.baseURL, owner, repo, labelID)
-	payload, _ := json.Marshal(map[string]string{
-		"name":  name,
-		"color": color,
+	exclusive := strings.Contains(name, "/")
+	payload, _ := json.Marshal(map[string]any{
+		"name":      name,
+		"color":     color,
+		"exclusive": exclusive,
 	})
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPatch, url, bytes.NewReader(payload))
@@ -257,11 +263,13 @@ func (c *Client) ResolveLabelIDs(ctx context.Context, owner, repo string, names 
 	var ids []int64
 	for _, name := range names {
 		wantColor := DefaultLabelColor(name)
+		wantExclusive := strings.Contains(name, "/")
 		key := strings.ToLower(name)
 		if label, ok := byName[key]; ok {
-			if !strings.EqualFold(label.Color, wantColor) {
+			needsUpdate := !strings.EqualFold(label.Color, wantColor) || label.Exclusive != wantExclusive
+			if needsUpdate {
 				if err := c.UpdateRepositoryLabel(ctx, owner, repo, label.ID, label.Name, wantColor); err != nil {
-					c.logger.Warnf("Failed to update label color for %s: %v", name, err)
+					c.logger.Warnf("Failed to update label %s: %v", name, err)
 				}
 			}
 			ids = append(ids, label.ID)

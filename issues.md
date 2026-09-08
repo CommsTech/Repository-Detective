@@ -1,5 +1,15 @@
 # Development Issues Log
 
+## Fixed (2026-09-08) — Reviewer follow-up (posture / aging / mirror)
+
+| Priority | Issue | Resolution |
+|----------|-------|------------|
+| P0 | Posture gate `≥20 AND high` inverted risk (misses 1 critical) | Risk-first: critical, high≥3, regression, actionable jump |
+| P0 | 14-day aging comments forever = spam on a timer | Stages aging→overdue→stale→long-lived then silence; body marker persisted |
+| P1 | Confidence 0.90→0.91 would comment | Minimum delta 0.15 + needs-review crossing |
+| P1 | Scoped labels not exclusive on Gitea | Create/update with `exclusive: true` for `name` containing `/` |
+| P1 | GitHub orphan snapshot (“1 Commit”) damages trust | Prefer history-preserving `--github`; snapshot emergency-only |
+
 ## Fixed (2026-09-08) — Forge issue model 2.0
 
 | Priority | Issue | Resolution |

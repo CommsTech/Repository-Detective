@@ -108,6 +108,17 @@ func (c *Client) CreateIssueComment(ctx context.Context, owner, repo string, iss
 	return err
 }
 
+// EditIssueBody replaces an issue body (used to persist aging markers without spam).
+func (c *Client) EditIssueBody(ctx context.Context, owner, repo string, issueNumber int, body string) error {
+	endpoint := fmt.Sprintf("%s/repos/%s/%s/issues/%d", c.baseURL, owner, repo, issueNumber)
+	payload, err := json.Marshal(map[string]string{"body": body})
+	if err != nil {
+		return err
+	}
+	_, err = c.doJSON(ctx, http.MethodPatch, endpoint, payload)
+	return err
+}
+
 // AddIssueLabels attaches labels by name to an issue.
 func (c *Client) AddIssueLabels(ctx context.Context, owner, repo string, issueNumber int, labels []string) error {
 	if len(labels) == 0 {

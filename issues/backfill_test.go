@@ -59,6 +59,9 @@ func (p *paginatingForge) CreateIssue(context.Context, string, string, string, s
 func (p *paginatingForge) CreateIssueComment(context.Context, string, string, int, string) error {
 	return nil
 }
+func (p *paginatingForge) EditIssueBody(context.Context, string, string, int, string) error {
+	return nil
+}
 func (p *paginatingForge) AddIssueLabels(context.Context, string, string, int, []string) error {
 	return nil
 }
