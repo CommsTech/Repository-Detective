@@ -793,7 +793,11 @@ func (s *SQLiteStore) UpsertFinding(ctx context.Context, finding Finding) (Findi
 			file_path = excluded.file_path,
 			line = excluded.line,
 			title = excluded.title,
-			status = excluded.status,
+			status = CASE
+				WHEN findings.status IN ('false_positive', 'suppressed', 'resolved_verified', 'closure_blocked')
+					AND excluded.status IN ('open', '') THEN findings.status
+				ELSE excluded.status
+			END,
 			last_seen_scan_id = excluded.last_seen_scan_id,
 			last_seen_at = excluded.last_seen_at
 	`, finding.RepositoryID, finding.Fingerprint, finding.Category, finding.Severity, finding.Confidence,

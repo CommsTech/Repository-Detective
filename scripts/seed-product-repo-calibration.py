@@ -83,6 +83,10 @@ RULES = [
     ("maintainability", "HEALTH-LARGE-FILE", "store/sqlite_queries.go", "Store query surface — informational maintainability"),
     ("test_gap", "HEALTH-PY-NO-TEST", "scripts/", "Operator scripts are not a pytest package"),
     ("golangci-lint", "LINT-GO-gofmt", "internal/dogfood/", "Controlled dogfood staticcheck/gofmt marker"),
+    ("trivy", "TRIVY-CVE-2024-26130", "examples/vulnerable-demo/", "Intentional vulnerable demo fixture"),
+    ("trivy", "", "examples/vulnerable-demo/", "All Trivy findings under vulnerable-demo are intentional demo CVEs"),
+    ("grype", "", "examples/vulnerable-demo/", "Intentional vulnerable demo fixture"),
+    ("test_gap", "HEALTH-PY-NO-TEST", "examples/vulnerable-demo/", "Demo package is not a pytest target"),
 ]
 
 

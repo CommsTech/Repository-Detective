@@ -7,11 +7,12 @@
 
 | Item | Value |
 |------|-------|
-| Live | `repository-detective:upgrade-candidate` binary from tree @ **`48ef8e2d`** (+ knownsafe/workflow/script fixes) |
-| Cycle 1 scan | **`73759e3053198342`** deep, filing enabled — polling |
-| Pre-scan open actionable | high/medium **0** (info/low remain) |
-| Pre-scan forge | open `repository-detective` issues **0** |
-| Fixes this cycle | pages-docs full SHA pins; nosemgrep on env-staged workflow inputs; shellcheck script quotes; knownsafe G203/OpenAPI/shell-injection; +17 repo calibration rules; DB mark fixed/FP/suppressed |
+| Live | `repository-detective:upgrade-candidate` **`dc7ffcab`** (next: disposition-preserving upsert + demo FP) |
+| Cycle 1 | **`73759e3053198342`** — fixed G115/G122/G306/pages-docs/shellcheck; knownsafe expansions |
+| Cycle 2 | **`0475147f3a913f1f`** — only intentional `vulnerable-demo` high/med remained; forge **0** |
+| Fix | Preserve `false_positive`/`suppressed`/`resolved_verified` on finding upsert; demo calibrated FP |
+| Cycle 3 | pending after push+rebuild |
+| Open actionable | **0** high/med (info 174 / low 11 OK) |
 
 ### Remaining-26 closeout — perms / Docker / cookie / FP (2026-09-08)
 

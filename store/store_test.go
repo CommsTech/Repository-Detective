@@ -248,6 +248,39 @@ func TestFindingUpsertAndInstance(t *testing.T) {
 		t.Fatal("first_seen_at should be preserved")
 	}
 
+	if _, err := s.UpsertFinding(ctx, store.Finding{
+		RepositoryID:   repo.ID,
+		Fingerprint:    "rd-deadbeef",
+		Category:       "security",
+		Severity:       "high",
+		Confidence:     0.99,
+		Source:         "semgrep",
+		Title:          "Test finding",
+		Status:         store.FindingStatusFalsePositive,
+		LastSeenScanID: scanID,
+		LastSeenAt:     now.Add(2 * time.Minute),
+	}); err != nil {
+		t.Fatalf("mark false_positive: %v", err)
+	}
+	f3, err := s.UpsertFinding(ctx, store.Finding{
+		RepositoryID:   repo.ID,
+		Fingerprint:    "rd-deadbeef",
+		Category:       "security",
+		Severity:       "high",
+		Confidence:     0.99,
+		Source:         "semgrep",
+		Title:          "Test finding seen again",
+		Status:         store.FindingStatusOpen,
+		LastSeenScanID: scanID,
+		LastSeenAt:     now.Add(3 * time.Minute),
+	})
+	if err != nil {
+		t.Fatalf("upsert after false_positive: %v", err)
+	}
+	if f3.Status != store.FindingStatusFalsePositive {
+		t.Fatalf("expected false_positive disposition preserved on rescan upsert, got %q", f3.Status)
+	}
+
 	if err := s.AddFindingInstance(ctx, store.FindingInstance{
 		FindingID:        f2.ID,
 		ScanID:           scanID,
