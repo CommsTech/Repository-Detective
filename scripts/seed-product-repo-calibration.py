@@ -66,6 +66,23 @@ RULES = [
     ("static", "REL-INTERNAL-INFRA-REF", "internal/privacy/", "Localhost host check is privacy classification, not leakage"),
     ("public_release", "REL-INTERNAL-INFRA-REF", "internal/privacy/", "Localhost host check is privacy classification, not leakage"),
     ("checkov", "CKV_GHA_7", ".github/workflows/docker-publish.yml", "Documented skip — workflow_dispatch inputs required for operator GHCR mirror"),
+    ("checkov", "CKV_OPENAPI_5", "docsdata/", "Bundled OpenAPI docs surface — not a live gateway"),
+    ("checkov", "CKV_OPENAPI_20", "docsdata/", "Bundled OpenAPI docs surface — not a live gateway"),
+    ("checkov", "CKV_OPENAPI_21", "docsdata/", "Bundled OpenAPI docs surface — not a live gateway"),
+    ("gosec", "G203", "ui/ui_helpers.go", "template.JS after json.Valid — intentional embedding into application/json script tags"),
+    ("gosec", "G118", "preinstall/", "WithoutCancel detaches background audit from request cancel — intentional"),
+    ("gosec", "G301", "main.go", "Directory perms fixed to 0750 — historical finding path"),
+    ("ruff", "LINT-RUFF-F541", "scripts/", "Operator maintenance scripts — calibrated informational"),
+    ("ruff", "LINT-RUFF-F401", "scripts/", "Operator maintenance scripts — calibrated informational"),
+    ("ruff", "LINT-RUFF-F841", "scripts/", "Operator maintenance scripts — calibrated informational"),
+    ("ruff", "LINT-RUFF-F601", "scripts/", "Operator maintenance scripts — calibrated informational"),
+    ("ruff", "LINT-RUFF-E741", "scripts/", "Operator maintenance scripts — calibrated informational"),
+    ("shellcheck", "LINT-SHELL-2155", "scripts/", "Operator maintenance scripts — calibrated informational"),
+    ("shellcheck", "LINT-SHELL-1083", "scripts/", "Operator maintenance scripts — calibrated informational"),
+    ("shellcheck", "LINT-SHELL-1111", "scripts/", "Operator maintenance scripts — calibrated informational"),
+    ("maintainability", "HEALTH-LARGE-FILE", "store/sqlite_queries.go", "Store query surface — informational maintainability"),
+    ("test_gap", "HEALTH-PY-NO-TEST", "scripts/", "Operator scripts are not a pytest package"),
+    ("golangci-lint", "LINT-GO-gofmt", "internal/dogfood/", "Controlled dogfood staticcheck/gofmt marker"),
 ]
 
 

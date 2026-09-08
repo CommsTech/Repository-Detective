@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -101,20 +102,16 @@ func formatIntComma(n int) string {
 	if len(s) <= 3 {
 		return s
 	}
-	var out []byte
-	for i, c := range reverseString(s) {
-		if i > 0 && i%3 == 0 {
-			out = append(out, ',')
-		}
-		out = append(out, byte(c))
+	lead := len(s) % 3
+	if lead == 0 {
+		lead = 3
 	}
-	return reverseString(string(out))
-}
-
-func reverseString(s string) string {
-	b := []byte(s)
-	for i, j := 0, len(b)-1; i < j; i, j = i+1, j-1 {
-		b[i], b[j] = b[j], b[i]
+	var b strings.Builder
+	b.Grow(len(s) + len(s)/3)
+	b.WriteString(s[:lead])
+	for i := lead; i < len(s); i += 3 {
+		b.WriteByte(',')
+		b.WriteString(s[i : i+3])
 	}
-	return string(b)
+	return b.String()
 }

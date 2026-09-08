@@ -129,7 +129,7 @@ func generateSyftSBOM(ctx context.Context, dir, outDir string) (Result, error) {
 		}
 		return Result{Status: StatusCheckFailed, Detail: detail}, nil
 	}
-	if err := os.WriteFile(outPath, out, 0o640); err != nil {
+	if err := os.WriteFile(outPath, out, 0o600); err != nil {
 		return Result{}, err
 	}
 	var doc cycloneDXDoc

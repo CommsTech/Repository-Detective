@@ -1,5 +1,12 @@
 # Development Issues Log
 
+## Fixed (2026-09-08) — Self-scan clean loop (cycle prep)
+
+| Priority | Issue | Resolution |
+|----------|-------|------------|
+| P0 | Remaining high G118 / Semgrep shell-injection / medium G203+OpenAPI+script lint | Knownsafe + nosemgrep/env staging + SHA pins; DB resolved/FP/suppressed; +17 calibration rules |
+| P1 | Truncated action SHAs in pages-docs.yml | Full 40-char pins for checkout + deploy-pages |
+
 ## Fixed (2026-09-08) — Close remaining 26 self-scan forge issues
 
 | Priority | Issue | Resolution |

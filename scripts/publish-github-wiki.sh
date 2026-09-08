@@ -92,11 +92,11 @@ if ! wiki_remote_ready; then
 GitHub only creates ${OWNER}/${REPO}.wiki.git after you create the first page in the UI:
 
   1) Open ${PUBLIC_URL}
-  2) Click "Create the first page"
+  2) Click Create the first page
   3) Save (title Home is fine)
   4) Re-run: ./scripts/publish-github-wiki.sh
 
-Or run: ./scripts/publish-github-wiki.sh --wait   (then do steps 1–3)
+Or run: ./scripts/publish-github-wiki.sh --wait   (then do steps 1-3)
 "
 fi
 

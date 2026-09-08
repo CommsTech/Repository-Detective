@@ -45,18 +45,63 @@ func TestApplyKnownSafeRoutingG703Patcher(t *testing.T) {
 	}
 }
 
-func TestApplyKnownSafeRoutingLeavesRealSQL(t *testing.T) {
+func TestApplyKnownSafeRoutingG203UIHelpers(t *testing.T) {
 	issues := []ai.CodeIssue{{
 		Source:          "gosec",
-		RuleID:          "G201",
-		Severity:        "high",
-		File:            "api/handler.go",
-		CodeSnippet:     `query := fmt.Sprintf("SELECT * FROM users WHERE name = '%s'", userInput)`,
+		RuleID:          "G203",
+		Severity:        "medium",
+		File:            "ui/ui_helpers.go",
+		CodeSnippet:     `return template.JS(raw) // after json.Valid`,
 		ReportingAction: profile.ActionAutoIssue,
 		Confidence:      0.9,
 	}}
 	ApplyKnownSafeRouting(issues)
-	if issues[0].ReportingAction != profile.ActionAutoIssue {
-		t.Fatalf("must not quiet untrusted SQL formatting, got %s", issues[0].ReportingAction)
+	if issues[0].ReportingAction != profile.ActionReportOnly {
+		t.Fatalf("expected report_only for validated JSON script content, got %s", issues[0].ReportingAction)
+	}
+}
+
+func TestApplyKnownSafeRoutingDocsdataOpenAPI(t *testing.T) {
+	issues := []ai.CodeIssue{{
+		Source:          "checkov",
+		RuleID:          "CKV_OPENAPI_5",
+		Severity:        "medium",
+		File:            "docsdata/openapi.yaml",
+		ReportingAction: profile.ActionAutoIssue,
+		Confidence:      0.9,
+	}}
+	ApplyKnownSafeRouting(issues)
+	if issues[0].ReportingAction != profile.ActionReportOnly {
+		t.Fatalf("expected report_only for docsdata OpenAPI, got %s", issues[0].ReportingAction)
+	}
+}
+
+func TestApplyKnownSafeRoutingVulnerableDemo(t *testing.T) {
+	issues := []ai.CodeIssue{{
+		Source:          "trivy",
+		RuleID:          "TRIVY-CVE-2024-26130",
+		Severity:        "high",
+		File:            "examples/vulnerable-demo/requirements.txt",
+		ReportingAction: profile.ActionAutoIssue,
+		Confidence:      0.95,
+	}}
+	ApplyKnownSafeRouting(issues)
+	if issues[0].ReportingAction != profile.ActionReportOnly {
+		t.Fatalf("expected report_only for vulnerable-demo, got %s", issues[0].ReportingAction)
+	}
+}
+
+func TestApplyKnownSafeRoutingSandboxWalk(t *testing.T) {
+	issues := []ai.CodeIssue{{
+		Source:          "gosec",
+		RuleID:          "G122",
+		Severity:        "high",
+		File:            "preinstall/clone.go",
+		ReportingAction: profile.ActionAutoIssue,
+		Confidence:      0.9,
+	}}
+	ApplyKnownSafeRouting(issues)
+	if issues[0].ReportingAction != profile.ActionReportOnly {
+		t.Fatalf("expected report_only for sandbox WalkDir, got %s", issues[0].ReportingAction)
 	}
 }

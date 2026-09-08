@@ -3,6 +3,7 @@
 # Used by Dockerfile scanner-tools stage. Versions documented in docs/DOCKER.md.
 set -eu
 # Fail on curl|tar pipelines when the download is missing/corrupt (e.g. deleted GitHub release).
+# shellcheck disable=SC3040 # pipefail is intentional when the shell supports it (Alpine ash)
 set -o pipefail 2>/dev/null || true
 
 TRIVY_VERSION="${TRIVY_VERSION:-0.74.0}"

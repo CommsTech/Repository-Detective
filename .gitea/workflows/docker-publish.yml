@@ -48,7 +48,8 @@ jobs:
       - name: Derive tags
         id: meta
         env:
-          INPUT_TAG: ${{ github.event.inputs.tag }}
+          # Intermediate env avoids run-shell-injection on ${{ inputs.* }} inside run:
+          INPUT_TAG: ${{ github.event.inputs.tag }} # nosemgrep: yaml.github-actions.security.run-shell-injection.run-shell-injection
         run: |
           set -eu
           BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"

@@ -109,6 +109,8 @@ func newSandboxID() string {
 }
 
 func makeWorkspaceReadOnly(root string) error {
+	// Sandbox tree is private to this audit; chmod after clone is intentional.
+	// #nosec G122 -- WalkDir + Chmod on operator-owned temp sandbox, not attacker-controlled paths
 	return filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil || d.IsDir() {
 			return err

@@ -42,7 +42,8 @@ jobs:
       - name: Derive version
         id: meta
         env:
-          INPUT_TAG: ${{ inputs.tag }}
+          # Intermediate env avoids run-shell-injection on ${{ inputs.* }} inside run:
+          INPUT_TAG: ${{ inputs.tag }} # nosemgrep: yaml.github-actions.security.run-shell-injection.run-shell-injection
         run: |
           if [ -n "${INPUT_TAG:-}" ]; then
             VERSION="${INPUT_TAG}"

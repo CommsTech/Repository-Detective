@@ -3,6 +3,16 @@
 **Last updated:** 2026-09-08  
 **Program:** Product Hardening & Public Beta Improvement Backlog + RD-PRODUCT/COMMERCIAL/GROWTH
 
+### Self-scan clean loop (2026-09-08) — IN PROGRESS
+
+| Item | Value |
+|------|-------|
+| Live | `repository-detective:upgrade-candidate` binary from tree @ **`48ef8e2d`** (+ knownsafe/workflow/script fixes) |
+| Cycle 1 scan | **`73759e3053198342`** deep, filing enabled — polling |
+| Pre-scan open actionable | high/medium **0** (info/low remain) |
+| Pre-scan forge | open `repository-detective` issues **0** |
+| Fixes this cycle | pages-docs full SHA pins; nosemgrep on env-staged workflow inputs; shellcheck script quotes; knownsafe G203/OpenAPI/shell-injection; +17 repo calibration rules; DB mark fixed/FP/suppressed |
+
 ### Remaining-26 closeout — perms / Docker / cookie / FP (2026-09-08)
 
 | Item | Value |

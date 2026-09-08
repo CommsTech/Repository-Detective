@@ -19,9 +19,11 @@ echo "==> staticcheck (install if missing)"
 if ! command -v staticcheck >/dev/null 2>&1; then
   go install honnef.co/go/tools/cmd/staticcheck@latest
 fi
-PATH="$(go env GOPATH)/bin:$PATH"
+GOBIN_PATH="$(go env GOPATH)/bin"
+PATH="${GOBIN_PATH}:$PATH"
 export PATH
-staticcheck $(go list ./... | grep -v /vendor)
+mapfile -t STATICCHECK_PKGS < <(go list ./... | grep -v /vendor)
+staticcheck "${STATICCHECK_PKGS[@]}"
 
 echo "==> tests"
 go test ./... -count=1

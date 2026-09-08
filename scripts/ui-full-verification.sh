@@ -37,21 +37,24 @@ if [[ ! -f "$DB" && -f "./data/repository-detective.db" ]]; then
   DB="./data/repository-detective.db"
 fi
 if [[ -f "$DB" ]]; then
-  RD_VERIFY_REPO_ID="$(python3 -c "
+  RD_VERIFY_REPO_ID="$(
+    python3 -c "
 import sqlite3
 c=sqlite3.connect('$DB')
 r=c.execute(\"SELECT id FROM repositories WHERE full_name LIKE '%Repository-Detective%' ORDER BY id LIMIT 1\").fetchone()
 print(r[0] if r else 1)
 ")"
   export RD_VERIFY_REPO_ID
-  RD_VERIFY_SCAN_ID="$(python3 -c "
+  RD_VERIFY_SCAN_ID="$(
+    python3 -c "
 import sqlite3
 c=sqlite3.connect('$DB')
 r=c.execute(\"SELECT id FROM scans WHERE status='completed' ORDER BY finished_at DESC LIMIT 1\").fetchone()
 print(r[0] if r else '')
 ")"
   export RD_VERIFY_SCAN_ID
-  RD_VERIFY_FINDING_ID="$(python3 -c "
+  RD_VERIFY_FINDING_ID="$(
+    python3 -c "
 import sqlite3
 c=sqlite3.connect('$DB')
 r=c.execute(\"SELECT id FROM findings WHERE status='open' ORDER BY id DESC LIMIT 1\").fetchone()
