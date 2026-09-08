@@ -177,7 +177,7 @@ def main() -> int:
         "",
         f"**Accepted (repo-scoped):** {accepted}",
         f"**Rejected:** {rejected}",
-        f"**Global accepted:** 0 (policy block)",
+        "**Global accepted:** 0 (policy block)",
         "",
         "## Safety checks",
         "- No issue filing enabled",

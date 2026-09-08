@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
-import re
 import sqlite3
 import sys
 import urllib.request
@@ -89,7 +87,6 @@ def latest_reconcilable_scan(conn: sqlite3.Connection) -> tuple[str, int, dict]:
     for scan_id, summary_raw in cur.fetchall():
         summary = json.loads(summary_raw or "{}")
         expected = summary.get("persistence_expected_count") or summary.get("issues_found") or 0
-        persisted = summary.get("persistence_persisted_count")
         ps = summary.get("persistence_status")
         cur.execute("SELECT COUNT(1) FROM finding_instances WHERE scan_id = ?", (scan_id,))
         inst = cur.fetchone()[0]
@@ -240,14 +237,14 @@ def main() -> int:
         + "| # | Title | Fingerprint | Labels |\n|---|-------|-------------|--------|\n"
         + "\n".join(
             f"| #{i['number']} | {i.get('title','').replace('|','/')[:80]} | {extract_fingerprint(i.get('body') or '')[:20]} | "
-            f"{', '.join(l.get('name','') for l in i.get('labels', [])[:3])} |"
+            f"{', '.join(label.get('name','') for label in i.get('labels', [])[:3])} |"
             for i in issues
         )
         + "\n"
     )
 
     recon_lines = [
-        f"# Current open issues reconciliation — commstech/Repository-Detective\n",
+        "# Current open issues reconciliation — commstech/Repository-Detective\n",
         f"Generated: {now}\n",
         f"Reconciled against scan **`{scan_id or 'none'}`** ({inst_count} finding instances).\n",
         "## Summary\n",
@@ -272,7 +269,7 @@ def main() -> int:
     active = [c for c in classified if c["classification"] == "active_present_in_latest_scan"]
     health_ignored = [c for c in active if c.get("rule_id") == "HEALTH-IGNORED-ERROR"]
     backlog_lines = [
-        f"# Real active backlog — commstech/Repository-Detective\n",
+        "# Real active backlog — commstech/Repository-Detective\n",
         f"Generated: {now}\n",
         f"Scan: **`{scan_id or 'none'}`**\n",
         "## Summary\n",

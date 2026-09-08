@@ -11,6 +11,9 @@
 - Posture forge issues: risk/regression gated (`ShouldCreatePostureIssue`), not finding-volume gated.
 - Public mirror: history-preserving GitHub sync preferred (`docs/GITHUB_MIRROR.md`); orphan snapshot is emergency-only.
 - Dogfood issue samples: `docs/dogfood-issue-samples/`.
+- Learning / FP reduction: `calibration.ApplyKnownSafeRouting` (G201 placeholders, G204 tooling, G703 patcher, SC2034, G104, G118 preinstall) runs after normalize; `findinglearn.ApplyRepoRoutingForForge` applies operator calibration to forge routing including high/critical (severity stays visible).
+- Commit-status policy evaluation lives in `gitea/policy_outcome.go` (`EvaluatePolicyOutcome`); legacy unused helpers in `gitea/checks.go` were removed.
+- Onboarding defaults API is `handleDefaultsExtended` only (`handlers/onboarding_phase4.go`).
 
 ## Tech-debt / duplicate paths (Phase 8A)
 

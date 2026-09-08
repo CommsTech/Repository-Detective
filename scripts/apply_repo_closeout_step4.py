@@ -147,10 +147,6 @@ def apply_actions(api_key: str, queue: list[dict], stats: dict, errors: list[str
         "(e.g. your-gitea-access-token-here, change-me-to-a-secure-random-string), not live secrets. "
         "Checkov CKV_SECRET_6 entropy heuristic on template files."
     )
-    cmd_reason = (
-        "Proven false positive: SEC-CMD-EXEC match is the static-analysis rule definition in "
-        "analyzers/static.go (detection regex catalog), not runtime command injection."
-    )
 
     for row in queue:
         n = row["issue_number"]

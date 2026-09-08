@@ -85,19 +85,6 @@ func (h *OnboardingHandler) RegisterRoutes(router *gin.Engine, onboardAPI *gin.R
 	h.registerPhase4Routes(onboardAPI)
 }
 
-func (h *OnboardingHandler) handleDefaults(c *gin.Context) {
-	webhookURL := strings.TrimSuffix(h.publicURL, "/") + "/webhook"
-	c.JSON(http.StatusOK, gin.H{
-		"gitea_url":       h.giteaURL,
-		"public_url":      h.publicURL,
-		"webhook_url":     webhookURL,
-		"gitea_scan_orgs": h.giteaScanOrgs,
-		"ai_provider":     h.aiConfig.Provider,
-		"ai_model":        h.aiConfig.Model,
-		"ai_base_url":     h.aiConfig.BaseURL,
-	})
-}
-
 type onboardConnectionRequest struct {
 	GiteaURL      string   `json:"gitea_url"`
 	GiteaToken    string   `json:"gitea_token"`

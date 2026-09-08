@@ -19,7 +19,8 @@ echo "==> staticcheck (install if missing)"
 if ! command -v staticcheck >/dev/null 2>&1; then
   go install honnef.co/go/tools/cmd/staticcheck@latest
 fi
-export PATH="$(go env GOPATH)/bin:$PATH"
+PATH="$(go env GOPATH)/bin:$PATH"
+export PATH
 staticcheck $(go list ./... | grep -v /vendor)
 
 echo "==> tests"

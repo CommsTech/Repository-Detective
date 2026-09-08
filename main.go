@@ -21,6 +21,7 @@ import (
 	"git.commsnet.org/commstech/repository-detective/containers"
 	"git.commsnet.org/commstech/repository-detective/docsdata"
 	"git.commsnet.org/commstech/repository-detective/doctor"
+	"git.commsnet.org/commstech/repository-detective/findinglearn"
 	"git.commsnet.org/commstech/repository-detective/forge"
 	"git.commsnet.org/commstech/repository-detective/gitea"
 	"git.commsnet.org/commstech/repository-detective/github"
@@ -1568,10 +1569,6 @@ func resolveCommitSHA(result *analyzers.AnalysisResult, fallback string) string 
 	return ""
 }
 
-func scannerSummaries(result *analyzers.AnalysisResult) []gitea.ScannerResultSummary {
-	return scannerSummariesForPolicy(result, store.EffectiveFromGlobalSnapshot(store.DefaultGlobalSettings()))
-}
-
 func scannerSummariesForPolicy(result *analyzers.AnalysisResult, effective store.EffectiveSettings) []gitea.ScannerResultSummary {
 	if result == nil {
 		return nil
@@ -1849,6 +1846,42 @@ func filterIssuesForForge(issues []ai.CodeIssue, effective store.EffectiveSettin
 	return out
 }
 
+// applyRepoCalibrationRouting applies operator-accepted repo calibration to forge
+// routing so learned FPs stop creating issues (including high/critical).
+func applyRepoCalibrationRouting(ctx context.Context, repositoryID int64, issues []ai.CodeIssue) {
+	if rdStore == nil || repositoryID <= 0 || len(issues) == 0 {
+		return
+	}
+	storeRules, err := rdStore.ListRepoCalibrationRules(ctx, repositoryID, true)
+	if err != nil || len(storeRules) == 0 {
+		return
+	}
+	rules := make([]findinglearn.RepoCalibrationRule, 0, len(storeRules))
+	for _, r := range storeRules {
+		rules = append(rules, findinglearn.RepoCalibrationRule{
+			Source:      r.Source,
+			RuleID:      r.RuleID,
+			PathPattern: r.PathPattern,
+			Action:      r.Action,
+			Reason:      r.Reason,
+			Active:      r.Active,
+			ExpiresAt:   r.ExpiresAt,
+		})
+	}
+	for i := range issues {
+		action, note := findinglearn.ApplyRepoRoutingForForge(
+			issues[i].ReportingAction, issues[i].Source, issues[i].RuleID, issues[i].File, rules,
+		)
+		if note == "" {
+			continue
+		}
+		issues[i].ReportingAction = action
+		if issues[i].SuppressionReason == "" {
+			issues[i].SuppressionReason = note
+		}
+	}
+}
+
 func applyReportingDefaults(cfg *Config) {
 	if cfg == nil {
 		return
@@ -1877,6 +1910,19 @@ func applyReportingDefaults(cfg *Config) {
 	}
 	if cfg.Reporting.RuleOverrides == nil {
 		cfg.Reporting.RuleOverrides = defaults.RuleOverrides
+	} else {
+		for k, v := range defaults.RuleOverrides {
+			if _, ok := cfg.Reporting.RuleOverrides[k]; !ok {
+				cfg.Reporting.RuleOverrides[k] = v
+			}
+		}
+	}
+	if cfg.Reporting.CategoryOverrides != nil {
+		for k, v := range defaults.CategoryOverrides {
+			if _, ok := cfg.Reporting.CategoryOverrides[k]; !ok {
+				cfg.Reporting.CategoryOverrides[k] = v
+			}
+		}
 	}
 	if cfg.MaxIssuesPerRun <= 0 && cfg.Reporting.MaxIssuesPerScan > 0 {
 		cfg.MaxIssuesPerRun = cfg.Reporting.MaxIssuesPerScan
@@ -2026,6 +2072,7 @@ func createIssuesFromResult(ctx context.Context, forgeType, owner, repo string, 
 
 	repository := fmt.Sprintf("%s/%s", owner, repo)
 	issues.EnrichIssues(repository, result.ScanID, result.Issues)
+	applyRepoCalibrationRouting(postCtx, repositoryID, result.Issues)
 	loadSuppressionPolicy(postCtx, repositoryID)
 	actionIssues := filterIssuesWithSuppression(repositoryID, result.Issues)
 

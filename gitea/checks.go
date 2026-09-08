@@ -1,7 +1,6 @@
 package gitea
 
 import (
-	"fmt"
 	"strings"
 )
 
@@ -137,46 +136,6 @@ func normalizeSeverityBucket(severity string) string {
 		return "low"
 	default:
 		return "info"
-	}
-}
-
-func formatFindingDescription(counts map[string]int) string {
-	parts := make([]string, 0, 5)
-	for _, severity := range []string{"critical", "high", "medium", "low", "info"} {
-		if counts[severity] > 0 {
-			parts = append(parts, fmt.Sprintf("%d %s", counts[severity], severity))
-		}
-	}
-	if len(parts) == 0 {
-		return "Policy met — no gated findings"
-	}
-	return "Action required — findings: " + strings.Join(parts, ", ")
-}
-
-func hasBadScannerFailure(results []ScannerResultSummary) bool {
-	for _, result := range results {
-		status := strings.ToLower(strings.TrimSpace(result.Status))
-		if result.Required {
-			switch status {
-			case "failed", "timed_out", "parse_failed", "binary_missing", "scanner_unavailable":
-				return true
-			}
-			continue
-		}
-		switch status {
-		case "failed", "timed_out", "parse_failed":
-			return true
-		}
-	}
-	return false
-}
-
-func shouldFailCommitStatus(policyLevel string) bool {
-	switch strings.ToLower(strings.TrimSpace(policyLevel)) {
-	case "gate_pr", "suggest_fix", "auto_pr_with_approval", "auto_pr_low_risk":
-		return true
-	default:
-		return false
 	}
 }
 

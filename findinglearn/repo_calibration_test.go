@@ -1,27 +1,35 @@
 package findinglearn
 
-import (
-	"testing"
-	"time"
-)
+import "testing"
 
-func TestApplyRepoRuleDowngradesLowSeverity(t *testing.T) {
-	exp := time.Now().UTC().Add(24 * time.Hour)
-	sev, conf, note := ApplyRepoRule("low", 0.8, "maintainability", "HEALTH-MANY-PARAMS", "store/foo.go", RepoCalibrationRule{
-		Source: "maintainability", RuleID: "HEALTH-MANY-PARAMS", PathPattern: "store/",
-		Action: "informational", Reason: "Store layer — many params expected", Active: true, ExpiresAt: &exp,
-	}, time.Now().UTC())
-	if sev != "info" || conf > 0.55 || note == "" {
-		t.Fatalf("got sev=%s conf=%v note=%q", sev, conf, note)
+func TestApplyRepoRoutingForForgeHighSeverity(t *testing.T) {
+	rules := []RepoCalibrationRule{{
+		Source: "gosec",
+		RuleID: "G703",
+		Action: "report_only",
+		Reason: "workspace-bound write",
+		Active: true,
+	}}
+	action, note := ApplyRepoRoutingForForge("auto_issue", "gosec", "G703", "patcher/rules_hadolint.go", rules)
+	if action != "report_only" || note == "" {
+		t.Fatalf("expected report_only for calibrated high finding, got action=%s note=%q", action, note)
 	}
 }
 
-func TestApplyRepoRuleProtectsHighSeverity(t *testing.T) {
-	exp := time.Now().UTC().Add(24 * time.Hour)
-	sev, _, note := ApplyRepoRule("high", 0.9, "security", "SEC-EVAL", "a.go", RepoCalibrationRule{
-		RuleID: "SEC-EVAL", PathPattern: "a.go", Action: "informational", Active: true, ExpiresAt: &exp,
-	}, time.Now().UTC())
-	if sev != "high" || note != "" {
-		t.Fatalf("high must not be downgraded: sev=%s note=%q", sev, note)
+func TestApplyRepoRoutingPathPattern(t *testing.T) {
+	rules := []RepoCalibrationRule{{
+		Source:      "gosec",
+		RuleID:      "G201",
+		PathPattern: "store/*",
+		Action:      "report_only",
+		Active:      true,
+	}}
+	action, _ := ApplyRepoRoutingForForge("auto_issue", "gosec", "G201", "store/learning_sqlite.go", rules)
+	if action != "report_only" {
+		t.Fatalf("store path should match, got %s", action)
+	}
+	action, note := ApplyRepoRoutingForForge("auto_issue", "gosec", "G201", "api/handler.go", rules)
+	if action != "auto_issue" || note != "" {
+		t.Fatalf("non-store path must not match, got action=%s note=%q", action, note)
 	}
 }

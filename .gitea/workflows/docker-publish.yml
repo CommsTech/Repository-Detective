@@ -47,13 +47,15 @@ jobs:
 
       - name: Derive tags
         id: meta
+        env:
+          INPUT_TAG: ${{ github.event.inputs.tag }}
         run: |
           set -eu
           BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           SHA="${GITHUB_SHA:-${GITEA_SHA:-unknown}}"
           SHORT="$(echo "$SHA" | cut -c1-12)"
-          if [ -n "${{ github.event.inputs.tag }}" ]; then
-            VERSION="${{ github.event.inputs.tag }}"
+          if [ -n "${INPUT_TAG:-}" ]; then
+            VERSION="${INPUT_TAG}"
           elif [ "${GITHUB_REF_TYPE:-${GITEA_REF_TYPE:-}}" = "tag" ]; then
             VERSION="${GITHUB_REF_NAME:-${GITEA_REF_NAME}}"
           else

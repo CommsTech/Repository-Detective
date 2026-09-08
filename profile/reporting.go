@@ -75,9 +75,17 @@ func DefaultReportingConfig() ReportingConfig {
 			"license":                  ActionManualReview,
 			"code_quality":             ActionReportOnly,
 			"quality":                  ActionReportOnly,
+			"lint":                     ActionReportOnly,
+			"style":                    ActionReportOnly,
 			"documentation":            ActionReportOnly,
 			"test_gap":                 ActionReportOnly,
 			"ai_risk":                  ActionManualReview,
+		},
+		RuleOverrides: map[string]string{
+			"lint-shell-2034": ActionReportOnly,
+			"sc2034":          ActionReportOnly,
+			"g104":            ActionReportOnly,
+			"g304":            ActionReportOnly,
 		},
 		SourceTypeOverrides: map[string]string{
 			SourceTypeSource:     ActionAutoIssue,

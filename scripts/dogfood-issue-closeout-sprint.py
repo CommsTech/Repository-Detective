@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import json
 import os
-import re
 import sqlite3
 import sys
 import urllib.error
@@ -353,7 +352,7 @@ def write_plan(rows: list[dict], open_before: int, scan_id: str) -> None:
     close_resolved = counts.get("close_now_resolved_verified", 0)
     close_dup = counts.get("close_now_duplicate", 0)
     lines = [
-        f"# Issue closeout plan — commstech/Repository-Detective\n",
+        "# Issue closeout plan — commstech/Repository-Detective\n",
         f"Generated: {now}\n",
         f"Gitea open issues (start): **{open_before}**\n",
         f"Latest scan: **`{scan_id}`**\n",
@@ -396,16 +395,16 @@ def close_verified_issue(
         try:
             api_request(api_key, "POST", f"/findings/{finding_id}/verify-closure")
         except urllib.error.HTTPError as e:
-            detail = e.read().decode(errors="replace")
+            e.read()  # drain body; fall through to direct close with evidence
             if e.code not in (200, 201, 409):
-                pass  # fall through to direct close with evidence
+                pass
     body = (
-        f"Repository Detective **evidence closure** (dogfood sprint).\n\n"
+        "Repository Detective **evidence closure** (dogfood sprint).\n\n"
         f"- Scan ID: `{scan_id}`\n"
         f"- Scanner/check: `{row['scanner_check']}` (status: {row['scanner_status'] or 'ok'})\n"
         f"- Fingerprint `{fp}` **absent** from latest persisted scan\n"
-        f"- Closure reason: resolved_verified\n"
-        f"- Lifecycle: `external_issue_closed_resolved_verified`\n"
+        "- Closure reason: resolved_verified\n"
+        "- Lifecycle: `external_issue_closed_resolved_verified`\n"
     )
     try:
         gitea_request(base, token, "POST", f"/repos/{OWNER}/{REPO}/issues/{num}/comments", {"body": body})
@@ -436,7 +435,7 @@ def close_duplicate_issue(base: str, token: str, row: dict, scan_id: str) -> tup
         f"Repository Detective closed this issue as a **duplicate** of #{canonical}.\n\n"
         f"- Same fingerprint: `{fp}`\n"
         f"- Latest scan: `{scan_id}`\n"
-        f"- Lifecycle: `external_issue_closed_duplicate`\n"
+        "- Lifecycle: `external_issue_closed_duplicate`\n"
     )
     try:
         gitea_request(base, token, "POST", f"/repos/{OWNER}/{REPO}/issues/{num}/comments", {"body": body})

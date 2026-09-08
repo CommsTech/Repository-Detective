@@ -3,6 +3,52 @@
 **Last updated:** 2026-09-08  
 **Program:** Product Hardening & Public Beta Improvement Backlog + RD-PRODUCT/COMMERCIAL/GROWTH
 
+### Known-safe / repo routing overlay (2026-09-08)
+
+| Item | Value |
+|------|-------|
+| Tests | `go test ./calibration/ ./findinglearn/ ./profile/ ./analyzers/ -count=1` → **PASS** |
+| Fix | `calibration/knownsafe.go` — drop invalid `issue.ID` fallback (`CodeIssue` has `RuleID` only) |
+| `pathMatchesCalibrationPattern` | returns `bool`; `findinglearn` compiles |
+| Image | `repository-detective:upgrade-candidate` (`commit=537a623d`) |
+| Health | `http://127.0.0.1:8081/health` → **healthy**, ready=true, tools 12/12 |
+| Git | **Not committed** (per operator request) |
+
+### Self-scan remediation (2026-09-08) — FP apply + lint/Go cleanup
+
+| Item | Value |
+|------|-------|
+| Backup | `data/repository-detective.db.bak-fp-20260908` (via docker `cp` — host `data/` not writable) |
+| Open before | **227** (high 7 / medium 92 / low 9 / info 119) |
+| Open after | **214** (high 4 / medium 58 / low 9 / info 143) |
+| Downgraded to info | **34** (G201/G202 store 9, G204 20, LINT-SHELL-2034 5); others already info |
+| G703 patcher/ | **3** fingerprint suppressions + `status=false_positive` |
+| OPT-NESTED-LOOP docs | **10** → `status=suppressed` (LICENSE/README/issues.md) |
+| Seed | +4 idempotent rules (G201/G202 `store/`, G703 `patcher/`, health HEALTH); reliability HEALTH already present |
+| Code | ruff/shellcheck cleanup in scripts; deleted unused Go: `formatFindingDescription`, `hasBadScannerFailure`, `shouldFailCommitStatus`, `handleDefaults`, `scannerSummaries` |
+
+### Calibration insert (2026-09-08) — repo_id=1 report_only
+
+| Item | Value |
+|------|-------|
+| Open findings (unchanged) | **227** (high 7 / medium 92 / low 9 / info 119) |
+| Inserted rules | **750** G201 `store/*`, **751** G202 `store/*`, **752** G204, **753** G703, **754** shellcheck/`LINT-SHELL-2034` |
+| Skipped (already active) | G104, G304, LINT-GO-typecheck, HEALTH-IGNORED-ERROR, OPT-NESTED-LOOP |
+| Finding status | No `false_positive` marks; calibration only |
+| expires_at | 2027-09-08T17:25:52Z (+365d) for new rows |
+
+### Self-dogfood findings inventory (2026-09-08) — read-only
+
+| Item | Value |
+|------|-------|
+| Repo | `commstech/Repository-Detective` (repo_id **1**) |
+| Open findings | **227** (high 7 / medium 92 / low 9 / info 119) |
+| Storage | host `/home/commstech/Bugbot/data/repository-detective.db` → container `/app/data/repository-detective.db` |
+| Actions | calibrate_fp 114 · suppress 42 · needs_human 37 · fix_code 32 · auto_pr 2 |
+| Dump | `/tmp/rd_findings_complete.tsv`, `/tmp/rd_classified.json` |
+| Report | [docs/dogfood-reports/self-findings-inventory-2026-09-08.md](docs/dogfood-reports/self-findings-inventory-2026-09-08.md) |
+| Note | No data modified; `safe_for_auto_pr` / `reporting_action` null on all open rows |
+
 ### Reviewer follow-up (2026-09-08) — posture / aging / GitHub trust
 
 | Item | Status | Notes |

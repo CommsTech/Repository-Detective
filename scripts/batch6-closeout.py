@@ -188,7 +188,7 @@ def main() -> int:
             [
                 "# Historical summary rollup disposition report\n",
                 f"Generated: {now}\n",
-                f"Policy: **close_as_superseded_by_fingerprint_lifecycle**\n",
+                "Policy: **close_as_superseded_by_fingerprint_lifecycle**\n",
                 f"Candidates: {len(SUMMARY_ISSUES)}\n",
                 f"Closed: {len(summary_closed)}\n",
                 f"Skipped: {len(summary_skipped)}\n",

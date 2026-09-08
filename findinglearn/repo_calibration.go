@@ -26,10 +26,10 @@ func ApplyRepoRule(severity string, confidence float64, source, ruleID, filePath
 	if rule.ExpiresAt != nil && !rule.ExpiresAt.After(now) {
 		return severity, confidence, ""
 	}
-	if rule.Source != "" && rule.Source != source {
+	if rule.Source != "" && !strings.EqualFold(rule.Source, source) {
 		return severity, confidence, ""
 	}
-	if rule.RuleID != "" && rule.RuleID != ruleID {
+	if rule.RuleID != "" && !strings.EqualFold(rule.RuleID, ruleID) {
 		return severity, confidence, ""
 	}
 	if rule.PathPattern != "" && !pathMatchesCalibrationPattern(filePath, rule.PathPattern) {
@@ -67,6 +67,40 @@ func ApplyRepoRules(severity string, confidence float64, source, ruleID, filePat
 		}
 	}
 	return severity, confidence, ""
+}
+
+// ApplyRepoRoutingForForge sets ReportingAction to report_only when an active
+// repo calibration rule matches. Unlike ApplyRepoRule, this applies to
+// high/critical findings too — severity stays visible on the dashboard, but
+// forge filing is quieted for operator-approved calibrations.
+func ApplyRepoRoutingForForge(reportingAction, source, ruleID, filePath string, rules []RepoCalibrationRule) (string, string) {
+	now := time.Now().UTC()
+	for _, rule := range rules {
+		if !rule.Active {
+			continue
+		}
+		if rule.ExpiresAt != nil && !rule.ExpiresAt.After(now) {
+			continue
+		}
+		if rule.Source != "" && !strings.EqualFold(rule.Source, source) {
+			continue
+		}
+		if rule.RuleID != "" && !strings.EqualFold(rule.RuleID, ruleID) {
+			continue
+		}
+		if rule.PathPattern != "" && !pathMatchesCalibrationPattern(filePath, rule.PathPattern) {
+			continue
+		}
+		switch strings.ToLower(strings.TrimSpace(rule.Action)) {
+		case "report_only", "informational", "downgrade_confidence":
+			note := strings.TrimSpace(rule.Reason)
+			if note == "" {
+				note = "Repo calibration — forge report_only (finding remains visible)."
+			}
+			return "report_only", note
+		}
+	}
+	return reportingAction, ""
 }
 
 func pathMatchesCalibrationPattern(path, pattern string) bool {

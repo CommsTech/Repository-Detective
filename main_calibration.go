@@ -334,7 +334,16 @@ func ruleIDProtectedFromAutoApply(source, ruleID string) bool {
 			return true
 		}
 	}
-	for _, prefix := range []string{"CVE-", "GHSA-", "TRIVY-", "GRYPE-", "GITLEAKS-", "SEC-", "CKV_SECRET"} {
+	// gosec: only allow auto-apply for well-known informational rules.
+	if strings.Contains(src, "gosec") {
+		switch rule {
+		case "G104", "G304", "G204":
+			return false
+		default:
+			return true
+		}
+	}
+	for _, prefix := range []string{"CVE-", "GHSA-", "TRIVY-", "GRYPE-", "GITLEAKS-", "SEC-", "CKV_SECRET", "G201", "G202", "G703"} {
 		if strings.HasPrefix(rule, prefix) {
 			return true
 		}

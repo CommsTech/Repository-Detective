@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"git.commsnet.org/commstech/repository-detective/ai"
+	"git.commsnet.org/commstech/repository-detective/calibration"
 	"git.commsnet.org/commstech/repository-detective/forge"
 	"git.commsnet.org/commstech/repository-detective/gitea"
 	"git.commsnet.org/commstech/repository-detective/graph"
@@ -1338,6 +1339,7 @@ func (e *Engine) analysisResultFromReport(ctx context.Context, owner, repo, ref,
 		FalsePositive: e.config.FalsePositive,
 		KnownPaths:    knownPaths,
 	})
+	calibration.ApplyKnownSafeRouting(result.Issues)
 	score := ComputeScoreResult(result.Issues, ScoreInput{ScannerResults: report.ScannerResults})
 	result.ScoreComplete = score.Complete
 	result.ScoreIncompleteReason = score.IncompleteReason

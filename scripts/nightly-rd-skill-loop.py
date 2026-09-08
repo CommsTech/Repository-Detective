@@ -14,7 +14,6 @@ import os
 import shutil
 import sqlite3
 import subprocess
-import sys
 import time
 import urllib.error
 import urllib.request
@@ -528,7 +527,6 @@ class NightlySkillLoop:
             headers={
                 "Authorization": f"Bearer {api_key}",
                 "X-API-Key": api_key,
-                "X-Repository-Detective-API-Key": api_key,
                 "X-Repository-Detective-API-Key": api_key,
                 "Content-Type": "application/json",
             },

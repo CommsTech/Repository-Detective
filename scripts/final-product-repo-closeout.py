@@ -180,12 +180,12 @@ def close_verified(base: str, token: str, row: dict) -> tuple[bool, str]:
     num = row["issue_number"]
     fp = row["fingerprint"]
     body = (
-        f"Repository Detective **evidence closure** (final product-repo closeout).\n\n"
+        "Repository Detective **evidence closure** (final product-repo closeout).\n\n"
         f"- Scan ID: `{SCAN_ID}`\n"
         f"- Scanner/check: `{row['scanner_check']}` (status: {row['scanner_status']})\n"
         f"- Rule: `{row['rule_id']}`\n"
         f"- Fingerprint `{fp}` absent from latest persisted scan\n"
-        f"- Lifecycle: `external_issue_closed_resolved_verified`\n"
+        "- Lifecycle: `external_issue_closed_resolved_verified`\n"
     )
     try:
         gitea(base, token, "POST", f"/repos/{OWNER}/{REPO}/issues/{num}/comments", {"body": body})
@@ -204,7 +204,7 @@ def close_duplicate(base: str, token: str, row: dict) -> tuple[bool, str]:
         f"Repository Detective closed this issue as a **duplicate** of #{canonical}.\n\n"
         f"- Same fingerprint: `{fp}`\n"
         f"- Latest scan: `{SCAN_ID}`\n"
-        f"- Lifecycle: `external_issue_closed_duplicate`\n"
+        "- Lifecycle: `external_issue_closed_duplicate`\n"
     )
     try:
         gitea(base, token, "POST", f"/repos/{OWNER}/{REPO}/issues/{num}/comments", {"body": body})
@@ -229,9 +229,9 @@ def write_docs(rows: list[dict], open_before: int, open_after: int, closed: list
                 "- Docs CI: **#120** / `e3e4193` / completed failure (docs-only; do not block closeout)\n",
                 "## Repository\n",
                 f"- Open Gitea issues: **{open_before}**\n",
-                f"- Latest code-fix commit: `73c4a0f`\n",
+                "- Latest code-fix commit: `73c4a0f`\n",
                 f"- Latest scan: `{SCAN_ID}` (1088 instances, persistence complete)\n",
-                f"- Real active findings: **0**\n",
+                "- Real active findings: **0**\n",
                 "- Backlog-control: **enabled** (`dogfood_backlog_control_enabled: true`)\n",
             ]
         )
@@ -239,7 +239,7 @@ def write_docs(rows: list[dict], open_before: int, open_after: int, closed: list
     )
 
     export_lines = [
-        f"# Final 43 open issues export\n",
+        "# Final 43 open issues export\n",
         f"Generated: {now}\n",
         f"Scan: `{SCAN_ID}`\n",
         f"Total open: {len(rows)}\n",
@@ -253,7 +253,7 @@ def write_docs(rows: list[dict], open_before: int, open_after: int, closed: list
 
     counts = Counter(r["classification"] for r in rows)
     class_lines = [
-        f"# Final 43 issues classification\n",
+        "# Final 43 issues classification\n",
         f"Generated: {now}\n",
         f"Scan: `{SCAN_ID}`\n",
         "## Summary\n",

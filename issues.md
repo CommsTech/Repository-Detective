@@ -1,5 +1,21 @@
 # Development Issues Log
 
+## Fixed (2026-09-08) — knownsafe compile break
+
+| Priority | Issue | Resolution |
+|----------|-------|------------|
+| P0 | `calibration/knownsafe.go` referenced `issue.ID` (undefined on `ai.CodeIssue`) | Use `RuleID` only; calibration + analyzers packages build/test green |
+
+## Fixed (2026-09-08) — Self-scan remediation (ruff / shellcheck / U1000 / FP calibrate)
+
+| Priority | Issue | Resolution |
+|----------|-------|------------|
+| P1 | Ruff F541 / unused imports / unused vars in closeout scripts | Fixed in place under `scripts/` |
+| P1 | ShellCheck SC2155 / SC1111 / SC1083 | Split export+assign; ASCII quotes; quote `HEAD^{tree}` |
+| P1 | U1000 unused Go helpers | Deleted `formatFindingDescription`, `hasBadScannerFailure`, `shouldFailCommitStatus`, `handleDefaults`, `scannerSummaries` |
+| P1 | Open known-FP findings still medium/low | Applied SQLite calibrate → info; G703 fingerprint suppressions; OPT docs suppressed |
+| P2 | Seed missing gosec/shellcheck rules | Extended `scripts/seed-product-repo-calibration.py` (idempotent) |
+
 ## Fixed (2026-09-08) — Reviewer follow-up (posture / aging / mirror)
 
 | Priority | Issue | Resolution |

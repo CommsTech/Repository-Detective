@@ -68,7 +68,7 @@ Source commit: ${SOURCE_COMMIT}
 "
   git tag -a "$TAG" -m "Repository Detective ${TAG} (sanitized public snapshot of ${SHORT})"
   if [[ "$DRY_RUN" == "1" ]]; then
-    echo "DRY-RUN: would push tag $TAG (tree $(git rev-parse HEAD^{tree}))"
+    echo "DRY-RUN: would push tag $TAG (tree $(git rev-parse 'HEAD^{tree}'))"
     exit 0
   fi
   if [[ -f "$DEPLOY_KEY" ]]; then
