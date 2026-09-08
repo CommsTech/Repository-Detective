@@ -1,5 +1,12 @@
 # Repository Detective Architecture
 
+## Product surface (2026-09-08)
+
+- Finding Detail 2.0 operator brief (`ui/finding_detail_view.go`) — what / why / fix / RD capabilities; evidence under expander.
+- Noise reduction proof metrics (`store/noise_reduction.go`) on dashboard.
+- Edition gates (`internal/edition`) — Community repo cap + Commercial RBAC/audit UI unlock via `license_key`.
+- Positioning: Gitea/Forgejo-first self-hosted AppSec (not enterprise VMS).
+
 ## Tech-debt / duplicate paths (Phase 8A)
 
 - Inventory only (no code deleted): [docs/TECH_DEBT_AUDIT.md](docs/TECH_DEBT_AUDIT.md) (RD-030).
