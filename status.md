@@ -15,6 +15,7 @@
 | DB | findings → resolved_verified/false_positive/suppressed; `external_issues` closed; +6 `repo_calibration_rules` (no broad G301) |
 | Backup | `deployment-backups/pre-close26-20260908T210032Z/` |
 | Tests | `go test ./calibration/ ./ui/ ./sbom/ ./runner/ ./preinstall/ ./scanners/ -count=1` OK |
+| Shipped | Gitea **`261c7639`**; sanitized GitHub tip **`3cbe645`**; live `/health` commit **`261c7639`** |
 
 ### Forge issue closeout — remediations-linked self-scan (2026-09-08)
 
