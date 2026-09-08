@@ -87,7 +87,9 @@ if ! wiki_remote_ready; then
 fi
 
 if ! wiki_remote_ready; then
-  die "GitHub wiki git remote does not exist yet.
+  # Heredoc avoids shellcheck SC1078 on multi-line double-quoted die messages.
+  die "$(cat <<EOF
+GitHub wiki git remote does not exist yet.
 
 GitHub only creates ${OWNER}/${REPO}.wiki.git after you create the first page in the UI:
 
@@ -97,7 +99,8 @@ GitHub only creates ${OWNER}/${REPO}.wiki.git after you create the first page in
   4) Re-run: ./scripts/publish-github-wiki.sh
 
 Or run: ./scripts/publish-github-wiki.sh --wait   (then do steps 1-3)
-"
+EOF
+)"
 fi
 
 WORK="$(mktemp -d)"

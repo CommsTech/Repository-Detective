@@ -1,10 +1,9 @@
 #!/bin/sh
 # Install pinned external scanner binaries (Alpine Linux / musl amd64).
 # Used by Dockerfile scanner-tools stage. Versions documented in docs/DOCKER.md.
+# Intentionally POSIX sh (no bash/pipefail): Alpine ash in Docker builds.
+# Integrity for downloads uses download_to() below instead of curl|tar pipelines.
 set -eu
-# Fail on curl|tar pipelines when the download is missing/corrupt (e.g. deleted GitHub release).
-# shellcheck disable=SC3040 # pipefail is intentional when the shell supports it (Alpine ash)
-set -o pipefail 2>/dev/null || true
 
 TRIVY_VERSION="${TRIVY_VERSION:-0.74.0}"
 GRYPE_VERSION="${GRYPE_VERSION:-0.84.0}"

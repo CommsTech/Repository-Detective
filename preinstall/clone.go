@@ -3,6 +3,7 @@ package preinstall
 import (
 	"context"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -108,14 +109,20 @@ func newSandboxID() string {
 	return fmt.Sprintf("%x", time.Now().UnixNano())[:12]
 }
 
-func makeWorkspaceReadOnly(root string) error {
-	// Sandbox tree is private to this audit; chmod after clone is intentional.
-	// #nosec G122 -- WalkDir + Chmod on operator-owned temp sandbox, not attacker-controlled paths
-	return filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
-		if err != nil || d.IsDir() {
+func makeWorkspaceReadOnly(rootPath string) error {
+	// Confine chmod to the clone sandbox via os.Root so a symlink planted
+	// between WalkDir enumeration and Chmod cannot escape the temp tree (gosec G122).
+	root, err := os.OpenRoot(rootPath)
+	if err != nil {
+		return err
+	}
+	defer root.Close()
+
+	return fs.WalkDir(root.FS(), ".", func(rel string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() || rel == "." {
 			return err
 		}
-		return os.Chmod(path, 0o400)
+		return root.Chmod(rel, 0o400)
 	})
 }
 
