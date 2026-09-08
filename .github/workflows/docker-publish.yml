@@ -72,15 +72,15 @@ jobs:
           set -eu
 
           ghcr_has_tag() {
-            # Prefer GitHub Packages API (works with GITHUB_TOKEN after login).
-            if gh api "user/packages/container/repository-detective/versions" --paginate \
+            # GITHUB_TOKEN is the Actions identity — query the repo owner's package,
+            # not /user/packages (that is the bot's own packages).
+            owner="${GITHUB_REPOSITORY_OWNER}"
+            if gh api "/users/${owner}/packages/container/repository-detective/versions" --paginate \
               --jq ".[].metadata.container.tags // [] | .[]" 2>/dev/null | grep -Fxq "$VERSION"; then
               return 0
             fi
-            if docker buildx imagetools inspect "${GHCR_IMAGE}:${VERSION}" >/dev/null 2>&1; then
-              return 0
-            fi
-            if docker manifest inspect "${GHCR_IMAGE}:${VERSION}" >/dev/null 2>&1; then
+            # After docker/login-action, a lightweight pull proves the tag exists.
+            if docker pull "${GHCR_IMAGE}:${VERSION}" >/dev/null 2>&1; then
               return 0
             fi
             return 1
