@@ -74,10 +74,13 @@ GitHub is part of the public storefront. Buyers evaluating a security product ex
 | Mode | Flag | When to use |
 |------|------|-------------|
 | **History-preserving** (default for public refresh) | `--github` / `--github-only` | Normal releases and discovery updates |
-| **Orphan tree snapshot** (emergency only) | `--github-snapshot` | Only if push protection still blocks full history; document why |
+| **Sanitized full history** (current public `main`) | one-time `git-filter-repo` scrub of historical test fixtures | Required once because GitHub push protection blocked Stripe/Slack-shaped strings in old *test* commits |
+| **Orphan tree snapshot** (emergency only) | `--github-snapshot` | Only if push protection still blocks; document why |
+
+**Note:** After the sanitize rewrite, GitHub commit SHAs may differ from Gitea even when the tip tree matches. Gitea remains canonical. Prefer `--github` thereafter; do not reintroduce orphan snapshots.
 
 ### Emergency snapshot (`--github-snapshot`)
 
-Force-pushes an orphan commit of the current tree. This damages trust (GitHub shows ~1 commit). Prefer rewriting/allowlisting the historical blob that blocked the first full mirror (legacy Stripe-shaped test fixture) and returning to `--github`.
+Force-pushes an orphan commit of the current tree. This damages trust (GitHub shows ~1 commit). Prefer allowlisting or sanitizing historical fixture blobs and returning to `--github`.
 
 Release tags (`v*`) must remain immutable once published — see [RELEASE_MIRROR.md](RELEASE_MIRROR.md).

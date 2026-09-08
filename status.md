@@ -11,7 +11,7 @@
 | Confidence comment delta | **Done** | `ConfidenceCommentDelta = 0.15`; tiny 0.90→0.91 silent |
 | Posture trigger (risk not volume) | **Done** | critical>0 OR high≥3 OR regression/jump — not ≥20 AND high |
 | Exclusive scoped Gitea labels | **Done** | `exclusive: true` on create/update for `scope/*` names |
-| History-preserving GitHub mirror | **In progress** | Docs prefer `--github`; snapshot emergency-only |
+| History-preserving GitHub mirror | **Done** | Replaced orphan tip; ~500-commit sanitized graph on GitHub (`7ddb2a8`); snapshot emergency-only |
 | Dogfood sample bodies | **Done** | `docs/dogfood-issue-samples/` (G201, ShellCheck, dep, posture) |
 
 ### Product value sprint (2026-09-08) — five tickets
