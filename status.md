@@ -15,8 +15,8 @@
 | Open actionable (high/med/critical) | **0** |
 | Open Gitea `source/repository-detective` | **0** |
 | Open Gitea `repository-detective` | **0** |
-| Gitea / local tip | **`846adefe`** |
-| GitHub sanitized tip | **`3be6c71`** |
+| Gitea / local tip | **`d2da8e8e`** (code fix **`846adefe`**) |
+| GitHub sanitized tip | **`8a83757`** |
 | Live `/health` commit | **`846adefe`** healthy tools 12/12 |
 
 ### Self-scan clean loop (2026-09-08) — CLEAN
