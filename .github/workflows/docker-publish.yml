@@ -54,8 +54,10 @@ jobs:
         uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ github.repository_owner }}
+          # Prefer a PAT with packages scope. GITHUB_TOKEN cannot read an
+          # unlinked private package previously pushed outside Actions.
+          password: ${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}
 
       # Preferred path: copy the already-built Gitea digest. Do not rebuild on
       # missing credentials — fallback rebuilds are slow and can drift from the
@@ -67,19 +69,16 @@ jobs:
           GITEA_USER: ${{ secrets.GITEA_PACKAGE_USER }}
           GITEA_TOKEN: ${{ secrets.GITEA_PACKAGE_TOKEN }}
           VERSION: ${{ steps.meta.outputs.version }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
           set -eu
 
           ghcr_has_tag() {
-            # GITHUB_TOKEN is the Actions identity — query the repo owner's package,
-            # not /user/packages (that is the bot's own packages).
             owner="${GITHUB_REPOSITORY_OWNER}"
             if gh api "/users/${owner}/packages/container/repository-detective/versions" --paginate \
               --jq ".[].metadata.container.tags // [] | .[]" 2>/dev/null | grep -Fxq "$VERSION"; then
               return 0
             fi
-            # After docker/login-action, a lightweight pull proves the tag exists.
             if docker pull "${GHCR_IMAGE}:${VERSION}" >/dev/null 2>&1; then
               return 0
             fi
@@ -97,7 +96,10 @@ jobs:
             exit 1
           fi
 
-          echo "$GITEA_TOKEN" | docker login git.commsnet.org -u "${GITEA_USER:-commstech}" --password-stdin
+          if ! echo "$GITEA_TOKEN" | docker login git.commsnet.org -u "${GITEA_USER:-commstech}" --password-stdin; then
+            echo "::error::Cannot log in to Gitea registry from this runner (often IP/ACL restricted). Push the mirror from a host that can reach Gitea, or ensure GHCR already has ${VERSION}."
+            exit 1
+          fi
           SRC="${GITEA_IMAGE}:${VERSION}"
           docker pull "$SRC"
           for t in "${VERSION}" "${VERSION}-all-in-one" all-in-one latest; do
