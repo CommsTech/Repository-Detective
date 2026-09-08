@@ -1,5 +1,33 @@
 # Development Issues Log
 
+## Fixed (2026-09-08) — Close remaining 26 self-scan forge issues
+
+| Priority | Issue | Resolution |
+|----------|-------|------------|
+| P0 | 26 open `repository-detective` issues (G301/G302/G306, G124, G118, Checkov Docker/GHA/secret, HEALTH-FATAL-EXIT, REL-INTERNAL) | Closed **26/26**; perms 0750/0640/0400; Secure cookie always; Docker HEALTHCHECK; calibrated FPs |
+| P1 | Linked SQLite findings still `open` | Marked resolved_verified / false_positive / suppressed; `external_issues` closed |
+| P2 | Recurring template/doctor/privacy/GHA noise | Seeded +6 `repo_calibration_rules` (no broad G301) |
+
+## Fixed (2026-09-08) — Close remediations-linked self-scan forge issues
+
+| Priority | Issue | Resolution |
+|----------|-------|------------|
+| P0 | ~113 open `repository-detective` Gitea issues after FP calibrate/code fix (product historically annotated without closing) | Closed **87** then remaining **26** (labeled open = **0**) |
+| P1 | Stale `external_issues.state=open` for already-closed FP/suppressed forge issues | Synced SQLite mappings closed for repo_id=1 (incl. G703 FP #355–357, Trivy suppressed #352–354, #358) |
+| P1 | Shell-injection forge issues after `env:` remediation | Closed #361/#362 with fixed-via-env comment |
+
+Script: `scripts/close-remediated-selfscan-issues.py` (plan `/tmp/rd_close_plan.json`, report `/tmp/rd_close_report.json`).
+
+## Fixed (2026-09-08) — Learning / FP algorithm + self-scan
+
+| Priority | Issue | Resolution |
+|----------|-------|------------|
+| P0 | Accepted calibration did not silence forge issues (esp. high G703) | `ApplyRepoRoutingForForge` |
+| P0 | Gosec store placeholders / tooling / patcher noise auto-filed | `calibration.ApplyKnownSafeRouting` |
+| P0 | Workflow shell-injection from `${{ inputs }}` in `run:` | Move to `env:` then shell-expand |
+| P1 | 227 open self-findings | Calibrate/suppress/fix → **214** open (high 7→4, medium 92→58) |
+| P1 | `knownsafe` referenced missing `issue.ID` | Use `RuleID` only |
+
 ## Fixed (2026-09-08) — knownsafe compile break
 
 | Priority | Issue | Resolution |

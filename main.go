@@ -702,7 +702,7 @@ func loadConfig() error {
 	applyEditionDefaults(config)
 
 	if config.DatabaseEnabled && config.DatabaseDriver == "sqlite" && config.DatabasePath != "" {
-		if err := os.MkdirAll(filepath.Dir(config.DatabasePath), 0o755); err != nil && !os.IsExist(err) {
+		if err := os.MkdirAll(filepath.Dir(config.DatabasePath), 0o750); err != nil && !os.IsExist(err) {
 			logger.Warnf("Cannot ensure database directory %s: %v", filepath.Dir(config.DatabasePath), err)
 		}
 	}

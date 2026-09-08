@@ -5,6 +5,7 @@
 
 name: Docker publish (GHCR mirror)
 
+# checkov:skip=CKV_GHA_7: workflow_dispatch inputs (tag/source_gitea) are required for operator-driven GHCR mirror refreshes; tag pushes still run without inputs
 on:
   push:
     tags:

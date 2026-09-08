@@ -21,7 +21,7 @@ func CloneRepository(ctx context.Context, cloneURL, ref, dest string, timeout ti
 	if err := os.RemoveAll(dest); err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(dest), 0o750); err != nil {
 		return err
 	}
 	if timeout <= 0 {

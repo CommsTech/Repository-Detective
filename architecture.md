@@ -11,7 +11,8 @@
 - Posture forge issues: risk/regression gated (`ShouldCreatePostureIssue`), not finding-volume gated.
 - Public mirror: history-preserving GitHub sync preferred (`docs/GITHUB_MIRROR.md`); orphan snapshot is emergency-only.
 - Dogfood issue samples: `docs/dogfood-issue-samples/`.
-- Learning / FP reduction: `calibration.ApplyKnownSafeRouting` (G201 placeholders, G204 tooling, G703 patcher, SC2034, G104, G118 preinstall) runs after normalize; `findinglearn.ApplyRepoRoutingForForge` applies operator calibration to forge routing including high/critical (severity stays visible).
+- Learning / FP reduction: `calibration.ApplyKnownSafeRouting` (G201 placeholders, G204 tooling, G703 patcher, SC2034, G104, G118 preinstall, doctor HEALTH-FATAL-EXIT, privacy REL-INTERNAL localhost, config.env.template CKV_SECRET_6) runs after normalize; `findinglearn.ApplyRepoRoutingForForge` applies operator calibration to forge routing including high/critical (severity stays visible).
+- Self-scan hardening: directory/file perms 0750/0640/0400; API-key cookies always `Secure: true`; overlay Dockerfiles carry HEALTHCHECK + documented checkov skips.
 - Commit-status policy evaluation lives in `gitea/policy_outcome.go` (`EvaluatePolicyOutcome`); legacy unused helpers in `gitea/checks.go` were removed.
 - Onboarding defaults API is `handleDefaultsExtended` only (`handlers/onboarding_phase4.go`).
 
@@ -61,6 +62,8 @@ Profile-required scanners cannot be removed by disabling the scanner (RD-012A); 
 ## Issue deduplication
 
 Forge issue filing dedups via **finding fingerprints** and local SQLite `external_issues` mappings (plus forge issue search). There is no external vector / Qdrant integration.
+
+Operator closeout for remediations-linked self-scan noise: `scripts/close-remediated-selfscan-issues.py` PATCHes forge `state=closed`, posts a short reason comment, adds triage labels, and syncs `external_issues.state` (filter by `repository-detective` label / fingerprint; do not close unrelated human issues).
 
 
 ## Scan failure classification

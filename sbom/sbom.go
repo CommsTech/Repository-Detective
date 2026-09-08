@@ -51,7 +51,7 @@ func GenerateAndCheck(ctx context.Context, dir, outDir string) (Result, error) {
 	if outDir == "" {
 		outDir = dir
 	}
-	_ = os.MkdirAll(outDir, 0o755)
+	_ = os.MkdirAll(outDir, 0o750)
 
 	if hasGoModule(dir) {
 		return generateGoModuleSBOM(ctx, dir, outDir)
@@ -129,7 +129,7 @@ func generateSyftSBOM(ctx context.Context, dir, outDir string) (Result, error) {
 		}
 		return Result{Status: StatusCheckFailed, Detail: detail}, nil
 	}
-	if err := os.WriteFile(outPath, out, 0o644); err != nil {
+	if err := os.WriteFile(outPath, out, 0o640); err != nil {
 		return Result{}, err
 	}
 	var doc cycloneDXDoc

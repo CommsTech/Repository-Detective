@@ -113,7 +113,7 @@ func makeWorkspaceReadOnly(root string) error {
 		if err != nil || d.IsDir() {
 			return err
 		}
-		return os.Chmod(path, 0o444)
+		return os.Chmod(path, 0o400)
 	})
 }
 

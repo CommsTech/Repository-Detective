@@ -60,6 +60,12 @@ RULES = [
     ("health", "HEALTH-IGNORED-ERROR", "", "HEALTH-IGNORED-ERROR — calibrated informational for product dogfood"),
     ("reliability", "HEALTH-IGNORED-ERROR", "", "HEALTH-IGNORED-ERROR (reliability source) — calibrated informational for product dogfood"),
     ("container", "DL3018", "Dockerfile", "Alpine apk version pins drift frequently; accepted for this image build"),
+    ("checkov", "CKV_SECRET_6", "config.env.template", "Template placeholder entropy FP — not live secrets"),
+    ("reliability", "HEALTH-FATAL-EXIT", "main_doctor.go", "Doctor CLI intentional process exits"),
+    ("health", "HEALTH-FATAL-EXIT", "main_doctor.go", "Doctor CLI intentional process exits"),
+    ("static", "REL-INTERNAL-INFRA-REF", "internal/privacy/", "Localhost host check is privacy classification, not leakage"),
+    ("public_release", "REL-INTERNAL-INFRA-REF", "internal/privacy/", "Localhost host check is privacy classification, not leakage"),
+    ("checkov", "CKV_GHA_7", ".github/workflows/docker-publish.yml", "Documented skip — workflow_dispatch inputs required for operator GHCR mirror"),
 ]
 
 

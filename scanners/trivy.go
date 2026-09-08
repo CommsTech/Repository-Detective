@@ -84,7 +84,7 @@ func RunTrivy(ctx context.Context, logger *logrus.Logger, dir string, cfg Config
 	defer func() { _ = os.Remove(reportPath) }()
 
 	cacheDir := filepath.Join(dir, ".rd-trivy-cache")
-	_ = os.MkdirAll(cacheDir, 0o755)
+	_ = os.MkdirAll(cacheDir, 0o750)
 
 	args := []string{
 		"fs",

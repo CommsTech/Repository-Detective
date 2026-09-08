@@ -16,6 +16,8 @@ COPY go.mod go.sum ./
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w -X main.version=${VERSION} -X main.commit=${COMMIT} -X main.buildDate=${BUILD_DATE}" -o repository-detective .
 
+# Pin SOURCE_IMAGE at build time to a versioned tag (default v0.1.0-beta.3), never :latest.
+# checkov:skip=CKV_DOCKER_7: build-arg SOURCE_IMAGE must remain overridable for upgrade-candidate overlays; default is version-pinned
 FROM ${SOURCE_IMAGE}
 USER root
 ARG VERSION=dev
@@ -27,3 +29,7 @@ LABEL org.opencontainers.image.version="${VERSION}" \
 COPY --from=builder /app/repository-detective /app/repository-detective
 RUN chmod +x /app/repository-detective && chown repositorydetective:repositorydetective /app/repository-detective
 USER repositorydetective
+
+# Inherit base scanners; assert health endpoint still answers after binary swap.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+  CMD wget -qO- http://127.0.0.1:8081/health >/dev/null || exit 1

@@ -46,7 +46,7 @@ func (w *Worker) Run(ctx context.Context) error {
 	ctx, stop := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	if err := os.MkdirAll(w.cfg.WorkspaceRoot, 0o755); err != nil {
+	if err := os.MkdirAll(w.cfg.WorkspaceRoot, 0o750); err != nil {
 		return err
 	}
 
@@ -135,7 +135,7 @@ func (w *Worker) processJob(ctx context.Context, jobID string, spec JobSpec) err
 			}
 			return w.client.SubmitResult(jobCtx, jobID, result)
 		}
-	} else if err := os.MkdirAll(workspace, 0o755); err != nil {
+	} else if err := os.MkdirAll(workspace, 0o750); err != nil {
 		result := JobResult{
 			Version: ContractVersion, JobID: jobID, ScanID: spec.ScanID,
 			Status: JobStatusFailed, StartedAt: time.Now().UTC(), FinishedAt: time.Now().UTC(),

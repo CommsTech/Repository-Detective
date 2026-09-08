@@ -28,7 +28,6 @@ func (h *Handler) UIAPIKeyCookieMiddleware() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		secure := c.Request.TLS != nil || strings.EqualFold(c.GetHeader("X-Forwarded-Proto"), "https")
 		http.SetCookie(c.Writer, &http.Cookie{
 			Name:     uiSessionCookieName,
 			Value:    key,
@@ -36,7 +35,8 @@ func (h *Handler) UIAPIKeyCookieMiddleware() gin.HandlerFunc {
 			MaxAge:   86400 * 7,
 			HttpOnly: true,
 			SameSite: http.SameSiteLaxMode,
-			Secure:   secure,
+			// Always Secure: session cookies must not ride cleartext HTTP.
+			Secure: true,
 		})
 		q := c.Request.URL.Query()
 		q.Del("api_key")

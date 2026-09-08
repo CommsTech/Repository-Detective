@@ -3,16 +3,41 @@
 **Last updated:** 2026-09-08  
 **Program:** Product Hardening & Public Beta Improvement Backlog + RD-PRODUCT/COMMERCIAL/GROWTH
 
+### Remaining-26 closeout — perms / Docker / cookie / FP (2026-09-08)
+
+| Item | Value |
+|------|-------|
+| Repo | `commstech/repository-detective` on `https://git.commsnet.org` |
+| Closed | **26** / **26** (0 API errors; labeled open after = **0**) |
+| Code fixes | G301/G302/G306 → 0750/0640/0400; G124 `Secure: true`; Docker HEALTHCHECK + CKV skips; CKV_GHA_7 documented skip |
+| Known-safe / FP | G118 WithoutCancel; HEALTH-FATAL-EXIT doctor CLI; REL-INTERNAL privacy localhost; CKV_SECRET_6 template |
+| Labels | `resolved-verified` (code fixed) · `false-positive` / `suppressed` (calibrated) |
+| DB | findings → resolved_verified/false_positive/suppressed; `external_issues` closed; +6 `repo_calibration_rules` (no broad G301) |
+| Backup | `deployment-backups/pre-close26-20260908T210032Z/` |
+| Tests | `go test ./calibration/ ./ui/ ./sbom/ ./runner/ ./preinstall/ ./scanners/ -count=1` OK |
+
+### Forge issue closeout — remediations-linked self-scan (2026-09-08)
+
+| Item | Value |
+|------|-------|
+| Repo | `commstech/repository-detective` on `https://git.commsnet.org` |
+| Open before | **113** (`repository-detective` label) |
+| Closed (wave 1) | **87** (0 API errors) |
+| Then remaining | **26** → closed in wave 2 (see above); labeled open = **0** |
+| Close buckets (wave 1) | calibrated known-FP 48 · code-fixed lint 24 · store G201/G202 7 · obsolete Code Review Summary 6 · shell-injection fixed 2 |
+| Inventory | [docs/dogfood-reports/open-repository-detective-issues-inventory-2026-09-08.md](docs/dogfood-reports/open-repository-detective-issues-inventory-2026-09-08.md) |
+| Script | `scripts/close-remediated-selfscan-issues.py` |
+
 ### Known-safe / repo routing overlay (2026-09-08)
 
 | Item | Value |
 |------|-------|
-| Tests | `go test ./calibration/ ./findinglearn/ ./profile/ ./analyzers/ -count=1` → **PASS** |
-| Fix | `calibration/knownsafe.go` — drop invalid `issue.ID` fallback (`CodeIssue` has `RuleID` only) |
-| `pathMatchesCalibrationPattern` | returns `bool`; `findinglearn` compiles |
-| Image | `repository-detective:upgrade-candidate` (`commit=537a623d`) |
-| Health | `http://127.0.0.1:8081/health` → **healthy**, ready=true, tools 12/12 |
-| Git | **Not committed** (per operator request) |
+| Shipped | commit **`aaa3efe4`** (Gitea + sanitized GitHub `a29d47ea`) |
+| Live | `repository-detective:upgrade-candidate` — `/health` commit **`aaa3efe4`**, healthy, tools 12/12 |
+| Known-safe | G201/G202 store placeholders, G204 tooling, G703 patcher, SC2034, G104, G118 preinstall |
+| Calibration→forge | `ApplyRepoRoutingForForge` quiets filing for accepted rules including high/critical |
+| Open findings | **214** (was 227): high 4 / medium 58 / low 9 / info 143 |
+| Remaining | Checkov/cookie/XSS/perms review queue; next self-scan will re-route with new heuristics |
 
 ### Self-scan remediation (2026-09-08) — FP apply + lint/Go cleanup
 

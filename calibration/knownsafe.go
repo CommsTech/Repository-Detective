@@ -43,6 +43,12 @@ func applyKnownSafeOne(issue *ai.CodeIssue) {
 		reason = "known-safe: gosec G104 unchecked-assign is informational for this codebase"
 	case isIntentionalWithoutCancel(src, rule, file, code):
 		reason = "known-safe: context.WithoutCancel used to detach background audit from request cancel"
+	case isDoctorCLIFatalExit(src, rule, file):
+		reason = "known-safe: doctor CLI process exits are intentional, not library fatal paths"
+	case isPrivacyLocalhostClassification(src, rule, file, code):
+		reason = "known-safe: localhost host check is privacy-mode classification, not infra leakage"
+	case isConfigTemplateSecretEntropy(src, rule, file):
+		reason = "known-safe: config.env.template placeholders are not live secrets"
 	}
 	if reason == "" {
 		return
@@ -137,4 +143,32 @@ func isIntentionalWithoutCancel(source, rule, file, code string) bool {
 		return false
 	}
 	return strings.Contains(code, "WithoutCancel") || strings.Contains(code, "context.WithoutCancel")
+}
+
+func isDoctorCLIFatalExit(source, rule, file string) bool {
+	if !strings.EqualFold(rule, "HEALTH-FATAL-EXIT") {
+		return false
+	}
+	lower := strings.ToLower(file)
+	return strings.Contains(lower, "main_doctor.go") || strings.HasSuffix(lower, "doctor/main.go")
+}
+
+func isPrivacyLocalhostClassification(source, rule, file, code string) bool {
+	if !strings.EqualFold(rule, "REL-INTERNAL-INFRA-REF") {
+		return false
+	}
+	lower := strings.ToLower(file)
+	if !strings.Contains(lower, "internal/privacy/") {
+		return false
+	}
+	return strings.Contains(code, "localhost") || strings.Contains(strings.ToLower(code), "host ==")
+}
+
+func isConfigTemplateSecretEntropy(source, rule, file string) bool {
+	if !strings.Contains(strings.ToUpper(rule), "SECRET") && !strings.EqualFold(rule, "CKV_SECRET_6") {
+		return false
+	}
+	lower := strings.ToLower(file)
+	return strings.Contains(lower, ".template") || strings.Contains(lower, ".example") ||
+		strings.HasSuffix(lower, "config.env.template")
 }

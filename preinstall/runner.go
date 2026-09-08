@@ -87,6 +87,8 @@ func (r *Runner) StartAudit(ctx context.Context, repoURL, auditDepth string) (st
 		return "", err
 	}
 
+	// Detach from the request cancel so audits finish after the HTTP handler returns.
+	// #nosec G118 -- intentional WithoutCancel for background audit lifecycle
 	go r.runAudit(context.WithoutCancel(ctx), auditID, parsed, depth)
 	return auditID, nil
 }
