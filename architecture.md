@@ -6,6 +6,7 @@
 - Noise reduction proof metrics (`store/noise_reduction.go`) on dashboard.
 - Edition gates (`internal/edition`) — Community repo cap + Commercial RBAC/audit UI unlock via `license_key`.
 - Positioning: Gitea/Forgejo-first self-hosted AppSec (not enterprise VMS).
+- Forge issue model 2.0 (`issues/template.go`, `labels.go`, `lifecycle.go`, `posture.go`) — developer work items, scoped labels, quiet rescans, posture not % score.
 
 ## Tech-debt / duplicate paths (Phase 8A)
 

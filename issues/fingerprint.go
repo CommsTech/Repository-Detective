@@ -82,14 +82,20 @@ func SanitizedEvidenceHash(evidence string) string {
 
 // ExtractFingerprintFromBody reads a fingerprint marker from an issue body.
 func ExtractFingerprintFromBody(body string) string {
+	markers := []string{
+		"- " + FingerprintBodyMarker,
+		FingerprintBodyMarker,
+	}
+	for _, legacy := range legacyFingerprintMarkers {
+		markers = append(markers, "- "+legacy, legacy)
+	}
 	for _, line := range strings.Split(body, "\n") {
 		line = strings.TrimSpace(line)
-		for _, marker := range []string{
-			"- " + FingerprintBodyMarker,
-			FingerprintBodyMarker,
-		} {
+		for _, marker := range markers {
 			if strings.HasPrefix(line, marker) {
-				return strings.TrimSpace(strings.TrimPrefix(line, marker))
+				rest := strings.TrimSpace(strings.TrimPrefix(line, marker))
+				rest = strings.Trim(rest, "`")
+				return strings.TrimSpace(rest)
 			}
 		}
 	}

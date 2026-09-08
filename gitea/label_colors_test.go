@@ -23,4 +23,7 @@ func TestDefaultLabelColorCategory(t *testing.T) {
 	if got := DefaultLabelColor("repository-detective/open"); got != "0ea5a4" {
 		t.Fatalf("open color = %q", got)
 	}
+	if got := DefaultLabelColor("triage/needs-review"); got != "d97706" {
+		t.Fatalf("triage color = %q", got)
+	}
 }

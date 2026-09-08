@@ -67,7 +67,8 @@ type IssueCreationRequest struct {
 	RepositoryID       int64
 	AnalysisResult     *ai.CodeAnalysisResult
 	Context            string
-	Commit             string
+	Commit             string // immutable commit SHA when known
+	BranchRef          string // branch/tag name; never substitute for Commit
 	PullRequest        int
 	ScanID             string
 	MinIssueConfidence float64
@@ -250,9 +251,19 @@ func (m *Manager) CreateIssuesFromAnalysis(ctx context.Context, req *IssueCreati
 	return result, nil
 }
 
-// shouldCreateSummaryIssue avoids one extra rollup ticket for tiny scan runs (reduces board noise).
+// shouldCreateSummaryIssue is intentionally rare: scan history belongs in Repository Detective.
+// A forge summary issue is only created when high/critical findings exist and grouping is enabled
+// (legacy GroupSimilarIssues). Prefer dashboard posture over backlog pollution.
 func shouldCreateSummaryIssue(issues []ai.CodeIssue) bool {
-	return len(issues) >= 5
+	hasMaterial := false
+	for _, issue := range issues {
+		sev := strings.ToLower(strings.TrimSpace(issue.Severity))
+		if sev == "critical" || sev == "high" {
+			hasMaterial = true
+			break
+		}
+	}
+	return hasMaterial && len(issues) >= 20
 }
 
 func (m *Manager) createOrUpdateIssue(ctx context.Context, req *IssueCreationRequest, issue *ai.CodeIssue, result *IssueCreationResult) (string, error) {
@@ -291,23 +302,18 @@ func (m *Manager) createOrUpdateIssue(ctx context.Context, req *IssueCreationReq
 }
 
 func (m *Manager) updateExistingIssue(ctx context.Context, forge IssueForge, req *IssueCreationRequest, issue *ai.CodeIssue, match *ExistingIssueMatch, result *IssueCreationResult) error {
-	var comment string
-	var labels []string
+	decision := DecideExistingIssueUpdate(issue, match, req.ScanID, time.Now().UTC())
 
-	if ConfidenceNeedsHumanReview(issue.Confidence) {
-		comment = NeedsHumanReviewCommentBody(issue, req.ScanID)
-		labels = ExpandLifecycleLabels(LifecycleNeedsHumanReview)
-	} else {
-		comment = StillPresentCommentBody(issue, req.ScanID)
-		labels = ExpandLifecycleLabels(LifecycleStillPresent)
+	if decision.Comment && decision.Body != "" {
+		if err := forge.CreateIssueComment(ctx, req.Owner, req.Repository, match.IssueNumber, decision.Body); err != nil {
+			return fmt.Errorf("comment on existing issue #%d: %w", match.IssueNumber, err)
+		}
 	}
 
-	if err := forge.CreateIssueComment(ctx, req.Owner, req.Repository, match.IssueNumber, comment); err != nil {
-		return fmt.Errorf("comment on existing issue #%d: %w", match.IssueNumber, err)
-	}
-
-	if err := forge.AddIssueLabels(ctx, req.Owner, req.Repository, match.IssueNumber, labels); err != nil {
-		m.logger.Warnf("Failed to attach lifecycle labels to issue #%d: %v", match.IssueNumber, err)
+	if len(decision.Labels) > 0 {
+		if err := forge.AddIssueLabels(ctx, req.Owner, req.Repository, match.IssueNumber, decision.Labels); err != nil {
+			m.logger.Warnf("Failed to attach lifecycle labels to issue #%d: %v", match.IssueNumber, err)
+		}
 	}
 
 	result.IssuesSkipped++
@@ -319,7 +325,11 @@ func (m *Manager) updateExistingIssue(ctx context.Context, forge IssueForge, req
 		IssueURL:    match.IssueURL,
 		Action:      "updated",
 	})
-	m.logger.Infof("Updated existing issue #%d for fingerprint %s", match.IssueNumber, issue.Fingerprint)
+	if decision.Comment {
+		m.logger.Infof("Updated existing issue #%d for fingerprint %s (%s)", match.IssueNumber, issue.Fingerprint, decision.Reason)
+	} else {
+		m.logger.Debugf("Silent rescan for issue #%d fingerprint %s (%s)", match.IssueNumber, issue.Fingerprint, decision.Reason)
+	}
 	return nil
 }
 
@@ -376,17 +386,18 @@ func (m *Manager) createSummaryIssue(ctx context.Context, req *IssueCreationRequ
 	if forge == nil {
 		return fmt.Errorf("no issue forge configured for %s", m.normalizeForgeType(req.ForgeType))
 	}
-	title := fmt.Sprintf("Code Review Summary - %d Issues Found", len(req.AnalysisResult.Issues))
+	posture := BuildRepositoryPosture(req.AnalysisResult)
+	title := fmt.Sprintf("Repository posture: %s", posture.Headline)
 	body := m.createSummaryIssueBody(req)
 
-	createdIssue, err := forge.CreateIssue(ctx, req.Owner, req.Repository, title, body, m.config.IssueLabels)
+	createdIssue, err := forge.CreateIssue(ctx, req.Owner, req.Repository, title, body, append(DefaultIssueBaseLabels(), "category/maintainability"))
 	if err != nil {
 		return fmt.Errorf("failed to create summary issue: %w", err)
 	}
 
 	result.IssuesCreated++
 	result.IssueURLs = append(result.IssueURLs, createdIssue.HTMLURL)
-	m.logger.Infof("Created summary issue #%d", createdIssue.Number)
+	m.logger.Infof("Created posture summary issue #%d", createdIssue.Number)
 	return nil
 }
 
@@ -402,13 +413,7 @@ func (m *Manager) createIssueTitle(issue *ai.CodeIssue, req *IssueCreationReques
 		}
 		return title
 	}
-
-	severity := strings.ToUpper(issue.Severity)
-	title := issue.Title
-	if loc := locationRef(issue); loc != "" && !strings.Contains(title, loc) {
-		title = fmt.Sprintf("%s — %s", title, loc)
-	}
-	return fmt.Sprintf("[%s] %s", severity, title)
+	return OperatorIssueTitle(issue)
 }
 
 func (m *Manager) createIssueBody(issue *ai.CodeIssue, req *IssueCreationRequest) string {
@@ -422,6 +427,17 @@ func (m *Manager) createIssueBody(issue *ai.CodeIssue, req *IssueCreationRequest
 	if m.normalizeForgeType(req.ForgeType) == "github" {
 		webBase = m.config.GitHubBaseURL
 	}
+	commitSHA := strings.TrimSpace(req.Commit)
+	branchRef := strings.TrimSpace(req.BranchRef)
+	if !looksLikeCommitSHA(commitSHA) {
+		if branchRef == "" && commitSHA != "" {
+			branchRef = commitSHA
+		}
+		commitSHA = ""
+		if looksLikeCommitSHA(issue.CommitSHA) {
+			commitSHA = issue.CommitSHA
+		}
+	}
 	return RenderIssueBody(IssueRenderInput{
 		Issue:        issue,
 		Repository:   repository,
@@ -429,8 +445,8 @@ func (m *Manager) createIssueBody(issue *ai.CodeIssue, req *IssueCreationRequest
 		RepoName:     req.Repository,
 		GiteaBaseURL: webBase,
 		Context:      req.Context,
-		Commit:       req.Commit,
-		Ref:          req.Commit,
+		Commit:       commitSHA,
+		Ref:          branchRef,
 		PullRequest:  req.PullRequest,
 		ScanID:       req.ScanID,
 		Provider:     m.normalizeForgeType(req.ForgeType),
@@ -463,89 +479,31 @@ func (m *Manager) applyIssueBodyTemplate(tmpl string, issue *ai.CodeIssue, req *
 }
 
 func formatAnalysisOverallScore(result *ai.CodeAnalysisResult) string {
-	if result == nil {
-		return "incomplete"
-	}
-	complete := result.ScoreComplete
-	score := result.OverallScore
-	if !complete && score >= 0 && score <= 1 {
-		complete = true
-	}
-	if !complete || score < 0 {
-		if strings.TrimSpace(result.ScoreIncompleteReason) != "" {
-			return "incomplete (" + result.ScoreIncompleteReason + ")"
-		}
-		return "incomplete"
-	}
-	line := fmt.Sprintf("%.2f%%", score*100)
-	if strings.TrimSpace(result.ScoreExplanation) != "" {
-		line += " — " + result.ScoreExplanation
-	}
-	return line
+	// Deprecated for forge issues — kept for any external callers; prefer BuildRepositoryPosture.
+	return BuildRepositoryPosture(result).Headline
 }
 
 func (m *Manager) createSummaryIssueBody(req *IssueCreationRequest) string {
+	posture := BuildRepositoryPosture(req.AnalysisResult)
 	var body strings.Builder
-
-	body.WriteString("## Code Review Summary\n\n")
-	body.WriteString(fmt.Sprintf("**Total Issues Found:** %d\n", len(req.AnalysisResult.Issues)))
-	body.WriteString(fmt.Sprintf("**Overall Score:** %s\n", formatAnalysisOverallScore(req.AnalysisResult)))
-	body.WriteString(fmt.Sprintf("**Analysis Time:** %v\n", req.AnalysisResult.AnalysisTime))
-	if req.ScanID != "" {
-		body.WriteString(fmt.Sprintf("**Scan ID:** %s\n", req.ScanID))
-	}
-
-	severityCounts := make(map[string]int)
-	for _, issue := range req.AnalysisResult.Issues {
-		severityCounts[issue.Severity]++
-	}
-
-	body.WriteString("\n## Issue Breakdown\n\n")
-	for severity, count := range severityCounts {
-		body.WriteString(fmt.Sprintf("- **%s:** %d issues\n", capitalizeWord(severity), count))
-	}
-
-	categoryCounts := make(map[string]int)
-	for _, issue := range req.AnalysisResult.Issues {
-		categoryCounts[NormalizeCategory(issue.Category, issue.Source)]++
-	}
-
-	body.WriteString("\n## Category Breakdown\n\n")
-	for category, count := range categoryCounts {
-		body.WriteString(fmt.Sprintf("- **%s:** %d issues\n", capitalizeWord(category), count))
-	}
-
-	body.WriteString("\n## Top Issues\n\n")
-
-	topIssues := 5
-	if len(req.AnalysisResult.Issues) < topIssues {
-		topIssues = len(req.AnalysisResult.Issues)
-	}
-
-	for i := 0; i < topIssues; i++ {
-		issue := req.AnalysisResult.Issues[i]
-		body.WriteString(fmt.Sprintf("### %d. %s\n", i+1, issue.Title))
-		body.WriteString(fmt.Sprintf("- **Severity:** %s\n", issue.Severity))
-		body.WriteString(fmt.Sprintf("- **Category:** %s\n", issue.Category))
-		body.WriteString(fmt.Sprintf("- **Description:** %s\n\n", issue.Description))
-	}
-
-	body.WriteString("## Context\n\n")
-	body.WriteString(fmt.Sprintf("- **Repository:** %s\n", req.Repository))
+	body.WriteString(RenderRepositoryPostureMarkdown(posture))
+	body.WriteString("\n## Context\n\n")
+	body.WriteString(fmt.Sprintf("- **Repository:** %s/%s\n", req.Owner, req.Repository))
 	body.WriteString(fmt.Sprintf("- **Context:** %s\n", req.Context))
-
-	if req.Commit != "" {
-		body.WriteString(fmt.Sprintf("- **Commit:** %s\n", req.Commit))
+	if looksLikeCommitSHA(req.Commit) {
+		body.WriteString(fmt.Sprintf("- **Commit:** `%s`\n", req.Commit))
+	} else if req.BranchRef != "" {
+		body.WriteString(fmt.Sprintf("- **Ref:** `%s`\n", req.BranchRef))
 	}
-
+	if req.ScanID != "" {
+		body.WriteString(fmt.Sprintf("- **Scan ID:** `%s`\n", req.ScanID))
+	}
 	if req.PullRequest > 0 {
 		body.WriteString(fmt.Sprintf("- **Pull Request:** #%d\n", req.PullRequest))
 	}
-
-	body.WriteString(fmt.Sprintf("- **Analysis Completed:** %s\n", time.Now().Format(time.RFC3339)))
+	body.WriteString(fmt.Sprintf("- **Recorded:** %s\n", time.Now().UTC().Format(time.RFC3339)))
 	body.WriteString("\n---\n")
-	body.WriteString("*This summary was automatically generated by Repository Detective*\n")
-
+	body.WriteString("*Prefer the Repository Detective dashboard for scan history. This forge issue is reserved for material posture changes.*\n")
 	return body.String()
 }
 

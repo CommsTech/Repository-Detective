@@ -13,6 +13,16 @@
 | RD-COMMERCIAL-001 Commercial MVP | **Done** | Edition/license gates, repo cap, RBAC roles, users + audit UI |
 | RD-GROWTH-001 Ten-minute aha + trust | **Done** | TEN_MINUTE_AHA.md, vulnerable-demo, self-hosted fonts (no Google CDN) |
 
+### Issue model 2.0 (2026-09-08)
+
+| Ticket | Status | Notes |
+|--------|--------|-------|
+| Slim forge issue bodies | **Done** | Summary → impact → location → evidence → action → verify → details |
+| Quiet rescan comments | **Done** | Comment only on severity/location/confidence/aging changes |
+| Scoped labels | **Done** | severity/category/scanner/triage/remediation + source/repository-detective |
+| Posture not % score | **Done** | Rare forge posture issue; no 0.00% score |
+| Commit SHA evidence | **Done** | Never write `Commit: main` |
+
 ### Live dogfood (2026-09-08)
 
 | Item | Value |

@@ -1,5 +1,17 @@
 # Development Issues Log
 
+## Fixed (2026-09-08) — Forge issue model 2.0
+
+| Priority | Issue | Resolution |
+|----------|-------|------------|
+| P0 | Bloated Gitea issue bodies / repeated sections | Slim developer work-item template |
+| P0 | Nightly “still present” comment spam | Meaningful-change comments only |
+| P0 | `0.00%` score + contradictory counts | Repository posture summary (no %) |
+| P0 | `Commit: main` as evidence | Immutable SHA only; branch kept separate |
+| P1 | Generic impact text (e.g. “SQL string formatting”) | Rule-specific context (G201, ShellCheck, …) |
+| P1 | Noisy Code Review Summary issues | Rare posture issues; dashboard owns history |
+| P1 | Redundant labels | Scoped severity/category/scanner/triage/remediation |
+
 ## Fixed (2026-09-08) — Product value sprint (feature freeze)
 
 | Priority | Issue | Resolution |

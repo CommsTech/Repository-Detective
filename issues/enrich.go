@@ -6,7 +6,7 @@ import (
 	"git.commsnet.org/commstech/repository-detective/ai"
 )
 
-// BuildLabels returns Repository Detective labels for Gitea issue submission.
+// BuildLabels returns scoped Gitea labels for a finding issue.
 func BuildLabels(base []string, issue *ai.CodeIssue) []string {
 	labels := append([]string{}, DefaultIssueBaseLabels()...)
 	labels = append(labels, base...)
@@ -17,17 +17,21 @@ func BuildLabels(base []string, issue *ai.CodeIssue) []string {
 	if severityLabel := SeverityLabel(issue.Severity); severityLabel != "" {
 		labels = append(labels, severityLabel)
 	}
-
-	lifecycle := issue.LifecycleState
-	switch {
-	case ConfidenceNeedsHumanReview(issue.Confidence):
-		labels = append(labels, ExpandLifecycleLabels(LifecycleNeedsHumanReview)...)
-	case lifecycle != "":
-		labels = append(labels, ExpandLifecycleLabels(lifecycle)...)
-	default:
-		labels = append(labels, ExpandLifecycleLabels(LifecycleOpen)...)
+	if scanner := ScannerLabel(issue.Source); scanner != "" {
+		labels = append(labels, scanner)
 	}
 
+	if ConfidenceNeedsHumanReview(issue.Confidence) || issue.LifecycleState == LifecycleNeedsHumanReview {
+		labels = append(labels, TriageNeedsReview)
+	} else if issue.LifecycleState == LifecycleFalsePositive {
+		labels = append(labels, TriageFalsePositive)
+	} else if issue.LifecycleState == LifecycleSuppressed {
+		labels = append(labels, TriageAcceptedRisk)
+	} else {
+		labels = append(labels, TriageNeedsReview)
+	}
+
+	labels = append(labels, RemediationLabel(issue.Fixable, issue.SafeForAutoPR))
 	return uniqueStrings(labels)
 }
 

@@ -6,42 +6,40 @@ import "strings"
 func DefaultLabelColor(name string) string {
 	key := strings.ToLower(strings.TrimSpace(name))
 	switch key {
-	case "repository-detective":
+	case "source/repository-detective", "repository-detective":
 		return "0d1b2a"
 	case "automated-review":
 		return "374151"
-	case "repository-detective/security":
+	case "category/security", "repository-detective/security":
 		return "991b1b"
-	case "repository-detective/secret":
+	case "category/secret", "repository-detective/secret":
 		return "7c3aed"
-	case "repository-detective/dependency":
+	case "category/dependency", "repository-detective/dependency":
 		return "2563eb"
-	case "repository-detective/code-quality":
+	case "category/container":
 		return "0ea5a4"
-	case "repository-detective/reliability":
+	case "category/reliability", "repository-detective/reliability":
 		return "0891b2"
-	case "repository-detective/maintainability":
+	case "category/maintainability", "repository-detective/maintainability", "repository-detective/code-quality":
 		return "059669"
-	case "repository-detective/performance":
-		return "0284c7"
-	case "repository-detective/test-gap":
-		return "6366f1"
-	case "repository-detective/tech-debt":
-		return "a16207"
-	case "repository-detective/architecture":
-		return "4338ca"
-	case "repository-detective/ai-generated-risk":
-		return "c026d3"
+	case "triage/needs-review", "repository-detective/needs-human-review":
+		return "d97706"
 	case "repository-detective/open":
 		return "0ea5a4"
-	case "repository-detective/still-present":
-		return "f59e0b"
-	case "repository-detective/needs-human-review":
-		return "d97706"
-	case "repository-detective/not-reproduced":
-		return "6b7280"
-	case "repository-detective/resolved-verified":
+	case "triage/confirmed":
 		return "16a34a"
+	case "triage/false-positive", "repository-detective/false-positive":
+		return "6b7280"
+	case "triage/accepted-risk", "repository-detective/suppressed":
+		return "a16207"
+	case "remediation/auto-pr":
+		return "2563eb"
+	case "remediation/manual":
+		return "0ea5a4"
+	case "remediation/blocked":
+		return "dc2626"
+	case "remediation/unknown":
+		return "6b7280"
 	case "severity/critical":
 		return "dc2626"
 	case "severity/high":
@@ -53,8 +51,14 @@ func DefaultLabelColor(name string) string {
 	case "severity/info":
 		return "6b7280"
 	default:
+		if strings.HasPrefix(key, "scanner/") {
+			return "4338ca"
+		}
 		if strings.HasPrefix(key, "severity/") {
 			return "6b7280"
+		}
+		if strings.HasPrefix(key, "category/") {
+			return "1e3a8a"
 		}
 		if strings.Contains(key, "security") || strings.Contains(key, "secret") {
 			return "991b1b"

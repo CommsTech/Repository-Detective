@@ -99,7 +99,7 @@ func TestCreateIssuesUpdatesExistingFingerprint(t *testing.T) {
 	if result.IssuesUpdated != 1 {
 		t.Fatalf("expected 1 updated issue, got %d", result.IssuesUpdated)
 	}
-	if comments != 1 {
-		t.Fatalf("expected one still-present comment, got %d", comments)
+	if comments != 0 {
+		t.Fatalf("expected silent still-present (0 comments), got %d", comments)
 	}
 }

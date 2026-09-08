@@ -2030,8 +2030,17 @@ func createIssuesFromResult(ctx context.Context, forgeType, owner, repo string, 
 	actionIssues := filterIssuesWithSuppression(repositoryID, result.Issues)
 
 	commitRef := commit
+	branchRef := ""
 	if commitRef == "" {
 		commitRef = result.CommitSHA
+	}
+	// Prefer immutable SHA for forge evidence; keep branch separately.
+	if !looksLikeGitCommitSHA(commitRef) {
+		branchRef = commitRef
+		commitRef = result.CommitSHA
+		if !looksLikeGitCommitSHA(commitRef) {
+			commitRef = ""
+		}
 	}
 
 	var processed []issues.ProcessedIssueRecord
@@ -2087,6 +2096,7 @@ func createIssuesFromResult(ctx context.Context, forgeType, owner, repo string, 
 				},
 				Context:            contextLabel,
 				Commit:             commitRef,
+				BranchRef:          branchRef,
 				PullRequest:        prNumber,
 				ScanID:             result.ScanID,
 				MinIssueConfidence: effective.ConfidenceGate,
@@ -2272,6 +2282,18 @@ func normalizeForgeType(forgeType string) string {
 		return store.ForgeTypeGitHub
 	}
 	return store.ForgeTypeGitea
+}
+
+func looksLikeGitCommitSHA(ref string) bool {
+	if len(ref) < 7 || len(ref) > 64 {
+		return false
+	}
+	for _, r := range ref {
+		if !((r >= '0' && r <= '9') || (r >= 'a' && r <= 'f') || (r >= 'A' && r <= 'F')) {
+			return false
+		}
+	}
+	return true
 }
 
 func enqueueManualAnalysis(parentCtx context.Context, req manualAnalysisRequest) {
