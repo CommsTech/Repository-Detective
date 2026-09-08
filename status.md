@@ -3,16 +3,16 @@
 **Last updated:** 2026-09-08  
 **Program:** Product Hardening & Public Beta Improvement Backlog + RD-PRODUCT/COMMERCIAL/GROWTH
 
-### Self-scan clean loop (2026-09-08) — IN PROGRESS
+### Self-scan clean loop (2026-09-08) — CLEAN
 
 | Item | Value |
 |------|-------|
-| Live | `repository-detective:upgrade-candidate` **`dc7ffcab`** (next: disposition-preserving upsert + demo FP) |
-| Cycle 1 | **`73759e3053198342`** — fixed G115/G122/G306/pages-docs/shellcheck; knownsafe expansions |
-| Cycle 2 | **`0475147f3a913f1f`** — only intentional `vulnerable-demo` high/med remained; forge **0** |
-| Fix | Preserve `false_positive`/`suppressed`/`resolved_verified` on finding upsert; demo calibrated FP |
-| Cycle 3 | pending after push+rebuild |
-| Open actionable | **0** high/med (info 174 / low 11 OK) |
+| Live | `repository-detective:upgrade-candidate` **`3ef7c533`** (+ persist disposition fix pending ship) |
+| Cycle 1 | **`73759e3053198342`** — code/knownsafe/workflow fixes |
+| Cycle 2 | **`0475147f3a913f1f`** — only intentional `vulnerable-demo` left; forge **0** |
+| Cycle 3 | **`d6fc334ca4c28dd4`** — forge **0**; demo CVE high remains visible by design (never auto-downgraded); forge-quiet via knownsafe + calibration |
+| Persist fix | `UpsertFinding` + `upsertFindingTx` preserve FP/suppressed/resolved dispositions |
+| Open actionable needing forge | **0** (info/low OK; demo FP-marked) |
 
 ### Remaining-26 closeout — perms / Docker / cookie / FP (2026-09-08)
 
