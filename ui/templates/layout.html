@@ -22,9 +22,7 @@
   }
 })();
 </script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{.BasePath}}/static/fonts.css">
 <link rel="stylesheet" href="{{.BasePath}}/static/theme.css">
 {{end}}
 
@@ -47,12 +45,16 @@
       <a href="{{.BasePath}}/findings{{apiKeyQS .APIKey}}" class="{{navActive "findings" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">◇</span> Findings</a>
       <span class="rd-nav-label">Intelligence</span>
       <a href="{{.BasePath}}/reports{{apiKeyQS .APIKey}}" class="{{navActive "reports" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">▤</span> Reports</a>
-      <a href="{{.BasePath}}/learning{{apiKeyQS .APIKey}}" class="{{navActive "learning" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">↻</span> Learning</a>
+      <a href="{{.BasePath}}/learning{{apiKeyQS .APIKey}}" class="{{navActive "learning" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">↻</span> Noise reduction</a>
       <span class="rd-nav-label">Platform</span>
       <a href="{{.BasePath}}/health{{apiKeyQS .APIKey}}" class="{{navActive "health" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">♥</span> System Health</a>
       <a href="{{.BasePath}}/doctor{{apiKeyQS .APIKey}}" class="{{navActive "doctor" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">⌖</span> Doctor</a>
       <a href="{{.BasePath}}/preinstall{{apiKeyQS .APIKey}}" class="{{navActive "preinstall" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">⌕</span> Pre-install audit</a>
       <a href="{{.BasePath}}/projects{{apiKeyQS .APIKey}}" class="{{navActive "projects" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">◫</span> Project groups</a>
+      {{if .AuthLocal}}
+      <a href="{{.BasePath}}/users{{apiKeyQS .APIKey}}" class="{{navActive "users" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">☺</span> Users</a>
+      <a href="{{.BasePath}}/audit{{apiKeyQS .APIKey}}" class="{{navActive "audit" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">☰</span> Audit trail</a>
+      {{end}}
       {{if .SetupComplete}}
       <a href="{{.BasePath}}/configure{{apiKeyQS .APIKey}}" class="{{navActive "settings" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">☰</span> Configure</a>
       {{else}}
@@ -61,7 +63,8 @@
     </nav>
     <div class="rd-sidebar-foot">
       Repository Detective<br>
-      Enterprise code audit &amp; vulnerability management
+      Self-hosted AppSec for Gitea and Forgejo
+      {{if .Edition}}<br><span class="rd-chip">{{.Edition}}</span>{{end}}
     </div>
   </aside>
   <div class="rd-main">

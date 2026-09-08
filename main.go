@@ -20,6 +20,7 @@ import (
 	"git.commsnet.org/commstech/repository-detective/api"
 	"git.commsnet.org/commstech/repository-detective/containers"
 	"git.commsnet.org/commstech/repository-detective/docsdata"
+	"git.commsnet.org/commstech/repository-detective/doctor"
 	"git.commsnet.org/commstech/repository-detective/forge"
 	"git.commsnet.org/commstech/repository-detective/gitea"
 	"git.commsnet.org/commstech/repository-detective/github"
@@ -27,6 +28,7 @@ import (
 	"git.commsnet.org/commstech/repository-detective/handlers"
 	"git.commsnet.org/commstech/repository-detective/health"
 	"git.commsnet.org/commstech/repository-detective/internal/config/envcompat"
+	"git.commsnet.org/commstech/repository-detective/internal/edition"
 	"git.commsnet.org/commstech/repository-detective/internal/middleware"
 	"git.commsnet.org/commstech/repository-detective/internal/privacy"
 	"git.commsnet.org/commstech/repository-detective/internal/scanid"
@@ -292,6 +294,9 @@ type Config struct {
 	RejectQueryStringAPIKey                  bool                                 `mapstructure:"reject_query_string_api_key"`
 	WarnQueryStringAPIKey                    bool                                 `mapstructure:"warn_query_string_api_key"`
 	PrivacyMode                              string                               `mapstructure:"privacy_mode"`
+	Edition                                  string                               `mapstructure:"edition"`
+	LicenseKey                               string                               `mapstructure:"license_key"`
+	CommunityMaxRepos                         int                                  `mapstructure:"community_max_repos"`
 }
 
 func main() {
@@ -641,6 +646,9 @@ func loadConfig() error {
 	viper.SetDefault("reject_query_string_api_key", false)
 	viper.SetDefault("warn_query_string_api_key", true)
 	viper.SetDefault("privacy_mode", "hybrid")
+	viper.SetDefault("edition", "community")
+	viper.SetDefault("license_key", "")
+	viper.SetDefault("community_max_repos", 10)
 
 	reportingDefaults := profile.DefaultReportingConfig()
 	viper.SetDefault("reporting.mode", reportingDefaults.Mode)
@@ -690,6 +698,7 @@ func loadConfig() error {
 	applyReportingDefaults(config)
 	applyContainerScanDefaults(config)
 	applyOpenClawDefaults(config)
+	applyEditionDefaults(config)
 
 	if config.DatabaseEnabled && config.DatabaseDriver == "sqlite" && config.DatabasePath != "" {
 		if err := os.MkdirAll(filepath.Dir(config.DatabasePath), 0o755); err != nil && !os.IsExist(err) {
@@ -759,7 +768,34 @@ func loadConfig() error {
 		return err
 	}
 
+	ed := editionConfig()
+	logger.Infof("Edition: %s (connected repo limit=%s)", ed.DisplayName(), editionLimitLabel(ed))
+
 	return nil
+}
+
+func applyEditionDefaults(c *Config) {
+	if c == nil {
+		return
+	}
+	ed := edition.Normalize(c.Edition, c.LicenseKey, c.CommunityMaxRepos)
+	c.Edition = ed.Name
+	c.LicenseKey = ed.LicenseKey
+	c.CommunityMaxRepos = ed.CommunityMaxRepos
+}
+
+func editionConfig() edition.Config {
+	if config == nil {
+		return edition.Normalize("", "", 10)
+	}
+	return edition.Normalize(config.Edition, config.LicenseKey, config.CommunityMaxRepos)
+}
+
+func editionLimitLabel(ed edition.Config) string {
+	if ed.MaxRepos() <= 0 {
+		return "unlimited"
+	}
+	return fmt.Sprintf("%d", ed.MaxRepos())
 }
 
 func (c *Config) validatePrivacy() error {
@@ -964,6 +1000,7 @@ func initializeComponents() error {
 		}
 		rdStore = s
 		scanRecorder = store.NewRecorder(s, logger)
+		scanRecorder.SetMaxConnectedRepos(editionConfig().MaxRepos())
 		initSuppressionMatcher()
 		if onboardingHandler != nil {
 			onboardingHandler.SetInstallCounters(
@@ -1156,10 +1193,21 @@ func initializeComponents() error {
 			uiHandler.SetCalibrationBackend(true, calibrationUIBridge{})
 		}
 		uiHandler.SetReadinessFn(func() operator.Readiness { return buildReadiness("running") })
+		uiHandler.SetDoctorFns(
+			func(ctx context.Context, owner, repo string) any {
+				return doctor.RedactReport(runDoctorReport(ctx, owner, repo))
+			},
+			func(ctx context.Context, owner, repo string) any {
+				report := runDoctorReport(ctx, owner, repo)
+				return doctor.BuildSupportBundle(report, sanitizedDoctorConfig(), nil)
+			},
+		)
 		uiHandler.SetPlatformSettingsApplier(func(settings store.PlatformSettings) error {
 			applyPlatformSettingsToRuntime(settings)
 			return nil
 		})
+		uiHandler.SetEditionLabel(editionConfig().DisplayName())
+		uiHandler.SetEditionGates(editionConfig().IsCommercial())
 		operatorUI = uiHandler
 		logger.Infof("Operator UI enabled at %s", uiHandler.BasePath())
 	} else {

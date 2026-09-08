@@ -1,7 +1,46 @@
 # Repository Detective - Implementation Status
 
-**Last updated:** 2026-09-05  
-**Program:** Product Hardening & Public Beta Improvement Backlog (RD-001…RD-030)
+**Last updated:** 2026-09-08  
+**Program:** Product Hardening & Public Beta Improvement Backlog + RD-PRODUCT/COMMERCIAL/GROWTH
+
+### Product value sprint (2026-09-08) — five tickets
+
+| Ticket | Status | Notes |
+|--------|--------|-------|
+| RD-PRODUCT-001 Finding Detail 2.0 | **Done** | Operator brief + deduped evidence expander |
+| RD-PRODUCT-002 Noise Reduction proof | **Done** | Dashboard card from real DB metrics |
+| RD-PRODUCT-003 Gitea/Forgejo positioning | **Done** | README + sidebar; no “enterprise VMS” pitch |
+| RD-COMMERCIAL-001 Commercial MVP | **Done** | Edition/license gates, repo cap, RBAC roles, users + audit UI |
+| RD-GROWTH-001 Ten-minute aha + trust | **Done** | TEN_MINUTE_AHA.md, vulnerable-demo, self-hosted fonts (no Google CDN) |
+
+### Live dogfood (2026-09-08)
+
+| Item | Value |
+|------|-------|
+| Running | `repository-detective:upgrade-candidate` (rebuild after product sprint) |
+| Pin | `Bugbot/.env` → `RD_IMAGE=repository-detective:upgrade-candidate` |
+| Base scanners | `v0.1.0-beta.3` all-in-one + binary overlay |
+| Backup | `deployment-backups/pre-upgrade-beta2-to-latest-20260908T024810Z/` |
+
+### Live dogfood (2026-09-07) — upgraded to current main
+
+| Item | Value |
+|------|-------|
+| Running | `repository-detective:upgrade-candidate` (`rev=53d6ad7c`, healthy, tools 12/12) |
+| Pin | `Bugbot/.env` → `RD_IMAGE=repository-detective:upgrade-candidate` |
+| Base scanners | `v0.1.0-beta.3` all-in-one + binary overlay (`Dockerfile.binary-overlay`) |
+| Backup | `deployment-backups/pre-upgrade-beta2-to-latest-20260908T024810Z/` |
+| Doctor | `DEGRADED` (0 required failures; optional warnings only) |
+| Known warnings | GitHub token **401** (startup skipped); no `config/config.yaml` (env + DB settings); Doctor auth/webhook/Class-B advisories |
+| Doctor UI | **Fixed 2026-09-08** — Run button works via `app.js` + `/ui/doctor/report` (CSP-safe) |
+| Removed | Stale `/tmp/repository-detective-static` binary bind-mount |
+
+### Prior live dogfood gap (resolved 2026-09-07)
+
+| Item | Value |
+|------|-------|
+| Was | `…:v0.1.0-beta.2` pinned since 2026-09-02 |
+| Cause | `.env` pin never bumped after beta.3 publish |
 
 ### Phase 8A (2026-09-05) — Beta hardening & real-use readiness — COMPLETE
 

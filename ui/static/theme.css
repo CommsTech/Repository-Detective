@@ -14,8 +14,8 @@
   --rd-radius: 14px;
   --rd-radius-sm: 10px;
   --rd-sidebar: 280px;
-  --rd-font: "DM Sans", system-ui, -apple-system, sans-serif;
-  --rd-mono: "JetBrains Mono", ui-monospace, monospace;
+  --rd-font: "Avenir Next", "Segoe UI Variable", "Segoe UI", "Helvetica Neue", system-ui, sans-serif;
+  --rd-mono: "SF Mono", "Cascadia Code", "Consolas", "Liberation Mono", ui-monospace, monospace;
   --rd-focus: 0 0 0 3px rgba(14, 165, 164, 0.45);
   /* Graph cytoscape (severity distinguishable in both themes) */
   --rd-graph-bg: #0f172a;
@@ -2576,3 +2576,30 @@ html[data-theme="light"] .rd-badge.low {
   color: var(--rd-text-dim);
 }
 
+
+/* Finding Detail 2.0 — operator brief */
+.rd-finding-brief { border-left: 4px solid var(--rd-teal); }
+.rd-finding-brief-top { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem; }
+.rd-finding-headline { font-size: 1.55rem; line-height: 1.25; margin: 0 0 1rem; }
+.rd-finding-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: 0.75rem 1.25rem; margin: 0 0 1.25rem; }
+.rd-finding-facts > div { margin: 0; }
+.rd-finding-facts dt { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--rd-muted); margin: 0 0 0.2rem; }
+.rd-finding-facts dd { margin: 0; font-weight: 600; }
+.rd-finding-why, .rd-finding-assessment, .rd-finding-action, .rd-finding-capabilities { margin-bottom: 1.1rem; }
+.rd-finding-why h3, .rd-finding-assessment h3, .rd-finding-action h3, .rd-finding-capabilities h3 { margin: 0 0 0.4rem; font-size: 0.95rem; }
+.rd-assessment-list, .rd-capability-list { margin: 0; padding-left: 1.1rem; }
+.rd-assessment-list li, .rd-capability-list li { margin: 0.25rem 0; }
+.rd-action-line { font-size: 1.05rem; margin: 0; }
+.rd-capability-list { list-style: none; padding-left: 0; }
+.rd-capability-list li { display: flex; gap: 0.55rem; align-items: flex-start; }
+.rd-cap-mark { font-weight: 700; min-width: 1rem; }
+.rd-cap-yes .rd-cap-mark { color: var(--rd-green); }
+.rd-cap-no .rd-cap-mark { color: var(--rd-red); }
+.rd-finding-after { color: var(--rd-muted); font-size: 0.92rem; margin: 0.5rem 0 0; }
+.rd-evidence-expander summary { cursor: pointer; font-weight: 600; font-size: 1.05rem; }
+.rd-evidence-expander[open] summary { margin-bottom: 0.75rem; }
+.rd-evidence-block { margin-bottom: 0.75rem; }
+
+/* Noise reduction card */
+.rd-noise-card .rd-noise-hero { font-size: 1.35rem; font-weight: 700; margin: 0.35rem 0 0.75rem; }
+.rd-noise-card .rd-noise-sub { color: var(--rd-muted); margin: 0 0 1rem; }

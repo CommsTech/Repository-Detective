@@ -1,5 +1,15 @@
 # Development Issues Log
 
+## Fixed (2026-09-08) — Product value sprint (feature freeze)
+
+| Priority | Issue | Resolution |
+|----------|-------|------------|
+| P0 | Finding page forced operator investigation | RD-PRODUCT-001 Finding Detail 2.0 brief + deduped evidence |
+| P0 | Calibration buried / unproven | RD-PRODUCT-002 dashboard Noise Reduction card with real metrics |
+| P1 | “Enterprise” positioning vs Gitea niche | RD-PRODUCT-003 Gitea/Forgejo pitch; editions honesty |
+| P1 | Commercial edition only documented | RD-COMMERCIAL-001 runtime edition/license, repo cap, RBAC, audit UI |
+| P1 | Slow aha + Google Fonts on self-hosted UI | RD-GROWTH-001 TEN_MINUTE_AHA + vulnerable-demo + system/self-hosted fonts |
+
 ## Fixed (2026-09-05) — Phase 7 public trust / release supply chain
 
 | Priority | Issue | Resolution |
@@ -20,12 +30,32 @@
 | P1 | Secret auto-close after fix looked incomplete | Documented intentional PARTIAL (RD-017D) |
 | P1 | Clean-install Doctor HTTP 401 | Compose host env overrode ephemeral API key |
 
+## Fixed (2026-09-08) — Doctor UI Run button
+
+| Priority | Issue | Resolution |
+|----------|-------|------------|
+| P1 | `/ui/doctor` **Run doctor** did nothing | CSP `script-src 'self'` blocked inline click script; moved handler to `app.js` and added cookie-auth `/ui/doctor/report` + `/ui/doctor/bundle` |
+
+## Fixed (2026-09-08) — GHCR mirror workflow
+
+| Priority | Issue | Resolution |
+|----------|-------|------------|
+| P1 | `Docker publish (GHCR mirror)` failed on `v0.1.0-beta.3` | Missing Gitea secrets → silent rebuild; Trivy `0.57.1` release gone (`gzip: invalid magic`). Workflow now prefers existing GHCR tag via `GHCR_TOKEN`; pin Trivy `0.74.0`; no silent rebuild on tag push |
+
 ## Open / deferred
 
 | Priority | Issue | Plan |
 |----------|-------|------|
-| P2 | Upgrade E2E | NOT_PROVEN — use beta.3 as baseline for next release |
+| P1 | Live GitHub token returns 401 | Rotate/refresh `REPOSITORY_DETECTIVE_GITHUB_TOKEN` in `.env` |
+| P2 | Doctor DEGRADED (optional) | Auth query-key advisory, webhook/first-scan proof, notify channels, Class-B NOT_PROVEN |
+| P2 | Upgrade E2E | beta.3→main integration proven; published release→release still NOT_PROVEN |
 | P2 | Class-B remediation / RD-015–016 | Excluded (RD-008B Option C) |
+
+## Fixed (2026-09-07) — live dogfood upgrade
+
+| Priority | Issue | Resolution |
+|----------|-------|------------|
+| P1 | Live dogfood stuck on `v0.1.0-beta.2` | Backup + rebuild `upgrade-candidate` @ `53d6ad7c` + recreate via `docker-compose`; pin `RD_IMAGE` |
 
 ## Fixed (2026-09-04) — Phase 6A real Gitea E2E (RD-017A / RD-018)
 

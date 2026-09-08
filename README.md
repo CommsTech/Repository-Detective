@@ -5,12 +5,17 @@
 <h1 align="center">Repository Detective</h1>
 
 <p align="center">
-  <strong>Inspect. Analyze. Improve.</strong>
+  <strong>Self-hosted AppSec for Gitea and Forgejo.</strong>
 </p>
 
 <p align="center">
-  Self-hosted, <strong>Gitea-first</strong> repository investigation: deterministic analysis,
-  canonical finding lifecycle, owner-defined policy evaluation, and evidence-based remediation planning.
+  Use proven scanners. Cut repetitive findings. Turn findings into tracked fixes.
+  Verify they&rsquo;re actually gone. Keep your code under your control.
+</p>
+
+<p align="center">
+  Gitea-first repository assessment, issue lifecycle, and evidence-based remediation —
+  deterministic-first, optional AI off by default.
 </p>
 
 <p align="center">
@@ -42,9 +47,11 @@
 | **Remediation** | Planning available; **remediation PR execution disabled by default** |
 | **License** | [AGPL-3.0-or-later](LICENSE) |
 
-**Who it is for:** operators who self-host Gitea and want investigation + owner-defined policy gates — not an AI code-review bot, not a vulnerability-free certification service, and not a GitHub-first product.
+**Who it is for:** operators who self-host **Gitea or Forgejo** and want investigation + owner-defined policy gates — not an enterprise vulnerability-management platform, not an AI code-review bot, and not a GitHub-first product.
 
-**Where to start:** [Quick Start](#quick-start) · [Demo](docs/DEMO.md) · [Screenshots](docs/assets/screenshots/README.md) · [Public beta guide](docs/PUBLIC_BETA.md)
+**Positioning:** own the Gitea/Forgejo hole. GitHub customers already have GitHub’s native security ecosystem; Repository Detective is built for forges you control.
+
+**Where to start:** [Ten-minute aha](docs/TEN_MINUTE_AHA.md) · [Quick Start](#quick-start) · [Demo](docs/DEMO.md) · [Screenshots](docs/assets/screenshots/README.md) · [Public beta guide](docs/PUBLIC_BETA.md)
 
 ---
 

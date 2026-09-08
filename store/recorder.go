@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -12,6 +13,9 @@ import (
 	"git.commsnet.org/commstech/repository-detective/scanners"
 	"github.com/sirupsen/logrus"
 )
+
+// ErrRepoLimitExceeded is returned when Community edition connected-repo cap is hit.
+var ErrRepoLimitExceeded = errors.New("community edition connected repository limit reached")
 
 // scanBatchStore extends Store with batched scan persistence operations.
 type scanBatchStore interface {
@@ -39,13 +43,21 @@ type ScanContext struct {
 
 // Recorder persists scan metadata to the local store.
 type Recorder struct {
-	store  Store
-	logger *logrus.Logger
+	store             Store
+	logger            *logrus.Logger
+	maxConnectedRepos int // 0 = unlimited (Commercial)
 }
 
 // NewRecorder creates a scan recorder. store may be nil (no-op).
 func NewRecorder(s Store, logger *logrus.Logger) *Recorder {
 	return &Recorder{store: s, logger: logger}
+}
+
+// SetMaxConnectedRepos sets the Community connected-repo cap (0 = unlimited).
+func (r *Recorder) SetMaxConnectedRepos(n int) {
+	if r != nil {
+		r.maxConnectedRepos = n
+	}
 }
 
 // Enabled reports whether persistence is active.
@@ -67,6 +79,10 @@ func (r *Recorder) BeginScan(ctx context.Context, scanCtx ScanContext) (Reposito
 		scanCtx.ForgeType = ForgeTypeGitea
 	}
 	fullName := scanCtx.Owner + "/" + scanCtx.Repo
+
+	if err := r.enforceConnectedRepoLimit(ctx, scanCtx.ForgeType, fullName, scanCtx.ConnectedRepo); err != nil {
+		return Repository{}, err
+	}
 
 	repo, err := r.store.UpsertRepository(ctx, Repository{
 		ForgeType:     scanCtx.ForgeType,
@@ -96,6 +112,25 @@ func (r *Recorder) BeginScan(ctx context.Context, scanCtx ScanContext) (Reposito
 	}
 
 	return repo, nil
+}
+
+func (r *Recorder) enforceConnectedRepoLimit(ctx context.Context, forgeType, fullName string, connecting bool) error {
+	if r == nil || r.maxConnectedRepos <= 0 || !connecting {
+		return nil
+	}
+	existing, err := r.store.GetRepositoryByFullName(ctx, forgeType, fullName)
+	if err == nil && existing.ID > 0 {
+		// Re-scan of an already tracked repo is always allowed.
+		return nil
+	}
+	count, err := CountConnectedRepositories(ctx, r.store)
+	if err != nil {
+		return fmt.Errorf("count connected repositories: %w", err)
+	}
+	if count >= r.maxConnectedRepos {
+		return fmt.Errorf("%w: limit %d (upgrade to Commercial for unlimited repos)", ErrRepoLimitExceeded, r.maxConnectedRepos)
+	}
+	return nil
 }
 
 // FinishScan records scanner completion and marks analysis complete; findings persist separately.

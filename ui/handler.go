@@ -53,10 +53,34 @@ type Handler struct {
 	reconciler            IssueReconciler
 	scanTrigger           ScanTrigger
 	readinessFn           func() operator.Readiness
+	doctorReportFn        DoctorReportFn
+	doctorBundleFn        DoctorBundleFn
 	platform              PlatformContext
 	applyPlatformSettings PlatformSettingsApplier
 	loginLimiter          *auth.LoginLimiter
+	editionName           string
+	editionCommercial     bool
 }
+
+// SetEditionLabel sets the UI edition badge (community / commercial / enterprise).
+func (h *Handler) SetEditionLabel(name string) {
+	if h != nil {
+		h.editionName = name
+	}
+}
+
+// SetEditionGates records whether Commercial capabilities are unlocked.
+func (h *Handler) SetEditionGates(commercial bool) {
+	if h != nil {
+		h.editionCommercial = commercial
+	}
+}
+
+// DoctorReportFn returns a redacted doctor report payload for the operator UI.
+type DoctorReportFn func(ctx context.Context, owner, repo string) any
+
+// DoctorBundleFn returns a sanitized support-bundle payload for the operator UI.
+type DoctorBundleFn func(ctx context.Context, owner, repo string) any
 
 // CalibrationBackend applies learning calibration actions from the UI.
 type CalibrationBackend interface {
@@ -187,6 +211,15 @@ func (h *Handler) SetReadinessFn(fn func() operator.Readiness) {
 	}
 }
 
+// SetDoctorFns wires UI-authenticated doctor JSON endpoints (avoids CSP-blocked
+// inline scripts calling /api/v1 without the UI session cookie).
+func (h *Handler) SetDoctorFns(report DoctorReportFn, bundle DoctorBundleFn) {
+	if h != nil {
+		h.doctorReportFn = report
+		h.doctorBundleFn = bundle
+	}
+}
+
 // SetPlatformContext wires non-secret platform state for setup detection and health capability cards.
 func (h *Handler) SetPlatformContext(ctx PlatformContext) {
 	if h != nil {
@@ -238,6 +271,8 @@ func (h *Handler) RegisterRoutes(g *gin.RouterGroup) {
 	g.GET("/reports", h.Reports)
 	g.GET("/health", h.SystemHealth)
 	g.GET("/doctor", h.Doctor)
+	g.GET("/doctor/report", h.DoctorReport)
+	g.GET("/doctor/bundle", h.DoctorBundle)
 	g.GET("/scans/:scan_id", h.ScanDetail)
 	g.GET("/scans/:scan_id/sbom", h.ScanSBOM)
 	g.GET("/scans/:scan_id/sbom/download", h.ScanSBOMDownload)
@@ -268,6 +303,9 @@ func (h *Handler) RegisterRoutes(g *gin.RouterGroup) {
 	g.POST("/learning/recommendations/:id/accept", h.AcceptCalibrationRecommendation)
 	g.POST("/learning/recommendations/:id/reject", h.RejectCalibrationRecommendation)
 	g.POST("/learning/recompute", h.RecomputeCalibration)
+	g.GET("/users", h.UsersPage)
+	g.POST("/users", h.CreateUserSubmit)
+	g.GET("/audit", h.AuditTrailPage)
 	h.registerScanRoutes(g)
 	h.registerRepoControlRoutes(g)
 }
@@ -298,6 +336,7 @@ type pageData struct {
 	AuthLocal     bool
 	SetupComplete bool
 	CurrentUser   *store.User
+	Edition       string
 	Data          map[string]any
 }
 
@@ -363,6 +402,7 @@ func (h *Handler) page(c *gin.Context, title string, data map[string]any) pageDa
 		AuthLocal:     h.auth.IsLocal(),
 		SetupComplete: h.isSetupComplete(c.Request.Context()),
 		CurrentUser:   currentUser,
+		Edition:       h.editionName,
 		Data:          data,
 	}
 }
@@ -473,6 +513,7 @@ func (h *Handler) Dashboard(c *gin.Context) {
 
 	calibration, _ := h.store.CalibrationSummary(c.Request.Context())
 	learningHealth, _ := h.store.LearningHealthSummary(c.Request.Context())
+	noise, _ := h.store.NoiseReductionSummary(c.Request.Context(), 30)
 
 	data := map[string]any{
 		"Summary":              summary,
@@ -483,6 +524,7 @@ func (h *Handler) Dashboard(c *gin.Context) {
 		"Actions":              actions,
 		"Calibration":          calibration,
 		"LearningHealth":       learningHealth,
+		"NoiseReduction":       noise,
 		"ChartJSON":            buildDashboardChartJSONWithStore(c.Request.Context(), h.store, summary, repos),
 	}
 	h.renderNav(c, "dashboard.html", "Dashboard", "dashboard", data)
@@ -662,6 +704,28 @@ func (h *Handler) SystemHealth(c *gin.Context) {
 
 func (h *Handler) Doctor(c *gin.Context) {
 	h.renderNav(c, "doctor.html", "Doctor", "doctor", map[string]any{})
+}
+
+// DoctorReport serves the redacted doctor report under UI auth (cookie/session).
+func (h *Handler) DoctorReport(c *gin.Context) {
+	if h.doctorReportFn == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "doctor diagnostics unavailable"})
+		return
+	}
+	owner := c.Query("owner")
+	repo := c.Query("repo")
+	c.JSON(http.StatusOK, h.doctorReportFn(c.Request.Context(), owner, repo))
+}
+
+// DoctorBundle serves a sanitized support bundle under UI auth (cookie/session).
+func (h *Handler) DoctorBundle(c *gin.Context) {
+	if h.doctorBundleFn == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "doctor support bundle unavailable"})
+		return
+	}
+	owner := c.Query("owner")
+	repo := c.Query("repo")
+	c.JSON(http.StatusOK, h.doctorBundleFn(c.Request.Context(), owner, repo))
 }
 
 func (h *Handler) fleetHealthSummary(ctx context.Context) store.FleetHealthSummary {
@@ -1436,6 +1500,10 @@ func (h *Handler) SuppressFinding(c *gin.Context) {
 		c.String(http.StatusServiceUnavailable, "suppression calibration disabled")
 		return
 	}
+	if h.auth.IsLocal() && !store.RoleCanWriteSecurity(h.currentRole(c)) {
+		c.String(http.StatusForbidden, "role cannot suppress findings")
+		return
+	}
 	id, ok := parseID(c, "id")
 	if !ok {
 		return
@@ -1624,7 +1692,7 @@ func (h *Handler) Learning(c *gin.Context) {
 	byType, _ := h.store.CountLearningEventsByType(ctx)
 	noisy, _ := h.store.ListCalibrationRuleStats(ctx, 12)
 	notice := strings.TrimSpace(c.Query("notice"))
-	h.renderNav(c, "learning.html", "Learning & Calibration", "learning", map[string]any{
+	h.renderNav(c, "learning.html", "Noise reduction & calibration", "learning", map[string]any{
 		"Health":                      health,
 		"Recommendations":             enrichCalibrationRecommendationViews(recs),
 		"AIRecommendations":           aiRecs,
@@ -1717,7 +1785,7 @@ func (h *Handler) renderLearningNotice(c *gin.Context, notice string) {
 	aiRecs, _ := h.store.ListPendingAIAdvisoryRecommendations(ctx, 50)
 	byType, _ := h.store.CountLearningEventsByType(ctx)
 	noisy, _ := h.store.ListCalibrationRuleStats(ctx, 12)
-	h.renderNav(c, "learning.html", "Learning & Calibration", "learning", map[string]any{
+	h.renderNav(c, "learning.html", "Noise reduction & calibration", "learning", map[string]any{
 		"Health":                      health,
 		"Recommendations":             enrichCalibrationRecommendationViews(recs),
 		"AIRecommendations":           aiRecs,

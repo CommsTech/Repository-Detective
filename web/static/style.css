@@ -1,5 +1,8 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap');
+@import url('./fonts.css');
 
+:root {
+  --rd-font: "Avenir Next", "Segoe UI Variable", "Segoe UI", "Helvetica Neue", system-ui, sans-serif;
+}
 :root {
   --rd-navy: #0b1220;
   --rd-navy-mid: #111b2e;
@@ -11,7 +14,7 @@
   --rd-grey-light: #e2e8f0;
   --rd-bg: #f1f5f9;
   --rd-card: #ffffff;
-  --rd-font: "DM Sans", system-ui, sans-serif;
+  --rd-font: "Avenir Next", "Segoe UI Variable", "Segoe UI", "Helvetica Neue", system-ui, sans-serif;
 }
 
 * { box-sizing: border-box; }

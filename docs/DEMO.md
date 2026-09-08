@@ -7,11 +7,11 @@ Use synthetic names such as `demo/repository-detective-test`. Never capture real
 
 ## Goal
 
-See the full path:
+See the full path in about **10 minutes** ([TEN_MINUTE_AHA.md](TEN_MINUTE_AHA.md)):
 
 1. Install / start Repository Detective  
 2. Connect disposable Gitea  
-3. Select a repository  
+3. Select a repository (or push [`examples/vulnerable-demo`](../examples/vulnerable-demo/))  
 4. Use **Observe** mode (`monitor_only`)  
 5. Push a **harmless synthetic** finding fixture  
 6. Webhook delivery  

@@ -364,6 +364,64 @@
     });
   }
 
+  // Doctor page: CSP blocks inline scripts (script-src 'self'), so the Run
+  // button must live here. Fetch the UI-auth report path so rd_ui_sess works.
+  function initDoctorPage() {
+    var out = document.getElementById("rd-doctor-out");
+    var btn = document.getElementById("rd-doctor-run");
+    if (!btn || !out) return;
+
+    btn.addEventListener("click", function () {
+      var url = btn.getAttribute("data-report-url") || "/ui/doctor/report";
+      out.textContent = "Running…";
+      btn.disabled = true;
+      fetch(url, {
+        headers: { Accept: "application/json" },
+        credentials: "same-origin"
+      })
+        .then(function (r) {
+          return r.text().then(function (text) {
+            var payload = null;
+            try {
+              payload = text ? JSON.parse(text) : null;
+            } catch (e) {
+              payload = null;
+            }
+            return { ok: r.ok, status: r.status, payload: payload, text: text };
+          });
+        })
+        .then(function (x) {
+          if (!x.ok) {
+            var errMsg = (x.payload && (x.payload.error || x.payload.message)) ||
+              ("Doctor request failed (HTTP " + x.status + ")");
+            out.textContent = errMsg;
+            return;
+          }
+          var j = x.payload || {};
+          var lines = [
+            "Overall: " + (j.overall || ""),
+            "Summary: " + (j.summary || ""),
+            ""
+          ];
+          (j.checks || []).forEach(function (c) {
+            lines.push("[" + c.state + "] " + c.id + " — " + c.summary);
+            if (c.detail) {
+              lines.push("    " + c.detail);
+            }
+          });
+          lines.push("");
+          lines.push("These results describe readiness, not whether repositories are safe or secure.");
+          out.textContent = lines.join("\n");
+        })
+        .catch(function (e) {
+          out.textContent = String(e && e.message ? e.message : e);
+        })
+        .finally(function () {
+          btn.disabled = false;
+        });
+    });
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     initTableSearch();
     initConfirmForms();
@@ -373,5 +431,6 @@
     initScanAutoRefresh();
     initCopyButtons();
     initPrintButtons();
+    initDoctorPage();
   });
 })();

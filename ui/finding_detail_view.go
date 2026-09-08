@@ -8,7 +8,8 @@ import (
 	"git.commsnet.org/commstech/repository-detective/store"
 )
 
-// ActionableFindingView enriches a finding for engineer-actionable UI sections.
+// ActionableFindingView enriches a finding for the Finding Detail 2.0 operator brief
+// (RD-PRODUCT-001). Top of page answers: what / why / what changes / can RD fix it.
 type ActionableFindingView struct {
 	Summary            string
 	WhyItMatters       string
@@ -33,6 +34,39 @@ type ActionableFindingView struct {
 	RelatedRuleID      string
 	RawMetadataPretty  string
 	HasSecretEvidence  bool
+
+	// Finding Detail 2.0 — operator brief
+	OperatorHeadline   string
+	DependencyKind     string
+	FoundIn            string
+	WhyCareSummary     string
+	ScannerMatchLabel  string
+	RuntimeExposure    string
+	Exploitability     string
+	FixComplexityLabel string
+	RegressionRisk     string
+	RecommendedAction  string
+	CapabilityRows     []FindingCapability
+	AfterMergeNote     string
+	UniqueEvidence     []DedupedEvidence
+	InstanceCount      int
+	UniqueEvidenceN    int
+	AdvisoryCount      int
+	IsDependencyVuln   bool
+}
+
+// FindingCapability is one "Repository Detective can / cannot" row.
+type FindingCapability struct {
+	Label   string
+	Allowed bool
+	Note    string
+}
+
+// DedupedEvidence is one unique evidence body with occurrence count.
+type DedupedEvidence struct {
+	Text       string
+	Count      int
+	LatestScan string
 }
 
 func buildActionableFindingView(detail store.FindingDetail) ActionableFindingView {
@@ -41,6 +75,13 @@ func buildActionableFindingView(detail store.FindingDetail) ActionableFindingVie
 		RelatedRuleID:      detail.RuleID,
 		PackageName:        detail.PackageName,
 		FalsePositiveGuide: "If this is noise or acceptable risk, mark false positive with a reason. Calibration drafts help suppress similar matches in future scans without deleting history.",
+		InstanceCount:      len(detail.Instances),
+		RuntimeExposure:    "Unknown",
+		Exploitability:     "Unknown",
+		FixComplexityLabel: "Unknown",
+		RegressionRisk:     "Unknown",
+		DependencyKind:     "Unknown",
+		AfterMergeNote:     "After merge, Repository Detective will rescan and only close the issue if the finding fingerprint disappears.",
 	}
 	view.WhyItMatters = whyItMatters(detail)
 	view.ConfidenceReason = confidenceReason(detail.Confidence)
@@ -48,6 +89,7 @@ func buildActionableFindingView(detail store.FindingDetail) ActionableFindingVie
 	view.EvidenceKind = evidenceKind(detail)
 	view.IssueFilingStatus, view.IssueFilingDetail = issueFilingView(detail)
 	view.RecommendedFix, view.VerificationSteps = fixAndVerify(detail)
+	view.ScannerMatchLabel = scannerMatchLabel(detail.Confidence)
 	if len(detail.Instances) > 0 {
 		view.WhyFlagged = strings.TrimSpace(detail.Instances[0].EvidenceRedacted)
 		view.RawMetadataPretty = jsonPretty(detail.Instances[0].RawMetadataJSON)
@@ -62,7 +104,227 @@ func buildActionableFindingView(detail store.FindingDetail) ActionableFindingVie
 	if detail.FilePath != "" {
 		view.CurrentInTree = "Inspect path in latest scan workspace; re-scan to confirm still present."
 	}
+
+	view.UniqueEvidence = dedupeEvidence(detail.Instances)
+	view.UniqueEvidenceN = len(view.UniqueEvidence)
+	view.AdvisoryCount = countDistinctAdvisories(detail)
+	view.IsDependencyVuln = isDependencyVuln(detail, view)
+	view.FoundIn = formatFoundIn(detail)
+	view.OperatorHeadline = operatorHeadline(detail, view)
+	view.WhyCareSummary = whyCareSummary(detail, view)
+	view.RecommendedAction = recommendedActionLine(detail, view)
+	enrichAssessment(&view, detail)
+	view.CapabilityRows = defaultCapabilities(detail, view)
 	return view
+}
+
+func operatorHeadline(d store.FindingDetail, v ActionableFindingView) string {
+	if v.IsDependencyVuln && v.PackageName != "" {
+		name := humanPackageName(v.PackageName)
+		return fmt.Sprintf("%s dependency vulnerable", name)
+	}
+	title := strings.TrimSpace(d.Title)
+	if title == "" {
+		return "Security finding"
+	}
+	// Prefer short operator language over raw scanner titles.
+	lower := strings.ToLower(title)
+	if strings.Contains(lower, "cve-") && v.PackageName != "" {
+		return fmt.Sprintf("%s dependency vulnerable", humanPackageName(v.PackageName))
+	}
+	return title
+}
+
+func humanPackageName(pkg string) string {
+	pkg = strings.TrimSpace(pkg)
+	if i := strings.LastIndex(pkg, "/"); i >= 0 && i+1 < len(pkg) {
+		pkg = pkg[i+1:]
+	}
+	if i := strings.LastIndex(pkg, ":"); i >= 0 && i+1 < len(pkg) {
+		// purl-ish pkg:pypi/cryptography
+		rest := pkg[i+1:]
+		if j := strings.LastIndex(rest, "/"); j >= 0 && j+1 < len(rest) {
+			return rest[j+1:]
+		}
+		return rest
+	}
+	return pkg
+}
+
+func formatFoundIn(d store.FindingDetail) string {
+	if d.FilePath == "" {
+		if strings.Contains(strings.ToLower(d.Source), "trivy") || strings.Contains(strings.ToLower(d.Source), "grype") {
+			return "Container / SBOM inventory (no single source file)"
+		}
+		return "Repository-level / no single file path"
+	}
+	path := displayPath(d.FilePath)
+	if d.Line > 0 {
+		return fmt.Sprintf("%s:%d", path, d.Line)
+	}
+	return path
+}
+
+func whyCareSummary(d store.FindingDetail, v ActionableFindingView) string {
+	if v.IsDependencyVuln {
+		n := v.AdvisoryCount
+		if n <= 0 {
+			n = 1
+		}
+		if n == 1 {
+			return "One scanner advisory maps to this dependency problem."
+		}
+		return fmt.Sprintf("%d scanner advisories map to this one dependency problem.", n)
+	}
+	if v.UniqueEvidenceN > 1 {
+		return fmt.Sprintf("Seen across %d scans with %d unique evidence shapes (duplicates collapsed).", v.InstanceCount, v.UniqueEvidenceN)
+	}
+	if v.InstanceCount > 1 {
+		return fmt.Sprintf("Recurring finding — observed in %d scans; evidence deduplicated for display.", v.InstanceCount)
+	}
+	return v.WhyItMatters
+}
+
+func recommendedActionLine(d store.FindingDetail, v ActionableFindingView) string {
+	if v.IsDependencyVuln && v.PackageName != "" {
+		pkg := humanPackageName(v.PackageName)
+		cur := strings.TrimSpace(v.PackageVersion)
+		fix := strings.TrimSpace(v.FixedVersion)
+		if cur != "" && fix != "" {
+			return fmt.Sprintf("%s==%s → %s>=%s", pkg, cur, pkg, fix)
+		}
+		if fix != "" {
+			return fmt.Sprintf("Upgrade %s to %s (or newer fixed release)", pkg, fix)
+		}
+		if cur != "" {
+			return fmt.Sprintf("Upgrade %s (currently %s) to a patched release", pkg, cur)
+		}
+		return fmt.Sprintf("Upgrade vulnerable dependency %s", pkg)
+	}
+	return v.RecommendedFix
+}
+
+func enrichAssessment(view *ActionableFindingView, d store.FindingDetail) {
+	if view.IsDependencyVuln {
+		view.RuntimeExposure = "Unknown — reachability not proven"
+		view.Exploitability = "Moderate / Unknown"
+		if view.FixedVersion != "" {
+			view.FixComplexityLabel = "Low"
+			view.RegressionRisk = "Low/Medium"
+		} else {
+			view.FixComplexityLabel = "Medium"
+			view.RegressionRisk = "Medium"
+		}
+		return
+	}
+	switch strings.ToLower(d.Category) {
+	case "secret":
+		view.RuntimeExposure = "Possible if credential is live"
+		view.Exploitability = "High if credential is valid"
+		view.FixComplexityLabel = "Medium"
+		view.RegressionRisk = "Low"
+	case "misconfiguration", "iac":
+		view.RuntimeExposure = "Depends on deployment"
+		view.Exploitability = "Context-dependent"
+		view.FixComplexityLabel = "Low/Medium"
+		view.RegressionRisk = "Low/Medium"
+	default:
+		view.RuntimeExposure = "Unknown"
+		view.Exploitability = "Unknown"
+		view.FixComplexityLabel = "Unknown"
+		view.RegressionRisk = "Unknown"
+	}
+}
+
+func defaultCapabilities(d store.FindingDetail, v ActionableFindingView) []FindingCapability {
+	canPR := v.IsDependencyVuln && v.FixedVersion != "" && d.Category != "secret"
+	return []FindingCapability{
+		{Label: "Create branch", Allowed: canPR, Note: ternary(canPR, "Via approved remediation plan", "Not available for this finding type yet")},
+		{Label: "Update dependency / apply fix", Allowed: canPR, Note: ternary(canPR, "Lockfile / manifest patch when plan allows", "Manual fix required")},
+		{Label: "Run validation", Allowed: canPR, Note: ternary(canPR, "Allowlisted checks when remediation PR enabled", "Operator-run tests")},
+		{Label: "Open PR", Allowed: canPR, Note: ternary(canPR, "Never auto-merges", "Planner / PR path not applicable")},
+		{Label: "Merge automatically", Allowed: false, Note: "Repository Detective never merges"},
+	}
+}
+
+func ternary(cond bool, a, b string) string {
+	if cond {
+		return a
+	}
+	return b
+}
+
+func isDependencyVuln(d store.FindingDetail, v ActionableFindingView) bool {
+	cat := strings.ToLower(d.Category)
+	src := strings.ToLower(d.Source)
+	if cat == "vulnerability" || cat == "vuln" || cat == "dependency" {
+		return true
+	}
+	if strings.Contains(src, "trivy") || strings.Contains(src, "grype") {
+		return true
+	}
+	rule := strings.ToUpper(d.RuleID)
+	if strings.HasPrefix(rule, "TRIVY-") || strings.HasPrefix(rule, "GRYPE-") || strings.HasPrefix(rule, "CVE-") {
+		return true
+	}
+	return v.PackageName != "" && (v.CVEID != "" || v.FixedVersion != "")
+}
+
+func scannerMatchLabel(c float64) string {
+	switch {
+	case c >= 0.85:
+		return "High confidence"
+	case c >= 0.6:
+		return "Medium confidence"
+	default:
+		return "Low confidence"
+	}
+}
+
+func countDistinctAdvisories(d store.FindingDetail) int {
+	seen := map[string]struct{}{}
+	for _, inst := range d.Instances {
+		key := strings.TrimSpace(inst.EvidenceRedacted)
+		if key == "" && len(inst.RawMetadataJSON) > 0 {
+			key = string(inst.RawMetadataJSON)
+		}
+		if key == "" {
+			continue
+		}
+		seen[key] = struct{}{}
+	}
+	if len(seen) == 0 {
+		if d.RuleID != "" {
+			return 1
+		}
+		return 0
+	}
+	return len(seen)
+}
+
+func dedupeEvidence(instances []store.FindingInstance) []DedupedEvidence {
+	order := make([]string, 0)
+	byText := map[string]*DedupedEvidence{}
+	for _, inst := range instances {
+		text := strings.TrimSpace(inst.EvidenceRedacted)
+		if text == "" {
+			continue
+		}
+		if existing, ok := byText[text]; ok {
+			existing.Count++
+			if inst.ScanID != "" {
+				existing.LatestScan = inst.ScanID
+			}
+			continue
+		}
+		order = append(order, text)
+		byText[text] = &DedupedEvidence{Text: text, Count: 1, LatestScan: inst.ScanID}
+	}
+	out := make([]DedupedEvidence, 0, len(order))
+	for _, text := range order {
+		out = append(out, *byText[text])
+	}
+	return out
 }
 
 func whyItMatters(d store.FindingDetail) string {
@@ -183,12 +445,19 @@ func parseInstanceMetadata(view *ActionableFindingView, inst store.FindingInstan
 	}
 	view.CommitSHA = metaString(meta, "commit", "commit_sha", "CommitSHA")
 	view.ImageDigest = metaString(meta, "image_digest", "digest", "ImageID")
-	view.PackageName = firstNonEmpty(view.PackageName, metaString(meta, "package", "PackageName", "pkg_name"))
-	view.PackageVersion = metaString(meta, "version", "installed_version", "PackageVersion")
-	view.FixedVersion = metaString(meta, "fixed_version", "FixedVersion")
-	view.CVEID = metaString(meta, "cve", "cve_id", "VulnerabilityID", "vulnerability_id")
+	view.PackageName = firstNonEmpty(view.PackageName, metaString(meta, "package", "PackageName", "pkg_name", "PkgName", "name"))
+	view.PackageVersion = metaString(meta, "version", "installed_version", "PackageVersion", "InstalledVersion")
+	view.FixedVersion = metaString(meta, "fixed_version", "FixedVersion", "FixedVersionStr")
+	view.CVEID = metaString(meta, "cve", "cve_id", "VulnerabilityID", "vulnerability_id", "VulnerabilityID")
 	view.ScannerCommand = metaString(meta, "scanner", "tool", "command")
 	view.SBOMRelation = metaString(meta, "sbom_component", "purl", "bom_ref")
+	dep := strings.ToLower(metaString(meta, "dependency_type", "DependencyType", "relationship", "Relation"))
+	switch {
+	case strings.Contains(dep, "direct"):
+		view.DependencyKind = "Direct"
+	case strings.Contains(dep, "trans"):
+		view.DependencyKind = "Transitive"
+	}
 	if view.ScannerCommand == "" {
 		view.ScannerCommand = metaString(meta, "source")
 	}

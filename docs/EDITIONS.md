@@ -4,6 +4,8 @@
 
 Repository Detective ships as a single codebase and Docker image. Edition determines which capabilities are enabled at runtime.
 
+**Commercial MVP status (RD-COMMERCIAL-001):** Community vs Commercial gates are **implemented** for connected-repo limits, multi-user RBAC roles, operator audit trail UI, and license-key unlock. Enterprise remains reserved (treated like Commercial capability set until a separate Enterprise license path exists). SSO/SAML/HA are **not** in Commercial v1.
+
 ---
 
 ## Editions
@@ -12,7 +14,7 @@ Repository Detective ships as a single codebase and Docker image. Edition determ
 |---------|----------|------|
 | **Community** | Homelab, OSS adopters, small teams | Adoption, trust, feedback, Gitea visibility |
 | **Commercial** | Self-hosted companies | Scale, teams, RBAC, support, commercial license |
-| **Enterprise** | Regulated / large orgs | SSO, governance, HA, compliance, SLA |
+| **Enterprise** | Regulated / large orgs | SSO, governance, HA, compliance, SLA *(roadmap)* |
 
 ---
 
@@ -20,79 +22,65 @@ Repository Detective ships as a single codebase and Docker image. Edition determ
 
 | Feature | Community | Commercial | Enterprise |
 |---------|:---------:|:----------:|:----------:|
-| Gitea connected repo scans | ✅ | ✅ | ✅ |
+| Gitea / Forgejo connected repo scans | ✅ | ✅ | ✅ |
 | Deterministic scanners | ✅ | ✅ | ✅ |
-| Pre-install audit | ✅ limited | ✅ | ✅ |
-| Repository Map | ✅ | ✅ | ✅ |
-| Suppressions / calibration | ✅ basic | ✅ advanced | ✅ governed |
+| Finding Detail 2.0 operator brief | ✅ | ✅ | ✅ |
+| Noise reduction dashboard proof | ✅ | ✅ | ✅ |
+| Suppressions / calibration | ✅ basic | ✅ advanced reporting | ✅ governed *(roadmap)* |
 | Issue creation (connected Gitea) | ✅ | ✅ | ✅ |
 | Remediation planner | ✅ | ✅ | ✅ |
-| Safe remediation PRs | limited / manual | ✅ | ✅ with approvals |
+| Safe remediation PRs | limited / manual | ✅ when enabled | ✅ with approvals |
 | Evidence closure | ✅ | ✅ | ✅ |
 | Single API-key auth | ✅ | ✅ legacy | ✅ legacy |
-| Multi-user login | ❌ | ✅ | ✅ |
-| RBAC | ❌ | ✅ | ✅ |
-| Teams / orgs | ❌ | ✅ | ✅ |
-| OIDC / SAML | ❌ | ❌ / OIDC optional | ✅ |
-| Audit log | basic / local | ✅ | ✅ advanced |
-| Runner delegation | limited | ✅ | ✅ advanced pools |
-| Notifications | basic | ✅ | ✅ |
-| Custom branding / reports | ❌ | ✅ | ✅ |
-| Multiple forge connections | Gitea only | Gitea / Forgejo | GitHub / GitLab / Gitea |
-| Postgres / HA | ❌ | optional | ✅ |
+| Multi-user login (`auth_mode=local`) | single operator | ✅ | ✅ |
+| RBAC (owner / admin / security / developer / viewer) | ❌ | ✅ | ✅ |
+| Operator audit trail UI | basic / local writes | ✅ | ✅ advanced *(roadmap)* |
+| Connected repo limit | **10** (configurable) | unlimited | unlimited |
+| Custom branding / reports | ❌ | ✅ gated | ✅ |
+| OIDC / SAML | ❌ | ❌ | ✅ *(not built)* |
+| Postgres / HA | ❌ | optional *(not built)* | ✅ *(not built)* |
 | Support / SLA | community | paid support | SLA |
-| Managed service rights | ❌ | by contract | by contract |
+| License | AGPL | Commercial license + key | Commercial + enterprise terms |
 
 ---
 
-## Community limits (proposed)
-
-Good limits — preserve credibility:
+## Community limits (enforced)
 
 ```text
-~10 connected repos (configurable)
-Limited schedules / concurrency
-No teams / RBAC / SSO
-No multi-tenant
-No hosted support SLA
-No customer PDF/export branding
-No commercial managed-service rights without license
+~10 connected repos (community_max_repos, default 10)
+Single operator (no multi-user create UI)
+No Commercial audit trail UI
+No branded management reports
 ```
 
-Bad limits — **never**:
-
-```text
-Hiding security findings
-Blocking scanner results
-Blocking local pre-install safety checks
-Blocking false-positive suppressions
-```
+**Never limited:** security findings, scanners, local false-positive suppressions, pre-install safety checks.
 
 ---
 
-## Runtime model (future)
+## Runtime model
 
 ```yaml
 edition: community          # community | commercial | enterprise
-license_key: ""             # empty = community defaults
+license_key: ""             # required to unlock commercial/enterprise
+community_max_repos: 10
 ```
 
-Startup loads license file, env key, or defaults to Community. UI shows locked features with edition badges (not implemented yet).
+Environment:
 
-See [LICENSING_STRATEGY.md](LICENSING_STRATEGY.md) and implementation plan in [COMMERCIAL_ENTERPRISE.md](COMMERCIAL_ENTERPRISE.md).
+```bash
+REPOSITORY_DETECTIVE_EDITION=commercial
+REPOSITORY_DETECTIVE_LICENSE_KEY=your-license-key
+REPOSITORY_DETECTIVE_COMMUNITY_MAX_REPOS=10
+```
+
+Empty `license_key` always forces Community limits even if `edition` says commercial.
+
+UI shows the edition chip in the sidebar. Doctor reports the active edition.
+
+See [LICENSING_STRATEGY.md](LICENSING_STRATEGY.md) and [COMMERCIAL_ENTERPRISE.md](COMMERCIAL_ENTERPRISE.md).
 
 ---
 
 ## Compatibility
 
 Legacy **Repository-Detective** naming remains supported in all editions for env vars, API headers, labels, and fingerprints. See [BRANDING_MIGRATION.md](BRANDING_MIGRATION.md).
-
----
-
-## Related docs
-
-- [COMMUNITY_EDITION.md](COMMUNITY_EDITION.md)
-- [COMMERCIAL_ENTERPRISE.md](COMMERCIAL_ENTERPRISE.md)
-- [LICENSING_STRATEGY.md](LICENSING_STRATEGY.md)
-- [MONETIZATION_READINESS.md](MONETIZATION_READINESS.md)
-- [AUTH_RBAC_PLAN.md](AUTH_RBAC_PLAN.md)

@@ -29,6 +29,8 @@ type AuthStore interface {
 	DeleteSessionsForUser(ctx context.Context, userID int64) error
 
 	AddAuthAuditEvent(ctx context.Context, event AuthAuditEvent) error
+	ListUsers(ctx context.Context, limit int) ([]User, error)
+	ListAuthAuditEvents(ctx context.Context, limit int) ([]AuthAuditEvent, error)
 }
 
 func (s *SQLiteStore) CountUsers(ctx context.Context) (int, error) {
@@ -56,6 +58,11 @@ func (s *SQLiteStore) CreateUser(ctx context.Context, user User) (User, error) {
 	if !user.Enabled {
 		enabled = 0
 	}
+	role := NormalizeRole(strings.TrimSpace(user.Role))
+	if role == "" {
+		role = RoleViewer
+	}
+	user.Role = role
 	res, err := s.db.ExecContext(ctx, `
 		INSERT INTO users (email, display_name, password_hash, role, enabled, created_at, updated_at, last_login_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, NULL)`,
@@ -271,4 +278,64 @@ func (s *SQLiteStore) AddAuthAuditEvent(ctx context.Context, event AuthAuditEven
 		return fmt.Errorf("add auth audit event: %w", err)
 	}
 	return nil
+}
+
+func (s *SQLiteStore) ListUsers(ctx context.Context, limit int) ([]User, error) {
+	if limit <= 0 {
+		limit = 100
+	}
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT id, email, display_name, password_hash, role, enabled, created_at, updated_at, last_login_at
+		FROM users ORDER BY id ASC LIMIT ?`, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list users: %w", err)
+	}
+	defer rows.Close()
+	var out []User
+	for rows.Next() {
+		var u User
+		var enabled int
+		var lastLogin sql.NullString
+		if err := rows.Scan(
+			&u.ID, &u.Email, &u.DisplayName, &u.PasswordHash, &u.Role, &enabled,
+			&formatTimeScan{&u.CreatedAt}, &formatTimeScan{&u.UpdatedAt}, &lastLogin,
+		); err != nil {
+			return nil, fmt.Errorf("scan user: %w", err)
+		}
+		u.Enabled = enabled == 1
+		u.LastLoginAt = parseTimePtr(lastLogin)
+		u.PasswordHash = "" // never expose hash to callers of ListUsers
+		out = append(out, u)
+	}
+	return out, rows.Err()
+}
+
+func (s *SQLiteStore) ListAuthAuditEvents(ctx context.Context, limit int) ([]AuthAuditEvent, error) {
+	if limit <= 0 {
+		limit = 100
+	}
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT id, event_type, user_id, email, ip_address, user_agent, details, created_at
+		FROM auth_audit_events ORDER BY id DESC LIMIT ?`, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list auth audit events: %w", err)
+	}
+	defer rows.Close()
+	var out []AuthAuditEvent
+	for rows.Next() {
+		var e AuthAuditEvent
+		var userID sql.NullInt64
+		if err := rows.Scan(
+			&e.ID, &e.EventType, &userID, &e.Email, &e.IPAddress, &e.UserAgent, &e.Details,
+			&formatTimeScan{&e.CreatedAt},
+		); err != nil {
+			return nil, fmt.Errorf("scan auth audit: %w", err)
+		}
+		if userID.Valid {
+			id := userID.Int64
+			e.UserID = &id
+		}
+		out = append(out, e)
+	}
+	return out, rows.Err()
 }

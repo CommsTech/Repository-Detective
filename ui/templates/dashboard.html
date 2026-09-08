@@ -136,6 +136,41 @@
 </div>
 {{end}}
 
+{{with $.Data.NoiseReduction}}
+<div class="rd-card rd-noise-card">
+  <div class="rd-card-head">
+    <h2>Noise Reduction — Last {{.WindowDays}} Days</h2>
+    <a class="rd-link" href="{{$.BasePath}}/learning{{apiKeyQS $.APIKey}}">Calibration →</a>
+  </div>
+  <p class="rd-muted">Repository Detective learns what matters in <em>your</em> repositories without sending your code to an AI.</p>
+  <div class="rd-grid rd-grid-stats">
+    <div class="rd-stat info">
+      <div class="rd-stat-value">{{.RawFindings}}</div>
+      <div class="rd-stat-label">Raw findings</div>
+    </div>
+    <div class="rd-stat info">
+      <div class="rd-stat-value">{{.StructurallyGrouped}}</div>
+      <div class="rd-stat-label">Structurally grouped</div>
+    </div>
+    <div class="rd-stat info">
+      <div class="rd-stat-value">{{.CalibratedNoise}}</div>
+      <div class="rd-stat-label">Existing calibrated noise</div>
+    </div>
+    <div class="rd-stat success">
+      <div class="rd-stat-value">{{.ActionablePresented}}</div>
+      <div class="rd-stat-label">Actionable findings presented</div>
+    </div>
+  </div>
+  <p class="rd-noise-hero">{{.Headline}}</p>
+  <p class="rd-noise-sub">{{.Subline}}</p>
+  {{if .WorkloadReductionPct}}
+  <p><strong>Human-review workload ↓ {{printf "%.0f" .WorkloadReductionPct}}%</strong>
+    <span class="rd-muted">({{printf "%.1f" .FindingsPerScanBefore}} → {{printf "%.1f" .FindingsPerScanAfter}} findings/scan)</span>
+  </p>
+  {{end}}
+</div>
+{{end}}
+
 {{with $.Data.Calibration}}
 <div class="rd-card">
   <div class="rd-card-head">

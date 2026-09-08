@@ -1,0 +1,3 @@
+# Deliberately vulnerable for Repository Detective demo only.
+# Do not use in production.
+cryptography==41.0.3

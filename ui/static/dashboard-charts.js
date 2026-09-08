@@ -331,7 +331,7 @@
 
     Chart.defaults.color = palette.text;
     Chart.defaults.borderColor = palette.grid;
-    Chart.defaults.font.family = '"DM Sans", system-ui, sans-serif';
+    Chart.defaults.font.family = '"Avenir Next", "Segoe UI", system-ui, sans-serif';
 
     var severity = document.getElementById("rd-chart-severity");
     var category = document.getElementById("rd-chart-category");

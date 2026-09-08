@@ -5,89 +5,119 @@
 <nav class="rd-breadcrumb" aria-label="Breadcrumb">
   <a href="{{$.BasePath}}/findings{{apiKeyQS $.APIKey}}">Findings</a>
   <span>/</span>
-  <span>{{.Title}}</span>
+  <span>{{$.Data.Actionable.OperatorHeadline}}</span>
 </nav>
-<div class="rd-grid">
-  <div class="rd-stat {{severityBadge .Severity}}">
-    <div class="rd-stat-value"><span class="rd-badge {{severityBadge .Severity}}">{{.Severity}}</span></div>
-    <div class="rd-stat-label">Severity</div>
-  </div>
-  <div class="rd-stat info">
-    <div class="rd-stat-value"><span class="rd-badge {{categoryBadge .Category}}">{{.Category}}</span></div>
-    <div class="rd-stat-label">Category</div>
-  </div>
-  <div class="rd-stat">
-    <div class="rd-stat-value">{{printf "%.0f%%" (mul .Confidence 100)}}</div>
-    <div class="rd-stat-label">Confidence</div>
-  </div>
-  <div class="rd-stat">
-    <div class="rd-stat-value"><span class="rd-badge {{statusBadge .Status}}">{{.Status}}</span></div>
-    <div class="rd-stat-label">Status</div>
-  </div>
-</div>
 
-<div class="rd-card">
-  <h2>Finding summary</h2>
-  <p>{{$.Data.Actionable.Summary}}</p>
+{{/* RD-PRODUCT-001 — Finding Detail 2.0 operator brief */}}
+<section class="rd-card rd-finding-brief" aria-labelledby="rd-finding-headline">
+  <div class="rd-finding-brief-top">
+    <span class="rd-badge {{severityBadge .Severity}}">{{.Severity}}</span>
+    <span class="rd-badge {{statusBadge .Status}}">{{.Status}}</span>
+    <span class="rd-badge {{categoryBadge .Category}}">{{.Category}}</span>
+  </div>
+  <h2 id="rd-finding-headline" class="rd-finding-headline">{{$.Data.Actionable.OperatorHeadline}}</h2>
+
+  {{if $.Data.Actionable.IsDependencyVuln}}
+  <dl class="rd-finding-facts">
+    {{if $.Data.Actionable.PackageVersion}}<div><dt>Installed</dt><dd><code>{{$.Data.Actionable.PackageVersion}}</code></dd></div>{{end}}
+    {{if $.Data.Actionable.FixedVersion}}<div><dt>Minimum fixed version</dt><dd><code>{{$.Data.Actionable.FixedVersion}}</code></dd></div>{{end}}
+    <div><dt>Dependency</dt><dd>{{$.Data.Actionable.DependencyKind}}</dd></div>
+    <div><dt>Found in</dt><dd><code>{{$.Data.Actionable.FoundIn}}</code></dd></div>
+    {{if $.Data.Actionable.CVEID}}<div><dt>Advisory</dt><dd><code>{{$.Data.Actionable.CVEID}}</code></dd></div>{{end}}
+  </dl>
+  {{else}}
+  <dl class="rd-finding-facts">
+    <div><dt>Found in</dt><dd><code>{{$.Data.Actionable.FoundIn}}</code></dd></div>
+    <div><dt>Scanner</dt><dd>{{.Source}}</dd></div>
+    <div><dt>Rule</dt><dd><code>{{$.Data.Actionable.RelatedRuleID}}</code></dd></div>
+  </dl>
+  {{end}}
+
+  <div class="rd-finding-why">
+    <h3>Why you should care</h3>
+    <p>{{$.Data.Actionable.WhyCareSummary}}</p>
+  </div>
+
+  <div class="rd-finding-assessment">
+    <h3>Repository Detective assessment</h3>
+    <ul class="rd-assessment-list">
+      <li><strong>Scanner match:</strong> {{$.Data.Actionable.ScannerMatchLabel}}</li>
+      <li><strong>Runtime exposure:</strong> {{$.Data.Actionable.RuntimeExposure}}</li>
+      <li><strong>Exploitability:</strong> {{$.Data.Actionable.Exploitability}}</li>
+      <li><strong>Fix complexity:</strong> {{$.Data.Actionable.FixComplexityLabel}}</li>
+      <li><strong>Regression risk:</strong> {{$.Data.Actionable.RegressionRisk}}</li>
+    </ul>
+  </div>
+
+  <div class="rd-finding-action">
+    <h3>Recommended action</h3>
+    <p class="rd-action-line"><code>{{$.Data.Actionable.RecommendedAction}}</code></p>
+  </div>
+
+  <div class="rd-finding-capabilities">
+    <h3>Repository Detective can</h3>
+    <ul class="rd-capability-list">
+      {{range $.Data.Actionable.CapabilityRows}}
+      <li class="{{if .Allowed}}rd-cap-yes{{else}}rd-cap-no{{end}}">
+        <span class="rd-cap-mark" aria-hidden="true">{{if .Allowed}}✓{{else}}✗{{end}}</span>
+        <span><strong>{{.Label}}</strong>{{if .Note}} — <span class="rd-muted">{{.Note}}</span>{{end}}</span>
+      </li>
+      {{end}}
+    </ul>
+  </div>
+
+  <p class="rd-finding-after">{{$.Data.Actionable.AfterMergeNote}}</p>
+
+  {{if .ExternalIssueURL}}
+  <div class="rd-actions">
+    <a class="rd-btn rd-btn-secondary" href="{{.ExternalIssueURL}}" target="_blank" rel="noopener">Open forge issue #{{.ExternalIssueNumber}}</a>
+  </div>
+  {{end}}
+</section>
+
+<details class="rd-card rd-evidence-expander">
+  <summary>Evidence &amp; scanner details</summary>
+  <p class="rd-muted">Raw scanner output is collapsed so the brief above stays actionable. Duplicate evidence across scans is shown once.</p>
+
+  <h3>Summary metadata</h3>
   <dl class="rd-dl">
     <dt>Lifecycle</dt><dd>{{$.Data.LifecycleLabel}}</dd>
-    <dt>Scanner / source</dt><dd><span class="rd-badge skipped">{{.Source}}</span></dd>
-    <dt>Rule</dt><dd><code>{{$.Data.Actionable.RelatedRuleID}}</code></dd>
-    <dt>Fingerprint</dt><dd><code>{{.Fingerprint}}</code></dd>
     <dt>Repository</dt><dd>{{.RepoFullName}}</dd>
+    <dt>Fingerprint</dt><dd><code>{{.Fingerprint}}</code></dd>
     <dt>First seen</dt><dd>{{.FirstSeenAt.Format "2006-01-02 15:04 UTC"}}</dd>
     <dt>Last seen</dt><dd>{{.LastSeenAt.Format "2006-01-02 15:04 UTC"}}</dd>
-  </dl>
-  {{if .ExternalIssueURL}}<div class="rd-actions"><a class="rd-btn rd-btn-secondary" href="{{.ExternalIssueURL}}" target="_blank" rel="noopener">Open forge issue #{{.ExternalIssueNumber}}</a></div>{{end}}
-</div>
-
-<div class="rd-card">
-  <h2>Risk and impact</h2>
-  <p>{{$.Data.Actionable.WhyItMatters}}</p>
-  <dl class="rd-dl">
+    <dt>Instances recorded</dt><dd>{{$.Data.Actionable.InstanceCount}} ({{$.Data.Actionable.UniqueEvidenceN}} unique evidence shapes)</dd>
     <dt>Severity meaning</dt><dd>{{$.Data.Actionable.SeverityReason}}</dd>
     <dt>Confidence meaning</dt><dd>{{$.Data.Actionable.ConfidenceReason}}</dd>
   </dl>
-</div>
 
-<div class="rd-card">
-  <h2>Location</h2>
-  {{if .FilePath}}<p><code>{{displayPath .FilePath}}{{if .Line}}:{{.Line}}{{end}}</code></p>{{else}}<p class="rd-muted">No file path — may be repo-level, container image, or graph finding.</p>{{end}}
-  {{if $.Data.Actionable.PackageName}}<p><strong>Package:</strong> {{$.Data.Actionable.PackageName}}{{if $.Data.Actionable.PackageVersion}} @ {{$.Data.Actionable.PackageVersion}}{{end}}</p>{{end}}
-  {{if $.Data.Actionable.CVEID}}<p><strong>CVE:</strong> {{$.Data.Actionable.CVEID}}{{if $.Data.Actionable.FixedVersion}} · fixed in {{$.Data.Actionable.FixedVersion}}{{end}}</p>{{end}}
-  {{if $.Data.Actionable.CommitSHA}}<p><strong>Historical commit:</strong> <code>{{$.Data.Actionable.CommitSHA}}</code> — rotate secrets removed from history.</p>{{end}}
-  {{if $.Data.Actionable.ImageDigest}}<p><strong>Image digest:</strong> <code>{{$.Data.Actionable.ImageDigest}}</code></p>{{end}}
-  {{if $.Data.Actionable.CurrentInTree}}<p class="rd-muted">{{$.Data.Actionable.CurrentInTree}}</p>{{end}}
-</div>
+  <h3>Deduplicated evidence</h3>
+  {{if $.Data.Actionable.HasSecretEvidence}}<div class="rd-alert">Secret material is redacted in UI. Verify using secure channels only.</div>{{end}}
+  {{range $.Data.Actionable.UniqueEvidence}}
+  <div class="rd-evidence-block">
+    {{if gt .Count 1}}<p class="rd-muted">Seen {{.Count}} times{{if .LatestScan}} · latest scan <code>{{.LatestScan}}</code>{{end}}</p>{{end}}
+    <pre class="rd-pre">{{.Text}}</pre>
+  </div>
+  {{else}}
+  <p class="rd-muted">No evidence instances recorded.</p>
+  {{end}}
 
-<div class="rd-card">
-  <h2>Why this was flagged</h2>
-  <p>{{$.Data.Actionable.WhyFlagged}}</p>
-  <p class="rd-muted">Evidence kind: {{$.Data.Actionable.EvidenceKind}}</p>
-</div>
-
-<div class="rd-card">
-  <h2>Scanner rule details</h2>
+  <h3>Scanner rule</h3>
   <dl class="rd-dl">
     <dt>Rule ID</dt><dd><code>{{$.Data.Actionable.RelatedRuleID}}</code></dd>
     <dt>Scanner</dt><dd>{{.Source}}</dd>
+    <dt>Evidence kind</dt><dd>{{$.Data.Actionable.EvidenceKind}}</dd>
     {{if $.Data.Actionable.ScannerCommand}}<dt>Tool / command</dt><dd><code>{{$.Data.Actionable.ScannerCommand}}</code></dd>{{end}}
     {{if $.Data.Actionable.SBOMRelation}}<dt>SBOM component</dt><dd><code>{{$.Data.Actionable.SBOMRelation}}</code></dd>{{end}}
+    {{if $.Data.Actionable.PackageName}}<dt>Package</dt><dd>{{$.Data.Actionable.PackageName}}{{if $.Data.Actionable.PackageVersion}} @ {{$.Data.Actionable.PackageVersion}}{{end}}</dd>{{end}}
+    {{if $.Data.Actionable.ImageDigest}}<dt>Image digest</dt><dd><code>{{$.Data.Actionable.ImageDigest}}</code></dd>{{end}}
   </dl>
-</div>
 
-<div class="rd-card">
-  <h2>Recommended fix</h2>
-  <p>{{$.Data.Actionable.RecommendedFix}}</p>
-  <h3>Verification steps</h3>
-  <ol>{{range $.Data.Actionable.VerificationSteps}}<li>{{.}}</li>{{end}}</ol>
-</div>
-
-<div class="rd-card">
-  <h2>Issue filing status</h2>
-  <p><strong>{{$.Data.Actionable.IssueFilingStatus}}</strong></p>
-  <p class="rd-muted">{{$.Data.Actionable.IssueFilingDetail}}</p>
-</div>
+  {{if $.Data.Actionable.RawMetadataPretty}}
+  <h3>Raw metadata (latest instance)</h3>
+  <pre class="rd-pre">{{$.Data.Actionable.RawMetadataPretty}}</pre>
+  {{end}}
+</details>
 
 {{if $.Data.SuppressionEnabled}}
 <div class="rd-card">
@@ -96,10 +126,9 @@
   {{with $.Data.IssueTemplateLinks}}
   <div class="rd-actions" style="margin-bottom:0.75rem">
     <a class="rd-btn rd-btn-secondary" href="{{.FalsePositiveURL}}" target="_blank" rel="noopener">Report false positive (Gitea template)</a>
-    <pre id="fp-template-guidance" class="rd-muted" style="display:none">{{.TemplateGuidance}}</pre>
-    <button type="button" class="rd-btn rd-btn-ghost" onclick="navigator.clipboard.writeText(document.getElementById('fp-template-guidance').innerText)">Copy template guidance</button>
+    <pre id="fp-template-guidance" class="rd-muted" hidden>{{.TemplateGuidance}}</pre>
+    <button type="button" class="rd-btn rd-btn-ghost" data-copy-target="fp-template-guidance">Copy template guidance</button>
   </div>
-  <p class="rd-muted">Use the Gitea template for structured beta feedback. Do not paste secrets in issue bodies or URLs.</p>
   {{end}}
   <form method="post" action="{{$.BasePath}}/findings/{{$.Data.Finding.ID}}/suppress{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}" class="rd-form-inline">
     <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
@@ -136,102 +165,56 @@
     <dt>Outbound edges</dt><dd>{{$.Data.GraphDetail.OutboundEdgeCount}}</dd>
     <dt>Entrypoint reachable</dt><dd>{{$.Data.GraphDetail.EntrypointReachable}}</dd>
     {{if $.Data.GraphDetail.PathClassification}}<dt>Path classification</dt><dd>{{$.Data.GraphDetail.PathClassification}}</dd>{{end}}
-    {{if $.Data.GraphDetail.ImportsFrom}}<dt>Imports from file</dt><dd>{{join $.Data.GraphDetail.ImportsFrom ", "}}</dd>{{end}}
-    {{if $.Data.GraphDetail.ImportedBy}}<dt>Imported by</dt><dd>{{join $.Data.GraphDetail.ImportedBy ", "}}</dd>{{end}}
   </dl>
-  {{if $.Data.GraphDetail.Troubleshooting}}
-  <p><strong>Troubleshooting steps:</strong></p>
-  <ol>{{range $.Data.GraphDetail.Troubleshooting}}<li>{{.}}</li>{{end}}</ol>
-  {{end}}
-  {{if $.Data.GraphDetail.SuggestedAction}}<p class="rd-muted">{{$.Data.GraphDetail.SuggestedAction}}</p>{{end}}
   {{if $.Data.GraphMapURL}}<div class="rd-actions"><a class="rd-btn rd-btn-secondary" href="{{$.Data.GraphMapURL}}">View in Repository Map</a></div>{{end}}
 </div>
 {{end}}
 
 <div class="rd-card">
-  <h2>Report flow</h2>
-  <div class="rd-pipeline">
-    <div class="rd-pipeline-step done">1. Triage</div>
-    <div class="rd-pipeline-step">2. Reproduce</div>
-    <div class="rd-pipeline-step">3. Fix</div>
-    <div class="rd-pipeline-step">4. Test</div>
-    <div class="rd-pipeline-step">5. Verify</div>
-  </div>
-  <table class="rd-table">
-    <tr><th>Step</th><th>Action</th><th>Notes</th></tr>
-    <tr><td>1. Triage</td><td>Validate severity, category, and true positive</td><td class="rd-muted">Confirm labels and assign owner</td></tr>
-    <tr><td>2. Reproduce</td><td>Inspect evidence at the reported location</td><td class="rd-muted">Compare snippet to current code</td></tr>
-    <tr><td>3. Fix</td><td>Apply minimal targeted change</td><td class="rd-muted">Follow remediation plan when approved</td></tr>
-    <tr><td>4. Test</td><td>Run suggested tests and CI</td><td class="rd-muted">Ensure no regressions</td></tr>
-    <tr><td>5. Verify</td><td>Re-scan or manually confirm resolution</td><td class="rd-muted">Close when fingerprint no longer reproduces</td></tr>
-  </table>
-</div>
-
-<div class="rd-card">
-  <h2>Evidence</h2>
-  {{if $.Data.Actionable.HasSecretEvidence}}<div class="rd-alert">Secret material is redacted in UI. Verify using secure channels only.</div>{{end}}
-  {{range .Instances}}<pre class="rd-pre">{{.EvidenceRedacted}}</pre>{{else}}<p class="rd-muted">No evidence instances recorded.</p>{{end}}
-</div>
-
-<div class="rd-card">
   <h2>History</h2>
   <ul>{{range .LifecycleEvents}}<li><span class="rd-badge {{statusBadge .EventType}}">{{.EventType}}</span> — {{.Message}} <span class="rd-muted">({{.CreatedAt.Format "2006-01-02"}})</span></li>{{else}}<li class="rd-muted">No lifecycle events yet.</li>{{end}}</ul>
 </div>
+{{end}}
 
-{{if $.Data.Actionable.RawMetadataPretty}}
-<div class="rd-card">
-  <h2>Raw JSON / debug details</h2>
-  <pre class="rd-pre">{{$.Data.Actionable.RawMetadataPretty}}</pre>
-</div>
-{{end}}
-{{end}}
 <div class="rd-card">
 <h2>Remediation plan</h2>
-<div class="rd-alert">Planning only — approve a plan before attempting a remediation PR.</div>
+<div class="rd-alert">Planning only — approve a plan before attempting a remediation PR. Repository Detective never merges.</div>
 {{if .Data.PlannerEnabled}}
 {{with .Data.RemediationPlan}}{{if .ID}}
 <p><strong>Status:</strong> {{.Status}} · <strong>Plan ID:</strong> {{.ID}}</p>
 <p><strong>Summary:</strong> {{.Summary}}</p>
 <p><strong>Fix strategy:</strong> {{.FixStrategy}}</p>
 {{if .AffectedFiles}}<p><strong>Affected files:</strong> {{join .AffectedFiles ", "}}</p>{{end}}
-{{if .RequiredTests}}<p><strong>Required tests:</strong></p><ul>{{range .RequiredTests}}<li>{{.}}</li>{{end}}</ul>{{end}}
-{{if .ValidationCommands}}<p><strong>Validation commands (suggested):</strong></p><ul>{{range .ValidationCommands}}<li><code>{{.}}</code></li>{{end}}</ul>{{end}}
 <p><strong>Risk:</strong> {{.RegressionRisk}} · <strong>Complexity:</strong> {{.FixComplexity}}</p>
-<p><strong>Safe for auto-PR:</strong> {{.SafeForAutoPR}} · <strong>Requires human review:</strong> {{.RequiresHumanReview}}</p>
-{{if .BlockedReasons}}<p><strong>Blocked reasons:</strong></p><ul>{{range .BlockedReasons}}<li>{{.}}</li>{{end}}</ul>{{end}}
 {{if eq .Status "proposed"}}
 <form method="post" action="{{$.BasePath}}/findings/{{$.Data.Finding.ID}}/remediation/approve{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}" style="display:inline">
 <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}"><input type="hidden" name="plan_id" value="{{.ID}}">
-<button type="submit">Approve plan</button></form>
+<button type="submit" class="rd-btn">Approve plan</button></form>
 <form method="post" action="{{$.BasePath}}/findings/{{$.Data.Finding.ID}}/remediation/reject{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}" style="display:inline">
 <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}"><input type="hidden" name="plan_id" value="{{.ID}}">
-<button type="submit">Reject plan</button></form>
+<button type="submit" class="rd-btn rd-btn-ghost">Reject plan</button></form>
 {{end}}
 {{if $.Data.PREnabled}}
 <h3>Safe remediation PR</h3>
-<div class="rd-alert">Repository Detective will create a branch and PR only. It will not merge or close the issue.</div>
-<p class="rd-muted">Repository Detective creates PRs only for approved low-risk plans. It never auto-merges.</p>
 {{with $.Data.PREligibility}}
 <p><strong>PR eligible:</strong> {{.Eligible}}</p>
-{{if .Checklist}}<p><strong>Eligibility checklist:</strong></p><ul>{{range $k, $v := .Checklist}}<li>{{$k}}: {{$v}}</li>{{end}}</ul>{{end}}
-{{if .BlockedReasons}}<p><strong>Blocked reasons:</strong></p><ul>{{range .BlockedReasons}}<li>{{.}}</li>{{end}}</ul>{{end}}
 {{if .Eligible}}
 <form method="post" action="{{$.BasePath}}/findings/{{$.Data.Finding.ID}}/remediation/attempt-pr{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}">
 <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}"><input type="hidden" name="plan_id" value="{{$.Data.RemediationPlan.ID}}">
-<button type="submit">Create remediation PR</button></form>
+<button type="submit" class="rd-btn">Create remediation PR</button></form>
 {{end}}{{end}}
 {{if $.Data.PatchAttempts}}<h4>Latest patch attempts</h4><ul>
 {{range $.Data.PatchAttempts}}<li>{{.Status}} — branch <code>{{.BranchName}}</code>
 {{if .PullRequestURL}} · <a href="{{.PullRequestURL}}">PR</a>{{end}}
-{{if .Error}} · {{.Error}}{{end}}
 </li>{{end}}</ul>{{end}}
 {{else}}<p class="rd-muted">Remediation PR feature disabled globally.</p>{{end}}
 {{else}}<p class="rd-muted">No remediation plan yet.</p>{{end}}{{end}}
 <form method="post" action="{{$.BasePath}}/findings/{{$.Data.Finding.ID}}/remediation/generate{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}">
 <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
-<button type="submit">Generate / regenerate plan</button></form>
+<button type="submit" class="rd-btn rd-btn-secondary">Generate / regenerate plan</button></form>
 {{else}}<p class="rd-muted">Remediation planner disabled globally.</p>{{end}}
 </div>
+
 {{if $.Data.ClosureEnabled}}
 <div class="rd-card">
 <h2>Closure evidence</h2>
@@ -239,24 +222,10 @@
 {{with $.Data.ClosureEvidence}}
 <p><strong>Status:</strong> {{if .Status}}{{.Status}}{{else}}not verified yet{{end}}</p>
 {{if .Reason}}<p><strong>Reason:</strong> {{.Reason}}</p>{{end}}
-{{if .MergeCommitSHA}}<p><strong>Merge commit:</strong> <code>{{.MergeCommitSHA}}</code></p>{{end}}
-{{if .VerificationScanID}}<p><strong>Verification scan:</strong> <code>{{.VerificationScanID}}</code></p>{{end}}
-{{if .OriginalSource}}<p><strong>Original scanner:</strong> {{.OriginalSource}} · status: {{.ScannerStatus}}</p>{{end}}
-<p><strong>Fingerprint present in verification scan:</strong> {{.FingerprintPresent}}</p>
-{{if eq .Status "pending_rescan"}}<p class="rd-alert">Waiting for rescan</p>{{end}}
-{{if eq .Status "blocked"}}<p class="rd-alert">Blocked: scanner did not run</p>{{end}}
-{{if eq .Status "still_present"}}<p class="rd-alert">Still present after remediation.</p>{{end}}
-{{if eq .Status "verified"}}<p><strong>Resolved verified</strong></p>{{end}}
-{{end}}
-{{if $.Data.PatchAttempts}}
-<form method="post" action="{{$.BasePath}}/findings/{{$.Data.Finding.ID}}/closure/check-merge{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}">
-<input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
-<input type="hidden" name="attempt_id" value="{{(index $.Data.PatchAttempts 0).ID}}">
-<button type="submit">Check PR merge</button></form>
 {{end}}
 <form method="post" action="{{$.BasePath}}/findings/{{$.Data.Finding.ID}}/closure/verify{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}">
 <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
-<button type="submit">Verify closure from latest scan</button></form>
+<button type="submit" class="rd-btn rd-btn-secondary">Verify closure from latest scan</button></form>
 </div>
 {{end}}
 {{template "foot" .}}

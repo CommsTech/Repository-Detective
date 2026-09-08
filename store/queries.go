@@ -230,6 +230,7 @@ type QueryStore interface {
 	GenerateRepoScopedRecommendations(ctx context.Context, repositoryID int64, minFindings int) (int, error)
 	ListRepositoryIDsAffectedByRule(ctx context.Context, source, ruleID string, limit int) ([]int64, error)
 	LearningHealthSummary(ctx context.Context) (LearningHealthSummary, error)
+	NoiseReductionSummary(ctx context.Context, windowDays int) (NoiseReductionSummary, error)
 	AssignStructuralGroup(ctx context.Context, repositoryID int64, structuralHash string, findingID int64) error
 
 	UpsertContainerImageReference(ctx context.Context, ref ContainerImageReference) (ContainerImageReference, error)

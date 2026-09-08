@@ -2,7 +2,7 @@
 
 **Repository Detective** — Inspect. Analyze. Improve.
 
-Get a single-operator homelab running in ~15 minutes. Generic placeholders only.
+Get a useful finding on screen in ~**10 minutes**. Full path: [TEN_MINUTE_AHA.md](TEN_MINUTE_AHA.md). Generic placeholders only.
 
 ---
 

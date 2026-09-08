@@ -76,6 +76,7 @@ func sanitizedDoctorConfig() map[string]string {
 		"public_url":                  config.PublicURL,
 		"privacy_mode":                config.PrivacyMode,
 		"auth_mode":                   config.AuthMode,
+		"edition":                     editionConfig().DisplayName(),
 		"scan_profile":                config.ScanProfile,
 		"enable_llm_auditors":         fmt.Sprintf("%v", config.EnableLLMAuditors),
 		"remediation_pr_enabled":      fmt.Sprintf("%v", config.RemediationPREnabled),
@@ -90,7 +91,7 @@ func runDoctorReport(ctx context.Context, owner, repo string) doctor.Report {
 	in := doctor.Input{
 		Version:                   version,
 		Commit:                    commit,
-		Edition:                   "community",
+		Edition:                   editionConfig().DisplayName(),
 		ConfigValid:               true,
 		AuthMode:                  config.AuthMode,
 		SessionSecretConfigured:   strings.TrimSpace(config.SessionSecret) != "",

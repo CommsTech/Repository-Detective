@@ -37,6 +37,38 @@ func TestActionableFindingViewSections(t *testing.T) {
 	if len(view.VerificationSteps) == 0 {
 		t.Fatal("expected verification steps")
 	}
+	if !view.IsDependencyVuln {
+		t.Fatal("expected dependency vuln brief")
+	}
+	if view.OperatorHeadline == "" || view.RecommendedAction == "" {
+		t.Fatal("expected Finding Detail 2.0 headline and action")
+	}
+	if len(view.CapabilityRows) == 0 {
+		t.Fatal("expected capability rows")
+	}
+}
+
+func TestFindingDetailDedupesEvidence(t *testing.T) {
+	detail := store.FindingDetail{
+		FindingListItem: store.FindingListItem{
+			Finding: store.Finding{
+				Title: "cryptography vuln", Severity: "high", Confidence: 0.9,
+				Category: "vulnerability", Source: "trivy", PackageName: "cryptography",
+			},
+		},
+		Instances: []store.FindingInstance{
+			{EvidenceRedacted: "same evidence", ScanID: "s1"},
+			{EvidenceRedacted: "same evidence", ScanID: "s2"},
+			{EvidenceRedacted: "other shape", ScanID: "s3"},
+		},
+	}
+	view := buildActionableFindingView(detail)
+	if view.UniqueEvidenceN != 2 {
+		t.Fatalf("unique evidence want 2 got %d", view.UniqueEvidenceN)
+	}
+	if view.UniqueEvidence[0].Count != 2 {
+		t.Fatalf("first evidence count want 2 got %d", view.UniqueEvidence[0].Count)
+	}
 }
 
 func TestSecretFindingFlagsRedaction(t *testing.T) {
