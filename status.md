@@ -3,6 +3,22 @@
 **Last updated:** 2026-09-08  
 **Program:** Product Hardening & Public Beta Improvement Backlog + RD-PRODUCT/COMMERCIAL/GROWTH
 
+### Six leftover forge issues closeout (2026-09-08) — CLEAN
+
+| Item | Value |
+|------|-------|
+| Closed | **#472–#477** (`source/repository-detective`) — all `resolved_verified` |
+| Fingerprints | `rd-aae43819c7490673` G122 · `rd-62a295232294fe4b` G306 · `rd-f1181d8578655061` SC3040 · `rd-ef41c67eb61ad790` SC1078 · `rd-c010c291a0dfff22` SC2046 · `rd-f625584236ba047c` G115 |
+| Code | `os.OpenRoot` sandbox chmod; SBOM `0o600`; drop `pipefail`; wiki heredoc die; mapfile-quoted staticcheck; no rune→byte |
+| Script | `scripts/close-six-source-rd-issues.py` |
+| Verify scan | **`701dc34f7571c79f`** deep (completed) |
+| Open actionable (high/med/critical) | **0** |
+| Open Gitea `source/repository-detective` | **0** |
+| Open Gitea `repository-detective` | **0** |
+| Gitea / local tip | **`846adefe`** |
+| GitHub sanitized tip | **`3be6c71`** |
+| Live `/health` commit | **`846adefe`** healthy tools 12/12 |
+
 ### Self-scan clean loop (2026-09-08) — CLEAN
 
 | Item | Value |

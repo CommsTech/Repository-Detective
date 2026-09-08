@@ -1,5 +1,17 @@
 # Development Issues Log
 
+## Fixed (2026-09-08) — Close leftover six source/repository-detective issues
+
+| Priority | Issue | Resolution |
+|----------|-------|------------|
+| P0 | #472 G122 `preinstall/clone.go` TOCTOU WalkDir/Chmod (`rd-aae43819c7490673`) | `makeWorkspaceReadOnly` uses `os.OpenRoot` + `root.FS()` WalkDir + `root.Chmod` |
+| P0 | #473 G306 `sbom/sbom.go` WriteFile mode (`rd-62a295232294fe4b`) | Already `0o600`; disposition `resolved_verified` |
+| P1 | #474 SC3040 `install-scanner-tools.sh` pipefail (`rd-f1181d8578655061`) | Removed `set -o pipefail`; kept `#!/bin/sh` + `download_to` |
+| P1 | #475 SC1078 `publish-github-wiki.sh` quote (`rd-ef41c67eb61ad790`) | Heredoc for multi-line `die` message |
+| P1 | #476 SC2046 `verify-all.sh` word-split (`rd-c010c291a0dfff22`) | Already `mapfile` + quoted `"${STATICCHECK_PKGS[@]}"` |
+| P0 | #477 G115 `store/noise_reduction.go` rune→byte (`rd-f625584236ba047c`) | Already `WriteByte(',')` / `strings.Builder` |
+| P1 | Stale open forge + `external_issues` | Closed via `scripts/close-six-source-rd-issues.py`; verify scan `701dc34f7571c79f` |
+
 ## Fixed (2026-09-08) — Self-scan clean loop (cycle prep)
 
 | Priority | Issue | Resolution |
