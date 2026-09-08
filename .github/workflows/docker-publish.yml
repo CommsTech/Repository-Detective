@@ -67,18 +67,33 @@ jobs:
           GITEA_USER: ${{ secrets.GITEA_PACKAGE_USER }}
           GITEA_TOKEN: ${{ secrets.GITEA_PACKAGE_TOKEN }}
           VERSION: ${{ steps.meta.outputs.version }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -eu
-          GHCR_REF="${GHCR_IMAGE}:${VERSION}"
+
+          ghcr_has_tag() {
+            # Prefer GitHub Packages API (works with GITHUB_TOKEN after login).
+            if gh api "user/packages/container/repository-detective/versions" --paginate \
+              --jq ".[].metadata.container.tags // [] | .[]" 2>/dev/null | grep -Fxq "$VERSION"; then
+              return 0
+            fi
+            if docker buildx imagetools inspect "${GHCR_IMAGE}:${VERSION}" >/dev/null 2>&1; then
+              return 0
+            fi
+            if docker manifest inspect "${GHCR_IMAGE}:${VERSION}" >/dev/null 2>&1; then
+              return 0
+            fi
+            return 1
+          }
+
+          if ghcr_has_tag; then
+            echo "GHCR already has ${GHCR_IMAGE}:${VERSION} — mirror satisfied."
+            echo "result=already_present" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
 
           if [ -z "${GITEA_TOKEN:-}" ]; then
-            echo "GITEA_PACKAGE_TOKEN is not configured."
-            if docker manifest inspect "$GHCR_REF" >/dev/null 2>&1; then
-              echo "GHCR already has ${GHCR_REF} — mirror satisfied without rebuild."
-              echo "result=already_present" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-            echo "::error::Set repository secrets GITEA_PACKAGE_USER / GITEA_PACKAGE_TOKEN to pull from Gitea, or re-run with source_gitea=false to rebuild on GHCR."
+            echo "::error::GHCR is missing ${VERSION}. Set secrets GITEA_PACKAGE_USER / GITEA_PACKAGE_TOKEN to pull from Gitea, or re-run with source_gitea=false to rebuild on GHCR."
             exit 1
           fi
 
