@@ -7,12 +7,15 @@
 
 | Item | Value |
 |------|-------|
-| Live | `repository-detective:upgrade-candidate` **`3ef7c533`** (+ persist disposition fix pending ship) |
-| Cycle 1 | **`73759e3053198342`** — code/knownsafe/workflow fixes |
-| Cycle 2 | **`0475147f3a913f1f`** — only intentional `vulnerable-demo` left; forge **0** |
-| Cycle 3 | **`d6fc334ca4c28dd4`** — forge **0**; demo CVE high remains visible by design (never auto-downgraded); forge-quiet via knownsafe + calibration |
-| Persist fix | `UpsertFinding` + `upsertFindingTx` preserve FP/suppressed/resolved dispositions |
-| Open actionable needing forge | **0** (info/low OK; demo FP-marked) |
+| Live | `repository-detective:upgrade-candidate` **`f298c426`** healthy tools 12/12 |
+| Cycle 1 | **`73759e3053198342`** deep — workflow/SHA/script/knownsafe fixes |
+| Cycle 2 | **`0475147f3a913f1f`** deep — only intentional vulnerable-demo left; forge **0** |
+| Cycle 3 | **`d6fc334ca4c28dd4`** deep — forge **0**; disposition persist path fixed after |
+| Open actionable (high/med) | **0** (info 175 / low 11 OK; demo CVE = false_positive) |
+| Gitea tip | **`f298c426`** |
+| GitHub sanitized tip | **`84c2b7d`** (same tree `0569444`) |
+| Open Gitea `repository-detective` issues | **0** |
+
 
 ### Remaining-26 closeout — perms / Docker / cookie / FP (2026-09-08)
 
