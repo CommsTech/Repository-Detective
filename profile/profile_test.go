@@ -238,6 +238,24 @@ func TestMaxIssuesGateViaReportingConfig(t *testing.T) {
 	}
 }
 
+func TestDecideActionSecretOnTestPathStillAutoIssues(t *testing.T) {
+	cfg := profile.DefaultReportingConfig()
+	fp := profile.DefaultFalsePositiveReductionConfig()
+	action, reason := profile.DecideAction("high", "secret", profile.SourceTypeTest, "generic-api-key", 0.95, cfg, fp)
+	if action != profile.ActionAutoIssue {
+		t.Fatalf("high secret on test path should auto_issue for GitGuardian parity, got %s (%s)", action, reason)
+	}
+}
+
+func TestDecideActionLintOnTestPathRemainsReportOnly(t *testing.T) {
+	cfg := profile.DefaultReportingConfig()
+	fp := profile.DefaultFalsePositiveReductionConfig()
+	action, reason := profile.DecideAction("high", "code_quality", profile.SourceTypeTest, "SC2034", 0.95, cfg, fp)
+	if action != profile.ActionReportOnly {
+		t.Fatalf("non-secret on test path should stay report_only, got %s (%s)", action, reason)
+	}
+}
+
 func TestMonitorOnlyMode(t *testing.T) {
 	cfg := profile.DefaultReportingConfig()
 	cfg.Mode = profile.ModeMonitorOnly

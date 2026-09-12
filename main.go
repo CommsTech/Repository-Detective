@@ -435,7 +435,7 @@ func loadConfig() error {
 	viper.SetDefault("enable_llm_auditors", false)
 	viper.SetDefault("enable_trivy", true)
 	viper.SetDefault("enable_grype", true)
-	viper.SetDefault("enable_gitleaks", false)
+	viper.SetDefault("enable_gitleaks", true)
 	viper.SetDefault("enable_semgrep", false)
 	viper.SetDefault("enable_govulncheck", false)
 	viper.SetDefault("enable_gosec", false)

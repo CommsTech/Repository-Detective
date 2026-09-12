@@ -19,7 +19,7 @@ func DefaultGlobalSettings() GlobalSettingsSnapshot {
 		EnableLLMAuditors:           false,
 		EnableTrivy:                 true,
 		EnableGrype:                 true,
-		EnableGitleaks:              false,
+		EnableGitleaks:              true,
 		EnableSemgrep:               false,
 		EnableGovulncheck:           false,
 		EnableGosec:                 false,

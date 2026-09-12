@@ -1,5 +1,16 @@
 # Development Issues Log
 
+## Open / In progress (2026-09-12) — GitGuardian parity for secret detection
+
+| Priority | Issue | Status |
+|----------|-------|--------|
+| P0 | `config/gitleaks.toml` + `.gitleaks.toml` were allowlist-only (no `[extend] useDefault = true`), so gitleaks loaded **zero rules** and reported clean while GitGuardian/GitHub secret scanning still alerted | **Fixed** — `useDefault = true`; incomplete configs rejected; always pass an explicit detector-bearing `--config` |
+| P0 | Blanket `_test.go$` allowlist hid the exact OpenAI key shape GitHub alerted on (`internal/security/redact_corpus_test.go`) | **Fixed** — removed blanket test allowlist; fixtures stay under `testdata/` / `benchmark/fixture/` |
+| P1 | Test/docs path quieting demoted secrets below the issue gate and forced `report_only` | **Fixed** — `ActionabilityAdjustCategory` preserves secret severity; `DecideAction` does not path-quiet secrets |
+| P1 | `enable_gitleaks` defaulted false in viper / `DefaultGlobalSettings` | **Fixed** — default **true** |
+| P2 | Push/PR `workspace_mode=api` still only tree-scans changed files (GitGuardian watches whole HEAD + history) | **Documented**; deep/scheduled history scans cover full history; follow-up: force archive workspace for secret tree scans on webhooks |
+| P1 | GitGuardian dashboard still Triggered on test fixtures (`redact_test.go`, `password_test.go`, etc.) and historical `config/config.yaml` | **Fixed for tip tree** — runtime-assembled fixtures; resolve GG incidents as test/false-positive after push; historical `config.yaml` not on current tip |
+
 ## Fixed (2026-09-08) — Close leftover six source/repository-detective issues
 
 | Priority | Issue | Resolution |

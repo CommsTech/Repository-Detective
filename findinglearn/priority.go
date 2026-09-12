@@ -13,7 +13,16 @@ type ReachabilityInput struct {
 }
 
 // ActionabilityAdjust returns severity/confidence deltas from reachability (never hides findings).
+// category should be the normalized finding category (e.g. "secret"); empty is allowed for callers
+// that only have path reachability context.
 func ActionabilityAdjust(severity string, confidence float64, in ReachabilityInput) (string, float64, string) {
+	return ActionabilityAdjustCategory(severity, confidence, in, "")
+}
+
+// ActionabilityAdjustCategory is ActionabilityAdjust with category awareness.
+// Secret / hardcoded_secret findings keep their severity on test/docs paths so
+// GitGuardian-style detections are not quietly demoted below the issue gate.
+func ActionabilityAdjustCategory(severity string, confidence float64, in ReachabilityInput, category string) (string, float64, string) {
 	note := ""
 	if in.FromEntrypoint && !in.TestOnlyPath {
 		if confidence < 0.85 {
@@ -22,16 +31,20 @@ func ActionabilityAdjust(severity string, confidence float64, in ReachabilityInp
 		note = "Reachable from detected entrypoint — raised actionability."
 	}
 	if in.TestOnlyPath || in.DocsOnlyPath {
-		switch severity {
-		case "critical", "high":
-			// Keep secrets/CVE visible, but stop docs/archive noise from dominating the high queue.
-			severity = "medium"
-			confidence = min(confidence, 0.7)
-		case "medium", "low":
-			severity = "info"
-			confidence = min(confidence, 0.55)
+		if isSecretCategory(category) {
+			note = "Test/docs path secret — severity preserved for credential visibility (rotate if real)."
+		} else {
+			switch severity {
+			case "critical", "high":
+				// Stop docs/archive lint noise from dominating the high queue.
+				severity = "medium"
+				confidence = min(confidence, 0.7)
+			case "medium", "low":
+				severity = "info"
+				confidence = min(confidence, 0.55)
+			}
+			note = "Test/docs/archive path — lowered actionability (finding remains visible)."
 		}
-		note = "Test/docs/archive path — lowered actionability (finding remains visible)."
 	}
 	if in.VendorPath {
 		confidence = min(confidence, 0.5)
@@ -48,6 +61,15 @@ func min(a, b float64) float64 {
 		return a
 	}
 	return b
+}
+
+func isSecretCategory(category string) bool {
+	switch strings.ToLower(strings.TrimSpace(category)) {
+	case "secret", "secrets", "hardcoded_secret", "credential", "credentials":
+		return true
+	default:
+		return false
+	}
 }
 
 // ClassifyPath heuristics for reachability input.

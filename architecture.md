@@ -1,5 +1,13 @@
 # Repository Detective Architecture
 
+## Secret scanning / GitGuardian parity (2026-09-12)
+
+- Root cause of missed GitGuardian/GitHub secret alerts: allowlist-only `config/gitleaks.toml` without `[extend] useDefault = true` replaced gitleaks' default rule pack with an empty ruleset (empirically: known `sk-…` fixtures → 0 findings).
+- Product always passes a detector-bearing `--config` (`effectiveGitleaksConfig` in `scanners/gitleaks.go`) so a scanned repo's broken `.gitleaks.toml` cannot silently disable detection.
+- Tree mode: `gitleaks` (`dir`). History mode: `gitleaks-history` (`detect`). Modes resolved by `ResolveSecretScanModes` (scoped push/PR → recent commits; deep → full history when enabled).
+- Reporting: secrets are not demoted on test/docs paths (`findinglearn.ActionabilityAdjustCategory`) and are not forced to `report_only` by source-type quieting (`profile.DecideAction`).
+- Defaults: `enable_gitleaks=true`.
+
 ## Product surface (2026-09-08)
 
 - Finding Detail 2.0 operator brief (`ui/finding_detail_view.go`) — what / why / fix / RD capabilities; evidence under expander.

@@ -70,7 +70,7 @@ func (s *SQLiteStore) PersistScanFindingsBatch(ctx context.Context, repositoryID
 		}
 
 		pathInput := findinglearn.ClassifyPath(issue.File)
-		severity, confidence, reachNote := findinglearn.ActionabilityAdjust(issue.Severity, issue.Confidence, pathInput)
+		severity, confidence, reachNote := findinglearn.ActionabilityAdjustCategory(issue.Severity, issue.Confidence, pathInput, issue.Category)
 		if len(repoRules) > 0 {
 			if sev, conf, calNote := findinglearn.ApplyRepoRules(severity, confidence, issue.Source, issue.RuleID, issue.File, repoRules); calNote != "" {
 				severity, confidence = sev, conf

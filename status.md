@@ -1,7 +1,19 @@
 # Repository Detective - Implementation Status
 
-**Last updated:** 2026-09-08  
+**Last updated:** 2026-09-12  
 **Program:** Product Hardening & Public Beta Improvement Backlog + RD-PRODUCT/COMMERCIAL/GROWTH
+
+### GitGuardian parity — secret detection (2026-09-12)
+
+| Item | Value |
+|------|-------|
+| Root cause | Allowlist-only gitleaks config → **zero detectors**; `_test.go` allowlist hid GitHub `openai_api_key` alert path |
+| Evidence | Container repro: default rules = 2 leaks; `/app/config/gitleaks.toml` (old) = 0; fixed `useDefault` = finds leaks including test files |
+| Code | `config/gitleaks.toml`, `.gitleaks.toml`, `scanners/gitleaks.go` (`effectiveGitleaksConfig`), `findinglearn/priority.go`, `profile/reporting.go`, defaults |
+| Tests | `go test ./scanners/ ./findinglearn/ ./profile/` green |
+| Live config bind-mount | `/home/commstech/Bugbot/config` → `/app/config` (fixed TOML live immediately) |
+| Redeploy | Image `repository-detective:upgrade-candidate` / `dev-gitguardian-parity`; `/health` version **`gitguardian-parity`**, commit **`f99aafef`**, tools **12/12** |
+| Remaining | Optional webhook full-tree secret workspace for push/PR changed-file mode; commit+push when ready |
 
 ### Six leftover forge issues closeout (2026-09-08) — CLEAN
 

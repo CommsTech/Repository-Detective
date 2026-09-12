@@ -209,8 +209,10 @@ func DecideAction(severity, category, sourceType, ruleID string, confidence floa
 		}
 	}
 
-	// Source type overrides first (unless mode allows explicit create flags)
-	if action, reason := actionFromSourceType(sourceType, cfg, fp); action != "" {
+	// Source type overrides first (unless mode allows explicit create flags).
+	// Secrets keep going through severity gates even on test/docs paths so
+	// GitGuardian-parity detections can still become forge issues when high/critical.
+	if action, reason := actionFromSourceType(sourceType, category, cfg, fp); action != "" {
 		if action == ActionSuppressedWithReason {
 			return action, reason
 		}
@@ -241,13 +243,15 @@ func DecideAction(severity, category, sourceType, ruleID string, confidence floa
 	return action, ""
 }
 
-func actionFromSourceType(sourceType string, cfg ReportingConfig, fp FalsePositiveReductionConfig) (string, string) {
+func actionFromSourceType(sourceType, category string, cfg ReportingConfig, fp FalsePositiveReductionConfig) (string, string) {
 	if !fp.Enabled {
 		if a, ok := cfg.SourceTypeOverrides[normalizeKey(sourceType)]; ok {
 			return a, ""
 		}
 		return "", ""
 	}
+
+	secretFinding := isSecretReportingCategory(category)
 
 	switch sourceType {
 	case SourceTypeGenerated:
@@ -260,22 +264,44 @@ func actionFromSourceType(sourceType string, cfg ReportingConfig, fp FalsePositi
 		}
 	case SourceTypeTest:
 		if fp.SuppressTestFixtures && !cfg.CreateIssuesForTests {
+			if secretFinding {
+				break
+			}
 			return ActionReportOnly, "test/fixture path"
 		}
 	case SourceTypeDocs:
 		if fp.SuppressDocsExamples && !cfg.CreateIssuesForDocs {
+			if secretFinding {
+				break
+			}
 			return ActionReportOnly, "documentation path"
 		}
 	case SourceTypeExample:
 		if fp.SuppressDocsExamples && !cfg.CreateIssuesForExamples {
+			if secretFinding {
+				break
+			}
 			return ActionReportOnly, "example/sample path"
 		}
 	}
 
 	if a, ok := cfg.SourceTypeOverrides[normalizeKey(sourceType)]; ok {
+		// Do not let source-type report_only override credential findings.
+		if secretFinding && (a == ActionReportOnly || a == ActionManualReview) {
+			return "", ""
+		}
 		return a, ""
 	}
 	return "", ""
+}
+
+func isSecretReportingCategory(category string) bool {
+	switch normalizeKey(category) {
+	case "secret", "secrets", "hardcoded_secret", "credential", "credentials":
+		return true
+	default:
+		return false
+	}
 }
 
 func passesSeverityConfidenceGate(severity string, confidence float64, cfg ReportingConfig) bool {

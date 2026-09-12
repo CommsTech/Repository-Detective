@@ -1,6 +1,9 @@
 package findinglearn
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestStructuralHashSamePattern(t *testing.T) {
 	a := StructuralHash("SEC-EVAL", "security", `eval(userInput)`)
@@ -36,6 +39,17 @@ func TestReachabilityDocsHighDowngrade(t *testing.T) {
 	sev, _, note = ActionabilityAdjust("critical", 0.9, in)
 	if sev != "medium" || note == "" {
 		t.Fatalf("archive critical should downgrade: sev=%s note=%q", sev, note)
+	}
+}
+
+func TestReachabilitySecretSeverityPreserved(t *testing.T) {
+	in := ClassifyPath("internal/security/redact_corpus_test.go")
+	sev, conf, note := ActionabilityAdjustCategory("high", 0.95, in, "secret")
+	if sev != "high" {
+		t.Fatalf("secret severity must stay high on test paths, got %s conf=%v note=%s", sev, conf, note)
+	}
+	if !strings.Contains(note, "secret") {
+		t.Fatalf("expected secret visibility note, got %q", note)
 	}
 }
 

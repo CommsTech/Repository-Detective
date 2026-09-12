@@ -110,7 +110,7 @@ Gitleaks runs in **`dir` mode** (filesystem snapshot only — no git history sca
 gitleaks dir <workspace> --report-format json --report-path=- --no-banner --redact
 ```
 
-When `gitleaks_config` is set, Repository Detective passes `--config <path>` (operator-controlled). If unset, gitleaks may still load `(workspace)/.gitleaks.toml` per [gitleaks config precedence](https://github.com/gitleaks/gitleaks#configuration) — there is no safe flag to disable repo config in this phase.
+When `gitleaks_config` is set, Repository Detective passes `--config <path>` after verifying the file extends defaults (`[extend] useDefault = true`) or defines `[[rules]]`. Allowlist-only configs are rejected (they load **zero detectors**). If unset or unusable, RD falls back to shipped `config/gitleaks.toml` or a baseline `useDefault` config so a scanned repo's broken `.gitleaks.toml` cannot silently disable secret scanning.
 
 Findings use category `secret`, severity `high`, and skip LLM debate when `enable_llm_auditors` is false.
 

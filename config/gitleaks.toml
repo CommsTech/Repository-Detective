@@ -1,15 +1,22 @@
 # Gitleaks config for Repository Detective self-scans and CI.
-# Unit tests and benchmark fixtures intentionally contain secret-shaped strings.
+#
+# CRITICAL: [extend] useDefault = true is required. A config that only defines
+# allowlists (and no rules / no useDefault) replaces gitleaks' built-in rule
+# pack with an empty ruleset, so every scan reports "clean" with zero leaks.
+# That is the primary reason GitGuardian / GitHub secret scanning can catch
+# credentials that Repository Detective previously missed.
 
 title = "repository-detective"
 
+[extend]
+useDefault = true
+
 [allowlist]
-description = "Tests, fixtures, docs examples, and vendor trees"
+description = "Synthetic fixtures and vendor trees — not a blanket skip of all tests. Secrets in *_test.go are still detected; reporting policy marks them report_only."
 paths = [
   '''(^|/)vendor/''',
   '''(^|/)testdata/''',
   '''(^|/)benchmark/fixture/''',
-  '''_test\.go$''',
   '''\.go\.src$''',
   '''(^|/)docs/dogfood-reports/''',
   '''(^|/)deployment-backups/''',

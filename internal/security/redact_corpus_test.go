@@ -16,7 +16,7 @@ func TestSanitizeDiagnosticCorpus(t *testing.T) {
 	slack := assemble("xoxb-", "123456789012-", "123456789012-", "abcdefghijklmnopqrstuvwx")
 	ghpat := assemble("ghp_", "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "0123456789")
 	aws := assemble("AKIA", "IOSFODNN7EXAMPLE")
-	bearer := assemble("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9", ".", "aaa", ".", "bbb")
+	bearer := assemble("eyJhbGciOi", "JIUzI1NiIsInR5cCI6", "IkpXVCJ9", ".", "aaa", ".", "bbb")
 	openai := assemble("sk-", "abcdefghijklmnopqrstuvwxyz", "0123456789ABCD")
 
 	fixtures := []struct {

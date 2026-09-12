@@ -89,7 +89,7 @@ func gitleaksHistoryArgs(gitDir string, cfg Config, scope, reportPath string) []
 	if cfg.SecretScanRedact {
 		args = append(args, "--redact")
 	}
-	if cfgPath := resolveGitleaksConfig(cfg.GitleaksConfig); cfgPath != "" {
+	if cfgPath := effectiveGitleaksConfig(cfg); cfgPath != "" {
 		args = append(args, "--config", cfgPath)
 	}
 	logOpts := historyLogOpts(cfg, scope)

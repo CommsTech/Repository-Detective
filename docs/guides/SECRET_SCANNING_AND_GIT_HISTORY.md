@@ -7,6 +7,12 @@ Repository Detective uses **Gitleaks** for credential detection in two labeled m
 | Current tree | `gitleaks` | Fast | Files in the scan workspace snapshot |
 | Git history | `gitleaks-history` | Slower | Commits in the cloned repository history |
 
+## Why GitGuardian can see secrets RD used to miss
+
+1. **Broken allowlist-only config (fixed):** `gitleaks_config` / `.gitleaks.toml` must include `[extend] useDefault = true` (or explicit `[[rules]]`). An allowlist-only file replaces the default rule pack with **zero detectors**, so scans report clean while GitGuardian / GitHub secret scanning still alert.
+2. **Path quieting (fixed for secrets):** Test/docs paths no longer demote or force `report_only` for `secret` findings.
+3. **Scope differences (still true):** Push/PR quick scans may use a changed-files workspace and recent-commit history window; GitGuardian watches full HEAD + full history continuously. Use deep / scheduled scans for full-history coverage.
+
 ## Configuration
 
 ```yaml

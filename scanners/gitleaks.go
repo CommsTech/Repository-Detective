@@ -94,10 +94,45 @@ func gitleaksArgs(dir string, cfg Config, reportPath string) []string {
 		"--redact",
 		"--log-level", "error",
 	}
-	if cfgPath := resolveGitleaksConfig(cfg.GitleaksConfig); cfgPath != "" {
+	if cfgPath := effectiveGitleaksConfig(cfg); cfgPath != "" {
 		args = append(args, "--config", cfgPath)
 	}
 	return args
+}
+
+// effectiveGitleaksConfig returns a config that is known to load detectors.
+// Prefer the operator path; otherwise fall back to the shipped product config.
+// Always preferring an explicit --config prevents a scanned repo's allowlist-only
+// .gitleaks.toml from replacing the default rule pack with zero detectors.
+func effectiveGitleaksConfig(cfg Config) string {
+	if p := resolveGitleaksConfig(cfg.GitleaksConfig); p != "" {
+		return p
+	}
+	for _, candidate := range []string{
+		"config/gitleaks.toml",
+		"/app/config/gitleaks.toml",
+	} {
+		if p := resolveGitleaksConfig(candidate); p != "" {
+			return p
+		}
+	}
+	return writeBaselineGitleaksConfig()
+}
+
+func writeBaselineGitleaksConfig() string {
+	f, err := os.CreateTemp("", "rd-gitleaks-baseline-*.toml")
+	if err != nil {
+		return ""
+	}
+	path := f.Name()
+	content := "title = \"repository-detective-baseline\"\n\n[extend]\nuseDefault = true\n"
+	if _, err := f.WriteString(content); err != nil {
+		_ = f.Close()
+		_ = os.Remove(path)
+		return ""
+	}
+	_ = f.Close()
+	return path
 }
 
 // resolveGitleaksConfig makes the allowlist path absolute before it reaches gitleaks.
@@ -105,6 +140,10 @@ func gitleaksArgs(dir string, cfg Config, reportPath string) []string {
 // path like "config/gitleaks.toml" resolves inside the repository under scan, and
 // gitleaks aborts the whole run when it cannot load it. An unusable path is dropped
 // so the scan falls back to the default rules instead of failing.
+//
+// Configs that define allowlists/title only (no [extend] useDefault and no [[rules]])
+// replace gitleaks' built-in rule pack with an empty ruleset. Those are also dropped
+// so secret scanning cannot silently report "clean" with zero detectors loaded.
 func resolveGitleaksConfig(path string) string {
 	path = strings.TrimSpace(path)
 	if path == "" {
@@ -120,7 +159,45 @@ func resolveGitleaksConfig(path string) string {
 	if _, err := os.Stat(path); err != nil {
 		return ""
 	}
+	if !gitleaksConfigHasDetectors(path) {
+		return ""
+	}
 	return path
+}
+
+// gitleaksConfigHasDetectors reports whether a TOML config will load at least the
+// default rule pack or explicit [[rules]]. Allowlist-only configs return false.
+func gitleaksConfigHasDetectors(path string) bool {
+	raw, err := os.ReadFile(filepath.Clean(path)) //nosec G304 -- path already validated by caller via Stat
+	if err != nil {
+		return false
+	}
+	return gitleaksConfigBytesHaveDetectors(raw)
+}
+
+func gitleaksConfigBytesHaveDetectors(raw []byte) bool {
+	content := strings.ToLower(string(raw))
+	// Strip comments so "# useDefault = true" does not count.
+	var b strings.Builder
+	for _, line := range strings.Split(content, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "#") {
+			continue
+		}
+		if idx := strings.Index(trimmed, "#"); idx >= 0 {
+			trimmed = strings.TrimSpace(trimmed[:idx])
+		}
+		b.WriteString(trimmed)
+		b.WriteByte('\n')
+	}
+	cleaned := b.String()
+	if strings.Contains(cleaned, "usedefault") && strings.Contains(cleaned, "true") {
+		return true
+	}
+	if strings.Contains(cleaned, "[[rules]]") {
+		return true
+	}
+	return false
 }
 
 // gitleaksFailureDetail keeps the tool's own output next to the exit status so a

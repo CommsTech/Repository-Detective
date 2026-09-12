@@ -14,7 +14,8 @@ import (
 func TestGitleaksArgsResolveConfigToAbsolutePath(t *testing.T) {
 	dir := t.TempDir()
 	configPath := filepath.Join(dir, "gitleaks.toml")
-	if err := os.WriteFile(configPath, []byte("title = \"test\"\n"), 0o600); err != nil {
+	content := "title = \"test\"\n\n[extend]\nuseDefault = true\n"
+	if err := os.WriteFile(configPath, []byte(content), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -41,8 +42,52 @@ func TestGitleaksArgsResolveConfigToAbsolutePath(t *testing.T) {
 func TestGitleaksArgsDropUnusableConfig(t *testing.T) {
 	args := gitleaksArgs("/scan/workspace", Config{GitleaksConfig: "does/not/exist.toml"}, "/tmp/report.json")
 
-	if indexOfArg(args, "--config") >= 0 {
-		t.Fatal("a missing config must be dropped so the scan falls back to default rules")
+	idx := indexOfArg(args, "--config")
+	if idx < 0 {
+		t.Fatal("expected a baseline --config when operator path is missing")
+	}
+	cfgPath := args[idx+1]
+	raw, err := os.ReadFile(cfgPath) //nosec G304 -- test reads path we just passed to gitleaks
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !gitleaksConfigBytesHaveDetectors(raw) {
+		t.Fatalf("fallback config must load detectors, got:\n%s", raw)
+	}
+}
+
+func TestGitleaksConfigBytesHaveDetectors(t *testing.T) {
+	allowlistOnly := []byte("title = \"x\"\n[allowlist]\npaths = ['''_test\\.go$''']\n")
+	if gitleaksConfigBytesHaveDetectors(allowlistOnly) {
+		t.Fatal("allowlist-only config must be rejected")
+	}
+	withExtend := []byte("title = \"x\"\n[extend]\nuseDefault = true\n[allowlist]\npaths = []\n")
+	if !gitleaksConfigBytesHaveDetectors(withExtend) {
+		t.Fatal("useDefault config must be accepted")
+	}
+	commented := []byte("title = \"x\"\n# useDefault = true\n[allowlist]\npaths = []\n")
+	if gitleaksConfigBytesHaveDetectors(commented) {
+		t.Fatal("commented useDefault must not count")
+	}
+	withRules := []byte("title = \"x\"\n[[rules]]\nid = \"custom\"\n")
+	if !gitleaksConfigBytesHaveDetectors(withRules) {
+		t.Fatal("explicit [[rules]] must be accepted")
+	}
+}
+
+func TestGitleaksArgsDropAllowlistOnlyConfig(t *testing.T) {
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "broken.toml")
+	if err := os.WriteFile(configPath, []byte("title = \"broken\"\n[allowlist]\npaths = ['''vendor/''']\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	args := gitleaksArgs("/scan/workspace", Config{GitleaksConfig: configPath}, "/tmp/report.json")
+	idx := indexOfArg(args, "--config")
+	if idx < 0 {
+		t.Fatal("expected fallback --config after dropping allowlist-only operator config")
+	}
+	if args[idx+1] == configPath {
+		t.Fatal("allowlist-only operator config must not be passed to gitleaks")
 	}
 }
 
