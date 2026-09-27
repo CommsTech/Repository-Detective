@@ -339,8 +339,9 @@ func main() {
 	server := &http.Server{
 		Addr:         listenAddr,
 		Handler:      router,
+		// AI advisory reviews wait on OpenClaw agent turns (often 1–5 minutes).
 		ReadTimeout:  120 * time.Second,
-		WriteTimeout: 120 * time.Second,
+		WriteTimeout: 600 * time.Second,
 		IdleTimeout:  60 * time.Second,
 	}
 
@@ -2684,6 +2685,9 @@ func (c *Config) effectiveAIProvider() string {
 
 // needsAIProvider reports whether an AI backend must be configured at startup.
 func (c *Config) needsAIProvider() bool {
+	if c.RemediationUseAI {
+		return true
+	}
 	depth := c.AnalysisDepth
 	if depth <= 0 {
 		depth = 3

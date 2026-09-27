@@ -18,6 +18,7 @@ type openAIChatRequest struct {
 	Stream      bool                `json:"stream"`
 	Temperature float64             `json:"temperature,omitempty"`
 	MaxTokens   int                 `json:"max_tokens,omitempty"`
+	User        string              `json:"user,omitempty"`
 }
 
 type openAIChatMessage struct {
@@ -77,6 +78,7 @@ func (t *OpenAICompatibleTransport) Complete(ctx context.Context, req ChatReques
 		Stream:      false,
 		Temperature: req.Temperature,
 		MaxTokens:   req.MaxTokens,
+		User:        req.User,
 	}
 	for _, message := range req.Messages {
 		payload.Messages = append(payload.Messages, openAIChatMessage(message))

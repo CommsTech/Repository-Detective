@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"git.commsnet.org/commstech/repository-detective/learning"
 	"git.commsnet.org/commstech/repository-detective/store"
 )
 
@@ -32,10 +33,12 @@ func BuildPacket(in PacketInput, cfg Config) (ReviewPacket, error) {
 		return ReviewPacket{}, fmt.Errorf("full file sending is disabled by policy")
 	}
 	pkt := ReviewPacket{
-		ScanID:   strings.TrimSpace(in.ScanID),
-		RepoID:   in.Repository.ID,
-		RepoName: in.Repository.FullName,
-		ScanType: in.ScanType,
+		HarnessVersion: HarnessVersion,
+		Task:           "advisory_finding_triage",
+		ScanID:         strings.TrimSpace(in.ScanID),
+		RepoID:         in.Repository.ID,
+		RepoName:       in.Repository.FullName,
+		ScanType:       in.ScanType,
 		Policy: ReviewPolicy{
 			IssueFiling:   in.IssueFiling,
 			RemediationPR: in.RemediationPR,
@@ -49,28 +52,55 @@ func BuildPacket(in PacketInput, cfg Config) (ReviewPacket, error) {
 			ContainerScanState: in.ContainerState,
 		},
 	}
-	candidates, _ := SelectCAHCandidates(in.Findings, in.Instances, in.History, cfg, cfg.CAH)
+	candidates, scores := SelectCAHCandidates(in.Findings, in.Instances, in.History, cfg, cfg.CAH)
+	scoreByFP := map[string]CAHScore{}
+	for _, sc := range scores {
+		if sc.Fingerprint != "" {
+			scoreByFP[sc.Fingerprint] = sc
+		}
+	}
 	for _, f := range candidates {
 		inst := in.Instances[f.ID]
 		hist := in.History[f.Fingerprint]
-		evidence := inst.EvidenceRedacted
+		evidence := strings.TrimSpace(inst.EvidenceRedacted)
+		if evidence == "" {
+			evidence = extractSnippet(inst.RawMetadataJSON)
+		}
 		if cfg.SendSourceSnippets {
 			if snip := extractSnippet(inst.RawMetadataJSON); snip != "" {
 				evidence = snip
 			}
 		}
+		sc := scoreByFP[f.Fingerprint]
+		if sc.Fingerprint == "" {
+			sc = ScoreFinding(f, inst, hist)
+		}
+		protected := sc.ProtectedFromDowngrade || learning.IsProtectedFromAutoDowngrade(f.Severity, f.Category)
+		lane := sc.CoachLane
+		if lane == "" {
+			if protected {
+				lane = "protected_coach"
+			} else {
+				lane = "review"
+			}
+		}
 		pkt.Findings = append(pkt.Findings, FindingInput{
-			Fingerprint:         f.Fingerprint,
-			RuleID:              f.RuleID,
-			Title:               f.Title,
-			Severity:            f.Severity,
-			Confidence:          confidenceBand(f.Confidence),
-			Source:              f.Source,
-			Path:                f.FilePath,
-			Line:                f.Line,
-			DescriptionRedacted: f.Title,
-			EvidenceRedacted:    evidence,
-			History:             hist,
+			Fingerprint:            f.Fingerprint,
+			RuleID:                 f.RuleID,
+			Title:                  f.Title,
+			Category:               f.Category,
+			Severity:               f.Severity,
+			Confidence:             confidenceBand(f.Confidence),
+			Source:                 f.Source,
+			Path:                   f.FilePath,
+			Line:                   f.Line,
+			DescriptionRedacted:    DescribeFinding(f, evidence),
+			EvidenceRedacted:       evidence,
+			History:                hist,
+			ProtectedFromDowngrade: protected,
+			UncertaintyScore:       sc.UncertaintyScore,
+			CoachLane:              lane,
+			CoachFocus:             CoachFocusForFinding(f, protected),
 		})
 	}
 	return pkt, nil
@@ -95,9 +125,9 @@ func extractSnippet(raw json.RawMessage) string {
 	if err := json.Unmarshal(raw, &meta); err != nil {
 		return ""
 	}
-	for _, key := range []string{"code_snippet", "snippet", "evidence"} {
+	for _, key := range []string{"code_snippet", "snippet", "evidence", "message", "detail", "description"} {
 		if v, ok := meta[key].(string); ok && strings.TrimSpace(v) != "" {
-			return v
+			return strings.TrimSpace(v)
 		}
 	}
 	return ""

@@ -14,6 +14,9 @@ type ChatRequest struct {
 	Messages    []ChatMessage
 	Temperature float64
 	MaxTokens   int
+	// User is an optional OpenAI-compatible user id. OpenClaw derives a stable
+	// agent session from this value (see gateway OpenAI HTTP API docs).
+	User string
 }
 
 // ChatResponse is a normalized chat completion response.

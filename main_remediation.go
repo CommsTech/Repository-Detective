@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"git.commsnet.org/commstech/repository-detective/ai"
 	"git.commsnet.org/commstech/repository-detective/issues"
@@ -24,13 +25,57 @@ func initRemediationPlanner() {
 		MinConfidence:   config.RemediationMinConfidence,
 		UseAI:           config.RemediationUseAI,
 		CommentOnIssue:  config.RemediationCommentOnIssue,
-		GlobalAIAllowed: aiClient != nil && config.EnableLLMAuditors,
+		GlobalAIAllowed: aiClient != nil,
 	}
 	var aiAdvisor remediation.AIAdvisor
 	if cfg.UseAI && cfg.GlobalAIAllowed {
+		timeout := time.Duration(config.OpenClawAIReview.TimeoutSeconds) * time.Second
+		if timeout <= 0 {
+			timeout = 180 * time.Second
+		}
+		maxTok := config.OpenClawAIReview.MaxTokensPerScan
+		if maxTok <= 0 {
+			maxTok = 1200
+		}
+		aiAdvisor = remediation.ProviderAdvisor{
+			Client:  remediationAIChatAdapter{client: aiClient},
+			Timeout: timeout,
+			MaxTok:  maxTok,
+		}
+		logger.Infof("Remediation AI advisor enabled via provider=%s model=%s", aiClient.Provider(), aiClient.Model())
+	} else if cfg.UseAI {
 		aiAdvisor = remediation.StubAIAdvisor{}
+		logger.Warn("Remediation AI requested but AI client not configured — using stub advisor")
 	}
 	remediationPlanner = remediation.NewPlanner(cfg, aiAdvisor, nil)
+}
+
+// remediationAIChatAdapter bridges *ai.Client into remediation.ChatCompleter.
+type remediationAIChatAdapter struct {
+	client *ai.Client
+}
+
+func (a remediationAIChatAdapter) Chat(ctx context.Context, req remediation.ChatRequest) (*remediation.ChatResult, error) {
+	if a.client == nil {
+		return nil, fmt.Errorf("ai client is nil")
+	}
+	converted := make([]ai.ChatMessage, 0, len(req.Messages))
+	for _, m := range req.Messages {
+		converted = append(converted, ai.ChatMessage{Role: m.Role, Content: m.Content})
+	}
+	resp, err := a.client.Chat(ctx, ai.ChatRequest{
+		Messages:    converted,
+		Temperature: req.Temperature,
+		MaxTokens:   req.MaxTokens,
+		User:        req.User,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if resp == nil {
+		return &remediation.ChatResult{}, nil
+	}
+	return &remediation.ChatResult{Content: resp.Content}, nil
 }
 
 func (remediationBridge) GetPlanForFinding(c *gin.Context, findingID int64) (remediation.Plan, error) {

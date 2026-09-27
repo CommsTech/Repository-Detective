@@ -56,8 +56,8 @@ func DefaultConfig() Config {
 	return Config{
 		Enabled:                 false,
 		Provider:                "openclaw",
-		// OpenClaw gateway often needs >60s for cold/agent turns (homelab measured ~80s for a tiny ping).
-		TimeoutSeconds:          180,
+		// OpenClaw agent turns routinely need 2–5 minutes (security-specialist ~160s for a tiny ping).
+		TimeoutSeconds:          300,
 		MaxFindingsPerScan:      25,
 		MaxTokensPerScan:        0,
 		SendSourceSnippets:      false,

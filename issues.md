@@ -6,17 +6,41 @@
 |----------|-------|---------------|
 | P0 | Host disk **96%** full (~12G free); Docker reclaimable images ~45GB + volumes ~5.5GB; FP DB backup `repository-detective.db.bak-fp-20260908` (~1.5G) | **Address** — prune unused images/volumes; archive/delete FP backup if no longer needed |
 | P0 | Legacy `bugbot.service` crash-loop (`NRestarts` ≈53k) looking for missing `docker-compose.public.yml` while Docker `repository-detective` already healthy | **Address** — `systemctl disable --now bugbot.service` |
-| P1 | Auto AI review to `192.168.255.11:18789` failing (connection refused / TLS timeout / malformed JSON) — dominant warning spam last 48h | **Tune/ops** — fix OpenClaw gateway or disable auto AI review until healthy |
-| P1 | Trivy DB download TLS failure (`mirror.gcr.io` unknown CA) + intermittent timed_out | **Address** — fix CA trust / offline DB / alternate mirror |
-| P1 | Live GitHub token still **401** (deferred from 2026-09-07) | **Address** — rotate `REPOSITORY_DETECTIVE_GITHUB_TOKEN` |
+| P1 | Auto AI review to `192.168.255.11:18789` failing (connection refused / TLS timeout / malformed JSON / stuck `running`) | **RD-side fixed** — detached review context, persist-on-cancel, HTTP client timeout 0, WriteTimeout 600s, JSON newline repair, timeout 600s. **Gateway still flaky** — state-lifecycle contention + Codex swarm (see P0 below). |
+| P1 | Trivy DB download TLS failure (`mirror.gcr.io` unknown CA) + intermittent timed_out | **Mitigated** — Trivy disabled in platform settings (doctor 8/9 required); restore after CA trust |
+| P1 | Live GitHub token still **401** (deferred from 2026-09-07) | **Addressed earlier** — rotated via `gh auth`; re-check if 401 returns |
 | P1 | Gitea history scan **401** (`invalid username, password or token`) at `2026-09-27T03:32:14Z` | **Address** — refresh `REPOSITORY_DETECTIVE_GITEA_TOKEN` / gitleaks-history auth |
-| P1 | Fleet noise: **10,205** open med+high are `LINT-RUFF-*`; **5,495** `external_issues` still `open`; **166** proposed calibrations unapplied | **Tune** — demote Ruff fleet-wide; accept safe `report_only` proposals (GRAPH/QUAL/REL/OPT); reconcile stale forge mappings |
-| P1 | Real critical: `commstech/OpenClaw-Config` `GRYPE-GHSA-fjxv-7rqg-78g4` (form-data) ×2, last_seen today | **Keep / remediate** — not a FP |
+| P1 | Fleet noise: **10,205** open med+high are `LINT-RUFF-*`; **5,495** `external_issues` still `open`; **166** proposed calibrations unapplied | **Partially tuned** — Ruff demoted + calibrations accepted; continue reconcile |
+| P1 | Real critical: `commstech/OpenClaw-Config` `GRYPE-GHSA-fjxv-7rqg-78g4` (form-data) ×2, last_seen today | **Fixed tip** `4139144` — confirm clear after rescan (prior scan interrupted) |
+| P0 | OpenClaw gateway chat **500**/hang: `StateDatabaseCoordinatorContentionError`, agent-db admission closed, Codex app-server swarm (~20+), cron fighting state DB | **Mitigating** — cleared stale `state_leases`/`gateway_boot_lifecycle`; temporarily set `cron.enabled=false` and `plugins.entries.codex.enabled=false` on AI host. Need durable Codex cap + cron isolation; then re-enable. |
+| P1 | Full CAH packet reviews (10 findings, ~20k agent bootstrap tokens) often exceed even 600s or return prose/malformed JSON | **Partial** — `RepairRelaxedJSON` + stricter prompt; prefer fewer CAH candidates / leaner agent bootstrap for advisory path |
 | P2 | SQLite deadline errors under load (evidence closure / remediation plan / dashboard summary context canceled) | After disk prune; watch DB contention |
 | P2 | gitleaks-history intermittent timed_out (10m) | Coverage gap on large histories; timeout/tuning later |
 | Ignore | GitHub welcome issue only open product issue; Gitea product issues **0** open; Class-B / upgrade E2E NOT_PROVEN | No action for noise tuning |
 
 Evidence: `/health` healthy `gitguardian-parity` / `f99aafef`; `docker logs repository-detective --since 48h`.
+
+## Fixed (2026-09-27) — fleet remediation + finding validation batch
+
+| Priority | Issue | Resolution |
+|----------|-------|------------|
+| P0 | `OpenClaw-Config` critical `GRYPE-GHSA-fjxv-7rqg-78g4` / `form-data` | Pushed `4139144` — npm `overrides` force `form-data@4.0.6` (removed nested 2.3.3). Rescan `e91952f0ef87094d` started. |
+| P0 | Hardcoded Wiki.js + Home Assistant JWTs in `wiki-publish.py`, `wiki-batch-publish.py`, `tests/test_ha_mcp.py` | Moved to `WIKI_JS_TOKEN` / `HA_TOKEN` env; **operator must rotate those tokens** (were in git history). |
+| P1 | ShellCheck noise on `scripts/cmb-weekly-audit.sh` (Python shebang) | Renamed to `.py` + doc refs. |
+| P1 | Example-file secret FPs (Business/Luna-Assist `*.example`) | Marked **11** FP via API; Business tip placeholders cleaned (`4cbf5f3`). |
+| P1 | `SEC-SQL-CONCAT` on `office.html` | Marked FP — HTML `<select>`, not SQL. |
+| P1 | Stale `House_Grocery_AI` `config.yaml` highs | **19** `resolved_verified` — tip only has empty `config.yaml.example`. Rescan `42ae4d99eee18aa5` completed. |
+| P2 | Learning feedback | Inserted FP/TP `learning_events` + repo calibration rules for example/HTML paths. |
+
+## Fixed (2026-09-27) — OpenClaw internal AI config (remediation + debug)
+
+| Priority | Issue | Resolution |
+|----------|-------|------------|
+| P0 | Internal AI `/api/v1/ai/status` showed `policy_disabled` / empty provider while advisory path was only half-wired | Enabled `ENABLE_LLM_AUDITORS` + OpenClaw provider client; `needsAIProvider` also true when `REMEDIATION_USE_AI` |
+| P0 | Remediation AI was stub-only (`StubAIAdvisor`) | Wired `ProviderAdvisor` through internal `ai.Client` (OpenClaw) for plan enrichment |
+| P1 | AI recommendations under-budgeted (1500/8) | Raised to **4000** tokens / **12** findings / budget **3000**; explicit `AI_RECOMMENDATIONS_PROVIDER/ENDPOINT/MODEL=openclaw` |
+| P1 | Deploy | Image `repository-detective:openclaw-ai-config`; recreate must export matching `RD_IMAGE` (shell override was pinning old tag) |
+| Blocked | OpenClaw gateway chat completions **500** for all agents | RD config correct; gateway `/v1/chat/completions` needs operator fix on `192.168.255.11:18789` before live reviews enrich |
 
 ## Fixed (2026-09-27) — API key unlock + OpenClaw connector
 

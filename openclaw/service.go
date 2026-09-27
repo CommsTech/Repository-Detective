@@ -88,10 +88,14 @@ func (s *Service) RunReview(ctx context.Context, in PacketInput) (ReviewResult, 
 	if err != nil {
 		return result, err
 	}
+	// Persistence after the model call must not depend on the caller's cancel
+	// signal — otherwise a disconnected HTTP client leaves status=running.
+	persistCtx := context.WithoutCancel(ctx)
+
 	client, err := NewClient(cfg, s.transport)
 	if err != nil {
 		result.Error = err.Error()
-		if failErr := s.failReview(ctx, rec, result.Error); failErr != nil {
+		if failErr := s.failReview(persistCtx, rec, result.Error); failErr != nil {
 			return result, fmt.Errorf("%w (also failed to persist review failure: %v)", err, failErr)
 		}
 		return result, err
@@ -124,7 +128,7 @@ func (s *Service) RunReview(ctx context.Context, in PacketInput) (ReviewResult, 
 			rec.ResponseJSON = sanitized
 		}
 	}
-	if err := s.store.UpdateAIAdvisoryReview(ctx, rec); err != nil {
+	if err := s.store.UpdateAIAdvisoryReview(persistCtx, rec); err != nil {
 		return reviewResult, fmt.Errorf("update ai advisory review: %w", err)
 	}
 	if reviewResult.Response != nil {
@@ -133,7 +137,7 @@ func (s *Service) RunReview(ctx context.Context, in PacketInput) (ReviewResult, 
 			if gapErr != nil {
 				gaps = []byte("[]")
 			}
-			if _, err := s.store.CreateAIAdvisoryRecommendation(ctx, store.AIAdvisoryRecommendation{
+			if _, err := s.store.CreateAIAdvisoryRecommendation(persistCtx, store.AIAdvisoryRecommendation{
 				ReviewID: reviewID, FindingFingerprint: r.Fingerprint,
 				Classification: r.Classification, SuggestedAction: r.SuggestedAction,
 				SuggestedSeverity: r.SuggestedSeverity, SuggestedConfidence: r.SuggestedConfidence,
@@ -152,7 +156,7 @@ func (s *Service) failReview(ctx context.Context, rec store.AIAdvisoryReview, ms
 	rec.ErrorMessage = msg
 	now := time.Now().UTC()
 	rec.FinishedAt = &now
-	return s.store.UpdateAIAdvisoryReview(ctx, rec)
+	return s.store.UpdateAIAdvisoryReview(context.WithoutCancel(ctx), rec)
 }
 
 func newReviewID() (string, error) {

@@ -26,12 +26,22 @@ func (c *Client) modelName() string {
 }
 
 func (c *Client) chat(ctx context.Context, messages []ChatMessage, temperature float64, maxTokens int) (*ChatResponse, error) {
-	return c.transport.Complete(ctx, ChatRequest{
-		Model:       c.modelName(),
+	return c.Chat(ctx, ChatRequest{
 		Messages:    messages,
 		Temperature: temperature,
 		MaxTokens:   maxTokens,
 	})
+}
+
+// Chat sends a chat completion through the configured provider (OpenClaw, OpenAI, etc.).
+func (c *Client) Chat(ctx context.Context, req ChatRequest) (*ChatResponse, error) {
+	if c == nil {
+		return nil, fmt.Errorf("ai client is nil")
+	}
+	if strings.TrimSpace(req.Model) == "" {
+		req.Model = c.modelName()
+	}
+	return c.transport.Complete(ctx, req)
 }
 
 // TestConnection verifies the AI backend responds.

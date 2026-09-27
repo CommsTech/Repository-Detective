@@ -9,18 +9,18 @@ import (
 
 func TestCAHSkipsHighConfidenceCritical(t *testing.T) {
 	findings := []store.Finding{{
-		ID: 1, Fingerprint: "fp-critical", Severity: "critical", Confidence: 0.95, Title: "critical issue",
+		ID: 1, Fingerprint: "fp-critical", Severity: "critical", Category: "security", Confidence: 0.95, Title: "critical issue", Source: "gosec",
 	}}
 	instances := map[int64]store.FindingInstance{1: {EvidenceRedacted: "long evidence " + repeat("x", 50)}}
 	cfg := openclaw.DefaultConfig()
 	cfg.MaxTokensPerScan = 2000
 	cah := openclaw.DefaultCAHConfig()
 	selected, scores := openclaw.SelectCAHCandidates(findings, instances, nil, cfg, cah)
-	if len(selected) != 0 {
-		t.Fatalf("expected 0 selected, got %d", len(selected))
+	if len(selected) != 1 {
+		t.Fatalf("expected protected finding in coach lane, got %d", len(selected))
 	}
-	if len(scores) == 0 || scores[0].SkipReason == "" {
-		t.Fatal("expected skip reason for protected finding")
+	if !scores[0].Selected || scores[0].CoachLane != "protected_coach" {
+		t.Fatalf("expected protected_coach selection, got %+v", scores[0])
 	}
 }
 

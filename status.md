@@ -3,6 +3,31 @@
 **Last updated:** 2026-09-27  
 **Program:** Product Hardening & Public Beta Improvement Backlog + RD-PRODUCT/COMMERCIAL/GROWTH
 
+### OpenClaw internal AI provider (2026-09-27)
+
+| Item | Value |
+|------|-------|
+| Live container | `repository-detective:openclaw-ai-config` + hot-swapped binary (JSON repair + detached review ctx + HTTP client timeout 0); env timeout **600s** |
+| Internal AI | **`ai_provider=openclaw`** — remediations `openclaw/software-engineer`; advisory reviews currently `openclaw/software-engineer` (security-specialist available; slower ~20k bootstrap) |
+| Sessions | Stable `user` ids (`rd:ai-review:*`, `rd:remediation:*`) |
+| Harness | **`rd-cah-v2`** + `RepairRelaxedJSON` (escapes raw newlines in model JSON strings) |
+| RD fixes shipped | Manual review no longer cancels on client disconnect; review status always persisted; AI HTTP client no longer hard-caps at 120s; WriteTimeout 600s |
+| AI recommendations | Enabled; timeout **600s**; CAH on; auto after scan |
+| Gateway (`192.168.255.11:18789`) | Health can be live while chat fails with **StateDatabaseCoordinatorContentionError** / agent-db cleanup failures when Codex swarm + cron contend for state-lifecycle. Cron + Codex plugin **temporarily disabled** for stability. Tiny chats work when clean (~5–110s); full 10-finding reviews often hang or EOF under load. |
+| Tracking | See `issues.md` § OpenClaw gateway chat + RD resilience |
+
+### Fleet remediation batch (2026-09-27)
+
+| Item | Value |
+|------|-------|
+| OpenClaw-Config | `master@4139144` — form-data override + env tokens + CMB script rename |
+| Business | `main@4cbf5f3` — example API key placeholders |
+| Validated FP | 11 example-path + 1 HTML SQL-concat |
+| Resolved verified | 19 HGAI stale `config.yaml` + OpenClaw form-data/token findings |
+| Learning events | FP/TP events recorded for calibration |
+| Rescans | HGAI `42ae4d99eee18aa5` completed; OC `e91952f0ef87094d` in progress |
+| Action required | **Rotate** Wiki.js (`WIKI_JS_TOKEN`) and Home Assistant (`HA_TOKEN`) — previous values lived in git |
+
 ### Ops health check (2026-09-27)
 
 | Item | Value |
@@ -15,7 +40,7 @@
 | GitHub token | Rotated from `gh auth` |
 | Calibration | Accepted **116** proposed; active repo rules increased (Ruff fleet +116) |
 | Fleet noise | LINT-RUFF demoted to info + report_only rules; `external_issues` open **5495→~1677** |
-| Remaining real | OpenClaw-Config critical `GHSA-fjxv-7rqg-78g4`; fix Trivy CA; re-enable AI later |
+| Remaining real | Rotate Wiki.js + HA tokens after OpenClaw-Config tip scrub; continue OpenClaw gitleaks/script secrets + dep CVEs; watch OC rescan `e91952f0ef87094d` |
 | Tracking | See `issues.md` § Fixed (2026-09-27) — ops remediation batch |
 
 ### Ops health check (2026-09-27 morning inventory — superseded by remediation above)

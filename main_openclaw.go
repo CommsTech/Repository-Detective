@@ -22,7 +22,17 @@ func (openclawReviewBridge) Config() openclaw.Config {
 }
 
 func (openclawReviewBridge) RunReview(c *gin.Context, scanID string) (openclaw.ReviewResult, error) {
-	return runOpenClawReview(c.Request.Context(), scanID)
+	// Detach from the HTTP request context: clients (and reverse proxies) often
+	// disconnect before OpenClaw agent turns finish (~45–180s+). Cancelling the
+	// outbound chat call left reviews stuck in status=running forever.
+	cfg := config.OpenClawAIReview.Normalized()
+	timeout := time.Duration(cfg.TimeoutSeconds+30) * time.Second
+	if timeout < 120*time.Second {
+		timeout = 120 * time.Second
+	}
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(c.Request.Context()), timeout)
+	defer cancel()
+	return runOpenClawReview(ctx, scanID)
 }
 
 func (openclawReviewBridge) GetReview(c *gin.Context, scanID string) (store.AIAdvisoryReview, []store.AIAdvisoryRecommendation, error) {

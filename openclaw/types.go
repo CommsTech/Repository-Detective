@@ -11,13 +11,15 @@ const (
 
 // ReviewPacket is the redacted payload sent to OpenClaw.
 type ReviewPacket struct {
-	ScanID   string         `json:"scan_id"`
-	RepoID   int64          `json:"repo_id"`
-	RepoName string         `json:"repo_name"`
-	ScanType ScanType       `json:"scan_type"`
-	Policy   ReviewPolicy   `json:"policy"`
-	Summary  ReviewSummary  `json:"summary"`
-	Findings []FindingInput `json:"findings"`
+	HarnessVersion string         `json:"harness_version"`
+	Task           string         `json:"task"`
+	ScanID         string         `json:"scan_id"`
+	RepoID         int64          `json:"repo_id"`
+	RepoName       string         `json:"repo_name"`
+	ScanType       ScanType       `json:"scan_type"`
+	Policy         ReviewPolicy   `json:"policy"`
+	Summary        ReviewSummary  `json:"summary"`
+	Findings       []FindingInput `json:"findings"`
 }
 
 // ReviewPolicy describes filing constraints visible to the reviewer.
@@ -45,17 +47,22 @@ type FindingHistory struct {
 
 // FindingInput is one redacted finding for advisory review.
 type FindingInput struct {
-	Fingerprint         string         `json:"fingerprint"`
-	RuleID              string         `json:"rule_id"`
-	Title               string         `json:"title"`
-	Severity            string         `json:"severity"`
-	Confidence          string         `json:"confidence"`
-	Source              string         `json:"source"`
-	Path                string         `json:"path"`
-	Line                int            `json:"line"`
-	DescriptionRedacted string         `json:"description_redacted"`
-	EvidenceRedacted    string         `json:"evidence_redacted"`
-	History             FindingHistory `json:"history"`
+	Fingerprint            string         `json:"fingerprint"`
+	RuleID                 string         `json:"rule_id"`
+	Title                  string         `json:"title"`
+	Category               string         `json:"category,omitempty"`
+	Severity               string         `json:"severity"`
+	Confidence             string         `json:"confidence"`
+	Source                 string         `json:"source"`
+	Path                   string         `json:"path"`
+	Line                   int            `json:"line"`
+	DescriptionRedacted    string         `json:"description_redacted"`
+	EvidenceRedacted       string         `json:"evidence_redacted"`
+	History                FindingHistory `json:"history"`
+	ProtectedFromDowngrade bool           `json:"protected_from_downgrade"`
+	UncertaintyScore       float64        `json:"uncertainty_score,omitempty"`
+	CoachLane              string         `json:"coach_lane,omitempty"`
+	CoachFocus             string         `json:"coach_focus,omitempty"`
 }
 
 // ReviewResponse is strict JSON expected from OpenClaw.
