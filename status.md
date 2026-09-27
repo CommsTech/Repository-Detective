@@ -1,7 +1,36 @@
 # Repository Detective - Implementation Status
 
-**Last updated:** 2026-09-12  
+**Last updated:** 2026-09-27  
 **Program:** Product Hardening & Public Beta Improvement Backlog + RD-PRODUCT/COMMERCIAL/GROWTH
+
+### Ops health check (2026-09-27)
+
+| Item | Value |
+|------|-------|
+| Live container | `repository-detective:ai-login-fix` healthy; commit `be1255e3`; cookie Secure follows `http` public_url; OpenClaw advisory **enabled** (timeout 180s, auto after scan) |
+| Tools | **11/11** (Trivy temporarily disabled for TLS CA failure; Grype on) |
+| Host disk | **85%** (~38G free) after FP gzip + image prune; ~20GB images still reclaimable |
+| Legacy unit | `bugbot.service` idle via `sleep infinity` (NRestarts held); still enabled — needs `sudo systemctl disable` |
+| AI recommendations | **Enabled** — timeout 180s, model `openclaw/software-engineer`, auto_after_scan; OpenClaw chat measured ~82s for tiny prompt |
+| GitHub token | Rotated from `gh auth` |
+| Calibration | Accepted **116** proposed; active repo rules increased (Ruff fleet +116) |
+| Fleet noise | LINT-RUFF demoted to info + report_only rules; `external_issues` open **5495→~1677** |
+| Remaining real | OpenClaw-Config critical `GHSA-fjxv-7rqg-78g4`; fix Trivy CA; re-enable AI later |
+| Tracking | See `issues.md` § Fixed (2026-09-27) — ops remediation batch |
+
+### Ops health check (2026-09-27 morning inventory — superseded by remediation above)
+
+| Item | Value |
+|------|-------|
+| Live container | `repository-detective` Up 6d **healthy**; `/health` version `gitguardian-parity`, commit `f99aafef`, tools 12/12 |
+| Host disk | **96%** used (~12G free) — same risk class as prior outages |
+| Legacy unit | `bugbot.service` crash-looping (~53k restarts); live app is Docker compose on `:8081` |
+| Log errors (48h) | 2× dashboard `context canceled`; heavy AI-review + Trivy TLS warnings |
+| Fleet open findings | 22,473 (crit 2 / high 1,046 / med 11,262); **~45%** of med+high is Ruff lint |
+| Forge mappings | `external_issues` open **5,495** / closed 507 |
+| Calibration backlog | **166** proposed (mostly GRAPH/QUAL/REL/OPT → `report_only`); **423** accepted |
+| Product forge issues | Gitea **0** open; GitHub **1** welcome-only |
+| Tracking | See `issues.md` § Open / ops (2026-09-27) |
 
 ### GitGuardian parity — secret detection (2026-09-12)
 

@@ -1,5 +1,56 @@
 # Development Issues Log
 
+## Open / ops (2026-09-27) — live log + fleet noise review
+
+| Priority | Issue | Status / plan |
+|----------|-------|---------------|
+| P0 | Host disk **96%** full (~12G free); Docker reclaimable images ~45GB + volumes ~5.5GB; FP DB backup `repository-detective.db.bak-fp-20260908` (~1.5G) | **Address** — prune unused images/volumes; archive/delete FP backup if no longer needed |
+| P0 | Legacy `bugbot.service` crash-loop (`NRestarts` ≈53k) looking for missing `docker-compose.public.yml` while Docker `repository-detective` already healthy | **Address** — `systemctl disable --now bugbot.service` |
+| P1 | Auto AI review to `192.168.255.11:18789` failing (connection refused / TLS timeout / malformed JSON) — dominant warning spam last 48h | **Tune/ops** — fix OpenClaw gateway or disable auto AI review until healthy |
+| P1 | Trivy DB download TLS failure (`mirror.gcr.io` unknown CA) + intermittent timed_out | **Address** — fix CA trust / offline DB / alternate mirror |
+| P1 | Live GitHub token still **401** (deferred from 2026-09-07) | **Address** — rotate `REPOSITORY_DETECTIVE_GITHUB_TOKEN` |
+| P1 | Gitea history scan **401** (`invalid username, password or token`) at `2026-09-27T03:32:14Z` | **Address** — refresh `REPOSITORY_DETECTIVE_GITEA_TOKEN` / gitleaks-history auth |
+| P1 | Fleet noise: **10,205** open med+high are `LINT-RUFF-*`; **5,495** `external_issues` still `open`; **166** proposed calibrations unapplied | **Tune** — demote Ruff fleet-wide; accept safe `report_only` proposals (GRAPH/QUAL/REL/OPT); reconcile stale forge mappings |
+| P1 | Real critical: `commstech/OpenClaw-Config` `GRYPE-GHSA-fjxv-7rqg-78g4` (form-data) ×2, last_seen today | **Keep / remediate** — not a FP |
+| P2 | SQLite deadline errors under load (evidence closure / remediation plan / dashboard summary context canceled) | After disk prune; watch DB contention |
+| P2 | gitleaks-history intermittent timed_out (10m) | Coverage gap on large histories; timeout/tuning later |
+| Ignore | GitHub welcome issue only open product issue; Gitea product issues **0** open; Class-B / upgrade E2E NOT_PROVEN | No action for noise tuning |
+
+Evidence: `/health` healthy `gitguardian-parity` / `f99aafef`; `docker logs repository-detective --since 48h`.
+
+## Fixed (2026-09-27) — API key unlock + OpenClaw connector
+
+| Priority | Issue | Resolution |
+|----------|-------|------------|
+| P0 | UI API-key unlock appeared broken (`/ui` 401 loop) | Root cause: `rd_ui_sess` cookie always `Secure: true` while `public_url` is `http://192.168.255.10:8081` — browsers drop the cookie. Now `CookieSecure()` follows public_url scheme (same as session cookies). |
+| P0 | OpenClaw AI disabled earlier as workaround | **Re-enabled** — gateway works; tiny chat ~82s. Raised advisory timeout **60→180s**, model `openclaw/software-engineer`, auto-after-scan on, max 8 findings / 1500 tokens. |
+| P1 | Deploy | Binary overlay image `repository-detective:ai-login-fix` (commit `be1255e3`); `/health` healthy. Unlock→dashboard verified without Secure cookie. |
+
+## Fixed (2026-09-27) — ops remediation batch
+
+| Priority | Issue | Resolution |
+|----------|-------|------------|
+| P0 | `bugbot.service` crash loop | Rewrote `/home/commstech/bugbot/run.sh` to `docker-compose.yml` + `sleep infinity`; symlinked `docker-compose.public.yml`. Unit idle (NRestarts held). Full `systemctl disable` still needs sudo. |
+| P0 | Disk / FP backup 1.5G | Gzipped to `.gz` (~165M); pruned ~1.45GB+ dangling/old layers → disk **96%→85%** (~38G free). ~20GB images still reclaimable (dependent layers). |
+| P1 | AI review spam / OpenClaw timeouts | Temporarily disabled; **superseded** — re-enabled with 180s timeout (see AI+login fix section) |
+| P1 | Trivy TLS unknown CA | `enable_trivy=false` until CA/mirror fixed (Grype remains). Tools 11/11. |
+| P1 | GitHub token 401 | Replaced `.env` token from `gh auth token` (verified 200). |
+| P1 | Gitea token | Live `/api/v1/user` probe **200**; intermittent history 401 treated as transient; token kept. |
+| P1 | 166 proposed calibrations | Accepted **116** safe `report_only` (GRAPH/QUAL/OPT/REL/HEALTH); rejected **2** secret demotions; **48** left for review. |
+| P1 | Ruff / REL-INTERNAL fleet noise | Inserted **2578** repo `report_only` rules; demoted **10,205+634** LINT-RUFF + **329** REL-INTERNAL to info; closed **3818** ruff-linked `external_issues`. |
+| P1 | OpenClaw-Config critical CVE | Still open — real finding; needs package bump in that repo (not suppressed). |
+
+## Open / remaining after ops batch
+
+| Priority | Issue | Plan |
+|----------|-------|------|
+| P0 | Disk still tight if image prune incomplete; `bugbot.service` still enabled | Finish `docker rmi` old tags; `sudo systemctl disable --now bugbot.service` |
+| P1 | Trivy CA / re-enable | Install trusted CA for `mirror.gcr.io` or offline DB, then set `enable_trivy=true` |
+| P1 | OpenClaw chat timeouts | **Mitigated** — timeout 180s; gateway still slow (~80s+) — watch for further latency |
+| P1 | `OpenClaw-Config` form-data GHSA | Upgrade/remove vulnerable `form-data` in that repo |
+| P2 | 48 remaining proposed calibrations; ~1.6k open external_issues | Continue triage |
+| P2 | SQLite deadline / dashboard cancel under load | Revisit after more disk headroom |
+
 ## Open / In progress (2026-09-12) — GitGuardian parity for secret detection
 
 | Priority | Issue | Status |

@@ -98,13 +98,13 @@ func (h *Handler) setSessionCookie(c *gin.Context, sessionID string, expiresAt t
 	if err != nil {
 		return
 	}
-	secure := strings.HasPrefix(strings.ToLower(strings.TrimSpace(h.auth.PublicURL)), "https://")
+	secure := h.auth.CookieSecure()
 	c.SetSameSite(http.SameSiteLaxMode)
 	c.SetCookie(h.sessionCookieName(), signed, int(time.Until(expiresAt).Seconds()), h.basePath+"/", "", secure, true)
 }
 
 func (h *Handler) clearSessionCookie(c *gin.Context) {
-	secure := strings.HasPrefix(strings.ToLower(strings.TrimSpace(h.auth.PublicURL)), "https://")
+	secure := h.auth.CookieSecure()
 	c.SetSameSite(http.SameSiteLaxMode)
 	c.SetCookie(h.sessionCookieName(), "", -1, h.basePath+"/", "", secure, true)
 }

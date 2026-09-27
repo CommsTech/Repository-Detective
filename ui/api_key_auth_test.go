@@ -112,6 +112,7 @@ func TestQueryStringAPIKeyNotLeakedInRenderedPage(t *testing.T) {
 
 func TestUnlockFormSetsCookie(t *testing.T) {
 	r, h := testUIWithAPIKeyAuth(t, "test-secret-key")
+	h.SetAuthConfig(ui.AuthConfig{Mode: "api_key_only", PublicURL: "http://192.168.255.10:8081"})
 	csrf := ""
 	// GET unlock page for CSRF token
 	w0 := httptest.NewRecorder()
@@ -138,5 +139,46 @@ func TestUnlockFormSetsCookie(t *testing.T) {
 	r.ServeHTTP(w, req)
 	if w.Code != http.StatusSeeOther {
 		t.Fatalf("expected redirect after unlock, got %d body=%s", w.Code, w.Body.String())
+	}
+	var sess *http.Cookie
+	for _, c := range w.Result().Cookies() {
+		if c.Name == "rd_ui_sess" {
+			sess = c
+			break
+		}
+	}
+	if sess == nil {
+		t.Fatal("expected rd_ui_sess cookie after unlock")
+	}
+	if sess.Secure {
+		t.Fatal("http public_url must not set Secure cookie (browsers drop it on cleartext UI)")
+	}
+	if sess.Value != "test-secret-key" {
+		t.Fatalf("unexpected cookie value %q", sess.Value)
+	}
+}
+
+func TestUnlockCookieSecureWhenPublicURLIsHTTPS(t *testing.T) {
+	r, h := testUIWithAPIKeyAuth(t, "test-secret-key")
+	h.SetAuthConfig(ui.AuthConfig{Mode: "api_key_only", PublicURL: "https://rd.example.com"})
+
+	form := url.Values{}
+	form.Set("api_key", "test-secret-key")
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodPost, "/ui/unlock", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusSeeOther {
+		t.Fatalf("expected redirect after unlock, got %d", w.Code)
+	}
+	var sess *http.Cookie
+	for _, c := range w.Result().Cookies() {
+		if c.Name == "rd_ui_sess" {
+			sess = c
+			break
+		}
+	}
+	if sess == nil || !sess.Secure {
+		t.Fatalf("https public_url must set Secure cookie, got %#v", sess)
 	}
 }

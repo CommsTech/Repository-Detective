@@ -35,8 +35,8 @@ func (h *Handler) UIAPIKeyCookieMiddleware() gin.HandlerFunc {
 			MaxAge:   86400 * 7,
 			HttpOnly: true,
 			SameSite: http.SameSiteLaxMode,
-			// Always Secure: session cookies must not ride cleartext HTTP.
-			Secure: true,
+			// Match public_url scheme (same rule as local session cookies).
+			Secure: h.auth.CookieSecure(),
 		})
 		q := c.Request.URL.Query()
 		q.Del("api_key")
