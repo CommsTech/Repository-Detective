@@ -25,6 +25,16 @@ type Config struct {
 	AdvisoryOnly            bool   `mapstructure:"ai_recommendations_advisory_only"`
 	UseCAHHarness           bool   `mapstructure:"ai_recommendations_use_cah_harness"`
 	AutoAfterScan           bool   `mapstructure:"ai_recommendations_auto_after_scan"`
+	// ValueMode steers CAH candidate selection (ponytail-influenced: prefer actionable security).
+	// actionable_security (default) | balanced | all
+	ValueMode string `mapstructure:"ai_recommendations_value_mode"`
+	// Harness abort / preflight knobs (shared with scan-time CAH auditors via main wiring).
+	AbortOnFirstTimeout          bool `mapstructure:"ai_harness_abort_on_first_timeout"`
+	MaxAuditorFailuresPerScan    int  `mapstructure:"ai_harness_max_auditor_failures_per_scan"`
+	PreflightTimeoutEvents       int  `mapstructure:"ai_harness_preflight_timeout_events"`
+	PreflightAdvisoryFailEvents  int  `mapstructure:"ai_harness_preflight_advisory_fail_events"`
+	PreflightLookbackHours       int  `mapstructure:"ai_harness_preflight_lookback_hours"`
+	PreflightProbeEnabled        bool `mapstructure:"ai_harness_preflight_probe_enabled"`
 
 	LegacyEnabled                 bool   `mapstructure:"openclaw_ai_review_enabled"`
 	LegacyEndpoint                string `mapstructure:"openclaw_ai_endpoint"`
@@ -52,30 +62,46 @@ type Config struct {
 }
 
 // DefaultConfig returns safe defaults (off, redacted, advisory-only).
+// Budgets intentionally lean (ponytail: the best AI spend is the spend you never make
+// on noise). Auto-after-scan defaults off after the 2026-10-02 token flood.
 func DefaultConfig() Config {
 	return Config{
 		Enabled:                 false,
 		Provider:                "openclaw",
 		// OpenClaw agent turns routinely need 2–5 minutes (security-specialist ~160s for a tiny ping).
-		TimeoutSeconds:          300,
-		MaxFindingsPerScan:      25,
-		MaxTokensPerScan:        0,
-		SendSourceSnippets:      false,
-		SendFullFiles:           false,
-		RedactSecrets:           true,
-		RedactPII:               true,
-		AllowPreinstall:         false,
-		AllowContainerScans:     true,
-		AllowRepoScans:          true,
-		RequireOperatorApproval: true,
-		StorePrompts:            false,
-		StoreResponses:          true,
-		AdvisoryOnly:            true,
-		UseCAHHarness:           true,
-		AutoAfterScan:           true,
-		CAH:                     DefaultCAHConfig(),
+		TimeoutSeconds:               300,
+		MaxFindingsPerScan:           12,
+		MaxTokensPerScan:             0,
+		SendSourceSnippets:           false,
+		SendFullFiles:                false,
+		RedactSecrets:                true,
+		RedactPII:                    true,
+		AllowPreinstall:              false,
+		AllowContainerScans:          true,
+		AllowRepoScans:               true,
+		RequireOperatorApproval:      true,
+		StorePrompts:                 false,
+		StoreResponses:               true,
+		AdvisoryOnly:                 true,
+		UseCAHHarness:                true,
+		AutoAfterScan:                false,
+		ValueMode:                    ValueModeActionableSecurity,
+		AbortOnFirstTimeout:          true,
+		MaxAuditorFailuresPerScan:    2,
+		PreflightTimeoutEvents:       10,
+		PreflightAdvisoryFailEvents:  5,
+		PreflightLookbackHours:       6,
+		PreflightProbeEnabled:        true,
+		CAH:                          DefaultCAHConfig(),
 	}
 }
+
+// Value-mode constants for CAH candidate selection.
+const (
+	ValueModeActionableSecurity = "actionable_security"
+	ValueModeBalanced           = "balanced"
+	ValueModeAll                = "all"
+)
 
 func mergeBool(preferred, legacy bool) bool {
 	return preferred || legacy
@@ -153,8 +179,37 @@ func (c Config) Normalized() Config {
 	if !out.UseCAHHarness {
 		out.UseCAHHarness = def.UseCAHHarness
 	}
+	out.ValueMode = normalizeValueMode(out.ValueMode)
+	if out.MaxAuditorFailuresPerScan <= 0 {
+		out.MaxAuditorFailuresPerScan = def.MaxAuditorFailuresPerScan
+	}
+	if out.PreflightTimeoutEvents <= 0 {
+		out.PreflightTimeoutEvents = def.PreflightTimeoutEvents
+	}
+	if out.PreflightAdvisoryFailEvents <= 0 {
+		out.PreflightAdvisoryFailEvents = def.PreflightAdvisoryFailEvents
+	}
+	if out.PreflightLookbackHours <= 0 {
+		out.PreflightLookbackHours = def.PreflightLookbackHours
+	}
+	// AbortOnFirstTimeout and PreflightProbeEnabled default true; only explicit
+	// false via config/env sticks because viper bool zero is false — main sets
+	// viper defaults to true before unmarshal.
 	out.CAH = normalizeCAH(out.CAH, out)
 	return out
+}
+
+func normalizeValueMode(mode string) string {
+	switch strings.ToLower(strings.TrimSpace(mode)) {
+	case "", ValueModeActionableSecurity, "actionable", "security":
+		return ValueModeActionableSecurity
+	case ValueModeBalanced, "default":
+		return ValueModeBalanced
+	case ValueModeAll, "off", "none":
+		return ValueModeAll
+	default:
+		return ValueModeActionableSecurity
+	}
 }
 
 // EffectiveEndpoint returns configured endpoint or core AI base URL.

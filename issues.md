@@ -1,24 +1,47 @@
 # Development Issues Log
 
+## Open / ops (2026-10-04) — AI harness hardening (ponytail-influenced)
+
+| Priority | Issue | Status / plan |
+|----------|-------|---------------|
+| P0 | Parallel CAH auditors all burned tokens after first timeout (2M-token flood class) | **Shipped 2026-10-04** — cross-auditor shared cancel; abort-on-first-timeout; auditor failure budget; `RunAuditor` single-flight + cancel respect; harness preflight (learning counts + endpoint probe). Binary `dist/rd-ai-harness`. Cost lockdown kept. |
+| P1 | AI recommendations selected GRAPH-ORPHAN / lint noise when intentionally enabled | **Shipped 2026-10-04** — `value_mode=actionable_security`; lean CAH budgets (6 candidates / 1200 tokens); `auto_after_scan` default **false**; harness `rd-cah-v3`. Influence: [ponytail](https://github.com/DietrichGebert/ponytail). |
+
+## Open / ops (2026-10-03) — AI cost flood prevention + learning upgrades
+
+| Priority | Issue | Status / plan |
+|----------|-------|---------------|
+| P0 | Overnight AI burn (~2M tokens): `scan_profile=deep` re-enabled CAH LLM auditors despite env `ENABLE_LLM_AUDITORS=false`; 3k+ auditor timeouts, almost no useful output | **Locked down 2026-10-03** — platform → `standard` + auditors/AI recs/auto-after-scan/remediation-AI **off**; code kill-switch so global `EnableLLMAuditors=false` wins over deep/repo; binary hot-swap `dist/rd-ai-learning`; live log: `deterministic-only mode`. Re-enable only intentionally. **Follow-up harness hardening 2026-10-04** (see above). |
+| P0 | Learning loop ignored overnight AI triage + diluted FP math with `scanner_failed` | **Shipped 2026-10-03** — disposition-only FP rates; ingest pending `calibrate_repo_scope`/`leave_visible` → soft FP events; AI accept → repo calibration; auditor timeout events + fail-fast + 24h circuit-breaker (≥25 timeouts). Recompute ingested **50** AI events and generated **7** new repo recommendations. |
+| P1 | Nightly RD evolution `20261003T081701` Pass=False (go test + dry-run gates); 0 promotions | Investigate `reports/nightly-rd-evolution/latest/full_loop_report.md` before next cron |
+| P2 | Remaining pending AI `fix` suggestions + proposed calibrations from AI ingest | Review/accept safe `report_only` proposals on `/ui/learning`; keep security categories protected |
+
 ## Open / ops (2026-09-27) — live log + fleet noise review
 
 | Priority | Issue | Status / plan |
 |----------|-------|---------------|
-| P0 | Host disk **96%** full (~12G free); Docker reclaimable images ~45GB + volumes ~5.5GB; FP DB backup `repository-detective.db.bak-fp-20260908` (~1.5G) | **Address** — prune unused images/volumes; archive/delete FP backup if no longer needed |
-| P0 | Legacy `bugbot.service` crash-loop (`NRestarts` ≈53k) looking for missing `docker-compose.public.yml` while Docker `repository-detective` already healthy | **Address** — `systemctl disable --now bugbot.service` |
-| P1 | Auto AI review to `192.168.255.11:18789` failing (connection refused / TLS timeout / malformed JSON / stuck `running`) | **RD-side fixed** — detached review context, persist-on-cancel, HTTP client timeout 0, WriteTimeout 600s, JSON newline repair, timeout 600s. **Gateway still flaky** — state-lifecycle contention + Codex swarm (see P0 below). |
+| P0 | Host disk **96%** full (~12G free); Docker reclaimable images ~45GB + volumes ~5.5GB; FP DB backup `repository-detective.db.bak-fp-20260908` (~1.5G) | **Mitigated** — image prune reclaimed **16.5GB**; disk **~79%** (~51G free). Volumes/FP backup optional later. |
+| P0 | Legacy `bugbot.service` crash-loop (`NRestarts` ≈53k) looking for missing `docker-compose.public.yml` while Docker `repository-detective` already healthy | **Idle** via `sleep infinity`; still enabled — needs operator `sudo systemctl disable --now bugbot.service` (password required) |
+| P1 | Auto AI review to `192.168.255.11:18789` failing (connection refused / TLS timeout / malformed JSON / stuck `running`) | **RD+gateway OK now** — binary `00de501e`; tiny chat **200/pong ~113s** (still ~18k bootstrap tokens). Full CAH reviews remain heavy (see P1 below). |
 | P1 | Trivy DB download TLS failure (`mirror.gcr.io` unknown CA) + intermittent timed_out | **Mitigated** — Trivy disabled in platform settings (doctor 8/9 required); restore after CA trust |
 | P1 | Live GitHub token still **401** (deferred from 2026-09-07) | **Addressed earlier** — rotated via `gh auth`; re-check if 401 returns |
 | P1 | Gitea history scan **401** (`invalid username, password or token`) at `2026-09-27T03:32:14Z` | **Address** — refresh `REPOSITORY_DETECTIVE_GITEA_TOKEN` / gitleaks-history auth |
 | P1 | Fleet noise: **10,205** open med+high are `LINT-RUFF-*`; **5,495** `external_issues` still `open`; **166** proposed calibrations unapplied | **Partially tuned** — Ruff demoted + calibrations accepted; continue reconcile |
 | P1 | Real critical: `commstech/OpenClaw-Config` `GRYPE-GHSA-fjxv-7rqg-78g4` (form-data) ×2, last_seen today | **Fixed tip** `4139144` — confirm clear after rescan (prior scan interrupted) |
-| P0 | OpenClaw gateway chat **500**/hang: `StateDatabaseCoordinatorContentionError`, agent-db admission closed, Codex app-server swarm (~20+), cron fighting state DB | **Mitigating** — cleared stale `state_leases`/`gateway_boot_lifecycle`; temporarily set `cron.enabled=false` and `plugins.entries.codex.enabled=false` on AI host. Need durable Codex cap + cron isolation; then re-enable. |
+| P0 | OpenClaw gateway chat **500**/hang: `StateDatabaseCoordinatorContentionError`, agent-db admission closed, Codex app-server swarm (~20+), cron fighting state DB | **Stabilized again 2026-09-28** — cron flipped back True overnight (re-disabled); gateway hit `worker task capacity` / `admission is closed` under CAH auditor flood → clean restart + **`ENABLE_LLM_AUDITORS=false`** (post-scan recommendations still on). Chat verified after recovery. |
 | P1 | Full CAH packet reviews (10 findings, ~20k agent bootstrap tokens) often exceed even 600s or return prose/malformed JSON | **Partial** — `RepairRelaxedJSON` + stricter prompt; prefer fewer CAH candidates / leaner agent bootstrap for advisory path |
 | P2 | SQLite deadline errors under load (evidence closure / remediation plan / dashboard summary context canceled) | After disk prune; watch DB contention |
 | P2 | gitleaks-history intermittent timed_out (10m) | Coverage gap on large histories; timeout/tuning later |
 | Ignore | GitHub welcome issue only open product issue; Gitea product issues **0** open; Class-B / upgrade E2E NOT_PROVEN | No action for noise tuning |
 
-Evidence: `/health` healthy `gitguardian-parity` / `f99aafef`; `docker logs repository-detective --since 48h`.
+Evidence: RD `/health` healthy commit `00de501e` tools 11/11 disk ~79%; gateway `192.168.255.11:18789` health live + chat 200; `bugbot.service` still needs sudo disable.
+
+## Fixed (2026-09-27) — OpenClaw gateway ops restart
+
+| Priority | Issue | Resolution |
+|----------|-------|------------|
+| P0 | Gateway exit 78 `CONFIG` — “migration inputs changed during startup” after editing cron/codex mid-boot | Stable restart with config already frozen; wait ~7–8 min for agent-db integrity; health `live` |
+| P0 | RD disk pressure + stale images | Hot-swap binary `00de501e`; `docker image prune -af` reclaimed 16.5GB → **79%** |
 
 ## Fixed (2026-09-27) — fleet remediation + finding validation batch
 

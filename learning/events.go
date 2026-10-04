@@ -19,7 +19,42 @@ const (
 	EventOperatorOverride        = "operator_override"
 	EventRecommendationAccepted  = "recommendation_accepted"
 	EventRecommendationRejected  = "recommendation_rejected"
+	// Cost / reliability signals learned from the 2026-10-02 OpenClaw auditor flood.
+	EventLLMAuditorTimeout           = "llm_auditor_timeout"
+	EventLLMAuditorEmptyBatch        = "llm_auditor_empty_batch"
+	EventAIAdvisoryFailed            = "ai_advisory_failed"
+	EventAIAdvisoryCalibrateSuggested = "ai_advisory_calibrate_suggested"
 )
+
+// DispositionEventTypes are events that count toward FP/TP calibration math.
+// Operational noise (scanner_failed, dry-run, auditor timeouts) must not dilute rates.
+var DispositionEventTypes = []string{
+	EventUserMarkedFalsePositive,
+	EventUserMarkedTruePositive,
+	EventResolvedVerified,
+	EventAIAdvisoryCalibrateSuggested,
+}
+
+// IsDispositionEvent reports whether eventType should count in FP/TP denominators.
+func IsDispositionEvent(eventType string) bool {
+	switch strings.TrimSpace(eventType) {
+	case EventUserMarkedFalsePositive, EventUserMarkedTruePositive,
+		EventResolvedVerified, EventAIAdvisoryCalibrateSuggested:
+		return true
+	default:
+		return false
+	}
+}
+
+// IsSoftFalsePositiveEvidence reports weak FP evidence (AI calibrate suggestions).
+func IsSoftFalsePositiveEvidence(eventType string) bool {
+	switch strings.TrimSpace(eventType) {
+	case EventUserMarkedFalsePositive, EventAIAdvisoryCalibrateSuggested:
+		return true
+	default:
+		return false
+	}
+}
 
 var protectedSeverities = map[string]bool{"critical": true, "high": true}
 

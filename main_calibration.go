@@ -232,6 +232,14 @@ func recomputeCalibration(ctx context.Context) (map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
+	aiIngested, err := rdStore.IngestAIAdvisoryCalibrateSuggestions(ctx, 1000)
+	if err != nil {
+		logger.Warnf("calibration AI advisory ingest: %v", err)
+	}
+	aiRecs, err := rdStore.GenerateCalibrationFromAIAdvisory(ctx, 2)
+	if err != nil {
+		logger.Warnf("calibration from AI advisory: %v", err)
+	}
 	repoRecs := 0
 	repoRecs, err = recomputeRepoScopedRecommendations(ctx, config.CalibrationMinFindingsForRecommendation)
 	if err != nil {
@@ -247,6 +255,8 @@ func recomputeCalibration(ctx context.Context) (map[string]any, error) {
 	return map[string]any{
 		"learning_events_backfilled":     backfilled,
 		"learning_events_purged":         purged,
+		"ai_advisory_events_ingested":    aiIngested,
+		"ai_advisory_recommendations":    aiRecs,
 		"rules_updated":                  stats,
 		"recommendations_generated":      recs,
 		"repo_recommendations_generated": repoRecs,

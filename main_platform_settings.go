@@ -60,9 +60,13 @@ func applyPlatformSettingsToRuntime(settings store.PlatformSettings) {
 	applyConfigBool(&config.EnableLinters, settings.EnableLinters)
 	applyConfigBool(&config.EnablePerformanceChecks, settings.EnablePerformanceChecks)
 	applyConfigBool(&config.EnableCodeGraph, settings.EnableCodeGraph)
+	applyConfigBool(&config.EnableLLMAuditors, settings.EnableLLMAuditors)
 
 	if settings.AIRecommendationsEnabled != nil {
 		config.OpenClawAIReview.Enabled = *settings.AIRecommendationsEnabled
+	}
+	if settings.AIRecommendationsAutoAfterScan != nil {
+		config.OpenClawAIReview.AutoAfterScan = *settings.AIRecommendationsAutoAfterScan
 	}
 	if settings.AIRecommendationsMaxTokensPerScan != nil {
 		config.OpenClawAIReview.MaxTokensPerScan = *settings.AIRecommendationsMaxTokensPerScan

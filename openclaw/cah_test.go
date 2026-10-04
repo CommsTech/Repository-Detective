@@ -81,6 +81,36 @@ func TestTokenBudgetEnforced(t *testing.T) {
 	}
 }
 
+func TestValueModePrefersSecurityOverOrphanNoise(t *testing.T) {
+	findings := []store.Finding{
+		{ID: 1, Fingerprint: "orphan", Severity: "medium", Confidence: 0.4, Title: "unused helper", Source: "graph", RuleID: "GRAPH-ORPHAN-FUNCTION", Category: "maintainability"},
+		{ID: 2, Fingerprint: "secret", Severity: "high", Confidence: 0.7, Title: "possible secret", Source: "gitleaks", RuleID: "generic-api-key", Category: "security", FilePath: ".github/workflows/deploy.yml"},
+		{ID: 3, Fingerprint: "lint", Severity: "low", Confidence: 0.3, Title: "ruff noise", Source: "ruff", RuleID: "LINT-RUFF-E501", Category: "quality"},
+	}
+	instances := map[int64]store.FindingInstance{
+		1: {EvidenceRedacted: "orphan fn " + repeat("x", 40)},
+		2: {EvidenceRedacted: "AKIA" + repeat("A", 40)},
+		3: {EvidenceRedacted: "line too long " + repeat("x", 40)},
+	}
+	cfg := openclaw.DefaultConfig()
+	cfg.ValueMode = openclaw.ValueModeActionableSecurity
+	cfg.MaxTokensPerScan = 2000
+	cah := openclaw.DefaultCAHConfig()
+	cah.MinUncertaintyScore = 0.2
+	selected, scores := openclaw.SelectCAHCandidates(findings, instances, nil, cfg, cah)
+	if len(selected) == 0 {
+		t.Fatal("expected security finding selected")
+	}
+	for _, f := range selected {
+		if f.RuleID == "GRAPH-ORPHAN-FUNCTION" || f.Source == "ruff" {
+			t.Fatalf("value mode selected noise: %+v", f)
+		}
+	}
+	if selected[0].Fingerprint != "secret" {
+		t.Fatalf("expected secret first, got %+v scores=%+v", selected[0], scores)
+	}
+}
+
 func repeat(s string, n int) string {
 	out := make([]byte, n)
 	for i := range out {

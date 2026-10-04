@@ -26,6 +26,9 @@ func ResolveEffectiveSettingsWithMeta(global GlobalSettingsSnapshot, repoSetting
 
 	merged = preserveGlobalAIPreferences(merged, global)
 	effective := applyRepoOverrides(merged, repoSettings)
+	// Hard cost kill-switch: global/env ENABLE_LLM_AUDITORS=false always wins over
+	// deep profile defaults and per-repo enable_llm_auditors overrides.
+	effective = enforceGlobalLLMAuditorKillSwitch(effective, global)
 	meta := buildSettingsMeta(global, repoSettings, effective)
 	effective.ScanProfile = meta.ScanProfile
 	return effective, meta
@@ -54,6 +57,16 @@ func preserveGlobalAIPreferences(merged EffectiveSettings, global GlobalSettings
 		merged.EnableAIRiskChecks = true
 	}
 	return merged
+}
+
+// enforceGlobalLLMAuditorKillSwitch blocks scan-time CAH auditors when the global
+// snapshot has EnableLLMAuditors=false (typical: REPOSITORY_DETECTIVE_ENABLE_LLM_AUDITORS=false).
+// Without this, scan_profile=deep re-enabled auditors and burned OpenClaw tokens on timeouts.
+func enforceGlobalLLMAuditorKillSwitch(effective EffectiveSettings, global GlobalSettingsSnapshot) EffectiveSettings {
+	if !global.EnableLLMAuditors {
+		effective.EnableLLMAuditors = false
+	}
+	return effective
 }
 
 // MergeConfigOverProfile applies explicit config values over profile defaults.

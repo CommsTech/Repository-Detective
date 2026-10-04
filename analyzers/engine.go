@@ -2,6 +2,7 @@ package analyzers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"sort"
@@ -35,14 +36,20 @@ type Config struct {
 	EnableSecurity    bool
 	EnableQuality     bool
 	EnableLLMAuditors bool
-	SkipPatterns      []string
-	LanguageMapping   map[string]string
-	Scanners          scanners.Config
-	Workspace         scanners.WorkspaceConfig
-	Health            health.Config
-	Graph             graph.Config
-	Reporting         profile.ReportingConfig
-	FalsePositive     profile.FalsePositiveReductionConfig
+	// AbortAuditorsOnFirstTimeout cancels remaining parallel CAH auditors when one
+	// hits timeout/cancel (ponytail: stop spending once the path is clearly sick).
+	AbortAuditorsOnFirstTimeout bool
+	// MaxAuditorFailuresPerScan caps failed auditors per scan before cancelling the rest.
+	// <=0 means default (2).
+	MaxAuditorFailuresPerScan int
+	SkipPatterns              []string
+	LanguageMapping           map[string]string
+	Scanners                  scanners.Config
+	Workspace                 scanners.WorkspaceConfig
+	Health                    health.Config
+	Graph                     graph.Config
+	Reporting                 profile.ReportingConfig
+	FalsePositive             profile.FalsePositiveReductionConfig
 }
 
 // CodeSuggestion represents a code improvement suggestion
@@ -137,6 +144,9 @@ type ReportStats struct {
 // ENGINE - CAH PIPELINE ORCHESTRATOR
 // ============================================================================
 
+// AuditorFailureHook records scan-time LLM auditor failures for the learning loop.
+type AuditorFailureHook func(ctx context.Context, auditorType, errorClass, detail string)
+
 // Engine coordinates the CAH multi-stage analysis pipeline
 type Engine struct {
 	giteaClient  *gitea.Client
@@ -144,6 +154,7 @@ type Engine struct {
 	aiClient     *ai.Client
 	logger       *logrus.Logger
 	config       *Config
+	onAuditorFailure AuditorFailureHook
 }
 
 // NewEngine creates a new CAH-pipeline analysis engine.
@@ -154,6 +165,13 @@ func NewEngine(giteaClient *gitea.Client, githubClient forge.RepoClient, aiClien
 		aiClient:     aiClient,
 		logger:       logger,
 		config:       config,
+	}
+}
+
+// SetAuditorFailureHook wires learning/cost feedback for auditor timeouts.
+func (e *Engine) SetAuditorFailureHook(hook AuditorFailureHook) {
+	if e != nil {
+		e.onAuditorFailure = hook
 	}
 }
 
@@ -586,22 +604,50 @@ func (e *Engine) Scan(ctx context.Context, prepare *PrepareReport) ([]CandidateF
 		{AuditorConfig, "misconfiguration"},
 	}
 
+	scanCfg := e.configFor(ctx)
+	abortOnFirst := scanCfg == nil || scanCfg.AbortAuditorsOnFirstTimeout
+	maxFailures := 2
+	if scanCfg != nil && scanCfg.MaxAuditorFailuresPerScan > 0 {
+		maxFailures = scanCfg.MaxAuditorFailuresPerScan
+	}
+
+	// Shared cancel so one timeout stops sibling auditors from burning tokens.
+	auditorCtx, cancelAuditors := context.WithCancel(ctx)
+	defer cancelAuditors()
+
 	results := make(chan result, len(auditors))
 
 	for _, auditor := range auditors {
 		go func(a AuditorType, prompt string) {
-			findings, err := e.runAuditor(ctx, a, prompt, prepare, llmTargets)
+			findings, err := e.runAuditor(auditorCtx, a, prompt, prepare, llmTargets)
 			results <- result{findings: findings, err: err, auditor: a}
 		}(auditor.auditorType, auditor.promptType)
 	}
 
+	auditorFailures := 0
+	cancelledSiblings := false
 	for i := 0; i < len(auditors); i++ {
 		r := <-results
 		if r.err != nil {
+			auditorFailures++
 			log.Warnf("[CAH:SCAN] Auditor %s failed: %v", r.auditor, r.err)
+			if !cancelledSiblings {
+				if abortOnFirst && isAuditorAbortError(r.err) {
+					cancelledSiblings = true
+					log.Warnf("[CAH:SCAN] Cross-auditor abort after %s timeout/cancel — stopping remaining in-flight auditors", r.auditor)
+					cancelAuditors()
+				} else if auditorFailures >= maxFailures {
+					cancelledSiblings = true
+					log.Warnf("[CAH:SCAN] Auditor failure budget exhausted (%d/%d) — cancelling remaining auditors", auditorFailures, maxFailures)
+					cancelAuditors()
+				}
+			}
 			continue
 		}
 		allCandidates = append(allCandidates, r.findings...)
+	}
+	if auditorFailures > 0 && len(allCandidates) == 0 {
+		log.Warnf("[CAH:SCAN] All LLM auditors failed or returned empty (%d failures) — skipping further AI spend for this scan", auditorFailures)
 	}
 
 	return allCandidates, summary, workspaceMeta, repoGraph, sbomResult, nil
@@ -764,6 +810,18 @@ func (e *Engine) runAuditor(ctx context.Context, auditorType AuditorType, vulnCl
 		resp, err := e.aiClient.RunAuditor(ctx, req)
 		if err != nil {
 			e.logger.Warnf("[CAH:SCAN] %s auditor batch failed: %v", auditorType, err)
+			errClass := "error"
+			if isAuditorAbortError(err) {
+				errClass = "timeout"
+			}
+			if e.onAuditorFailure != nil {
+				e.onAuditorFailure(ctx, string(auditorType), errClass, err.Error())
+			}
+			// Fail-fast on timeouts/cancellations — continuing batches was the
+			// 2026-10-02 token flood pattern (thousands of deadline exceeded calls).
+			if isAuditorAbortError(err) {
+				return candidates, fmt.Errorf("%s auditor aborted after batch failure: %w", auditorType, err)
+			}
 			continue
 		}
 
@@ -784,6 +842,20 @@ func (e *Engine) runAuditor(ctx context.Context, auditorType AuditorType, vulnCl
 
 	e.logger.Infof("[CAH:SCAN] %s auditor found %d candidates", auditorType, len(candidates))
 	return candidates, nil
+}
+
+func isAuditorAbortError(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
+		return true
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "context deadline exceeded") ||
+		strings.Contains(msg, "context canceled") ||
+		strings.Contains(msg, "timeout") ||
+		strings.Contains(msg, "deadline exceeded")
 }
 
 // ============================================================================

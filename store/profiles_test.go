@@ -78,6 +78,8 @@ func TestStandardProfileFilesIssues(t *testing.T) {
 func TestDeepProfileEnablesAI(t *testing.T) {
 	global := store.DefaultGlobalSettings()
 	global.ScanProfile = store.ScanProfileDeep
+	global.EnableLLMAuditors = true
+	global.AIPolicy = store.AIPolicyAllowed
 	effective := store.ResolveEffectiveSettings(global, store.RepoSettings{})
 	if effective.WorkspaceMode != "auto" || !effective.EnableTestGapChecks || !effective.EnablePerformanceChecks {
 		t.Fatalf("deep missing heavy checks: %+v", effective)
@@ -88,6 +90,25 @@ func TestDeepProfileEnablesAI(t *testing.T) {
 	if !effective.EnableLLMAuditors || effective.AIPolicy != store.AIPolicyAllowed || effective.AnalysisDepth < 3 {
 		t.Fatalf("deep should enable AI cross-checks: llm=%v ai=%s depth=%d",
 			effective.EnableLLMAuditors, effective.AIPolicy, effective.AnalysisDepth)
+	}
+}
+
+func TestGlobalLLMKillSwitchBlocksDeepProfile(t *testing.T) {
+	global := store.DefaultGlobalSettings()
+	global.ScanProfile = store.ScanProfileDeep
+	global.EnableLLMAuditors = false
+	effective := store.ResolveEffectiveSettings(global, store.RepoSettings{})
+	if effective.EnableLLMAuditors {
+		t.Fatal("global EnableLLMAuditors=false must block deep profile auditors")
+	}
+	profile := store.ScanProfileDeep
+	repoOn := true
+	effectiveRepo := store.ResolveEffectiveSettings(global, store.RepoSettings{
+		ScanProfile:       &profile,
+		EnableLLMAuditors: &repoOn,
+	})
+	if effectiveRepo.EnableLLMAuditors {
+		t.Fatal("global EnableLLMAuditors=false must block per-repo auditor enable")
 	}
 }
 
@@ -127,13 +148,15 @@ func TestGlobalProfileApplied(t *testing.T) {
 
 func TestRepoProfileApplied(t *testing.T) {
 	global := store.DefaultGlobalSettings()
+	global.EnableLLMAuditors = true
+	global.AIPolicy = store.AIPolicyAllowed
 	profile := store.ScanProfileDeep
 	effective, meta := store.ResolveEffectiveSettingsFull(global, store.RepoSettings{ScanProfile: &profile})
 	if meta.ProfileSource != "repo" || meta.ScanProfile != store.ScanProfileDeep {
 		t.Fatalf("unexpected meta: %+v", meta)
 	}
 	if !effective.EnableLLMAuditors {
-		t.Fatal("repo deep profile should apply AI")
+		t.Fatal("repo deep profile should apply AI when global auditors are allowed")
 	}
 }
 

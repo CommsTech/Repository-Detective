@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -16,6 +17,10 @@ type Client struct {
 	provider  ProviderType
 	model     string
 	logger    *logrus.Logger
+	// auditorGate serializes RunAuditor calls (single-flight). Combined with
+	// shared cancel in the CAH engine, this stops parallel timeout token floods.
+	auditorGate chan struct{}
+	initGate    sync.Once
 }
 
 func (c *Client) modelName() string {
@@ -38,10 +43,37 @@ func (c *Client) Chat(ctx context.Context, req ChatRequest) (*ChatResponse, erro
 	if c == nil {
 		return nil, fmt.Errorf("ai client is nil")
 	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	if strings.TrimSpace(req.Model) == "" {
 		req.Model = c.modelName()
 	}
-	return c.transport.Complete(ctx, req)
+	resp, err := c.transport.Complete(ctx, req)
+	if err != nil {
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return nil, ctxErr
+		}
+		return nil, err
+	}
+	return resp, nil
+}
+
+func (c *Client) acquireAuditorSlot(ctx context.Context) (release func(), err error) {
+	if c == nil {
+		return nil, fmt.Errorf("ai client is nil")
+	}
+	c.initGate.Do(func() {
+		if c.auditorGate == nil {
+			c.auditorGate = make(chan struct{}, 1)
+		}
+	})
+	select {
+	case c.auditorGate <- struct{}{}:
+		return func() { <-c.auditorGate }, nil
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
 }
 
 // TestConnection verifies the AI backend responds.
@@ -95,6 +127,18 @@ Respond with JSON:
 
 // RunAuditor runs a specialized auditor agent.
 func (c *Client) RunAuditor(ctx context.Context, req *AuditorRequest) (*AuditorResponse, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	release, err := c.acquireAuditorSlot(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer release()
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	resp, err := c.chat(ctx, []ChatMessage{
 		{Role: "system", Content: auditorSystemPrompt(req.AuditorType)},
 		{Role: "user", Content: buildAuditorPrompt(req)},

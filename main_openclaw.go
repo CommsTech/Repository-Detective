@@ -3,11 +3,13 @@ package main
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"git.commsnet.org/commstech/repository-detective/ai"
 	"git.commsnet.org/commstech/repository-detective/analyzers"
 	"git.commsnet.org/commstech/repository-detective/internal/privacy"
+	"git.commsnet.org/commstech/repository-detective/learning"
 	"git.commsnet.org/commstech/repository-detective/openclaw"
 	"git.commsnet.org/commstech/repository-detective/store"
 	"github.com/gin-gonic/gin"
@@ -47,14 +49,99 @@ func (openclawReviewBridge) GetReview(c *gin.Context, scanID string) (store.AIAd
 
 func (openclawReviewBridge) AcceptRecommendation(c *gin.Context, id int64) error {
 	cfg := config.OpenClawAIReview.Normalized()
-	if cfg.RequireOperatorApproval {
-		return rdStore.UpdateAIAdvisoryRecommendationStatus(c.Request.Context(), id, "accepted")
+	if !cfg.RequireOperatorApproval {
+		return fmt.Errorf("operator approval required")
 	}
-	return fmt.Errorf("operator approval required")
+	return acceptAIAdvisoryRecommendation(c.Request.Context(), id)
 }
 
 func (openclawReviewBridge) RejectRecommendation(c *gin.Context, id int64) error {
-	return rdStore.UpdateAIAdvisoryRecommendationStatus(c.Request.Context(), id, "rejected")
+	ctx := c.Request.Context()
+	rec, err := rdStore.GetAIAdvisoryRecommendationByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	review, _ := rdStore.GetAIAdvisoryReview(ctx, rec.ReviewID)
+	source, ruleID, _, _ := rdStore.FindingSourceRuleForFingerprint(ctx, review.RepositoryID, rec.FindingFingerprint)
+	emitLearning(ctx, store.LearningEvent{
+		RepositoryID:   review.RepositoryID,
+		ScanID:         review.ScanID,
+		Fingerprint:    rec.FindingFingerprint,
+		Source:         source,
+		RuleID:         ruleID,
+		EventType:      learning.EventRecommendationRejected,
+		CreatedBy:      "ai-advisory",
+		IdempotencyKey: fmt.Sprintf("ai-reject:%d", id),
+	})
+	return rdStore.UpdateAIAdvisoryRecommendationStatus(ctx, id, "rejected")
+}
+
+// acceptAIAdvisoryRecommendation records learning and, for calibrate_repo_scope on
+// non-protected noise, installs a repo report_only calibration rule.
+func acceptAIAdvisoryRecommendation(ctx context.Context, id int64) error {
+	if rdStore == nil {
+		return fmt.Errorf("database disabled")
+	}
+	rec, err := rdStore.GetAIAdvisoryRecommendationByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	review, err := rdStore.GetAIAdvisoryReview(ctx, rec.ReviewID)
+	if err != nil {
+		return err
+	}
+	source, ruleID, category, _ := rdStore.FindingSourceRuleForFingerprint(ctx, review.RepositoryID, rec.FindingFingerprint)
+	action := strings.ToLower(strings.TrimSpace(rec.SuggestedAction))
+
+	switch action {
+	case "calibrate_repo_scope", "leave_visible":
+		emitLearningEvidence(ctx, store.LearningEvent{
+			RepositoryID:   review.RepositoryID,
+			ScanID:         review.ScanID,
+			Fingerprint:    rec.FindingFingerprint,
+			Source:         source,
+			RuleID:         ruleID,
+			EventType:      learning.EventAIAdvisoryCalibrateSuggested,
+			CreatedBy:      "ai-advisory-accept",
+			IdempotencyKey: fmt.Sprintf("ai-accept-calibrate:%d", id),
+		}, map[string]any{
+			"ai_recommendation_id": id,
+			"suggested_action":     action,
+			"classification":       rec.Classification,
+			"accepted":             true,
+		})
+		if action == "calibrate_repo_scope" && ruleID != "" && !learning.IsProtectedFromAutoDowngrade("", category) {
+			calRec := &store.CalibrationRecommendation{
+				ID:                id,
+				Scope:             "repo",
+				RepositoryID:      &review.RepositoryID,
+				Source:            source,
+				RuleID:            ruleID,
+				Category:          category,
+				RecommendedAction: "report_only",
+				Reason:            "Accepted AI advisory calibrate_repo_scope: " + strings.TrimSpace(rec.Reason),
+				Confidence:        0.7,
+			}
+			if err := applyRepoCalibrationAccept(ctx, calRec, review.RepositoryID); err != nil {
+				logger.Warnf("ai advisory accept calibration apply id=%d: %v", id, err)
+			} else {
+				emitRecommendationLearning(ctx, review.RepositoryID, id, true, source, ruleID)
+			}
+		}
+	case "fix":
+		emitLearning(ctx, store.LearningEvent{
+			RepositoryID:   review.RepositoryID,
+			ScanID:         review.ScanID,
+			Fingerprint:    rec.FindingFingerprint,
+			Source:         source,
+			RuleID:         ruleID,
+			EventType:      learning.EventUserMarkedTruePositive,
+			CreatedBy:      "ai-advisory-accept",
+			IdempotencyKey: fmt.Sprintf("ai-accept-fix:%d", id),
+		})
+	}
+
+	return rdStore.UpdateAIAdvisoryRecommendationStatus(ctx, id, "accepted")
 }
 
 func (openclawReviewBridge) ListPendingRecommendations(c *gin.Context, limit int) ([]store.AIAdvisoryRecommendation, error) {
@@ -89,6 +176,10 @@ func runOpenClawReview(ctx context.Context, scanID string) (openclaw.ReviewResul
 		return openclaw.ReviewResult{}, err
 	}
 	cfg := config.OpenClawAIReview.Normalized()
+	if decision := aiHarnessPreflight(ctx, cfg); decision.Skip {
+		logger.Warnf("ai review skipped for scan %s: %s", scanID, decision.Reason)
+		return openclaw.ReviewResult{Status: "skipped", Error: decision.Reason}, nil
+	}
 	findings, err := rdStore.ListFindingsForScan(ctx, scanID, openClawFindingPoolLimit(cfg))
 	if err != nil {
 		return openclaw.ReviewResult{}, err
@@ -110,6 +201,31 @@ func runOpenClawReview(ctx context.Context, scanID string) (openclaw.ReviewResul
 	})
 }
 
+// aiHarnessPreflight skips AI spend when recent learning signals or a cheap
+// endpoint probe indicate the gateway/path is unhealthy.
+func aiHarnessPreflight(ctx context.Context, cfg openclaw.Config) openclaw.PreflightDecision {
+	cfg = cfg.Normalized()
+	lookback := time.Duration(cfg.PreflightLookbackHours) * time.Hour
+	if lookback <= 0 {
+		lookback = 6 * time.Hour
+	}
+	since := time.Now().UTC().Add(-lookback)
+	timeouts, advisoryFails := 0, 0
+	if rdStore != nil {
+		if n, err := rdStore.CountLearningEventsSince(ctx, learning.EventLLMAuditorTimeout, since); err == nil {
+			timeouts = n
+		}
+		if n, err := rdStore.CountLearningEventsSince(ctx, learning.EventAIAdvisoryFailed, since); err == nil {
+			advisoryFails = n
+		}
+	}
+	var probeErr error
+	if cfg.PreflightProbeEnabled && cfg.EndpointConfigured() {
+		probeErr = openclaw.ProbeEndpoint(ctx, cfg.EffectiveEndpoint(), 2*time.Second)
+	}
+	return openclaw.EvaluatePreflight(timeouts, advisoryFails, probeErr, cfg)
+}
+
 func maybeEnqueueOpenClawReview(ctx context.Context, scanCtx *store.ScanContext, repositoryID int64, result *analyzers.AnalysisResult, analysisErr error) {
 	if openclawReviewService == nil || scanCtx == nil || scanCtx.ScanID == "" || analysisErr != nil || result == nil {
 		return
@@ -122,6 +238,10 @@ func maybeEnqueueOpenClawReview(ctx context.Context, scanCtx *store.ScanContext,
 		return
 	}
 	if reportOnlyDryRunFromContext(ctx) {
+		return
+	}
+	if decision := aiHarnessPreflight(ctx, cfg); decision.Skip {
+		logger.Warnf("auto ai review skipped for scan %s: %s", scanCtx.ScanID, decision.Reason)
 		return
 	}
 	scanID := scanCtx.ScanID
@@ -138,10 +258,28 @@ func maybeEnqueueOpenClawReview(ctx context.Context, scanCtx *store.ScanContext,
 		review, err := runOpenClawReview(bg, scanID)
 		if err != nil {
 			logger.Warnf("auto ai review for scan %s failed: %v", scanID, err)
+			emitLearningEvidence(bg, store.LearningEvent{
+				RepositoryID:   repositoryID,
+				ScanID:         scanID,
+				Source:         "openclaw-advisory",
+				RuleID:         "ai_advisory",
+				EventType:      learning.EventAIAdvisoryFailed,
+				CreatedBy:      "auto-ai-review",
+				IdempotencyKey: scanID + ":ai_advisory_failed",
+			}, map[string]any{"error": err.Error()})
 			return
 		}
 		if review.Status == "failed" || review.Status == "timeout" {
 			logger.Warnf("auto ai review for scan %s ended with status=%s error=%s", scanID, review.Status, review.Error)
+			emitLearningEvidence(bg, store.LearningEvent{
+				RepositoryID:   repositoryID,
+				ScanID:         scanID,
+				Source:         "openclaw-advisory",
+				RuleID:         "ai_advisory",
+				EventType:      learning.EventAIAdvisoryFailed,
+				CreatedBy:      "auto-ai-review",
+				IdempotencyKey: scanID + ":ai_advisory_" + review.Status,
+			}, map[string]any{"status": review.Status, "error": review.Error})
 			return
 		}
 		logger.Infof("auto ai review for scan %s status=%s recommendations=%d", scanID, review.Status, review.RecommendationsCount)
@@ -212,6 +350,23 @@ func applyOpenClawDefaults(cfg *Config) {
 	if c.MaxTokensPerScan < 0 {
 		c.MaxTokensPerScan = 0
 	}
+	if strings.TrimSpace(c.ValueMode) == "" {
+		c.ValueMode = def.ValueMode
+	}
+	if c.MaxAuditorFailuresPerScan <= 0 {
+		c.MaxAuditorFailuresPerScan = def.MaxAuditorFailuresPerScan
+	}
+	if c.PreflightTimeoutEvents <= 0 {
+		c.PreflightTimeoutEvents = def.PreflightTimeoutEvents
+	}
+	if c.PreflightAdvisoryFailEvents <= 0 {
+		c.PreflightAdvisoryFailEvents = def.PreflightAdvisoryFailEvents
+	}
+	if c.PreflightLookbackHours <= 0 {
+		c.PreflightLookbackHours = def.PreflightLookbackHours
+	}
+	// AbortOnFirstTimeout / PreflightProbeEnabled default true via viper.SetDefault
+	// before unmarshal so operators can still set them false explicitly.
 }
 
 func issueFilingMode() string {

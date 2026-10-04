@@ -160,10 +160,12 @@
       <label><input type="checkbox" name="enable_performance_checks" value="true" {{if .EnablePerformanceChecks}}checked{{end}}> Performance checks</label>
     </div>
 
-    <h3>AI recommendations</h3>
-    <p class="rd-muted">Off by default. When enabled, keep token budgets low. Endpoint/API keys remain in <code>.env</code>.</p>
+    <h3>AI cost controls</h3>
+    <p class="rd-muted">Keep auditors and auto-reviews off unless you intentionally budget OpenClaw tokens. <code>ENABLE_LLM_AUDITORS=false</code> in <code>.env</code> is a hard kill-switch even if Deep profile is selected. Endpoint/API keys stay in <code>.env</code>.</p>
     <div class="rd-config-grid">
+      <label><input type="checkbox" name="enable_llm_auditors" value="true" {{if .EnableLLMAuditors}}checked{{end}}> Enable LLM auditors (scan-time CAH — expensive)</label>
       <label><input type="checkbox" name="ai_recommendations_enabled" value="true" {{if .AIRecommendationsEnabled}}checked{{end}}> Enable AI recommendations</label>
+      <label><input type="checkbox" name="ai_recommendations_auto_after_scan" value="true" {{if .AIRecommendationsAutoAfterScan}}checked{{end}}> Auto-run AI recommendations after every scan</label>
     </div>
     <label for="ai_recommendations_max_tokens_per_scan">Max tokens per scan</label>
     <input id="ai_recommendations_max_tokens_per_scan" name="ai_recommendations_max_tokens_per_scan" type="number" min="0" step="1" value="{{.AIRecommendationsMaxTokensPerScan}}">

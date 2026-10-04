@@ -61,7 +61,7 @@ func (s *SQLiteStore) touchRuleReliabilityFromEvent(ctx context.Context, ev Lear
 	now := time.Now().UTC().Format(time.RFC3339)
 	var tp, fp, rv, dup, reapp int
 	switch ev.EventType {
-	case "user_marked_false_positive":
+	case "user_marked_false_positive", "ai_advisory_calibrate_suggested":
 		fp = 1
 	case "user_marked_true_positive", "resolved_verified":
 		tp = 1
@@ -72,7 +72,7 @@ func (s *SQLiteStore) touchRuleReliabilityFromEvent(ctx context.Context, ev Lear
 		dup = 1
 	case "finding_reappeared":
 		reapp = 1
-	case "scanner_failed":
+	case "scanner_failed", "llm_auditor_timeout", "llm_auditor_empty_batch", "ai_advisory_failed":
 		_, err := s.db.ExecContext(ctx, `
 			INSERT INTO rule_reliability_stats (
 				repository_id, source, rule_id, scanner_failure_count, last_seen_at
@@ -295,6 +295,8 @@ func (s *SQLiteStore) ExpireRepoCalibrationRulesByRecommendation(ctx context.Con
 }
 
 // GenerateRepoScopedRecommendations proposes calibration changes per repository.
+// FP rate uses disposition events only — scanner_failed / dry-run / auditor timeouts
+// must not dilute evidence (lesson from 2026-10-02 overnight burn).
 func (s *SQLiteStore) GenerateRepoScopedRecommendations(ctx context.Context, repositoryID int64, minFindings int) (int, error) {
 	if minFindings <= 0 {
 		minFindings = 5
@@ -302,13 +304,16 @@ func (s *SQLiteStore) GenerateRepoScopedRecommendations(ctx context.Context, rep
 	now := time.Now().UTC().Format(time.RFC3339)
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT source, rule_id,
-			SUM(CASE WHEN event_type IN ('user_marked_false_positive') THEN 1 ELSE 0 END) AS fp,
+			SUM(CASE WHEN event_type IN ('user_marked_false_positive','ai_advisory_calibrate_suggested') THEN 1 ELSE 0 END) AS fp,
 			SUM(CASE WHEN event_type IN ('resolved_verified','user_marked_true_positive') THEN 1 ELSE 0 END) AS tp,
-			COUNT(1) AS total
+			SUM(CASE WHEN event_type IN (
+				'user_marked_false_positive','user_marked_true_positive',
+				'resolved_verified','ai_advisory_calibrate_suggested'
+			) THEN 1 ELSE 0 END) AS disposition_total
 		FROM learning_events
 		WHERE repository_id = ? AND (source != '' OR rule_id != '')
 		GROUP BY source, rule_id
-		HAVING total >= 3
+		HAVING disposition_total >= 3
 	`, repositoryID)
 	if err != nil {
 		return 0, err
@@ -321,19 +326,22 @@ func (s *SQLiteStore) GenerateRepoScopedRecommendations(ctx context.Context, rep
 	var candidates []candidate
 	for rows.Next() {
 		var source, ruleID string
-		var fp, tp, total int
-		if err := rows.Scan(&source, &ruleID, &fp, &tp, &total); err != nil {
+		var fp, tp, dispositionTotal int
+		if err := rows.Scan(&source, &ruleID, &fp, &tp, &dispositionTotal); err != nil {
 			rows.Close()
 			return 0, err
 		}
-		fpRate := float64(fp) / float64(total)
+		if dispositionTotal <= 0 {
+			continue
+		}
+		fpRate := float64(fp) / float64(dispositionTotal)
 		if fpRate < 0.5 {
 			continue
 		}
-		if total < repoScopedMinEvents(source, minFindings) {
+		if dispositionTotal < repoScopedMinEvents(source, minFindings) {
 			continue
 		}
-		candidates = append(candidates, candidate{source: source, ruleID: ruleID, fp: fp, total: total, fpRate: fpRate})
+		candidates = append(candidates, candidate{source: source, ruleID: ruleID, fp: fp, total: dispositionTotal, fpRate: fpRate})
 	}
 	if err := rows.Err(); err != nil {
 		rows.Close()

@@ -35,6 +35,7 @@ import (
 	"git.commsnet.org/commstech/repository-detective/internal/scanid"
 	"git.commsnet.org/commstech/repository-detective/internal/security"
 	"git.commsnet.org/commstech/repository-detective/issues"
+	"git.commsnet.org/commstech/repository-detective/learning"
 	"git.commsnet.org/commstech/repository-detective/limiter"
 	"git.commsnet.org/commstech/repository-detective/openclaw"
 	"git.commsnet.org/commstech/repository-detective/operator"
@@ -632,6 +633,13 @@ func loadConfig() error {
 	viper.SetDefault("ai_recommendations_require_operator_approval", defOpenClaw.RequireOperatorApproval)
 	viper.SetDefault("ai_recommendations_use_cah_harness", defOpenClaw.UseCAHHarness)
 	viper.SetDefault("ai_recommendations_auto_after_scan", defOpenClaw.AutoAfterScan)
+	viper.SetDefault("ai_recommendations_value_mode", defOpenClaw.ValueMode)
+	viper.SetDefault("ai_harness_abort_on_first_timeout", defOpenClaw.AbortOnFirstTimeout)
+	viper.SetDefault("ai_harness_max_auditor_failures_per_scan", defOpenClaw.MaxAuditorFailuresPerScan)
+	viper.SetDefault("ai_harness_preflight_timeout_events", defOpenClaw.PreflightTimeoutEvents)
+	viper.SetDefault("ai_harness_preflight_advisory_fail_events", defOpenClaw.PreflightAdvisoryFailEvents)
+	viper.SetDefault("ai_harness_preflight_lookback_hours", defOpenClaw.PreflightLookbackHours)
+	viper.SetDefault("ai_harness_preflight_probe_enabled", defOpenClaw.PreflightProbeEnabled)
 	defCAH := openclaw.DefaultCAHConfig()
 	viper.SetDefault("ai_recommendations_cah_enabled", defCAH.Enabled)
 	viper.SetDefault("ai_recommendations_cah_max_candidates", defCAH.MaxCandidates)
@@ -1327,19 +1335,22 @@ func initializeComponents() error {
 	initClosureEngine()
 
 	// Initialize analysis engine
+	ocHarness := config.OpenClawAIReview.Normalized()
 	analysisConfig := &analyzers.Config{
-		MaxFileSize:       config.MaxFileSize,
-		AnalysisDepth:     config.AnalysisDepth,
-		EnableSecurity:    config.EnableSecurity,
-		EnableQuality:     config.EnableQuality,
-		EnableLLMAuditors: config.EnableLLMAuditors,
-		SkipPatterns:      config.SkipPatterns,
-		LanguageMapping:   config.LanguageMapping,
-		Scanners:          mainScannerConfig(),
-		Health:            mainHealthConfig(),
-		Graph:             mainGraphConfig(),
-		Reporting:         config.Reporting,
-		FalsePositive:     config.FalsePositiveReduction,
+		MaxFileSize:                 config.MaxFileSize,
+		AnalysisDepth:               config.AnalysisDepth,
+		EnableSecurity:              config.EnableSecurity,
+		EnableQuality:               config.EnableQuality,
+		EnableLLMAuditors:           config.EnableLLMAuditors,
+		AbortAuditorsOnFirstTimeout: ocHarness.AbortOnFirstTimeout,
+		MaxAuditorFailuresPerScan:   ocHarness.MaxAuditorFailuresPerScan,
+		SkipPatterns:                config.SkipPatterns,
+		LanguageMapping:             config.LanguageMapping,
+		Scanners:                    mainScannerConfig(),
+		Health:                      mainHealthConfig(),
+		Graph:                       mainGraphConfig(),
+		Reporting:                   config.Reporting,
+		FalsePositive:               config.FalsePositiveReduction,
 		Workspace: scanners.WorkspaceConfig{
 			Mode:                   config.WorkspaceMode,
 			MaxSizeMB:              config.WorkspaceMaxSizeMB,
@@ -1349,6 +1360,29 @@ func initializeComponents() error {
 		},
 	}
 	analysisEngine = analyzers.NewEngine(giteaClient, githubClient, aiClient, analysisConfig, logger)
+	analysisEngine.SetAuditorFailureHook(func(ctx context.Context, auditorType, errorClass, detail string) {
+		scanID := scanid.From(ctx)
+		if rdStore == nil || scanID == "" {
+			return
+		}
+		scan, err := rdStore.GetScan(ctx, scanID)
+		if err != nil || scan.RepositoryID <= 0 {
+			return
+		}
+		eventType := learning.EventLLMAuditorEmptyBatch
+		if errorClass == "timeout" {
+			eventType = learning.EventLLMAuditorTimeout
+		}
+		emitLearningEvidence(ctx, store.LearningEvent{
+			RepositoryID:   scan.RepositoryID,
+			ScanID:         scanID,
+			Source:         "llm-auditor",
+			RuleID:         auditorType,
+			EventType:      eventType,
+			CreatedBy:      "cah-scan",
+			IdempotencyKey: fmt.Sprintf("%s:llm_auditor:%s:%s", scanID, auditorType, errorClass),
+		}, map[string]any{"error_class": errorClass, "detail": detail})
+	})
 
 	// Initialize issue manager
 	issueConfig := &issues.Config{
@@ -1817,6 +1851,20 @@ func resolveEffectiveSettingsForRepo(ctx context.Context, forgeType, owner, repo
 	}
 	if effective.AIPolicy == store.AIPolicyAllowed && aiClient == nil {
 		effective.EnableLLMAuditors = false
+	}
+	// Cost circuit-breaker: recent auditor timeout flood → force auditors off for this scan.
+	if effective.EnableLLMAuditors && rdStore != nil {
+		if n, err := rdStore.CountLearningEventsSince(ctx, learning.EventLLMAuditorTimeout, time.Now().UTC().Add(-24*time.Hour)); err == nil && n >= 25 {
+			logger.Warnf("LLM auditor circuit-breaker: %d timeout events in 24h — disabling auditors for this scan", n)
+			effective.EnableLLMAuditors = false
+		}
+	}
+	// Shorter-horizon harness preflight (learning + optional probe) also blocks auditors.
+	if effective.EnableLLMAuditors {
+		if decision := aiHarnessPreflight(ctx, config.OpenClawAIReview); decision.Skip {
+			logger.Warnf("LLM auditors disabled for scan by harness preflight: %s", decision.Reason)
+			effective.EnableLLMAuditors = false
+		}
 	}
 	if reportOnlyDryRunFromContext(ctx) {
 		store.ApplyReportOnlyDryRunSettings(&effective)

@@ -10,7 +10,8 @@ import (
 )
 
 // HarnessVersion identifies the advisory packet/prompt contract.
-const HarnessVersion = "rd-cah-v2"
+// v3: value-mode candidate selection + tighter budgets (ponytail-influenced).
+const HarnessVersion = "rd-cah-v3"
 
 // CAHConfig controls CAH-gated candidate selection for AI recommendations.
 type CAHConfig struct {
@@ -25,16 +26,17 @@ type CAHConfig struct {
 }
 
 // DefaultCAHConfig returns safe CAH defaults.
+// Lean budgets: prefer a few actionable security findings over GRAPH-ORPHAN noise.
 func DefaultCAHConfig() CAHConfig {
 	return CAHConfig{
 		Enabled:               true,
-		MaxCandidates:         10,
+		MaxCandidates:         6,
 		MinUncertaintyScore:   0.45,
-		TokenBudgetPerScan:    2000,
+		TokenBudgetPerScan:    1200,
 		FailClosedOnRedaction: true,
 		RequireStrictJSON:     true,
 		UseCAHHarness:         true,
-		MaxProtectedCoach:     3,
+		MaxProtectedCoach:     2,
 	}
 }
 
@@ -95,6 +97,12 @@ func ScoreFinding(f store.Finding, inst store.FindingInstance, hist FindingHisto
 	case "semgrep", "gosec", "gitleaks", "grype", "trivy", "govulncheck":
 		uncertainty += 0.08
 	}
+	if isNoiseFinding(f) {
+		uncertainty *= 0.35
+	}
+	if isActionableSecurityFinding(f) {
+		uncertainty += 0.12
+	}
 	protected := learning.IsProtectedFromAutoDowngrade(f.Severity, f.Category)
 	tokenEst := 90 + len(f.Title)/4 + len(evidence)/8 + len(f.RuleID)/8
 	return CAHScore{
@@ -104,6 +112,49 @@ func ScoreFinding(f store.Finding, inst store.FindingInstance, hist FindingHisto
 		ScannerReliability: scannerReliability(f.Source), EvidenceCompleteness: evidenceScore,
 		TokenCostEstimate: tokenEst, ProtectedFromDowngrade: protected,
 	}
+}
+
+// isNoiseFinding reports GRAPH-ORPHAN / HEALTH / LINT style findings that rarely
+// justify AI spend when budgets are tight (ponytail: skip work that won't ship value).
+func isNoiseFinding(f store.Finding) bool {
+	rule := strings.ToUpper(strings.TrimSpace(f.RuleID))
+	src := strings.ToLower(strings.TrimSpace(f.Source))
+	cat := strings.ToLower(strings.TrimSpace(f.Category))
+	if strings.HasPrefix(rule, "GRAPH-ORPHAN") || strings.Contains(rule, "GRAPH-ORPHAN") {
+		return true
+	}
+	if strings.HasPrefix(rule, "HEALTH-") || strings.HasPrefix(rule, "LINT-") {
+		return true
+	}
+	if src == "ruff" || src == "tech_debt" || src == "maintainability" || src == "graph" {
+		return true
+	}
+	if cat == "maintainability" || cat == "tech_debt" || cat == "code_smell" {
+		return true
+	}
+	return false
+}
+
+func isActionableSecurityFinding(f store.Finding) bool {
+	sev := strings.ToLower(strings.TrimSpace(f.Severity))
+	if sev == "critical" || sev == "high" {
+		if learning.IsProtectedFromAutoDowngrade(f.Severity, f.Category) ||
+			strings.Contains(strings.ToLower(f.Category), "security") ||
+			strings.Contains(strings.ToLower(f.Category), "secret") {
+			return true
+		}
+	}
+	src := strings.ToLower(f.Source)
+	switch src {
+	case "gitleaks", "gosec", "semgrep", "grype", "trivy", "govulncheck":
+		return sev == "critical" || sev == "high" || sev == "medium"
+	}
+	// Mutable GitHub Actions / workflow secrets are high-value triage targets.
+	path := strings.ToLower(f.FilePath)
+	if strings.Contains(path, ".github/workflows/") || strings.Contains(path, ".gitea/workflows/") {
+		return true
+	}
+	return false
 }
 
 func scannerReliability(source string) float64 {
@@ -140,12 +191,19 @@ func SelectCAHCandidates(findings []store.Finding, instances map[int64]store.Fin
 		return findings, nil
 	}
 
+	valueMode := normalizeValueMode(cfg.ValueMode)
 	scored := make([]scoredFinding, 0, len(findings))
 	for _, f := range findings {
 		sc := ScoreFinding(f, instances[f.ID], history[f.Fingerprint])
 		scored = append(scored, scoredFinding{finding: f, score: sc})
 	}
 	sort.SliceStable(scored, func(i, j int) bool {
+		if valueMode == ValueModeActionableSecurity {
+			ai, aj := valueRank(scored[i].finding), valueRank(scored[j].finding)
+			if ai != aj {
+				return ai > aj
+			}
+		}
 		// Prefer higher uncertainty, then evidence, then severity rank.
 		if scored[i].score.UncertaintyScore != scored[j].score.UncertaintyScore {
 			return scored[i].score.UncertaintyScore > scored[j].score.UncertaintyScore
@@ -206,13 +264,23 @@ func SelectCAHCandidates(findings []store.Finding, instances map[int64]store.Fin
 			continue
 		}
 
+		if valueMode == ValueModeActionableSecurity && isNoiseFinding(f) && !sc.ProtectedFromDowngrade {
+			// ponytail: do not spend AI tokens on orphan/lint/health noise.
+			sc.SkipReason = "value_mode skips noise"
+			scores = append(scores, sc)
+			continue
+		}
 		if sc.UncertaintyScore < cah.MinUncertaintyScore {
 			sc.SkipReason = "below uncertainty threshold"
 			scores = append(scores, sc)
 			continue
 		}
 		// Soft diversity: avoid flooding the packet with one noisy scanner.
-		if sourceCounts[src] >= 3 && (src == "ruff" || src == "tech_debt" || src == "static") {
+		noiseCap := 3
+		if valueMode == ValueModeActionableSecurity {
+			noiseCap = 1
+		}
+		if sourceCounts[src] >= noiseCap && (src == "ruff" || src == "tech_debt" || src == "static" || src == "graph" || src == "health") {
 			sc.SkipReason = "source diversity cap"
 			scores = append(scores, sc)
 			continue
@@ -247,6 +315,7 @@ func fillCAHCandidates(selected []store.Finding, findings []store.Finding, cah C
 	if maxTotal <= 0 {
 		maxTotal = cah.MaxCandidates
 	}
+	valueMode := normalizeValueMode(cfg.ValueMode)
 	seen := map[string]bool{}
 	sourceCounts := map[string]int{}
 	protectedCount := 0
@@ -261,6 +330,12 @@ func fillCAHCandidates(selected []store.Finding, findings []store.Finding, cah C
 	// Prefer higher severity + non-lint sources when topping up the packet.
 	remaining := append([]store.Finding(nil), findings...)
 	sort.SliceStable(remaining, func(i, j int) bool {
+		if valueMode == ValueModeActionableSecurity {
+			ai, aj := valueRank(remaining[i]), valueRank(remaining[j])
+			if ai != aj {
+				return ai > aj
+			}
+		}
 		ri, rj := severityRank(remaining[i].Severity), severityRank(remaining[j].Severity)
 		if ri != rj {
 			return ri > rj
@@ -274,8 +349,12 @@ func fillCAHCandidates(selected []store.Finding, findings []store.Finding, cah C
 		if seen[f.Fingerprint] {
 			continue
 		}
+		if valueMode == ValueModeActionableSecurity && isNoiseFinding(f) &&
+			!learning.IsProtectedFromAutoDowngrade(f.Severity, f.Category) {
+			continue
+		}
 		src := strings.ToLower(f.Source)
-		if sourceCounts[src] >= 2 && (src == "ruff" || src == "tech_debt" || src == "static") {
+		if sourceCounts[src] >= 2 && (src == "ruff" || src == "tech_debt" || src == "static" || src == "graph") {
 			continue
 		}
 		if learning.IsProtectedFromAutoDowngrade(f.Severity, f.Category) {
@@ -297,15 +376,26 @@ func fillPriority(source string) int {
 		return 5
 	case "grype", "trivy", "govulncheck":
 		return 4
-	case "graph", "checkov", "hadolint":
+	case "checkov", "hadolint":
 		return 3
-	case "static", "health":
+	case "static":
 		return 2
-	case "ruff", "tech_debt":
+	case "graph", "health", "ruff", "tech_debt":
 		return 1
 	default:
 		return 2
 	}
+}
+
+// valueRank prefers actionable security / workflow findings over orphan & lint noise.
+func valueRank(f store.Finding) int {
+	if isActionableSecurityFinding(f) {
+		return 100 + severityRank(f.Severity)
+	}
+	if isNoiseFinding(f) {
+		return severityRank(f.Severity)
+	}
+	return 40 + severityRank(f.Severity) + fillPriority(f.Source)
 }
 
 func severityRank(sev string) int {

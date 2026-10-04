@@ -60,8 +60,10 @@ type ConfigureFormValues struct {
 	EnableLinters           bool
 	EnablePerformanceChecks bool
 	EnableCodeGraph         bool
+	EnableLLMAuditors       bool
 
 	AIRecommendationsEnabled            bool
+	AIRecommendationsAutoAfterScan      bool
 	AIRecommendationsMaxTokensPerScan   int
 	AIRecommendationsTokenBudgetPerScan int
 	AIRecommendationsMaxFindingsPerScan int
@@ -225,9 +227,11 @@ func buildConfigureForm(
 		EnableHadolint:            global.EnableHadolint,
 		EnableCheckov:             global.EnableCheckov,
 		EnableLinters:             global.EnableLinters,
-		EnablePerformanceChecks:   global.EnablePerformanceChecks,
-		EnableCodeGraph:           global.EnableCodeGraph,
-		AIRecommendationsEnabled:  platform.OpenClawAIReviewEnabled,
+		EnablePerformanceChecks:          global.EnablePerformanceChecks,
+		EnableCodeGraph:                  global.EnableCodeGraph,
+		EnableLLMAuditors:                global.EnableLLMAuditors,
+		AIRecommendationsEnabled:         platform.OpenClawAIReviewEnabled,
+		AIRecommendationsAutoAfterScan:   false,
 	}
 	if f.ConfidenceGate == 0 {
 		f.ConfidenceGate = 0.75
@@ -296,8 +300,12 @@ func applySavedBools(f *ConfigureFormValues, s store.PlatformSettings) {
 	setBool(&f.EnableLinters, s.EnableLinters)
 	setBool(&f.EnablePerformanceChecks, s.EnablePerformanceChecks)
 	setBool(&f.EnableCodeGraph, s.EnableCodeGraph)
+	setBool(&f.EnableLLMAuditors, s.EnableLLMAuditors)
 	if s.AIRecommendationsEnabled != nil {
 		f.AIRecommendationsEnabled = *s.AIRecommendationsEnabled
+	}
+	if s.AIRecommendationsAutoAfterScan != nil {
+		f.AIRecommendationsAutoAfterScan = *s.AIRecommendationsAutoAfterScan
 	}
 	if s.AIRecommendationsMaxTokensPerScan != nil {
 		f.AIRecommendationsMaxTokensPerScan = *s.AIRecommendationsMaxTokensPerScan
@@ -363,7 +371,9 @@ func platformSettingsFromForm(c *gin.Context) store.PlatformSettings {
 		EnableLinters:                       formBoolPtr(c, "enable_linters"),
 		EnablePerformanceChecks:             formBoolPtr(c, "enable_performance_checks"),
 		EnableCodeGraph:                     formBoolPtr(c, "enable_code_graph"),
+		EnableLLMAuditors:                   formBoolPtr(c, "enable_llm_auditors"),
 		AIRecommendationsEnabled:            formBoolPtr(c, "ai_recommendations_enabled"),
+		AIRecommendationsAutoAfterScan:      formBoolPtr(c, "ai_recommendations_auto_after_scan"),
 		AIRecommendationsMaxTokensPerScan:   &maxTok,
 		AIRecommendationsTokenBudgetPerScan: &tokBudget,
 		AIRecommendationsMaxFindingsPerScan: &maxFindings,

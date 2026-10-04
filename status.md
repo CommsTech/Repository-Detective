@@ -1,19 +1,51 @@
 # Repository Detective - Implementation Status
 
-**Last updated:** 2026-09-27  
+**Last updated:** 2026-10-04  
 **Program:** Product Hardening & Public Beta Improvement Backlog + RD-PRODUCT/COMMERCIAL/GROWTH
+
+### AI harness hardening (2026-10-04) — ponytail-influenced
+
+| Item | Value |
+|------|-------|
+| Goal | Prevent another multi-auditor token flood; make intentional AI spend valuable |
+| Influence | [ponytail](https://github.com/DietrichGebert/ponytail) — YAGNI for AI spend, abort early, prefer actionable security over noise |
+| Cross-auditor abort | Shared cancel + `ai_harness_abort_on_first_timeout=true`; failure budget `ai_harness_max_auditor_failures_per_scan=2` |
+| AI client | `RunAuditor` single-flight + immediate cancel respect |
+| Defaults | `auto_after_scan=false`; max findings **12**; CAH candidates **6**; token budget **1200** |
+| Value mode | `ai_recommendations_value_mode=actionable_security` — prefer high/critical security + workflows; skip GRAPH-ORPHAN / HEALTH / LINT noise |
+| Preflight | Skip AI when recent `llm_auditor_timeout` / `ai_advisory_failed` high OR cheap endpoint probe fails |
+| Harness | **`rd-cah-v3`** |
+| Cost lockdown | Unchanged — `ENABLE_LLM_AUDITORS=false`, recommendations/auto-after-scan remain off |
+| Binary | Hot-swap `dist/rd-ai-harness` (static) |
+| Tests | `go test ./openclaw/ ./ai/ ./analyzers/ ./store/ ./learning/` green |
+
+### AI cost lockdown + learning upgrades (2026-10-03)
+
+| Item | Value |
+|------|-------|
+| Trigger | Overnight deep-profile CAH auditors timed out thousands of times (~2M tokens, little value) |
+| Root cause | Platform `scan_profile=deep` re-enabled auditors even with env `ENABLE_LLM_AUDITORS=false` |
+| Platform DB | `standard`, `enable_llm_auditors=false`, AI recommendations **off**, auto-after-scan **off**, depth **2** |
+| Env | `ENABLE_LLM_AUDITORS=false`, `AI_RECOMMENDATIONS_*=false/auto off`, `REMEDIATION_USE_AI=false` |
+| Cost controls | Global kill-switch; auditor fail-fast on timeout; learning events `llm_auditor_timeout`; circuit-breaker (≥25/24h) |
+| Learning upgrades | Disposition-only FP math; AI advisory ingest → soft FP events; accept `calibrate_repo_scope` → repo `report_only` rules |
+| Live recompute | Ingested **50** `ai_advisory_calibrate_suggested` events; **7** new repo calibration recommendations |
+| Binary | Hot-swap `dist/rd-ai-learning` (static); log: **deterministic-only mode** |
+| Tracking | `issues.md` § 2026-10-03 AI cost flood prevention + learning upgrades |
 
 ### OpenClaw internal AI provider (2026-09-27)
 
 | Item | Value |
 |------|-------|
-| Live container | `repository-detective:openclaw-ai-config` + hot-swapped binary (JSON repair + detached review ctx + HTTP client timeout 0); env timeout **600s** |
-| Internal AI | **`ai_provider=openclaw`** — remediations `openclaw/software-engineer`; advisory reviews currently `openclaw/software-engineer` (security-specialist available; slower ~20k bootstrap) |
+| Live container | Hot-swapped binary **`00de501e`** (JSON repair + detached review ctx + HTTP client timeout 0); `/health` healthy; env timeout **600s** |
+| Internal AI | **`ai_provider=openclaw`** — remediations + advisory `openclaw/software-engineer` |
 | Sessions | Stable `user` ids (`rd:ai-review:*`, `rd:remediation:*`) |
-| Harness | **`rd-cah-v2`** + `RepairRelaxedJSON` (escapes raw newlines in model JSON strings) |
-| RD fixes shipped | Manual review no longer cancels on client disconnect; review status always persisted; AI HTTP client no longer hard-caps at 120s; WriteTimeout 600s |
+| Harness | **`rd-cah-v2`** + `RepairRelaxedJSON` |
+| RD fixes shipped | Detached review ctx; persist terminal status; Client.Timeout 0; WriteTimeout 600s; JSON newline repair — pushed Gitea `00de501e` / GitHub cherry-pick |
 | AI recommendations | Enabled; timeout **600s**; CAH on; auto after scan |
-| Gateway (`192.168.255.11:18789`) | Health can be live while chat fails with **StateDatabaseCoordinatorContentionError** / agent-db cleanup failures when Codex swarm + cron contend for state-lifecycle. Cron + Codex plugin **temporarily disabled** for stability. Tiny chats work when clean (~5–110s); full 10-finding reviews often hang or EOF under load. |
+| Gateway (`192.168.255.11:18789`) | **LISTEN + health live** after stable restart (no mid-start config edit). Cron + Codex **disabled**. Prior exit 78 was “migration inputs changed during startup”. Agent-db integrity still ~7–8 min cold boot. |
+| Host disk (RD) | **79%** after `docker image prune -af` (~16.5GB reclaimed) |
+| Legacy unit | `bugbot.service` still enabled/active (`sleep infinity`); `sudo systemctl disable --now` blocked (password required) |
 | Tracking | See `issues.md` § OpenClaw gateway chat + RD resilience |
 
 ### Fleet remediation batch (2026-09-27)
@@ -34,9 +66,9 @@
 |------|-------|
 | Live container | `repository-detective:ai-login-fix` healthy; commit `be1255e3`; cookie Secure follows `http` public_url; OpenClaw advisory **enabled** (timeout 180s, auto after scan) |
 | Tools | **11/11** (Trivy temporarily disabled for TLS CA failure; Grype on) |
-| Host disk | **85%** (~38G free) after FP gzip + image prune; ~20GB images still reclaimable |
-| Legacy unit | `bugbot.service` idle via `sleep infinity` (NRestarts held); still enabled — needs `sudo systemctl disable` |
-| AI recommendations | **Enabled** — timeout 180s, model `openclaw/software-engineer`, auto_after_scan; OpenClaw chat measured ~82s for tiny prompt |
+| Host disk | **79%** (~51G free) after further `docker image prune -af` (+16.5GB) |
+| Legacy unit | `bugbot.service` idle via `sleep infinity` (NRestarts held); still enabled — needs `sudo systemctl disable --now` (password) |
+| AI recommendations | **Enabled** — timeout **600s**, model `openclaw/software-engineer`; tiny chat **~113s** verified post-restart |
 | GitHub token | Rotated from `gh auth` |
 | Calibration | Accepted **116** proposed; active repo rules increased (Ruff fleet +116) |
 | Fleet noise | LINT-RUFF demoted to info + report_only rules; `external_issues` open **5495→~1677** |

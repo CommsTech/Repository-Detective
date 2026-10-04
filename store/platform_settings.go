@@ -38,8 +38,10 @@ type PlatformSettings struct {
 	EnableLinters           *bool `json:"enable_linters,omitempty"`
 	EnablePerformanceChecks *bool `json:"enable_performance_checks,omitempty"`
 	EnableCodeGraph         *bool `json:"enable_code_graph,omitempty"`
+	EnableLLMAuditors       *bool `json:"enable_llm_auditors,omitempty"`
 
 	AIRecommendationsEnabled            *bool `json:"ai_recommendations_enabled,omitempty"`
+	AIRecommendationsAutoAfterScan      *bool `json:"ai_recommendations_auto_after_scan,omitempty"`
 	AIRecommendationsMaxTokensPerScan   *int  `json:"ai_recommendations_max_tokens_per_scan,omitempty"`
 	AIRecommendationsTokenBudgetPerScan *int  `json:"ai_recommendations_token_budget_per_scan,omitempty"`
 	AIRecommendationsMaxFindingsPerScan *int  `json:"ai_recommendations_max_findings_per_scan,omitempty"`
@@ -143,6 +145,7 @@ func ApplyPlatformSettingsToGlobal(base GlobalSettingsSnapshot, s PlatformSettin
 	applyBool(&out.EnableLinters, s.EnableLinters)
 	applyBool(&out.EnablePerformanceChecks, s.EnablePerformanceChecks)
 	applyBool(&out.EnableCodeGraph, s.EnableCodeGraph)
+	applyBool(&out.EnableLLMAuditors, s.EnableLLMAuditors)
 	return out
 }
 

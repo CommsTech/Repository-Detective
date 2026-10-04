@@ -50,20 +50,22 @@ func NewClient(cfg Config, legacy LegacyConfig, logger *logrus.Logger) (*Client,
 	logger.Infof("AI provider: %s (model=%s, transport=%s)", resolved.Provider, resolved.Model, transport.Name())
 
 	return &Client{
-		transport: transport,
-		provider:  resolved.Provider,
-		model:     resolved.Model,
-		logger:    logger,
+		transport:   transport,
+		provider:    resolved.Provider,
+		model:       resolved.Model,
+		logger:      logger,
+		auditorGate: make(chan struct{}, 1),
 	}, nil
 }
 
 // NewClientWithTransport is primarily for tests.
 func NewClientWithTransport(transport ChatTransport, model string, logger *logrus.Logger) *Client {
 	return &Client{
-		transport: transport,
-		provider:  ProviderOpenAI,
-		model:     model,
-		logger:    logger,
+		transport:   transport,
+		provider:    ProviderOpenAI,
+		model:       model,
+		logger:      logger,
+		auditorGate: make(chan struct{}, 1),
 	}
 }
 

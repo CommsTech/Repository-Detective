@@ -166,6 +166,9 @@ git.commsnet.org/commstech/repository-detective
 - Per-scanner enables (`enable_trivy`, `enable_gitleaks`, …) and scan profiles (Light/Standard/Deep/Custom)
 - Timeouts: `analysis_timeout_seconds`, `scanner_timeout_seconds`
 - Optional AI: `ai_provider`, `ai_base_url`, `ai_api_key`, `ai_model` (off by default; `needsAIProvider()` only when LLM auditors enabled at depth ≥ 3)
+- AI cost kill-switch: global/env `enable_llm_auditors=false` always wins over Deep profile and per-repo auditor enables (`enforceGlobalLLMAuditorKillSwitch`). Platform Configure also persists `enable_llm_auditors` + AI recommendation / auto-after-scan toggles.
+- Learning loop: FP rates use disposition events only (not `scanner_failed`). Pending AI `calibrate_repo_scope`/`leave_visible` ingest as soft FP evidence; accepting AI calibrate installs repo `report_only` rules (non-security). Auditor timeouts emit learning events and trip a 24h circuit-breaker.
+- AI harness (`rd-cah-v3`, ponytail-influenced): cross-auditor shared cancel + abort-on-first-timeout; `RunAuditor` single-flight; lean CAH budgets; `ai_recommendations_value_mode=actionable_security` prefers security/workflow findings over GRAPH-ORPHAN/HEALTH/LINT noise; preflight skips AI when recent timeout/advisory-fail learning counts are high or the endpoint probe fails. `ai_recommendations_auto_after_scan` defaults **false**.
 - Include/exclude and skip patterns for repositories and files
 
 ### Public beta support model
