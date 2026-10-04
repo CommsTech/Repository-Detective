@@ -1,9 +1,10 @@
 # Verify a Repository Detective release
 
-This guide shows how to verify **`v0.1.0-beta.3`** (accepted public-beta baseline).
+Latest tagged beta: **`v0.1.0-beta.4`** ([release notes](release/GITHUB_RELEASE_v0.1.0-beta.4.md)) — binary assets + harness/security fixes.  
+The section below remains the **digest-proven** container baseline from **`v0.1.0-beta.3`** until beta.4 publishes a matching OCI digest/SBOM.
 
-Signing status for this release: **CHECKSUM_ONLY** (OCI digest + SBOM checksums).  
-Cryptographic image/SBOM signing is **not** implemented for beta.3 — see decision notes below.
+Signing status: **CHECKSUM_ONLY** (OCI digest + SBOM checksums when published).  
+Cryptographic image/SBOM signing is **not** implemented yet — see decision notes below.
 
 ## 1. Identity of the release
 
