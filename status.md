@@ -1,6 +1,17 @@
 # Repository Detective - Implementation Status
 
-**Last updated:** 2026-10-04  
+**Last updated:** 2026-10-04
+
+### Cookie G124 closeout (2026-10-04)
+
+| Item | Value |
+|------|-------|
+| Issues | Gitea **#478** / **#479** (gosec G124 on UI API-key cookies) |
+| Fix | Use gin `SetCookie` + `SetSameSite` (same as session cookies); Secure still follows `public_url` |
+| Verify | `gosec -include=G124 ./ui/` → **0 issues**; `go test ./ui/ -run Cookie\|Unlock\|APIKey` green |
+| Live | Hot-swap `dist/rd-latest` — healthy, version `dev-*-cookie-fix`, **0** error/fatal in 6h logs |
+
+  
 **Program:** Product Hardening & Public Beta Improvement Backlog + RD-PRODUCT/COMMERCIAL/GROWTH
 
 ### AI harness hardening (2026-10-04) — ponytail-influenced

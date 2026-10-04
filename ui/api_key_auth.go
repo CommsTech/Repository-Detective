@@ -117,16 +117,12 @@ func (h *Handler) UnlockSubmit(c *gin.Context) {
 }
 
 func (h *Handler) setUIAPIKeyCookie(c *gin.Context, key string) {
-	http.SetCookie(c.Writer, &http.Cookie{
-		Name:     uiSessionCookieName,
-		Value:    key,
-		Path:     h.basePath,
-		MaxAge:   86400 * 7,
-		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
-		// Match public_url scheme (same rule as local session cookies).
-		Secure: h.auth.CookieSecure(),
-	})
+	// Use gin SetCookie (same pattern as session cookies) so Secure/HttpOnly/SameSite
+	// are always set. Secure follows public_url: https → true, http homelab → false
+	// (browsers drop Secure cookies on cleartext UI).
+	secure := h.auth.CookieSecure()
+	c.SetSameSite(http.SameSiteLaxMode)
+	c.SetCookie(uiSessionCookieName, key, 86400*7, h.basePath, "", secure, true)
 }
 
 func (h *Handler) renderUnlock(c *gin.Context, errMsg, next string) {

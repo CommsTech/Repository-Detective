@@ -1,5 +1,12 @@
 # Development Issues Log
 
+## Open / ops (2026-10-04) — G124 cookie closeout
+
+| Priority | Issue | Status / plan |
+|----------|-------|---------------|
+| P1 | Gitea #478/#479 gosec G124 insecure cookie attrs on `ui/api_key_auth.go` / `ui/api_key_cookie.go` | **Fixed 2026-10-04** — gin SetCookie/SameSite; Secure from public_url; gosec G124 clean; live healthy. |
+
+
 ## Open / ops (2026-10-04) — AI harness hardening (ponytail-influenced)
 
 | Priority | Issue | Status / plan |

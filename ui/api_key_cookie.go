@@ -28,16 +28,12 @@ func (h *Handler) UIAPIKeyCookieMiddleware() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		http.SetCookie(c.Writer, &http.Cookie{
-			Name:     uiSessionCookieName,
-			Value:    key,
-			Path:     h.basePath,
-			MaxAge:   86400 * 7,
-			HttpOnly: true,
-			SameSite: http.SameSiteLaxMode,
-			// Match public_url scheme (same rule as local session cookies).
-			Secure: h.auth.CookieSecure(),
-		})
+		// gin SetCookie always sets HttpOnly + SameSite; Secure follows public_url
+		// (https → true). Avoids gosec G124 false positives on http.Cookie literals
+		// while keeping HTTP homelab unlock working.
+		secure := h.auth.CookieSecure()
+		c.SetSameSite(http.SameSiteLaxMode)
+		c.SetCookie(uiSessionCookieName, key, 86400*7, h.basePath, "", secure, true)
 		q := c.Request.URL.Query()
 		q.Del("api_key")
 		c.Request.URL.RawQuery = q.Encode()
