@@ -1,0 +1,30 @@
+{{define "audit.html"}}
+<!DOCTYPE html><html lang="en"><head>{{template "head" .}}</head><body class="rd-app">
+{{template "nav" .}}
+<div class="rd-card">
+  <h2>Operator audit trail</h2>
+  {{if .Data.Upsell}}
+  <div class="rd-alert">{{.Data.Upsell}}</div>
+  {{else}}
+  <p class="rd-muted">Append-only auth and operator events (login, user creation, bootstrap).</p>
+  <table class="rd-table">
+    <thead><tr><th>When (UTC)</th><th>Event</th><th>Email</th><th>IP</th><th>Details</th></tr></thead>
+    <tbody>
+    {{range .Data.Events}}
+      <tr>
+        <td>{{.CreatedAt.Format "2006-01-02 15:04"}}</td>
+        <td><code>{{.EventType}}</code></td>
+        <td>{{.Email}}</td>
+        <td>{{.IPAddress}}</td>
+        <td class="rd-muted">{{.Details}}</td>
+      </tr>
+    {{else}}
+      <tr><td colspan="5" class="rd-muted">No audit events recorded yet.</td></tr>
+    {{end}}
+    </tbody>
+  </table>
+  {{end}}
+</div>
+{{template "foot" .}}
+</body></html>
+{{end}}

@@ -1,0 +1,32 @@
+name: Feature request
+about: Suggest an enhancement
+labels:
+  - type/feature
+  - status/needs-triage
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or opportunity
+      description: What operator pain does this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Suggested priority
+      options:
+        - priority/p0
+        - priority/p1
+        - priority/p2
+        - priority/p3

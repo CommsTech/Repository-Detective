@@ -1,0 +1,833 @@
+# Repository Detective - Implementation Status
+
+**Last updated:** 2026-10-10
+
+### Release v0.1.0-beta.5 (2026-10-10) — COMPLETE
+
+| Item | Value |
+|------|-------|
+| Tag | `v0.1.0-beta.5` (prerelease) @ `ffdb1013` (+ Go 1.26 follow-ups `589421b2` / `7fe68f03`) |
+| Gitea release | https://git.commsnet.org/commstech/repository-detective/releases/tag/v0.1.0-beta.5 (7 binary assets) |
+| GitHub release | https://github.com/CommsTech/Repository-Detective/releases/tag/v0.1.0-beta.5 (7 binary assets) |
+| Container digest | `sha256:e26caafb19e3252230119929bd89681feb6b91166b9427c8253bc0e372130215` |
+| Registries | Gitea Package Registry + GHCR (`:v0.1.0-beta.5`, `:all-in-one`, `:latest`) |
+| CAH fixes | Prompt-injection trust boundary + untrusted-file delimiters; in-process issue-create mutex; SQLite test `MEMORY` before WAL |
+| Verify | `go vet` + `go test` 53 pkgs PASS; `go test -race ./issues` PASS |
+| Live dogfood | `RD_IMAGE=repository-detective:v0.1.0-beta.5` — healthy, tools **12/12**, version `v0.1.0-beta.5` |
+| Posture | Issue filing **on** by default (`auto_create_issues: true`); severity/confidence gates apply; cross-process forge dedupe **NOT_PROVEN** |
+| Notes | [GITHUB_RELEASE_v0.1.0-beta.5.md](docs/release/GITHUB_RELEASE_v0.1.0-beta.5.md) |
+
+### SBOM missing banner + noisy-rule audit (2026-10-10)
+
+| Item | Value |
+|------|-------|
+| UI bug | `sbom_no_supported_manifest` (empty path) incorrectly showed **SBOM file missing on disk** — fixed via `classifySBOMAvailability` |
+| Manifest gap | Added `pyproject.toml` / `setup.py` / `setup.cfg` to SBOM supported manifests; rescanned **netmapper** → durable `/app/data/sbom/25/.../sbom.syft.cdx.json` |
+| Fleet | **0** repos now show the missing-on-disk banner |
+| Noisy rules | G104/HEALTH-READ-ALL/OPT-HTTP mostly tooling noise; **U1000 is NOT a true FP** (unused code / stale) — blocked from auto-apply; 14 stale U1000 marked resolved |
+
+### Self-scan 141 + AI-assisted learning (2026-10-10)
+
+| Item | Value |
+|------|-------|
+| Symptom | UI/scan reported **141 findings** on Repository-Detective; DB open was 0 (prior FP closeout) then rescan opened **19** including high `CVE-2026-78669` |
+| Valid fix | Bump `golang.org/x/net` **v0.58.0 → v0.60.0** (Go toolchain 1.26); SBOM durable dir **0750**; doctor `FormatHuman` checks write errors; mcpbridge shared HTTP client |
+| Learning | Rule-aware accept allows informational gosec `G104`/`G304`/`G204` despite category=security; AI advisory ingest marks `ingested_for_learning`; post-AI-review triggers calibration recompute; auto-apply **171** safe repo calibrations |
+| AI assist | `AI_RECOMMENDATIONS_ENABLED=true` + `AUTO_AFTER_SCAN=true` (tight budget, auditors still off); dry-run scans allowed for advisory learning |
+| Live | Image `repository-detective:learning-ai-assist` / commit `5685265e+`; `/health` tools **12/12** |
+
+### 24h ops pass (2026-10-10)
+
+| Item | Value |
+|------|-------|
+| Logs (24h) | No `error`/`fatal` lines; warnings: Trivy timeouts/DB mirror, gitleaks-history clone timeout, empty workspace |
+| Doctor | Trivy re-enabled → overall **DEGRADED** (not NOT_READY); Trivy **PASS** |
+| Learning | Accepted **169** proposed calibrations; recompute → 148 new repo recommendations; known-safe QUAL-DEBUG docs |
+| Remediation | AI remediation enabled; clone_url forge bug fixed; Trivy DS029 auto-PR path proven (`Wave_Analyser` **#56**) |
+| External PRs | Wave #55/#56, Wifi_Collector #32 (cryptography), optouter #1536 (PyJWT/multipart/lxml) |
+| Binary | `dist/rd-24h-ops` / `rd-latest` hot-swapped; container recreated with `.env` |
+
+### Self-scan closeout — repository-detective (2026-10-08)
+
+| Item | Value |
+|------|-------|
+| Scope | All open findings for repo_id **1** (`commstech/Repository-Detective`), not only Gitea-filed issues |
+| Before | **240 open** (info-heavy gosec/static/golangci/health noise + intentional `examples/vulnerable-demo` CVE) |
+| After | **0 open**; **267** `false_positive`; **240** new learning events; calibration recompute + repo-1 recommendations accepted |
+| Code | Known-safe expansions (`G304` tooling paths, nested-loop docs/LICENSE, golangci export-data, calibration self-ref, `.env.example` comments); `scripts/selfscan-fp-closeout.py` |
+| Verify | Packages `graph/store/ui/orch/e2e/calibration` compile clean; live `/health` OK after hot-swap |
+
+### Dark-mode scan refresh flash (2026-10-08)
+
+| Item | Value |
+|------|-------|
+| Symptom | Running scan page (`/ui/scans/...`) auto-refreshed every 5s; dark mode flashed white each cycle |
+| Root cause | `window.location.reload()` discarded the document; browser painted default white before theme bootstrap |
+| Fix | Soft refresh via `fetch` + replace `#main-content`; FOUC boot style `rd-theme-boot` in `layout.html` |
+| Binary | Hot-swap `dist/rd-dark-flash-fix` / `rd-latest` |
+| Verify | Live `/ui/static/app.js` serves `softRefreshScanPage`; authenticated UI head contains `rd-theme-boot` before `theme.css` |
+
+### SBOM durable persist fix (2026-10-08)
+
+| Item | Value |
+|------|-------|
+| Symptom | UI `/ui/repos/3/sbom` (OpenClaw-Config): metadata present, file missing; fleet-wide latest artifacts pointed at `/app/data/tmp/...` |
+| Root cause | `defer prepared.Cleanup()` deleted `.rd-sbom` before `persistScanSBOM`; also `data/sbom` not writable by uid 1001 |
+| Fix | Persist in `analyzers.Engine.Scan` before cleanup (`SbomDataRoot` + `WithRepositoryID`); nested manifest detection; chown `data/sbom` → 1001 |
+| Binary | Hot-swap `dist/rd-sbom-persist` / `rd-latest` |
+| Verify | OpenClaw-Config `9cd0114d3808e355` → durable file present; UI `/ui/repos/3/sbom` no missing-file warning; download 547 CycloneDX components |
+
+### AMMBER findings vs Gitea issues (2026-10-08)
+
+| Item | Value |
+|------|-------|
+| Symptom | `/ui/findings?repo_id=31` showed many open rows; Gitea `commstech/AMMBER/issues` showed almost none open |
+| Root cause | Open **findings** are internal RD records (397). Forge filing is gated (`severity_gate=high`, `confidence_gate=0.75`), so most never become Gitea issues. Separately, 7 mapped issues were closed on Gitea but still `open` in SQLite. |
+| Live Gitea open | **2** human issues (#209, #226) — not RD-filed |
+| After sync | `forge_open_issues=0` for repo 31; stale mappings #214–#223 marked closed |
+| Code | `issuelink.RefreshExternalIssueStates` + `gitea/github GetIssue`; runs before backfill on scan; findings UI clarifies findings ≠ forge issues |
+
+### CI recovery + smoke (2026-10-05)
+
+| Item | Value |
+|------|-------|
+| gofmt `-s` | Fixed on `fb340325` (13 files) — Format check green |
+| Fixture CI fail | `TestBenchmarkFixtureExpectations` missed `benchmark/fixture/vendor/minified.js` (root `vendor/` gitignore) — tracked on `aff4d2a1` / GitHub `99c69686` |
+| Live smoke | Container healthy (`60a49f53-sbom`); `/health` ready; UI unlock → dashboard/findings/repos/reports/doctor/scans/SBOM **200**; tools **11/11** |
+| Tip CI | **`aff4d2a1` `#10836` success** on RemoteSupport (gofmt/vet/staticcheck/tests/docker). GitHub mirror `99c69686` |
+| Backlog files | P1/P2 docs remain local-only (not filed as Gitea issues) |
+
+### Self-heal + durable SBOM (2026-10-05) — COMPLETE
+
+| Item | Value |
+|------|-------|
+| Goal | SBOM artifacts survive scan workspace cleanup; UI/report/download honest when file missing |
+| Code | `sbom/persist.go` durable copy under `data/sbom/<repo>/<scan>/`; `main_sbom.go` wired; UI SBOM + repo report panels; dashboard summary cache **30s** |
+| Live | Hot-swap binary **`60a49f53-sbom`** / version **`dev-sbom-durable`** — `/health` **healthy** |
+| Manual verify | CycloneDX **`sbom-go.cdx.json`** (49158 B, **55** components) at `data/sbom/1/manual-verify/`; DB `sbom_artifacts` scan **`manual-verify-sbom`** |
+| UI proof | `/ui/repos/1/sbom` **200**; download **200** non-empty JSON; `/ui/repos/1/report` SBOM section; `/ui` warm **~0.52s** (cold ~9.4s) |
+| Dogfood | Learning pass FP'd **17** findings → actionable open **0**; Gitea **#480** closed |
+| Forge | Gitea + GitHub push after commit (no force) |
+
+### Release v0.1.0-beta.4 (2026-10-04) — COMPLETE
+
+| Item | Value |
+|------|-------|
+| Tag | `v0.1.0-beta.4` (prerelease) |
+| Gitea release | https://git.commsnet.org/commstech/repository-detective/releases/tag/v0.1.0-beta.4 (7 binary assets) |
+| GitHub release | https://github.com/CommsTech/Repository-Detective/releases/tag/v0.1.0-beta.4 (7 binary assets) |
+| Container digest | `sha256:8d6f224b66870c761c4b1b3f87b74bad98dae215edaba3a381c871d7ba1264ea` |
+| Registries | Gitea Package Registry + GHCR (`:v0.1.0-beta.4`, `:all-in-one`, `:latest`) |
+| Image tip | `63672b5a` (product `0c4ceed4` + docs + govulncheck **v1.7.0** Docker pin for Go 1.25) |
+| Live dogfood | `RD_IMAGE=repository-detective:v0.1.0-beta.4` — healthy, tools **11/11**, **0** error/fatal since cutover |
+| Product issues | Gitea open **0** (GitHub welcome-only issue remains) |
+| Notes | Dockerfile no longer uses `govulncheck@latest` (needs Go 1.26) or `v1.1.3` (broken on Go 1.25 x/tools) |
+
+### Cookie G124 closeout (2026-10-04)
+
+| Item | Value |
+|------|-------|
+| Issues | Gitea **#478** / **#479** (gosec G124 on UI API-key cookies) |
+| Fix | Use gin `SetCookie` + `SetSameSite` (same as session cookies); Secure still follows `public_url` |
+| Verify | `gosec -include=G124 ./ui/` → **0 issues**; `go test ./ui/ -run Cookie\|Unlock\|APIKey` green |
+| Live | Hot-swap `dist/rd-latest` — healthy, version `dev-*-cookie-fix`, **0** error/fatal in 6h logs |
+
+  
+**Program:** Product Hardening & Public Beta Improvement Backlog + RD-PRODUCT/COMMERCIAL/GROWTH
+
+### AI harness hardening (2026-10-04) — ponytail-influenced
+
+| Item | Value |
+|------|-------|
+| Goal | Prevent another multi-auditor token flood; make intentional AI spend valuable |
+| Influence | [ponytail](https://github.com/DietrichGebert/ponytail) — YAGNI for AI spend, abort early, prefer actionable security over noise |
+| Cross-auditor abort | Shared cancel + `ai_harness_abort_on_first_timeout=true`; failure budget `ai_harness_max_auditor_failures_per_scan=2` |
+| AI client | `RunAuditor` single-flight + immediate cancel respect |
+| Defaults | `auto_after_scan=false`; max findings **12**; CAH candidates **6**; token budget **1200** |
+| Value mode | `ai_recommendations_value_mode=actionable_security` — prefer high/critical security + workflows; skip GRAPH-ORPHAN / HEALTH / LINT noise |
+| Preflight | Skip AI when recent `llm_auditor_timeout` / `ai_advisory_failed` high OR cheap endpoint probe fails |
+| Harness | **`rd-cah-v3`** |
+| Cost lockdown | Unchanged — `ENABLE_LLM_AUDITORS=false`, recommendations/auto-after-scan remain off |
+| Binary | Hot-swap `dist/rd-ai-harness` (static) |
+| Tests | `go test ./openclaw/ ./ai/ ./analyzers/ ./store/ ./learning/` green |
+
+### AI cost lockdown + learning upgrades (2026-10-03)
+
+| Item | Value |
+|------|-------|
+| Trigger | Overnight deep-profile CAH auditors timed out thousands of times (~2M tokens, little value) |
+| Root cause | Platform `scan_profile=deep` re-enabled auditors even with env `ENABLE_LLM_AUDITORS=false` |
+| Platform DB | `standard`, `enable_llm_auditors=false`, AI recommendations **off**, auto-after-scan **off**, depth **2** |
+| Env | `ENABLE_LLM_AUDITORS=false`, `AI_RECOMMENDATIONS_*=false/auto off`, `REMEDIATION_USE_AI=false` |
+| Cost controls | Global kill-switch; auditor fail-fast on timeout; learning events `llm_auditor_timeout`; circuit-breaker (≥25/24h) |
+| Learning upgrades | Disposition-only FP math; AI advisory ingest → soft FP events; accept `calibrate_repo_scope` → repo `report_only` rules |
+| Live recompute | Ingested **50** `ai_advisory_calibrate_suggested` events; **7** new repo calibration recommendations |
+| Binary | Hot-swap `dist/rd-ai-learning` (static); log: **deterministic-only mode** |
+| Tracking | `issues.md` § 2026-10-03 AI cost flood prevention + learning upgrades |
+
+### OpenClaw internal AI provider (2026-09-27)
+
+| Item | Value |
+|------|-------|
+| Live container | Hot-swapped binary **`00de501e`** (JSON repair + detached review ctx + HTTP client timeout 0); `/health` healthy; env timeout **600s** |
+| Internal AI | **`ai_provider=openclaw`** — remediations + advisory `openclaw/software-engineer` |
+| Sessions | Stable `user` ids (`rd:ai-review:*`, `rd:remediation:*`) |
+| Harness | **`rd-cah-v2`** + `RepairRelaxedJSON` |
+| RD fixes shipped | Detached review ctx; persist terminal status; Client.Timeout 0; WriteTimeout 600s; JSON newline repair — pushed Gitea `00de501e` / GitHub cherry-pick |
+| AI recommendations | Enabled; timeout **600s**; CAH on; auto after scan |
+| Gateway (`192.168.255.11:18789`) | **LISTEN + health live** after stable restart (no mid-start config edit). Cron + Codex **disabled**. Prior exit 78 was “migration inputs changed during startup”. Agent-db integrity still ~7–8 min cold boot. |
+| Host disk (RD) | **79%** after `docker image prune -af` (~16.5GB reclaimed) |
+| Legacy unit | `bugbot.service` still enabled/active (`sleep infinity`); `sudo systemctl disable --now` blocked (password required) |
+| Tracking | See `issues.md` § OpenClaw gateway chat + RD resilience |
+
+### Fleet remediation batch (2026-09-27)
+
+| Item | Value |
+|------|-------|
+| OpenClaw-Config | `master@4139144` — form-data override + env tokens + CMB script rename |
+| Business | `main@4cbf5f3` — example API key placeholders |
+| Validated FP | 11 example-path + 1 HTML SQL-concat |
+| Resolved verified | 19 HGAI stale `config.yaml` + OpenClaw form-data/token findings |
+| Learning events | FP/TP events recorded for calibration |
+| Rescans | HGAI `42ae4d99eee18aa5` completed; OC `e91952f0ef87094d` in progress |
+| Action required | **Rotate** Wiki.js (`WIKI_JS_TOKEN`) and Home Assistant (`HA_TOKEN`) — previous values lived in git |
+
+### Ops health check (2026-09-27)
+
+| Item | Value |
+|------|-------|
+| Live container | `repository-detective:ai-login-fix` healthy; commit `be1255e3`; cookie Secure follows `http` public_url; OpenClaw advisory **enabled** (timeout 180s, auto after scan) |
+| Tools | **11/11** (Trivy temporarily disabled for TLS CA failure; Grype on) |
+| Host disk | **79%** (~51G free) after further `docker image prune -af` (+16.5GB) |
+| Legacy unit | `bugbot.service` idle via `sleep infinity` (NRestarts held); still enabled — needs `sudo systemctl disable --now` (password) |
+| AI recommendations | **Enabled** — timeout **600s**, model `openclaw/software-engineer`; tiny chat **~113s** verified post-restart |
+| GitHub token | Rotated from `gh auth` |
+| Calibration | Accepted **116** proposed; active repo rules increased (Ruff fleet +116) |
+| Fleet noise | LINT-RUFF demoted to info + report_only rules; `external_issues` open **5495→~1677** |
+| Remaining real | Rotate Wiki.js + HA tokens after OpenClaw-Config tip scrub; continue OpenClaw gitleaks/script secrets + dep CVEs; watch OC rescan `e91952f0ef87094d` |
+| Tracking | See `issues.md` § Fixed (2026-09-27) — ops remediation batch |
+
+### Ops health check (2026-09-27 morning inventory — superseded by remediation above)
+
+| Item | Value |
+|------|-------|
+| Live container | `repository-detective` Up 6d **healthy**; `/health` version `gitguardian-parity`, commit `f99aafef`, tools 12/12 |
+| Host disk | **96%** used (~12G free) — same risk class as prior outages |
+| Legacy unit | `bugbot.service` crash-looping (~53k restarts); live app is Docker compose on `:8081` |
+| Log errors (48h) | 2× dashboard `context canceled`; heavy AI-review + Trivy TLS warnings |
+| Fleet open findings | 22,473 (crit 2 / high 1,046 / med 11,262); **~45%** of med+high is Ruff lint |
+| Forge mappings | `external_issues` open **5,495** / closed 507 |
+| Calibration backlog | **166** proposed (mostly GRAPH/QUAL/REL/OPT → `report_only`); **423** accepted |
+| Product forge issues | Gitea **0** open; GitHub **1** welcome-only |
+| Tracking | See `issues.md` § Open / ops (2026-09-27) |
+
+### GitGuardian parity — secret detection (2026-09-12)
+
+| Item | Value |
+|------|-------|
+| Root cause | Allowlist-only gitleaks config → **zero detectors**; `_test.go` allowlist hid GitHub `openai_api_key` alert path |
+| Evidence | Container repro: default rules = 2 leaks; `/app/config/gitleaks.toml` (old) = 0; fixed `useDefault` = finds leaks including test files |
+| Code | `config/gitleaks.toml`, `.gitleaks.toml`, `scanners/gitleaks.go` (`effectiveGitleaksConfig`), `findinglearn/priority.go`, `profile/reporting.go`, defaults |
+| Tests | `go test ./scanners/ ./findinglearn/ ./profile/` green |
+| Live config bind-mount | `/home/commstech/Bugbot/config` → `/app/config` (fixed TOML live immediately) |
+| Redeploy | Image `repository-detective:upgrade-candidate` / `dev-gitguardian-parity`; `/health` version **`gitguardian-parity`**, commit **`f99aafef`**, tools **12/12** |
+| Remaining | Optional webhook full-tree secret workspace for push/PR changed-file mode; commit+push when ready |
+
+### Six leftover forge issues closeout (2026-09-08) — CLEAN
+
+| Item | Value |
+|------|-------|
+| Closed | **#472–#477** (`source/repository-detective`) — all `resolved_verified` |
+| Fingerprints | `rd-aae43819c7490673` G122 · `rd-62a295232294fe4b` G306 · `rd-f1181d8578655061` SC3040 · `rd-ef41c67eb61ad790` SC1078 · `rd-c010c291a0dfff22` SC2046 · `rd-f625584236ba047c` G115 |
+| Code | `os.OpenRoot` sandbox chmod; SBOM `0o600`; drop `pipefail`; wiki heredoc die; mapfile-quoted staticcheck; no rune→byte |
+| Script | `scripts/close-six-source-rd-issues.py` |
+| Verify scan | **`701dc34f7571c79f`** deep (completed) |
+| Open actionable (high/med/critical) | **0** |
+| Open Gitea `source/repository-detective` | **0** |
+| Open Gitea `repository-detective` | **0** |
+| Gitea / local tip | **`d2da8e8e`** (code fix **`846adefe`**) |
+| GitHub sanitized tip | **`8a83757`** |
+| Live `/health` commit | **`846adefe`** healthy tools 12/12 |
+
+### Self-scan clean loop (2026-09-08) — CLEAN
+
+| Item | Value |
+|------|-------|
+| Live | `repository-detective:upgrade-candidate` **`f298c426`** healthy tools 12/12 |
+| Cycle 1 | **`73759e3053198342`** deep — workflow/SHA/script/knownsafe fixes |
+| Cycle 2 | **`0475147f3a913f1f`** deep — only intentional vulnerable-demo left; forge **0** |
+| Cycle 3 | **`d6fc334ca4c28dd4`** deep — forge **0**; disposition persist path fixed after |
+| Open actionable (high/med) | **0** (info 175 / low 11 OK; demo CVE = false_positive) |
+| Gitea tip | **`f298c426`** |
+| GitHub sanitized tip | **`84c2b7d`** (same tree `0569444`) |
+| Open Gitea `repository-detective` issues | **0** |
+
+
+### Remaining-26 closeout — perms / Docker / cookie / FP (2026-09-08)
+
+| Item | Value |
+|------|-------|
+| Repo | `commstech/repository-detective` on `https://git.commsnet.org` |
+| Closed | **26** / **26** (0 API errors; labeled open after = **0**) |
+| Code fixes | G301/G302/G306 → 0750/0640/0400; G124 `Secure: true`; Docker HEALTHCHECK + CKV skips; CKV_GHA_7 documented skip |
+| Known-safe / FP | G118 WithoutCancel; HEALTH-FATAL-EXIT doctor CLI; REL-INTERNAL privacy localhost; CKV_SECRET_6 template |
+| Labels | `resolved-verified` (code fixed) · `false-positive` / `suppressed` (calibrated) |
+| DB | findings → resolved_verified/false_positive/suppressed; `external_issues` closed; +6 `repo_calibration_rules` (no broad G301) |
+| Backup | `deployment-backups/pre-close26-20260908T210032Z/` |
+| Tests | `go test ./calibration/ ./ui/ ./sbom/ ./runner/ ./preinstall/ ./scanners/ -count=1` OK |
+| Shipped | Gitea **`261c7639`**; sanitized GitHub tip **`3cbe645`**; live `/health` commit **`261c7639`** |
+
+### Forge issue closeout — remediations-linked self-scan (2026-09-08)
+
+| Item | Value |
+|------|-------|
+| Repo | `commstech/repository-detective` on `https://git.commsnet.org` |
+| Open before | **113** (`repository-detective` label) |
+| Closed (wave 1) | **87** (0 API errors) |
+| Then remaining | **26** → closed in wave 2 (see above); labeled open = **0** |
+| Close buckets (wave 1) | calibrated known-FP 48 · code-fixed lint 24 · store G201/G202 7 · obsolete Code Review Summary 6 · shell-injection fixed 2 |
+| Inventory | [docs/dogfood-reports/open-repository-detective-issues-inventory-2026-09-08.md](docs/dogfood-reports/open-repository-detective-issues-inventory-2026-09-08.md) |
+| Script | `scripts/close-remediated-selfscan-issues.py` |
+
+### Known-safe / repo routing overlay (2026-09-08)
+
+| Item | Value |
+|------|-------|
+| Shipped | commit **`aaa3efe4`** (Gitea + sanitized GitHub `a29d47ea`) |
+| Live | `repository-detective:upgrade-candidate` — `/health` commit **`aaa3efe4`**, healthy, tools 12/12 |
+| Known-safe | G201/G202 store placeholders, G204 tooling, G703 patcher, SC2034, G104, G118 preinstall |
+| Calibration→forge | `ApplyRepoRoutingForForge` quiets filing for accepted rules including high/critical |
+| Open findings | **214** (was 227): high 4 / medium 58 / low 9 / info 143 |
+| Remaining | Checkov/cookie/XSS/perms review queue; next self-scan will re-route with new heuristics |
+
+### Self-scan remediation (2026-09-08) — FP apply + lint/Go cleanup
+
+| Item | Value |
+|------|-------|
+| Backup | `data/repository-detective.db.bak-fp-20260908` (via docker `cp` — host `data/` not writable) |
+| Open before | **227** (high 7 / medium 92 / low 9 / info 119) |
+| Open after | **214** (high 4 / medium 58 / low 9 / info 143) |
+| Downgraded to info | **34** (G201/G202 store 9, G204 20, LINT-SHELL-2034 5); others already info |
+| G703 patcher/ | **3** fingerprint suppressions + `status=false_positive` |
+| OPT-NESTED-LOOP docs | **10** → `status=suppressed` (LICENSE/README/issues.md) |
+| Seed | +4 idempotent rules (G201/G202 `store/`, G703 `patcher/`, health HEALTH); reliability HEALTH already present |
+| Code | ruff/shellcheck cleanup in scripts; deleted unused Go: `formatFindingDescription`, `hasBadScannerFailure`, `shouldFailCommitStatus`, `handleDefaults`, `scannerSummaries` |
+
+### Calibration insert (2026-09-08) — repo_id=1 report_only
+
+| Item | Value |
+|------|-------|
+| Open findings (unchanged) | **227** (high 7 / medium 92 / low 9 / info 119) |
+| Inserted rules | **750** G201 `store/*`, **751** G202 `store/*`, **752** G204, **753** G703, **754** shellcheck/`LINT-SHELL-2034` |
+| Skipped (already active) | G104, G304, LINT-GO-typecheck, HEALTH-IGNORED-ERROR, OPT-NESTED-LOOP |
+| Finding status | No `false_positive` marks; calibration only |
+| expires_at | 2027-09-08T17:25:52Z (+365d) for new rows |
+
+### Self-dogfood findings inventory (2026-09-08) — read-only
+
+| Item | Value |
+|------|-------|
+| Repo | `commstech/Repository-Detective` (repo_id **1**) |
+| Open findings | **227** (high 7 / medium 92 / low 9 / info 119) |
+| Storage | host `/home/commstech/Bugbot/data/repository-detective.db` → container `/app/data/repository-detective.db` |
+| Actions | calibrate_fp 114 · suppress 42 · needs_human 37 · fix_code 32 · auto_pr 2 |
+| Dump | `/tmp/rd_findings_complete.tsv`, `/tmp/rd_classified.json` |
+| Report | [docs/dogfood-reports/self-findings-inventory-2026-09-08.md](docs/dogfood-reports/self-findings-inventory-2026-09-08.md) |
+| Note | No data modified; `safe_for_auto_pr` / `reporting_action` null on all open rows |
+
+### Reviewer follow-up (2026-09-08) — posture / aging / GitHub trust
+
+| Item | Status | Notes |
+|------|--------|-------|
+| Aging stages (14→30→60→90 then silence) | **Done** | Persist `**Aging:**` via body patch; no 14-day repeat spam |
+| Confidence comment delta | **Done** | `ConfidenceCommentDelta = 0.15`; tiny 0.90→0.91 silent |
+| Posture trigger (risk not volume) | **Done** | critical>0 OR high≥3 OR regression/jump — not ≥20 AND high |
+| Exclusive scoped Gitea labels | **Done** | `exclusive: true` on create/update for `scope/*` names |
+| History-preserving GitHub mirror | **Done** | Replaced orphan tip; ~500-commit sanitized graph on GitHub (`7ddb2a8`); snapshot emergency-only |
+| Dogfood sample bodies | **Done** | `docs/dogfood-issue-samples/` (G201, ShellCheck, dep, posture) |
+
+### Product value sprint (2026-09-08) — five tickets
+
+| Ticket | Status | Notes |
+|--------|--------|-------|
+| RD-PRODUCT-001 Finding Detail 2.0 | **Done** | Operator brief + deduped evidence expander |
+| RD-PRODUCT-002 Noise Reduction proof | **Done** | Dashboard card from real DB metrics |
+| RD-PRODUCT-003 Gitea/Forgejo positioning | **Done** | README + sidebar; no “enterprise VMS” pitch |
+| RD-COMMERCIAL-001 Commercial MVP | **Done** | Edition/license gates, repo cap, RBAC roles, users + audit UI |
+| RD-GROWTH-001 Ten-minute aha + trust | **Done** | TEN_MINUTE_AHA.md, vulnerable-demo, self-hosted fonts (no Google CDN) |
+
+### Issue model 2.0 (2026-09-08)
+
+| Ticket | Status | Notes |
+|--------|--------|-------|
+| Slim forge issue bodies | **Done** | Summary → impact → location → evidence → action → verify → details |
+| Quiet rescan comments | **Done** | Comment only on severity/location/confidence/aging changes |
+| Scoped labels | **Done** | severity/category/scanner/triage/remediation + source/repository-detective |
+| Posture not % score | **Done** | Rare forge posture issue; no 0.00% score |
+| Commit SHA evidence | **Done** | Never write `Commit: main` |
+
+### Live dogfood (2026-09-08)
+
+| Item | Value |
+|------|-------|
+| Running | `repository-detective:upgrade-candidate` (rebuild after product sprint) |
+| Pin | `Bugbot/.env` → `RD_IMAGE=repository-detective:upgrade-candidate` |
+| Base scanners | `v0.1.0-beta.3` all-in-one + binary overlay |
+| Backup | `deployment-backups/pre-upgrade-beta2-to-latest-20260908T024810Z/` |
+
+### Live dogfood (2026-09-07) — upgraded to current main
+
+| Item | Value |
+|------|-------|
+| Running | `repository-detective:upgrade-candidate` (`rev=53d6ad7c`, healthy, tools 12/12) |
+| Pin | `Bugbot/.env` → `RD_IMAGE=repository-detective:upgrade-candidate` |
+| Base scanners | `v0.1.0-beta.3` all-in-one + binary overlay (`Dockerfile.binary-overlay`) |
+| Backup | `deployment-backups/pre-upgrade-beta2-to-latest-20260908T024810Z/` |
+| Doctor | `DEGRADED` (0 required failures; optional warnings only) |
+| Known warnings | GitHub token **401** (startup skipped); no `config/config.yaml` (env + DB settings); Doctor auth/webhook/Class-B advisories |
+| Doctor UI | **Fixed 2026-09-08** — Run button works via `app.js` + `/ui/doctor/report` (CSP-safe) |
+| Removed | Stale `/tmp/repository-detective-static` binary bind-mount |
+
+### Prior live dogfood gap (resolved 2026-09-07)
+
+| Item | Value |
+|------|-------|
+| Was | `…:v0.1.0-beta.2` pinned since 2026-09-02 |
+| Cause | `.env` pin never bumped after beta.3 publish |
+
+### Phase 8A (2026-09-05) — Beta hardening & real-use readiness — COMPLETE
+
+| Task | Status | Notes |
+|------|--------|-------|
+| RD-031 gofmt debt | **Done** | 140 files; CI `check-fmt` / workflow fails unclean |
+| RD-032 new-install auth | **Done** | Recommend `AUTH_MODE=local`; runtime default `api_key_only` unchanged |
+| RD-033 upgrade harness | **Done** | `scripts/e2e-upgrade-from-beta3.sh` → `UPGRADE_FROM_BETA3_TO_CURRENT_MAIN_INTEGRATION_PROVEN` when PASS |
+| RD-034 redaction | **Done** | `SanitizeDiagnostic` + corpus; remaining heuristic limits documented |
+| RD-035 dogfood | **Done** | [docs/release/DOGFOOD_2026-09-05.md](docs/release/DOGFOOD_2026-09-05.md) |
+| RD-024 finding-quality metrics | **Done** | `GET /analytics/finding-quality?window=7d\|30d\|all` |
+| RD-025 calibration transparency | **Done** | `/calibration/history` + accepted revert |
+| RD-030 tech-debt audit | **Done** | [docs/TECH_DEBT_AUDIT.md](docs/TECH_DEBT_AUDIT.md) — **no code deleted** |
+| Class-B / RD-015–016 | **Excluded** | Unchanged |
+
+### Phase 7 (2026-09-05) — Public trust, presentation, release supply chain — COMPLETE
+
+| Task | Status | Notes |
+|------|--------|-------|
+| RD-019 Public first impression | **Done** | README hierarchy, POLICY_*, privacy honesty, limitations, GitHub history |
+| RD-020 Screenshots + DEMO | **Done** | Disposable synthetic captures under `docs/assets/screenshots/`; DEMO.md |
+| RD-021 Public release surface | **Done** | Release notes + mirror process; GitHub tag/Release for beta.3 |
+| RD-022 Container SBOM | **Done** | SPDX + CycloneDX for digest `sha256:6a615548…`; Syft 1.45.1 |
+| RD-023 Integrity / signing | **CHECKSUM_ONLY** | VERIFY_RELEASE.md; SIGNING_NOT_IMPLEMENTED for cosign |
+| Class-B / RD-015–016 | **Excluded** | RD-008B Option C unchanged |
+
+### Phase 6B (2026-09-05) — Release alignment & proof closure — COMPLETE
+
+| Task | Status | Notes |
+|------|--------|-------|
+| RD-018A Publish beta.3 | **Done** | Digest `sha256:6a615548…308727` on Gitea + GHCR (match) |
+| RD-018B Clean install on published digest | **PUBLISHED_IMAGE_CLEAN_INSTALL_E2E_PROVEN** | Doctor present; empty storage |
+| RD-017B Core E2E on published digest | **PUBLISHED_IMAGE_CORE_E2E_PROVEN** | Gitea 1.22.3; zero FAIL |
+| RD-017C Four policy outcomes | **E2E_PROVEN** | POLICY_MET / ACTION_REQUIRED / OBSERVATION_ONLY / EVALUATION_INCOMPLETE |
+| RD-017D Secret resolution semantics | **PARTIAL** intentional | Documented; no naive absence-close |
+| RD-029A DOC_TRUTH drift | **Fixed** | Snapshot lag root cause |
+| RD-021A Minimal badges | **Done** | CI / beta.3 / container / license / Gitea 1.22.3 |
+| Class-B / RD-015–016 | **Excluded** | RD-008B Option C unchanged |
+
+### Phase 6A (2026-09-04) — Real Gitea E2E (RD-017A / RD-018) — COMPLETE (stop before Phase 5)
+
+| Task | Status | Notes |
+|------|--------|-------|
+| Disposable Gitea 1.22.3 + RD compose | **Done** | `docker-compose.e2e.yml`; host ports 13000/18081 |
+| Webhook delivery + FIRST_SCAN evidence | **E2E_PROVEN** | migration 25 `operator_evidence`; Doctor proofs |
+| E2E harness scenarios | **PASS** | `e2e/results/20260904T182636Z-2505621/` — zero FAIL |
+| Required-scanner fail-closed | **E2E_PROVEN** | Controlled gitleaks stub |
+| PR summary idempotency | **E2E_PROVEN** | RD-006A at Gitea 1.22.3 |
+| Clean install RD-018 | **PASS** | health+onboard+scanners; Doctor absent on published beta.2 digest |
+| Upgrade E2E | **NOT_PROVEN** | No prior public-beta baseline |
+| Class-B remediation / RD-015–016 | **Excluded** | RD-008B Option C unchanged |
+
+### Phase 1 (2026-09-04) — Public-beta contradictions
+
+| Task | Status | Notes |
+|------|--------|-------|
+| RD-001 Public feedback path | **Done** | GitHub Issues = public feedback; Gitea canonical forge |
+| RD-002 Recommended Installation | **Done** | Compose pull :8081 |
+| RD-003 AI explicitly optional | **Done** | Deterministic-first defaults |
+| RD-029 Doc truth audit | **Done** | Updated through Phase 3 |
+
+### Phase 2 (2026-09-04) — Product semantics — CLOSED (unit/integration)
+
+| Task | Status | Notes |
+|------|--------|-------|
+| RD-004 Policy outcomes | **Done** | Never “secure/safe” |
+| RD-005 Observe/Warn/Enforce | **Done** | UI labels over monitor/issue/gate |
+| RD-006 Compact PR summary | **Done** | One PR comment; issues canonical |
+| RD-006A Idempotent PR summary | **Done** | Marker upsert; fail-closed list; UNIT_TESTED |
+| RD-011 Scanner coverage | **Done** | Required incomplete blocks POLICY_MET |
+| RD-012 / RD-012A Required scanners | **Done** | Disabled REQUIRED → EVALUATION_INCOMPLETE |
+
+**Regression:** `go test ./...` in `golang:1.25-bookworm` — **PASS** (exit 0).  
+**Classification:** `IMPLEMENTED + UNIT/INTEGRATION TESTED; Gitea 1.22.3 E2E advanced in Phase 6A (RD-017A)`.
+
+### Phase 3 (2026-09-04) — Privacy / security
+
+| Task | Status | Proof |
+|------|--------|-------|
+| RD-007 Privacy modes | **Done** | CODE_PRESENT + WIRED + UNIT_TESTED |
+| RD-008 Threat model + MinimalSubprocessEnv | **Done** | SECURITY_MODEL.md; Class B sandbox NOT_PROVEN |
+| RD-009 Credential transport | **Done** | Header preferred; query reject optional; redaction UNIT_TESTED |
+| RD-010 UI session vs API auth | **Done** | Recommend local for new installs; runtime default api_key_only unchanged |
+
+### Phase 4 (2026-09-04) — Onboarding + Doctor
+
+| Task | Status | Proof |
+|------|--------|-------|
+| RD-013 CSPVR onboarding | **Done** | WIRED wizard stages + verify API |
+| RD-014 Doctor | **Done** | CLI + `/api/v1/doctor` + `/ui/doctor` + UNIT_TESTED engine |
+| RD-008B Class-B decision | **Done** | Option C documented; gate for Phase 5 |
+
+**Next:** Phase 5 only after RD-008B Option C warnings remain / Option A runner path if expanding remediation UX.
+
+**Repository:** https://git.commsnet.org/commstech/Repository-Detective.git
+## Live deploy (2026-08-02) — Full application audit
+
+| Item | Value |
+|------|-------|
+| Verdict | **Conditional GO** — accuracy/docs/wiki fixed; residual Go 1.23 image vs go.mod 1.25 |
+| Evidence | [docs/dogfood-reports/full-application-audit-2026-08-02.md](docs/dogfood-reports/full-application-audit-2026-08-02.md) |
+| Live | `rc-full-audit7` |
+| Dashboard tools missing | **0** (live probe overlay) |
+| SBOM | Syft fallback → **`sbom_generated` / 58 packages** |
+| Shellcheck / Trivy | **found** on product scans |
+| Grype | Rebuilt DB under container `XDG_CACHE_HOME=/app/data/cache` (was malformed; `$HOME/.cache` rebuild was the wrong path) |
+| Wiki | **24 pages** at https://git.commsnet.org/commstech/repository-detective/wiki |
+
+## Live deploy (2026-08-02) — Full UI eval clean pass
+
+| Item | Value |
+|------|-------|
+| Verdict | **36/36 OK** (light/dark/system) |
+| Evidence | [docs/dogfood-reports/ui-flow-eval-2026-08-02.md](docs/dogfood-reports/ui-flow-eval-2026-08-02.md) |
+| Harness | `scripts/ui-flow-eval.js` |
+| Live | `rc-ui-eval-clean` |
+| Follow-up fixed | Configure “missing” secret contrast; table/`details` solid surfaces |
+
+## Live deploy (2026-08-02) — SBOM tools in base image
+
+| Item | Value |
+|------|-------|
+| Focus | Health no longer reports syft / cyclonedx-gomod as missing binaries |
+| Shipped | Image `repository-detective:rc-sbom-tools` (also tagged `all-in-one`); Dockerfile verify gate; install script requires syft |
+| Live | `tools_summary` **12/12 available**, `missing: []` |
+| Versions | syft **1.18.1**, cyclonedx-gomod **v1.10.0** |
+
+## Live deploy (2026-08-02) — Full WebUI flow evaluation
+
+| Item | Value |
+|------|-------|
+| Focus | Browser walk of all operator pages in light/dark/system; branding + theme + charts |
+| Verdict | **36/36 pages OK** (Playwright headless against live `:8081`) |
+| Shipped | Theme contrast (KPI/inset/report solids); theme-aware charts; nav Learning under Intelligence; brand scrub for historical Bugbot text/paths; project group names |
+| Live | Hotpatched `rc-ui-flow-eval2` |
+| Branding | No Bugbot in UI templates; historical forge/errors/paths scrubbed at display |
+
+## Live deploy (2026-08-02) — Agent / MCP / OpenAPI docs
+
+| Item | Value |
+|------|-------|
+| Focus | Make Repository Detective usable by OpenClaw-like AI agents |
+| Shipped | `docs/AGENT_QUICKSTART.md`, `docs/MCP.md`, `docs/OPENCLAW_INTEGRATION.md`, `docs/openapi.yaml`, MCP stdio bridge `cmd/repository-detective-mcp`, `GET /api/v1/openapi.yaml`, richer `GET /api/v1/about` |
+| Agent auth | `X-Repository-Detective-API-Key` or Bearer |
+
+## Live deploy (2026-08-02) — UI responsiveness
+
+| Item | Value |
+|------|-------|
+| Focus | Benchmark all UI pages; keep only net-faster changes |
+| Shipped | Migration 24 indexes; repo-control query rewrites; batched dashboard charts; 2s dashboard summary cache; 30d scanner rollups |
+| Evidence | [docs/dogfood-reports/ui-responsiveness-bench-2026-08-02.md](docs/dogfood-reports/ui-responsiveness-bench-2026-08-02.md) |
+| Live | Hotpatched `/app/repository-detective` (schema v24 applied on data volume) |
+| Gains (cold p50) | `/ui` −58%, `/ui/repos` −73%, `/ui/health` −67%, `/ui/reports` −62%, dashboard API −68% |
+
+## Live deploy (2026-08-02) — Scanner reliability + SBOM + triage export
+
+| Item | Value |
+|------|-------|
+| Focus | Address external review: parse failures, timeouts, SBOM gap, finding triage volume |
+| Shipped | stdout-first command capture; parallel scanner registry; Syft/cyclonedx-gomod in image; focus list + CSV/JSON export; timeout defaults 900s/180s |
+| Requires | Image rebuild for Syft on live (`all-in-one`); hotpatch covers parser/parallel/export immediately |
+| Deferred | Config struct decomposition, main.go route extract, GitHub forge parity, full LLM prove stage |
+
+## Live deploy (2026-08-02) — Sanitized install base + learning completeness
+
+| Item | Value |
+|------|-------|
+| Focus | Confirm Gitea is a clean install base; operator DB never published; learning accept path fixed |
+| Shipped | Accept bugfix; background job repo-scoped parity; Learning UI actions; LAN IP redaction in tracked docs; privacy/setup clarity |
+| Not in git | `.env`, `config/config.yaml`, `data/*.db` (gitignored) |
+| Learning | Deterministic loop complete for FP→repo recommendation→accept/reject; global accept blocked; secrets categories blocked |
+
+## Live deploy (2026-08-02) — Prime-time readiness evaluation
+
+| Item | Value |
+|------|-------|
+| Verdict | **Conditional GO** for private beta; not public prime-time yet |
+| Evidence | [docs/dogfood-reports/prime-time-readiness-2026-08-02.md](docs/dogfood-reports/prime-time-readiness-2026-08-02.md) |
+| Blockers | 244 critical+high open findings; 251 parse_failed (14d); rebuild image from main |
+
+## Live deploy (2026-08-02) — Full brand purge
+
+| Item | Value |
+|------|-------|
+| Focus | Zero legacy product-name aliases for public release |
+| Shipped | REPOSITORY_DETECTIVE_* only; X-Repository-Detective-API-Key only; rd- fingerprints; repository-detective labels; DB `repository-detective.db` |
+| Gitea | https://git.commsnet.org/commstech/Repository-Detective.git |
+| Live | `rc-rd-brand-purge` |
+
+
+## Live deploy (2026-08-02) — Product rename + Gitea sync
+
+| Item | Value |
+|------|-------|
+| Focus | Sync uncommitted work; public brand is Repository Detective |
+| Shipped | Go module `repository-detective`; Gitea repo `commstech/Repository-Detective`; docs/UI scrub; silent legacy env/header/fingerprint shims retained |
+| Live hotpatch baseline | `rc-invalid-ref-truth` (+ rename in source) |
+
+## Live deploy (2026-08-02) — Invalid-ref / fleet failure truthfulness
+
+| Item | Value |
+|------|-------|
+| Focus | `no valid ref` mass failures + dashboard counting historical noise as actionable |
+| Finding | July 25–26 fleet failures were forge-probe outages mislabeled as missing refs; repos recovered (latest scans completed) |
+| Shipped | ResolveRef returns `unable to verify refs` on probe outages; actionable failures = 14d non-noise; unhealthy-repos = failed latest scan; buckets windowed |
+| Live | `rc-invalid-ref-truth` |
+
+## Live deploy (2026-08-02) — Review follow-ups (stale scans / parse failures / AI UX)
+
+| Item | Value |
+|------|-------|
+| Focus | External review: stale-reaped noise, parse failures, AI enablement friction |
+| Shipped | Actionable vs stale failed-scan split; failure reason buckets; parse_failed surfacing; Deep/AI callout on Configure; Pre-install + health CTAs on dashboard |
+| Live | `rc-review-followups` |
+| Note | ~332 failed scans are **invalid_ref** (missing default branch), not stale reaps (~15). Stale reaps are demoted from primary lists. |
+
+### Deferred backlog (from same review)
+
+| Priority | Item | Why deferred |
+|----------|------|--------------|
+| HIGH | Root-cause fix for `no valid ref` fleet failures | Needs forge/ref investigation per repo class |
+| MEDIUM | Decompose flat `Config` (~180 fields) + split `main.go` bootstrap | Large safe refactor; schedule separately |
+| MEDIUM | GitHub forge parity (RC-unproven) | Product expansion |
+| MEDIUM | Syft/SBOM completeness | Image/tooling |
+| MEDIUM | Finding interactive filters / MTTR charts / exports | UI expansion |
+| LOW | RBAC multi-operator | Auth slice 2 |
+| LOW | Notifications default-on polish | Ops preference |
+
+## Live deploy (2026-08-02) — System Health UX
+
+| Item | Value |
+|------|-------|
+| Focus | Scanner versions showed `unknown`; no failure drill-down; no easy product issue report |
+| Change | Parallel cached version probes; scanner-failure + failed-scan tables; Report issue prefills `system_health.md` on Gitea (no auto-submit) |
+| Live | `rc-health-ux` |
+| Note | Hard-refresh `/ui/health`; first version probe after restart may take a few seconds then caches 5m |
+
+## Live deploy (2026-08-02) — Qdrant removed
+
+| Item | Value |
+|------|-------|
+| Focus | Qdrant semantic dedup unused / empty collections / ops cost |
+| Change | Removed `memory/qdrant`, embeddings, semantic issue path; fingerprint + SQLite forge mappings only |
+| Live | `rc-no-qdrant` (after hotpatch + env recreate) |
+| Monitor | Fingerprint dedup accuracy via SQLite `external_issues` + forge reopen/update behavior |
+
+## Live deploy (2026-08-02) — Intuitive scan profile names
+
+| Item | Value |
+|------|-------|
+| Focus | Unintuitive profile IDs (`beta_standard`, `fast`, `maintainer_deep`, …) |
+| Change | Operator profiles are **Light / Standard / Deep / Custom**; legacy IDs still map |
+| Live | `rc-scan-profiles` (after hotpatch) |
+| Note | Hard-refresh Configure / Repos / Scan form so labels update |
+
+## Live deploy (2026-08-02) — Learning page graphical UI
+
+| Item | Value |
+|------|-------|
+| Focus | Learning page was tables/wall of text vs dashboard Learning health cards |
+| Live | `rc-learning-ui`; `/ui/learning` has stats, meters, charts, recommendation cards |
+| Note | Hard-refresh so `learning-charts.js` / `theme.css` load |
+
+## Live deploy (2026-08-02) — Dashboard 14-day scan trend fix
+
+| Item | Value |
+|------|-------|
+| Focus | Scan activity graph showed everything on the last day |
+| Live | `rc-scan-trend`; chart counts completed scans per UTC day across full 14-day window |
+| Note | Hard-refresh dashboard; Jul 25–26 stay at 0 because those days were failed-only in DB |
+
+## Live deploy (2026-08-02) — Manual scan UX + health responsiveness
+
+| Item | Value |
+|------|-------|
+| Focus | Start scan felt locked; health/UI stalled on tool probes |
+| Live | `rc-scan-ux`; `/health` ~1ms after warm; Start scan → scan detail with auto-refresh |
+| Note | Hard-refresh browser so embedded `app.js` updates load |
+
+## Live deploy (2026-08-02) — Configure UI save fix
+
+| Item | Value |
+|------|-------|
+| Focus | Configure page save appeared to do nothing |
+| Live | `rc-configure-save`, healthy; `/ui/configure` ~90ms |
+| Fix | Skip tool probes on Configure; sticky Save; live apply of feature toggles; clear saved banner |
+| Note | Notifications can show **degraded** when enabled but no webhook/Slack/etc. secrets in `.env` — that is expected |
+
+## Live deploy (2026-08-02) — release readiness / fleet burn-down
+
+| Item | Value |
+|------|-------|
+| Focus | Fleet findings accuracy, feature/UIX matrix, AI token policy, other-repo remediations |
+| Live | `rc-release-ready`, healthy, tools **10/10**, `scan_profile=beta_standard` |
+| Accuracy | Stable gitleaks RuleIDs; docs/archive/example/vendor actionability downgrades |
+| AI defaults | Recommendations **off**; when enabled: 1500/1200 token CAH budget, no snippets/full files |
+| Fleet queue | Open unsuppressed ~3.6k (from ~12.6k); high+critical ~67 (from ~900) before remediations settle |
+| Other repos | House_Grocery_AI secrets removed from git; optouter CVE/container harden pushed |
+| UIX | UI route smoke 19/19; feature-matrix UI/API pass; reconcile CSRF + containers page truth |
+| Ops bugfix | Fleet health audit `started_at` TEXT→time parse (repos list warning) |
+
+## Live deploy (2026-08-02) — RD findings closeout
+
+| Item | Value |
+|------|-------|
+| Focus | Clear open findings for `commstech/Repository-Detective` (repo_id=1) from Repository Detective |
+| Commits | `adff149`, `a26a5f1`, plus placeholder TECH-MARKER fix on `main` |
+| Live | `rc-adff149`, healthy, tools **10/10** |
+| Dogfood scan | `fed458d08455a5f8` completed (report-only) |
+| Open queue | **0** unsuppressed open findings (`status=open&suppressed=false`) |
+| UI smoke | 15/15 routes HTTP 200 (pre + post closeout) |
+| Closeout | `scripts/closeout-repo1-findings.py` + expanded calibration seed |
+
+## Live deploy (2026-08-01)
+
+| Item | Value |
+|------|-------|
+| Image | `repository-detective:rc-c45ebb8` (hotpatched scanners base + current `main` binary/entrypoint) |
+| `/health` | healthy, ready=true, version=`rc-c45ebb8`, tools **10/10** |
+| Ops fixes applied | Embedding model + vector size from `.env`; corrupt grype DB cleared; TMPDIR scratch cleanup; skill-loop JSON/auth fixes on `b18f53c` |
+| Learning | Nightly cron `17 2 * * *` → `scripts/rd-deterministic-daily.sh`; manual promote run kicked after redeploy |
+| Follow-up | Full `docker build --target all-in-one` once Go-tool install fix (`b18f53c`) is used; refresh expired GitHub token (401 on startup) |
+
+## Current sprint (2026-08-01)
+
+| Item | Status |
+|------|--------|
+| #352 CVE-2026-39829 (`golang.org/x/crypto`) | **Shipped** on `main` (`c45ebb8`) and live as `rc-c45ebb8` |
+| #48 AI/Qdrant connectivity | Soft-fail + `.env` embedding/Qdrant settings loaded into live container |
+| Rate-limiter unbounded map | Already fixed on `main` (bounded at 4096) |
+| Scanner test TMPDIR leak | Fixed in `scanners/grype_cache_test.go` |
+| Skill-loop crash (bytes JSON) + API Bearer auth | Fixed on `main` (`b18f53c`) |
+
+Verify:
+
+```bash
+export PATH="$HOME/.local/go/bin:$PATH"
+go test -mod=vendor ./issues ./handlers ./internal/auth ./gitea ./scanners -run 'TestEnsureScannerTempDir|TestCleanupStale|Hadolint|Checkov'
+go build -mod=vendor -o /tmp/repository-detective .
+go list -m golang.org/x/crypto   # expect v0.52.0
+```
+
+## Live deploy (2026-07-22 ops hardening)
+
+See `docs/dogfood-reports/container-ops-health-2026-07-22.md`.
+
+Key runtime fixes shipped:
+
+- Scanner temp under `/app/data/tmp` + startup cleanup of abandoned grype/getter scratch (prevents overlay disk fill)
+- Grype DB warmup when missing/invalid
+- OpenClaw embedding model + 768-d Qdrant collection alignment
+- Stronger scheduled-scan ref resolution + default_branch refresh
+- `apk-retry.sh` source-safe function (full scanner image install)
+
+## Live deploy (2026-07-13)
+
+| Item | Value |
+|------|-------|
+| Image | `repository-detective:rc-04db228` (also tagged `all-in-one`) |
+| Variant | Full all-in-one with `INSTALL_EXTERNAL_TOOLS=true` |
+| Size | ~3.87GB (was ~542MB without external scanners) |
+| `/health` | healthy, ready=true, version=`rc-04db228` |
+| `tools_summary` | **10/10 available**, missing=[] |
+| Scanners present | trivy, grype, gitleaks, semgrep, hadolint, checkov, ruff, shellcheck, gosec, govulncheck, staticcheck |
+| Network | host; mounts `config/`, `data/`, `certs/`; `--env-file .env` |
+
+## Current State: BUILD PASSING (Go 1.25) + CORE TESTS PASSING
+
+```bash
+go build -mod=vendor -o bin/repository-detective .
+go test -mod=vendor ./issues ./handlers ./internal/auth ./gitea
+```
+
+## Recent additions
+
+| Feature | Status |
+|---------|--------|
+| Deterministic static scanner (`analyzers/static.go`) | Done — runs before LLM |
+| File content in SCAN stage | Done — fetched via Gitea API |
+| `enable_security` / `enable_quality` flags | Done — wired in engine |
+| Repository include/exclude filters | Done — webhook + config |
+| Issue labels (resolve/create) | Done — `gitea.ResolveLabelIDs` |
+| PoC / file / line in issues | Done — from Prove stage |
+| Onboarding Web UI | Done — `/onboard` |
+| Docker compose env alignment | Done — `docker-compose.minimal.yml` |
+| Config unmarshaling fix | Done — `skip_patterns`, `language_mapping`, repo patterns |
+
+## Multi-Provider AI
+
+Supported backends: OpenAI, Anthropic, OpenRouter, Ollama, Open WebUI, OpenClaw
+
+See [docs/AI_PROVIDERS.md](docs/AI_PROVIDERS.md).
+
+## Onboarding
+
+Browser wizard at `/onboard` — see [docs/ONBOARDING.md](docs/ONBOARDING.md).
+
+Requires `public_url` / `REPOSITORY_DETECTIVE_PUBLIC_URL` for webhook registration.
+
+## CI/CD
+
+| Workflow | Trigger | Purpose |
+|----------|---------|---------|
+| `.gitea/workflows/ci.yml` | push/PR to main | lint, vet, staticcheck, tests, build, Docker smoke |
+| `.gitea/workflows/release.yml` | tag `v*` | multi-platform binaries + Gitea release |
+
+Go version pin: **1.25** (matches `go.mod` after `x/crypto` v0.52.0).
+
+## Architecture
+
+```
+main.go              → HTTP server, routes, webhook processor
+handlers/onboarding  → Web UI + setup API
+handlers/webhook     → Rate limit, secret verify, repo filter
+analyzers/engine.go  → CAH pipeline + static pre-scan
+analyzers/static.go  → Deterministic pattern rules
+ai/client.go         → Multi-provider LLM client
+gitea/hooks.go       → Repos, webhooks, labels
+issues/manager.go    → Labeled issues with PoC
+web/                 → Embedded onboarding assets
+```
+
+## Configuration (key settings)
+
+```yaml
+api_key: ""   # set via .env only — never commit secrets
+public_url: "https://repository-detective.example.com"
+ai_provider: openai
+enable_security: true
+enable_quality: true
+repository_exclude_patterns:
+  - "archived-*"
+skip_startup_checks: false
+```
+
+Legacy `openwebui_url` / `openwebui_token` still supported.

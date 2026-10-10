@@ -1,0 +1,106 @@
+# Repository Detective — example Compose with profiles.
+#
+# Usage:
+#   cp ../../.env.example ../../.env   # edit secrets on host, never bake into images
+#   docker compose -f docs/examples/docker-compose.yml --profile all-in-one pull
+#   docker compose -f docs/examples/docker-compose.yml --profile all-in-one up -d
+#   # or build from source: ... up -d --build
+#
+# See docs/DOCKER.md for image targets, volumes, registry tags, and rollback.
+
+name: repository-detective
+
+services:
+  repository-detective:
+    profiles: ["all-in-one", "default"]
+    image: ${RD_IMAGE:-git.commsnet.org/commstech/repository-detective:all-in-one}
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      target: all-in-one
+      args:
+        INSTALL_EXTERNAL_TOOLS: "true"
+        VERSION: ${RD_VERSION:-dev}
+        COMMIT: ${RD_COMMIT:-local}
+        BUILD_DATE: ${RD_BUILD_DATE:-unknown}
+    container_name: repository-detective
+    ports:
+      - "${REPOSITORY_DETECTIVE_PORT:-8081}:8081"
+    env_file:
+      - ../../.env
+    environment:
+      REPOSITORY_DETECTIVE_PORT: "${REPOSITORY_DETECTIVE_PORT:-8081}"
+      REPOSITORY_DETECTIVE_LISTEN_HOST: "0.0.0.0"
+      REPOSITORY_DETECTIVE_DATABASE_PATH: /app/data/repository-detective.db
+      REPOSITORY_DETECTIVE_SKIP_STARTUP_CHECKS: "true"
+    volumes:
+      - ../../config:/app/config:ro
+      - ../../data:/app/data
+      - ../../certs:/app/certs:ro
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/docker-healthcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+    restart: unless-stopped
+    # No privileged mode, no Docker socket
+    security_opt:
+      - no-new-privileges:true
+
+  repository-detective-core:
+    profiles: ["core"]
+    image: ${RD_CORE_IMAGE:-git.commsnet.org/commstech/repository-detective:core}
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      target: core
+      args:
+        VERSION: ${RD_VERSION:-dev}
+        COMMIT: ${RD_COMMIT:-local}
+        BUILD_DATE: ${RD_BUILD_DATE:-unknown}
+    container_name: repository-detective-core
+    ports:
+      - "${REPOSITORY_DETECTIVE_PORT:-8081}:8081"
+    env_file:
+      - ../../.env
+    environment:
+      REPOSITORY_DETECTIVE_PORT: "${REPOSITORY_DETECTIVE_PORT:-8081}"
+      REPOSITORY_DETECTIVE_LISTEN_HOST: "0.0.0.0"
+      REPOSITORY_DETECTIVE_DATABASE_PATH: /app/data/repository-detective.db
+    volumes:
+      - ../../config:/app/config:ro
+      - ../../data:/app/data
+      - ../../certs:/app/certs:ro
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/docker-healthcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  # Example: run a one-shot runner job (normally invoked from Gitea Actions).
+  repository-detective-runner:
+    profiles: ["runner-example"]
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      target: runner
+      args:
+        INSTALL_EXTERNAL_TOOLS: "true"
+    image: repository-detective:runner
+    environment:
+      REPOSITORY_DETECTIVE_CORE_URL: "http://repository-detective:8081"
+      REPOSITORY_DETECTIVE_RUNNER_SHARED_SECRET: "${REPOSITORY_DETECTIVE_RUNNER_SHARED_SECRET:-}"
+      REPOSITORY_DETECTIVE_WORKSPACE: /workspace
+    volumes:
+      - runner_workspace:/workspace
+    # Override entrypoint for local testing; Gitea Actions supplies flags via workflow.
+    entrypoint: ["/usr/local/bin/repository-detective-runner"]
+    command: ["--help"]
+
+volumes:
+  runner_workspace:

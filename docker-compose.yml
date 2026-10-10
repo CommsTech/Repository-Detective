@@ -1,0 +1,59 @@
+version: '3.7'
+
+# Default production deploy — bridge networking, localhost bind via port mapping.
+#
+#   cp .env.example .env && edit .env
+#   docker compose up -d --build
+#
+# For host networking (homelab / legacy): docker compose -f docker-compose.yml -f docker-compose.host-network.yml up -d
+# See DEPLOYMENT.md and docs/SETUP.md
+
+services:
+  repository-detective:
+    # Prefer published image (pull) so operators skip ~40 min local builds.
+    # Canonical: Gitea Package Registry. Override for pins or GHCR mirror:
+    #   RD_IMAGE=git.commsnet.org/commstech/repository-detective:v0.1.0-beta.3
+    #   RD_IMAGE=ghcr.io/commstech/repository-detective:all-in-one
+    image: ${RD_IMAGE:-git.commsnet.org/commstech/repository-detective:all-in-one}
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: all-in-one
+      args:
+        INSTALL_EXTERNAL_TOOLS: "true"
+        VERSION: ${RD_VERSION:-dev}
+        COMMIT: ${RD_COMMIT:-local}
+        BUILD_DATE: ${RD_BUILD_DATE:-unknown}
+    container_name: repository-detective
+    ports:
+      # Bind on all interfaces so LAN clients can reach the UI (homelab dogfood).
+      - "${REPOSITORY_DETECTIVE_PORT:-8081}:8081"
+    env_file:
+      - .env
+    environment:
+      REPOSITORY_DETECTIVE_PORT: "8081"
+      REPOSITORY_DETECTIVE_LISTEN_HOST: "0.0.0.0"
+      REPOSITORY_DETECTIVE_LOG_LEVEL: info
+      REPOSITORY_DETECTIVE_SKIP_STARTUP_CHECKS: "true"
+      REPOSITORY_DETECTIVE_STARTUP_CHECK_TIMEOUT: "10"
+      REPOSITORY_DETECTIVE_DATABASE_PATH: /app/data/repository-detective.db
+      REPOSITORY_DETECTIVE_API_KEY: ${REPOSITORY_DETECTIVE_API_KEY}
+      # Homelab OpenClaw with private CA / self-signed gateway:
+      REPOSITORY_DETECTIVE_AI_INSECURE_SKIP_TLS_VERIFY: ${REPOSITORY_DETECTIVE_AI_INSECURE_SKIP_TLS_VERIFY:-false}
+    volumes:
+      - ./config:/app/config:ro
+      - ./data:/app/data
+      - ./certs:/app/certs:ro
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/docker-healthcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - rd-net
+
+networks:
+  rd-net:
+    driver: bridge

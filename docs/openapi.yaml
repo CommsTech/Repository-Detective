@@ -1,0 +1,383 @@
+openapi: 3.0.3
+info:
+  title: Repository Detective API
+  description: |
+    Operator JSON API for Repository Detective (Inspect. Analyze. Improve.).
+    Authenticate with `X-Repository-Detective-API-Key` or `Authorization: Bearer`.
+    Agent guide: docs/AGENT_QUICKSTART.md · MCP: docs/MCP.md · Full route list: docs/API_ROUTES.md
+
+    This OpenAPI document is a **partial** agent-facing surface (discovery, core scans/findings,
+    calibration, AI recommendations). It is not exhaustive — see API_ROUTES.md for the complete map.
+    There is no `GET /api/v1/scans` (list-all) and no `/api/v1/learning/*`; use
+    `GET /api/v1/repos/{id}/scans` and `/api/v1/calibration/*` (UI learning is `/ui/learning`).
+  version: "1.0.0"
+  contact:
+    name: Repository Detective
+    url: https://git.commsnet.org/commstech/Repository-Detective
+
+servers:
+  - url: http://127.0.0.1:8081
+    description: Default compose / homelab
+  - url: http://127.0.0.1:8080
+    description: Minimal local trial compose
+
+tags:
+  - name: discovery
+  - name: scans
+  - name: findings
+  - name: repos
+  - name: ai-recommendations
+  - name: calibration
+
+paths:
+  /health:
+    get:
+      tags: [discovery]
+      summary: Liveness probe
+      security: []
+      responses:
+        "200":
+          description: Process is up
+
+  /api/v1/about:
+    get:
+      tags: [discovery]
+      summary: Product identity and agent discovery hints
+      security:
+        - ApiKeyHeader: []
+        - BearerAuth: []
+      responses:
+        "200":
+          description: About payload
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  product_name: { type: string }
+                  version: { type: string }
+                  api_base_path: { type: string }
+                  openapi_url: { type: string }
+                  agent_docs_url: { type: string }
+                  mcp_docs_url: { type: string }
+                  auth_headers:
+                    type: array
+                    items: { type: string }
+                  safe_loop: { type: string }
+
+  /api/v1/openapi.yaml:
+    get:
+      tags: [discovery]
+      summary: OpenAPI document (this file)
+      security:
+        - ApiKeyHeader: []
+        - BearerAuth: []
+      responses:
+        "200":
+          description: OpenAPI YAML
+
+  /api/v1/status:
+    get:
+      tags: [discovery]
+      summary: Runtime readiness and feature flags (no secrets)
+      security:
+        - ApiKeyHeader: []
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Status JSON
+
+  /api/v1/analyze:
+    post:
+      tags: [scans]
+      summary: Trigger a manual repository scan
+      security:
+        - ApiKeyHeader: []
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [owner, repository]
+              properties:
+                owner: { type: string }
+                repository: { type: string }
+                ref: { type: string, example: main }
+                forge: { type: string, description: "gitea | github" }
+                report_only_dry_run:
+                  type: boolean
+                  description: Prefer true for agent dry-runs
+                  default: false
+      responses:
+        "200":
+          description: Scan accepted / started
+        "401":
+          description: Invalid API key
+
+  /api/v1/dashboard/summary:
+    get:
+      tags: [discovery]
+      summary: Operator dashboard rollup
+      security:
+        - ApiKeyHeader: []
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Dashboard summary
+
+  /api/v1/repos:
+    get:
+      tags: [repos]
+      summary: List repositories
+      security:
+        - ApiKeyHeader: []
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Repository list
+
+  /api/v1/repos/{id}/scans:
+    get:
+      tags: [scans]
+      summary: List scans for a repository (no fleet-wide /scans list)
+      security:
+        - ApiKeyHeader: []
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/RepoId"
+        - in: query
+          name: limit
+          schema: { type: integer }
+        - in: query
+          name: offset
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Scan list for one repository
+
+  /api/v1/scans/{scan_id}:
+    get:
+      tags: [scans]
+      summary: Scan detail
+      security:
+        - ApiKeyHeader: []
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ScanId"
+      responses:
+        "200":
+          description: Scan
+
+  /api/v1/findings:
+    get:
+      tags: [findings]
+      summary: List findings
+      security:
+        - ApiKeyHeader: []
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: status
+          schema: { type: string, example: open }
+        - in: query
+          name: severity
+          schema: { type: string }
+        - in: query
+          name: repo_id
+          schema: { type: integer }
+          description: Repository id filter (not repository_id)
+        - in: query
+          name: limit
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Findings list
+
+  /api/v1/findings/{id}:
+    get:
+      tags: [findings]
+      summary: Finding detail
+      security:
+        - ApiKeyHeader: []
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/FindingId"
+      responses:
+        "200":
+          description: Finding
+
+  /api/v1/ai-recommendations/config:
+    get:
+      tags: [ai-recommendations]
+      summary: AI recommendations configuration (no secrets)
+      security:
+        - ApiKeyHeader: []
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Config
+
+  /api/v1/scans/{scan_id}/ai-recommendations:
+    post:
+      tags: [ai-recommendations]
+      summary: Run advisory AI review for a scan
+      security:
+        - ApiKeyHeader: []
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ScanId"
+      responses:
+        "200":
+          description: Review result
+    get:
+      tags: [ai-recommendations]
+      summary: Get AI review for a scan
+      security:
+        - ApiKeyHeader: []
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ScanId"
+      responses:
+        "200":
+          description: Review
+
+  /api/v1/ai-recommendations/pending:
+    get:
+      tags: [ai-recommendations]
+      summary: Pending AI advisory recommendations
+      security:
+        - ApiKeyHeader: []
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Pending list
+
+  /api/v1/ai-recommendations/{id}/accept:
+    post:
+      tags: [ai-recommendations]
+      summary: Accept AI recommendation (calibration draft only)
+      security:
+        - ApiKeyHeader: []
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/RecId"
+      responses:
+        "200":
+          description: Accepted
+
+  /api/v1/ai-recommendations/{id}/reject:
+    post:
+      tags: [ai-recommendations]
+      summary: Reject AI recommendation
+      security:
+        - ApiKeyHeader: []
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/RecId"
+      responses:
+        "200":
+          description: Rejected
+
+  /api/v1/calibration/summary:
+    get:
+      tags: [calibration]
+      summary: Calibration / learning summary
+      security:
+        - ApiKeyHeader: []
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Summary
+
+  /api/v1/calibration/recommendations:
+    get:
+      tags: [calibration]
+      summary: List calibration recommendations
+      security:
+        - ApiKeyHeader: []
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: status
+          schema: { type: string, example: proposed }
+      responses:
+        "200":
+          description: Recommendations
+
+  /api/v1/calibration/recommendations/{id}/accept:
+    post:
+      tags: [calibration]
+      summary: Accept calibration (repo-scoped; globals expand to affected repos)
+      security:
+        - ApiKeyHeader: []
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/RecId"
+      responses:
+        "200":
+          description: Accepted
+
+  /api/v1/calibration/recommendations/{id}/reject:
+    post:
+      tags: [calibration]
+      summary: Reject calibration recommendation
+      security:
+        - ApiKeyHeader: []
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/RecId"
+      responses:
+        "200":
+          description: Rejected
+
+  /api/v1/calibration/recompute:
+    post:
+      tags: [calibration]
+      summary: Recompute calibration recommendations (global + repo-scoped)
+      security:
+        - ApiKeyHeader: []
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Recompute started or completed
+
+components:
+  securitySchemes:
+    ApiKeyHeader:
+      type: apiKey
+      in: header
+      name: X-Repository-Detective-API-Key
+    BearerAuth:
+      type: http
+      scheme: bearer
+  parameters:
+    RepoId:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer }
+    ScanId:
+      name: scan_id
+      in: path
+      required: true
+      schema: { type: string }
+    FindingId:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer }
+    RecId:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer }
+
+security:
+  - ApiKeyHeader: []
+  - BearerAuth: []

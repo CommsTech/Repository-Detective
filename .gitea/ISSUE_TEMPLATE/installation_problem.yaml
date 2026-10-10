@@ -1,0 +1,47 @@
+name: Installation problem
+about: Compose, ports, env vars, image pull, or first-start failures
+labels:
+  - type/bug
+  - area/install
+  - status/needs-triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for **install / first-start** friction.
+        Public reporters may prefer GitHub: https://github.com/CommsTech/Repository-Detective/issues/new/choose
+        Do **not** paste secrets, tokens, or customer data.
+  - type: dropdown
+    id: install_path
+    attributes:
+      label: Installation path you followed
+      options:
+        - Recommended — docker compose pull (port 8081)
+        - Build from source (docker compose --build)
+        - Minimal compose (port 8080)
+        - Offline / prebuilt image
+        - Other / custom
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: What failed?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps already tried
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Image tag / commit
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Redacted logs (optional)

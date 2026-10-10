@@ -1,0 +1,14 @@
+package main
+
+import "os"
+
+func dbURL() string {
+	return os.Getenv("DATABASE_URL")
+}
+
+func fallback() string {
+	if v := os.Getenv("API_KEY"); v != "" {
+		return v
+	}
+	return "placeholder-not-a-secret"
+}
