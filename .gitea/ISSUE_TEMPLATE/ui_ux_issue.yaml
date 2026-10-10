@@ -1,0 +1,53 @@
+name: UI or UX issue
+about: Dashboard, findings pages, navigation, or visual problems
+labels:
+  - type/bug
+  - area/ui
+  - beta/feedback
+  - status/needs-triage
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Repository Detective commit / version
+    validations:
+      required: true
+  - type: input
+    id: page
+    attributes:
+      label: Page / route
+      placeholder: /ui/findings/123, /ui/scans/..., dashboard
+    validations:
+      required: true
+  - type: input
+    id: scan_id
+    attributes:
+      label: Scan ID (if relevant)
+  - type: input
+    id: finding_id
+    attributes:
+      label: Finding ID (if relevant)
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected UI behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual UI behavior
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: checkboxes
+    id: screenshot
+    attributes:
+      label: Screenshot
+      options:
+        - label: Screenshot attached (no secrets visible)

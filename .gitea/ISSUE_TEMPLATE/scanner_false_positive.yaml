@@ -1,0 +1,105 @@
+name: Scanner false positive
+about: Report a finding that should be suppressed or reclassified
+labels:
+  - type/false-positive
+  - area/scanner
+  - beta/feedback
+  - status/needs-triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do **not** paste secrets, tokens, `.env`, PHI/PII, or customer data.
+        Prefer repo-scoped calibration over global suppression.
+  - type: input
+    id: version
+    attributes:
+      label: Repository Detective commit / version
+    validations:
+      required: true
+  - type: input
+    id: finding_id
+    attributes:
+      label: Finding ID
+    validations:
+      required: true
+  - type: input
+    id: fingerprint
+    attributes:
+      label: Fingerprint
+    validations:
+      required: true
+  - type: input
+    id: scan_id
+    attributes:
+      label: Scan ID
+    validations:
+      required: true
+  - type: input
+    id: repo
+    attributes:
+      label: Repository (owner/name)
+    validations:
+      required: true
+  - type: input
+    id: scanner
+    attributes:
+      label: Scanner / source
+      placeholder: semgrep, trivy, gitleaks, health, graph, ...
+    validations:
+      required: true
+  - type: input
+    id: rule
+    attributes:
+      label: Rule ID
+    validations:
+      required: true
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Reported severity
+      options:
+        - critical
+        - high
+        - medium
+        - low
+        - info
+  - type: input
+    id: confidence
+    attributes:
+      label: Confidence (0-1)
+  - type: input
+    id: path
+    attributes:
+      label: File / path / image
+  - type: input
+    id: line
+    attributes:
+      label: Line
+  - type: dropdown
+    id: context
+    attributes:
+      label: Code context
+      options:
+        - production code
+        - test / fixture
+        - documentation
+        - generated / vendor
+        - example / benchmark
+        - other
+  - type: textarea
+    id: why_fp
+    attributes:
+      label: Why is this a false positive?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Redacted evidence snippet

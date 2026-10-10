@@ -1,0 +1,158 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+env:
+  GOPROXY: https://proxy.golang.org,direct
+  GOTOOLCHAIN: auto
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version: "1.25"
+          cache: true
+
+      - name: Run tests
+        run: go test ./...
+
+      - name: Verify tag matches module version pattern
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          echo "Release tag: ${TAG}"
+          test "${TAG#v}" != "${TAG}"
+
+      - name: Build multi-platform binaries
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+          mkdir -p dist
+          GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X main.version=${VERSION}" -o dist/repository-detective-linux-amd64 .
+          GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -ldflags "-s -w -X main.version=${VERSION}" -o dist/repository-detective-linux-arm64 .
+          GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X main.version=${VERSION}" -o dist/repository-detective-windows-amd64.exe .
+          GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X main.version=${VERSION}" -o dist/repository-detective-darwin-amd64 .
+          GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -ldflags "-s -w -X main.version=${VERSION}" -o dist/repository-detective-darwin-arm64 .
+          (cd dist && sha256sum * > SHA256SUMS)
+
+      - name: Build Docker image
+        run: |
+          docker build --target all-in-one \
+            --build-arg INSTALL_EXTERNAL_TOOLS=true \
+            --build-arg VERSION="${GITHUB_REF_NAME}" \
+            --build-arg COMMIT="${GITHUB_SHA}" \
+            --build-arg BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            -t repository-detective:${GITHUB_REF_NAME} \
+            -t repository-detective:all-in-one .
+
+      - name: Push image to Gitea Package Registry (canonical)
+        env:
+          GITEA_TOKEN: ${{ secrets.GITEA_PACKAGE_TOKEN || secrets.GITEA_TOKEN }}
+          GITEA_USER: ${{ secrets.GITEA_PACKAGE_USER }}
+        run: |
+          if [ -z "${GITEA_TOKEN:-}" ]; then
+            echo "GITEA_TOKEN not set — skipping container push (binaries still released)."
+            exit 0
+          fi
+          USER_NAME="${GITEA_USER:-${GITHUB_ACTOR:-commstech}}"
+          echo "$GITEA_TOKEN" | docker login git.commsnet.org -u "$USER_NAME" --password-stdin
+          DEST="git.commsnet.org/commstech/repository-detective"
+          DEST="$(echo "$DEST" | tr '[:upper:]' '[:lower:]')"
+          for t in "${GITHUB_REF_NAME}" "${GITHUB_REF_NAME}-all-in-one" all-in-one latest; do
+            docker tag "repository-detective:${GITHUB_REF_NAME}" "${DEST}:${t}"
+            docker push "${DEST}:${t}"
+          done
+          echo "Pushed ${DEST}:${GITHUB_REF_NAME} (Gitea canonical)"
+
+      - name: Mirror image to GHCR (optional public mirror)
+        env:
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          GHCR_USER: ${{ secrets.GHCR_USER }}
+        run: |
+          if [ -z "${GHCR_TOKEN:-}" ]; then
+            echo "GHCR_TOKEN not set — skipping GHCR mirror."
+            exit 0
+          fi
+          USER_NAME="${GHCR_USER:-${GITHUB_ACTOR:-CommsTech}}"
+          echo "$GHCR_TOKEN" | docker login ghcr.io -u "$USER_NAME" --password-stdin
+          DEST="ghcr.io/commstech/repository-detective"
+          DEST="$(echo "$DEST" | tr '[:upper:]' '[:lower:]')"
+          for t in "${GITHUB_REF_NAME}" "${GITHUB_REF_NAME}-all-in-one" all-in-one latest; do
+            docker tag "repository-detective:${GITHUB_REF_NAME}" "${DEST}:${t}"
+            docker push "${DEST}:${t}"
+          done
+          echo "Mirrored ${DEST}:${GITHUB_REF_NAME}"
+
+      - name: Generate release notes
+        run: |
+          PREV=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          {
+            echo "# ${GITHUB_REF_NAME}"
+            echo
+            echo "## Changes"
+            if [ -n "$PREV" ]; then
+              git log "${PREV}..HEAD" --pretty=format:'- %s (%h)'
+            else
+              git log --pretty=format:'- %s (%h)'
+            fi
+          } > dist/RELEASE_NOTES.md
+
+      - name: Create Gitea release
+        env:
+          GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+          REPO_SLUG="${GITHUB_REPOSITORY:-${GITEA_REPOSITORY}}"
+          OWNER="${REPO_SLUG%%/*}"
+          REPO="${REPO_SLUG#*/}"
+          API="${GITEA_API_URL:-${GITEA_SERVER_URL:-https://git.commsnet.org}/api/v1}"
+
+          if [ -z "$GITEA_TOKEN" ]; then
+            echo "GITEA_TOKEN secret not set — skipping remote release upload"
+            echo "Release assets built in dist/ on this runner."
+            ls -la dist/
+            exit 0
+          fi
+
+          jq -n \
+            --arg tag "$VERSION" \
+            --arg name "Repository Detective ${VERSION}" \
+            --rawfile body dist/RELEASE_NOTES.md \
+            '{tag_name:$tag,name:$name,body:$body,draft:false,prerelease:false}' > release-body.json
+
+          curl -sS -X POST "${API}/repos/${OWNER}/${REPO}/releases" \
+            -H "Authorization: token ${GITEA_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d @release-body.json > release.json
+
+          RELEASE_ID=$(python3 -c 'import json; print(json.load(open("release.json")).get("id",""))')
+          if [ -z "$RELEASE_ID" ]; then
+            echo "Failed to create release:"
+            cat release.json
+            exit 1
+          fi
+
+          for file in dist/repository-detective-* dist/SHA256SUMS dist/RELEASE_NOTES.md; do
+            [ -f "$file" ] || continue
+            curl -sS -X POST "${API}/repos/${OWNER}/${REPO}/releases/${RELEASE_ID}/assets?name=$(basename "$file")" \
+              -H "Authorization: token ${GITEA_TOKEN}" \
+              -H "Content-Type: application/octet-stream" \
+              --data-binary @"$file"
+          done
+
+          echo "Published release ${VERSION}"

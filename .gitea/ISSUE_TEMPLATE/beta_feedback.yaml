@@ -1,0 +1,100 @@
+name: Beta feedback
+about: General private-beta feedback (installation, UX, report quality)
+labels:
+  - beta/feedback
+  - beta/private
+  - status/needs-triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Invited operator beta** — not public production support.
+        Do **not** paste secrets, tokens, `.env`, PHI/PII, or customer data.
+  - type: input
+    id: version
+    attributes:
+      label: Repository Detective commit / version
+      placeholder: e4892d9 or /api/v1/about output
+    validations:
+      required: true
+  - type: input
+    id: live_revision
+    attributes:
+      label: Live revision (if known)
+      placeholder: rc-e3e19ec
+  - type: input
+    id: scan_id
+    attributes:
+      label: Scan ID
+    validations:
+      required: true
+  - type: input
+    id: repo
+    attributes:
+      label: Repository (owner/name)
+    validations:
+      required: true
+  - type: dropdown
+    id: provider
+    attributes:
+      label: Provider / scan context
+      options:
+        - gitea
+        - github
+        - gitlab
+        - pre-install
+        - container
+        - local
+  - type: dropdown
+    id: report_only
+    attributes:
+      label: Report-only scan?
+      options:
+        - "yes"
+        - "no"
+        - unknown
+  - type: dropdown
+    id: category
+    attributes:
+      label: Feedback category
+      options:
+        - installation friction
+        - confusing UI
+        - finding unclear
+        - report quality
+        - performance
+        - docs gap
+        - trust/safety concern
+        - other
+    validations:
+      required: true
+  - type: textarea
+    id: useful
+    attributes:
+      label: What was useful?
+  - type: textarea
+    id: confusing
+    attributes:
+      label: What was confusing?
+    validations:
+      required: true
+  - type: dropdown
+    id: urgency
+    attributes:
+      label: Urgency
+      options:
+        - blocks my testing
+        - annoying but workable
+        - minor / suggestion
+  - type: checkboxes
+    id: attachments_safe
+    attributes:
+      label: Attachments
+      options:
+        - label: I confirm attachments contain no secrets or PHI/PII
+  - type: textarea
+    id: details
+    attributes:
+      label: Details / steps / expected vs actual
+    validations:
+      required: true

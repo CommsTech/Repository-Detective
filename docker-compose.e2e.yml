@@ -1,0 +1,93 @@
+version: "3.7"
+
+# Disposable Gitea + Repository Detective acceptance topology (RD-017A).
+# Usage: scripts/e2e-gitea-acceptance.sh
+# Does NOT use production forge/DB/tokens.
+
+services:
+  gitea:
+    image: gitea/gitea:1.22.3
+    container_name: rd-e2e-gitea
+    environment:
+      USER_UID: "1000"
+      USER_GID: "1000"
+      GITEA__database__DB_TYPE: sqlite3
+      GITEA__server__DOMAIN: gitea
+      GITEA__server__HTTP_PORT: "3000"
+      # In-compose ROOT_URL so RD archive/history clone URLs resolve on the e2e network.
+      # Host harness still reaches Gitea via published port 13000.
+      GITEA__server__ROOT_URL: http://gitea:3000/
+      GITEA__server__DISABLE_SSH: "true"
+      GITEA__security__INSTALL_LOCK: "true"
+      GITEA__service__DISABLE_REGISTRATION: "false"
+      GITEA__webhook__ALLOWED_HOST_LIST: external,loopback,private
+      GITEA__webhook__SKIP_TLS_VERIFY: "true"
+    volumes:
+      - rd-e2e-gitea-data:/data
+    ports:
+      - "${RD_E2E_GITEA_HOST_PORT:-13000}:3000"
+    networks:
+      - rd-e2e
+    healthcheck:
+      # Cold SQLite install can take several minutes before HTTP binds.
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:3000/api/v1/version || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 72
+      start_period: 120s
+
+  repository-detective:
+    image: ${RD_E2E_IMAGE:-repository-detective:all-in-one}
+    container_name: rd-e2e-detective
+    depends_on:
+      - gitea
+    environment:
+      REPOSITORY_DETECTIVE_PORT: "8081"
+      REPOSITORY_DETECTIVE_LISTEN_HOST: "0.0.0.0"
+      REPOSITORY_DETECTIVE_LOG_LEVEL: info
+      REPOSITORY_DETECTIVE_SKIP_STARTUP_CHECKS: "true"
+      REPOSITORY_DETECTIVE_STARTUP_CHECK_TIMEOUT: "15"
+      REPOSITORY_DETECTIVE_DATABASE_ENABLED: "true"
+      REPOSITORY_DETECTIVE_DATABASE_PATH: /app/data/repository-detective.db
+      REPOSITORY_DETECTIVE_API_KEY: ${RD_E2E_API_KEY:-e2e-acceptance-api-key-not-a-secret}
+      REPOSITORY_DETECTIVE_GITEA_URL: http://gitea:3000
+      REPOSITORY_DETECTIVE_GITEA_TOKEN: ${RD_E2E_GITEA_TOKEN:-}
+      REPOSITORY_DETECTIVE_PUBLIC_URL: http://repository-detective:8081
+      REPOSITORY_DETECTIVE_WEBHOOK_SECRET: ${RD_E2E_WEBHOOK_SECRET:-e2e-webhook-secret-not-production}
+      REPOSITORY_DETECTIVE_PRIVACY_MODE: local_only
+      REPOSITORY_DETECTIVE_ENABLE_LLM_AUDITORS: "false"
+      REPOSITORY_DETECTIVE_SCAN_PROFILE: standard
+      REPOSITORY_DETECTIVE_AUTO_CREATE_ISSUES: "true"
+      REPOSITORY_DETECTIVE_ENABLE_GITEA_STATUS: "true"
+      REPOSITORY_DETECTIVE_REMEDIATION_PR_ENABLED: "false"
+      REPOSITORY_DETECTIVE_REJECT_QUERY_STRING_API_KEY: "true"
+      REPOSITORY_DETECTIVE_AUTH_MODE: api_key_only
+      # Standard profile requires gitleaks+trivy+grype+semgrep; allow longer scanner/analysis budgets.
+      REPOSITORY_DETECTIVE_SCANNER_TIMEOUT_SECONDS: "600"
+      REPOSITORY_DETECTIVE_ANALYSIS_TIMEOUT: "1800"
+      # Tree-head resolve/reopen acceptance (history secret scan is separate evidence path).
+      REPOSITORY_DETECTIVE_SECRET_SCAN_GIT_HISTORY_ENABLED: "false"
+      # Policy outcome E2E (RD-017C): do not collapse ACTION_REQUIRED/POLICY_MET when
+      # optional/history helpers fail; required-scanner fail-closed is proven separately.
+      REPOSITORY_DETECTIVE_GITEA_STATUS_INCLUDE_SCANNER_FAILURES: "false"
+    volumes:
+      - rd-e2e-rd-data:/app/data
+      - ./config:/app/config:ro
+    ports:
+      - "${RD_E2E_RD_HOST_PORT:-18081}:8081"
+    networks:
+      - rd-e2e
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/docker-healthcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 25s
+
+networks:
+  rd-e2e:
+    driver: bridge
+
+volumes:
+  rd-e2e-gitea-data:
+  rd-e2e-rd-data:

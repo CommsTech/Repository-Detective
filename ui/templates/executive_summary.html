@@ -1,0 +1,51 @@
+{{define "executive_summary.html"}}
+{{with .Executive}}
+<section class="rd-report rd-report-exec-section rd-print-block">
+  <div class="rd-report-exec-head">
+    <h2>Executive summary</h2>
+    <span class="rd-badge {{if eq .Recommendation "blocked"}}critical{{else if eq .Recommendation "caution"}}medium{{else}}completed{{end}}">{{.RecommendationLabel}}</span>
+  </div>
+  <p class="rd-report-meta"><strong>Risk posture:</strong> {{.RiskPosture}}</p>
+  <p class="rd-report-exec">{{.BusinessImpact}}</p>
+
+  {{if .TopRisks}}
+  <div class="rd-card rd-card-inset">
+    <h3>Top risks</h3>
+    <ol class="rd-risk-list">
+      {{range .TopRisks}}
+      <li>
+        <span class="rd-badge {{severityBadge .Severity}}">{{.Severity}}</span>
+        <strong>{{.Title}}</strong>
+        {{if .ReviewNote}}<span class="rd-muted"> — {{.ReviewNote}}</span>{{end}}
+      </li>
+      {{end}}
+    </ol>
+  </div>
+  {{end}}
+
+  <dl class="rd-dl rd-exec-dl">
+    <dt>Recommended decision</dt><dd><strong>{{.RecommendationLabel}}</strong></dd>
+    <dt>Confidence level</dt><dd>{{.ConfidenceLevel}}</dd>
+    <dt>Scope scanned</dt><dd>{{.ScopeScanned}}</dd>
+    <dt>Scanner coverage</dt><dd>{{.ScannerCoverage}}</dd>
+    {{if .ChangesSinceLastScan}}<dt>Since last scan</dt><dd>{{.ChangesSinceLastScan}}</dd>{{end}}
+    {{if .RiskTrend}}<dt>Risk trend</dt><dd>{{.RiskTrend}}</dd>{{end}}
+    <dt>Remediation progress</dt><dd>{{.RemediationProgress}}</dd>
+    <dt>Evidence-backed status</dt><dd>{{.EvidenceBacked}}</dd>
+  </dl>
+
+  {{if gt .ActionableCount 0}}
+  <p class="rd-muted">{{.ActionableCount}} actionable findings · {{.ReviewCount}} routed to review (low confidence or noisy rules)</p>
+  {{end}}
+
+  {{if .KnownLimitations}}
+  <div class="rd-card rd-card-inset">
+    <h3>Known limitations</h3>
+    <ul class="rd-muted">
+      {{range .KnownLimitations}}<li>{{.}}</li>{{end}}
+    </ul>
+  </div>
+  {{end}}
+</section>
+{{end}}
+{{end}}
