@@ -1,0 +1,62 @@
+name: Missed detection
+about: Report a security or quality issue Repository Detective should have found
+labels:
+  - type/missed-detection
+  - beta/feedback
+  - status/needs-triage
+body:
+  - type: markdown
+    attributes:
+      value: Do **not** paste secrets, tokens, or customer data.
+  - type: input
+    id: version
+    attributes:
+      label: Repository Detective commit / version
+    validations:
+      required: true
+  - type: input
+    id: scan_id
+    attributes:
+      label: Scan ID where miss was noticed
+    validations:
+      required: true
+  - type: input
+    id: repo
+    attributes:
+      label: Repository (owner/name)
+    validations:
+      required: true
+  - type: input
+    id: path
+    attributes:
+      label: File / path / image
+  - type: input
+    id: line
+    attributes:
+      label: Line (if applicable)
+  - type: textarea
+    id: expected
+    attributes:
+      label: What should have been detected?
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Redacted evidence (pattern, CVE, rule name)
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction steps
+    validations:
+      required: true
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Expected severity
+      options:
+        - critical
+        - high
+        - medium
+        - low
+        - info

@@ -1,0 +1,31 @@
+name: Accessibility
+about: WCAG-aligned improvement or Section 508-related barrier
+labels:
+  - type/accessibility
+  - status/needs-triage
+body:
+  - type: textarea
+    id: barrier
+    attributes:
+      label: Barrier description
+      description: What cannot users do with keyboard or assistive tech?
+    validations:
+      required: true
+  - type: input
+    id: page
+    attributes:
+      label: Page / URL path
+      placeholder: /ui/findings
+  - type: dropdown
+    id: wcag
+    attributes:
+      label: Related WCAG theme (informal)
+      options:
+        - Perceivable
+        - Operable
+        - Understandable
+        - Robust
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Done when

@@ -1,0 +1,5 @@
+{{define "error.html"}}
+<!DOCTYPE html><html lang="en"><head>{{template "head" .}}</head><body class="rd-app">
+{{template "nav" .}}<div class="rd-alert">{{.Data.Message}}</div>{{template "foot" .}}
+</body></html>
+{{end}}

@@ -1,0 +1,7 @@
+package main
+
+const internalURL = "http://192.168.1.10:8080/health"
+
+func healthCheck() string {
+	return internalURL
+}

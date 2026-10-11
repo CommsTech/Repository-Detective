@@ -1,0 +1,33 @@
+# Runtime image when `docker build` cannot reach storage.googleapis.com.
+# Uses Debian (glibc) because pre-built host binaries are typically glibc-linked.
+#
+#   cp /path/to/repository-detective build/repository-detective
+#   ./deploy.sh
+
+FROM debian:bookworm-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates curl wget bash gosu \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN groupadd -g 1001 repositorydetective && \
+    useradd -u 1001 -g repositorydetective -s /usr/sbin/nologin repositorydetective
+
+WORKDIR /app
+
+COPY build/repository-detective ./repository-detective
+COPY config ./config
+COPY scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+
+RUN chmod +x repository-detective /usr/local/bin/docker-entrypoint.sh && \
+    chown -R repositorydetective:repositorydetective /app
+
+EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:8081/health || exit 1
+
+USER repositorydetective
+
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+CMD ["/app/repository-detective"]

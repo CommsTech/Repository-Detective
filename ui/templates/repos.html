@@ -1,0 +1,123 @@
+{{define "repos.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>{{template "head" .}}</head>
+<body class="rd-app">
+{{template "nav" .}}
+{{if .Notice}}<div class="rd-alert info">{{.Notice}}</div>{{end}}
+
+<div class="rd-card rd-repos-control">
+  <div class="rd-card-head rd-fleet-head-bar">
+    <div class="rd-fleet-title-block">
+      <h2>Repository fleet</h2>
+      <p class="rd-muted rd-fleet-subtitle">Scan, schedule, and reconcile repositories from one console.</p>
+    </div>
+    <span class="rd-chip rd-fleet-count">{{len .Data.ControlPage.Rows}} tracked</span>
+  </div>
+
+  <p class="rd-fleet-help rd-muted" title="Webhook/commit scans are separate from nightly scheduler. The nightly calibration learner (02:17) is not a full-fleet scan. Findings and forge issues may differ in report-only mode.">
+    Webhook scans fire on push when configured. Nightly fleet scans require <code>Sched on</code> per repo.
+    Findings and forge issues may differ in report-only mode.
+  </p>
+
+  {{if .Data.ControlPage.FleetHealth.Warning}}
+  <div class="rd-alert warn rd-fleet-warning">
+    <strong>Fleet scan status:</strong> {{.Data.ControlPage.FleetHealth.Warning}}
+    {{if gt .Data.ControlPage.FleetHealth.StaleScanCount 0}}
+    <span> · {{.Data.ControlPage.FleetHealth.StaleScanCount}} repos have stale scans (&gt;24h).</span>
+    {{end}}
+    <div class="rd-fleet-warning-actions">
+      <span class="rd-muted">Audit: <code>python3 scripts/fleet-scheduler-audit.py --dry-run</code></span>
+    </div>
+  </div>
+  {{end}}
+
+  {{with .Data.ControlPage.WebhookSetup}}
+  {{if not .Ready}}
+  <div class="rd-alert warn rd-fleet-warning" role="status">
+    <strong>Push webhooks are not ready.</strong>
+    You can still enable repos for <em>manual</em> Scan now; Gitea push scans will not work until these are fixed:
+    <ul class="rd-fleet-webhook-issues">
+      {{range .Issues}}<li>{{.}}</li>{{end}}
+    </ul>
+    <div class="rd-fleet-warning-actions">
+      <a class="rd-link" href="{{.OnboardURL}}" target="_blank" rel="noopener">Open Onboard wizard</a>
+      · <a class="rd-link" href="{{$.BasePath}}/configure{{apiKeyQS $.APIKey}}">Configure</a>
+      · <a class="rd-link" href="{{.DocsURL}}" target="_blank" rel="noopener">Setup guide (webhooks)</a>
+      · <a class="rd-link" href="https://git.commsnet.org/commstech/Repository-Detective/src/branch/main/docs/NETWORKING.md" target="_blank" rel="noopener">Networking guide</a>
+    </div>
+  </div>
+  {{end}}
+  {{end}}
+
+  <div class="rd-toolbar rd-fleet-toolbar">
+    <div class="rd-search">
+      <label for="rd-table-search" class="rd-muted">Search</label>
+      <input type="search" id="rd-table-search" placeholder="Name, forge, status…" aria-label="Search repositories">
+    </div>
+  </div>
+
+  <div class="rd-fleet-scroll" id="rd-searchable-table">
+    <div class="rd-fleet-grid rd-fleet-grid-head" aria-hidden="true">
+      <div>Repository</div>
+      <div>State</div>
+      <div>Latest scan</div>
+      <div>Findings</div>
+      <div>Forge issues</div>
+      <div>Actions</div>
+    </div>
+
+    {{range .Data.ControlPage.Rows}}
+    <article class="rd-fleet-row" data-search="{{.FullName}} {{.ForgeType}} {{.LastScanStatus}} {{.IssueSyncStatus}} {{.ScanProfile}}">
+      <div class="rd-fleet-cell rd-fleet-repo">
+        <a class="rd-link rd-fleet-repo-name" href="{{$.BasePath}}/repos/{{.ID}}{{apiKeyQS $.APIKey}}">{{.FullName}}</a>
+        <span class="rd-fleet-repo-meta">ID {{.ID}} · {{.ForgeType}}</span>
+        {{if .CountsDiffer}}<span class="rd-badge monitor rd-badge-xs" title="Finding vs issue counts may differ — expected in report-only mode">sync note</span>{{end}}
+      </div>
+
+      <div class="rd-fleet-cell rd-fleet-state">
+        <div class="rd-fleet-kv" title="Repo allowed for webhook and manual scans (not an error state)"><span class="rd-fleet-k">Webhook/manual</span>{{if .ScanEnabled}}<span class="rd-badge success rd-badge-xs">enabled</span>{{else}}<span class="rd-badge skipped rd-badge-xs">disabled</span>{{end}}</div>
+        {{if .WebhookHint}}<p class="rd-fleet-webhook-hint rd-muted" title="{{.WebhookHint}}">{{.WebhookHint}} {{if not $.Data.ControlPage.WebhookSetup.Ready}}<a class="rd-link rd-link-sm" href="{{$.Data.ControlPage.WebhookSetup.DocsURL}}" target="_blank" rel="noopener">Fix guide</a>{{else}}<a class="rd-link rd-link-sm" href="{{$.Data.ControlPage.WebhookSetup.OnboardURL}}" target="_blank" rel="noopener">Register webhook</a>{{end}}</p>{{end}}
+        <div class="rd-fleet-kv" title="In-process nightly scheduler"><span class="rd-fleet-k">Nightly sched</span>{{if .ScheduleEnabled}}<span class="rd-badge info rd-badge-xs">on</span>{{else}}<span class="rd-muted" title="Nightly schedule off — no cron fleet scan">off</span>{{end}}</div>
+        <div class="rd-fleet-kv" title="Forge issue filing policy"><span class="rd-fleet-k">Filing</span><span class="rd-badge {{if .IssueFilingOn}}warn{{else}}monitor{{end}} rd-badge-xs">{{if .IssueFilingOn}}on{{else}}off{{end}}</span></div>
+        <div class="rd-fleet-kv"><span class="rd-fleet-k">Profile</span><code class="rd-fleet-code">{{profileLabel .ScanProfile}}</code></div>
+        <div class="rd-fleet-kv"><span class="rd-fleet-k">Report-only</span><span class="rd-muted rd-badge-xs">{{.ReportOnlyLabel}}</span></div>
+      </div>
+
+      <div class="rd-fleet-cell rd-fleet-scan">
+        {{if .ScanStale}}<span class="rd-badge warn rd-badge-xs" title="Last scan older than 24h or never scanned">stale</span>{{end}}
+        {{if .LastScanStatus}}<span class="rd-badge {{scanBadge .LastScanStatus}} rd-badge-xs">{{.LastScanStatus}}</span>{{else}}<span class="rd-muted">never</span>{{end}}
+        <span class="rd-fleet-scan-time">{{if .LastScanAt}}{{.LastScanAt.Format "2006-01-02 15:04"}}{{else}}—{{end}}</span>
+        {{if .LastScanID}}<a class="rd-link rd-link-sm" href="{{$.BasePath}}/scans/{{.LastScanID}}{{apiKeyQS $.APIKey}}">{{shortID .LastScanID 8}}</a>{{end}}
+        <span class="rd-fleet-sync" title="Issue sync status"><code>{{if .IssueSyncStatus}}{{.IssueSyncStatus}}{{else}}—{{end}}</code></span>
+        {{if .LastWebhookAt}}<span class="rd-fleet-subcount" title="Last push webhook scan">webhook {{.LastWebhookAt}}</span>{{end}}
+      </div>
+
+      <div class="rd-fleet-cell rd-fleet-findings" title="Active-present / scan findings total">
+        <strong>{{.ActivePresentOpen}}</strong><span class="rd-muted"> / {{.ScanFindingsTotal}}</span>
+        {{if gt .ReportOnlyFindings 0}}<span class="rd-fleet-subcount" title="Open findings with no mapped forge issue">{{.ReportOnlyFindings}} unmapped</span>{{end}}
+      </div>
+
+      <div class="rd-fleet-cell rd-fleet-forge">
+        <strong>{{.ForgeOpenIssues}}</strong> <span class="rd-muted">mapped forge issues</span>
+        {{if gt .UnmappedOpenIssues 0}}<span class="rd-fleet-subcount" title="Forge issues not linked to latest scan findings">{{.UnmappedOpenIssues}} unmapped issues</span>{{end}}
+      </div>
+
+      <div class="rd-fleet-cell rd-fleet-actions-cell">
+        {{template "repos_fleet_actions.html" (dict "Row" . "Page" $)}}
+      </div>
+    </article>
+    {{else}}
+    <div class="rd-empty rd-fleet-empty">
+      <div class="rd-empty-icon">▣</div>
+      <h3>No repositories yet</h3>
+      <p class="rd-muted">Repositories appear after the first webhook or manual scan.</p>
+    </div>
+    {{end}}
+  </div>
+</div>
+
+{{if .Data.ControlPage.ScanTriggerEnabled}}{{template "repos_scan_modal.html" .}}{{end}}
+{{template "foot" .}}
+</body></html>
+{{end}}
