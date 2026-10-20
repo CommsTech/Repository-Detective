@@ -1,0 +1,73 @@
+{{define "preinstall_audit.html"}}
+<!DOCTYPE html><html lang="en"><head>{{template "head" .}}</head><body class="rd-app">
+{{template "nav" .}}
+<div class="rd-alert info">Draft reports require human review before submission. No automatic issue filing in pre-install audits.</div>
+<div class="rd-card">
+  <div class="rd-card-head"><h2>Audit summary</h2><span class="rd-chip">{{.Data.Audit.Status}}</span></div>
+  <p><strong>Repository:</strong> {{.Data.Audit.NormalizedRepoURL}}</p>
+  {{if eq .Data.Audit.Status "failed"}}
+  <div class="rd-alert warn" role="alert">
+    <strong>Audit failed — no safety conclusion was made.</strong>
+    <p>Do not treat a failed audit as safe. Risk score is unavailable until a completed audit runs successfully.</p>
+    {{with preinstallFailureStage .Data.Audit}}<p><strong>Failure stage:</strong> {{.}}</p>{{end}}
+    {{if .Data.Audit.Error}}<p><strong>Reason:</strong> {{.Data.Audit.Error}}</p>{{end}}
+  </div>
+  {{else}}
+  <p><strong>Commit:</strong> <code>{{.Data.Audit.CommitSHA}}</code></p>
+  {{end}}
+  <p><strong>Risk score:</strong>
+    {{if eq .Data.Audit.Status "failed"}}
+    <span class="rd-badge skipped">unavailable</span>
+    {{else}}
+    <span class="rd-badge medium">{{preinstallRiskDisplay .Data.Audit}}</span>
+    {{end}}
+  </p>
+  <p><strong>Recommendation:</strong> {{preinstallRecDisplay .Data.Audit}}</p>
+  {{if and (ne .Data.Audit.Status "failed") .Data.Audit.Error}}<p class="rd-alert">{{.Data.Audit.Error}}</p>{{end}}
+</div>
+{{if ne .Data.Audit.Status "failed"}}
+<div class="rd-card">
+  <div class="rd-card-head"><h2>Findings</h2></div>
+  <table class="rd-table">
+    <tr><th>Severity</th><th>Category</th><th>Source</th><th>Title</th><th>File</th></tr>
+    {{range .Data.Findings}}
+    <tr>
+      <td><span class="rd-badge {{severityBadge .Severity}}">{{.Severity}}</span></td>
+      <td><span class="rd-badge {{categoryBadge .Category}}">{{.Category}}</span></td>
+      <td>{{.Source}}</td>
+      <td>{{.Title}}</td>
+      <td><code>{{.FilePath}}</code></td>
+    </tr>
+    {{else}}
+    <tr><td colspan="5" class="rd-muted">No findings recorded</td></tr>
+    {{end}}
+  </table>
+</div>
+<div class="rd-card">
+  <div class="rd-card-head"><h2>Generated reports</h2><span class="rd-chip">Markdown drafts</span></div>
+  {{range .Data.Reports}}
+  <div class="rd-report">
+    <h3>{{.Title}} <span class="rd-badge code-quality">{{.ReportType}}</span></h3>
+    <p class="rd-report-meta">Sensitivity: {{.Sensitivity}} · Confidence: {{.Confidence}}{{if .ApprovedByUser}} · Reviewed{{end}}</p>
+    <pre class="rd-pre" id="report-{{.ID}}">{{.BodyMarkdown}}</pre>
+    <div class="rd-actions">
+      <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('report-{{.ID}}').innerText)">Copy markdown</button>
+      <form method="post" action="{{$.BasePath}}/preinstall/reports/{{.ID}}/reviewed{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}" style="display:inline">
+        <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+        <button type="submit" class="rd-btn-secondary" {{if .ApprovedByUser}}disabled{{end}}>Mark reviewed</button>
+      </form>
+    </div>
+  </div>
+  {{else}}
+  <p class="rd-muted">Reports appear when the audit completes.</p>
+  {{end}}
+</div>
+{{else}}
+<div class="rd-card">
+  <p class="rd-muted">Findings and reports are not generated when an audit fails before scan completion.</p>
+</div>
+{{end}}
+<p><a class="rd-link" href="{{.BasePath}}/preinstall{{if .APIKey}}?api_key={{.APIKey}}{{end}}">← Back to pre-install audits</a></p>
+{{template "foot" .}}
+</body></html>
+{{end}}

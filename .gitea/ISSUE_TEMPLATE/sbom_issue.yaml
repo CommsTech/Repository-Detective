@@ -1,0 +1,44 @@
+name: SBOM issue
+about: SBOM generation, display, download, or vulnerability correlation
+labels:
+  - type/bug
+  - area/sbom
+  - status/needs-triage
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Repository Detective commit / version
+    validations:
+      required: true
+  - type: input
+    id: scan_id
+    attributes:
+      label: Scan ID
+    validations:
+      required: true
+  - type: input
+    id: repo
+    attributes:
+      label: Repository (owner/name)
+  - type: input
+    id: component
+    attributes:
+      label: SBOM component / package (if applicable)
+  - type: input
+    id: ecosystem
+    attributes:
+      label: Ecosystem
+      placeholder: go, npm, python, container
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected SBOM behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true

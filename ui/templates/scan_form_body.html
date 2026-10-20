@@ -1,0 +1,58 @@
+{{define "scan_form_body.html"}}
+{{$form := index . "Form"}}
+{{$page := index . "Page"}}
+<dl class="rd-dl rd-scan-meta">
+  <dt>Repository</dt><dd><strong>{{if $form.Repo.FullName}}{{$form.Repo.FullName}}{{else}}<span id="rd-repos-scan-name">—</span>{{end}}</strong></dd>
+  <dt>Repo ID</dt><dd><code>{{if $form.Repo.ID}}{{$form.Repo.ID}}{{else}}<span id="rd-repos-scan-id">—</span>{{end}}</code></dd>
+  <dt>Trigger</dt><dd>manual</dd>
+  <dt>Scan policy mode</dt><dd><code>{{if $form.ScanPolicyMode}}{{$form.ScanPolicyMode}}{{else}}{{$page.Data.ControlPage.ScanPolicyMode}}{{end}}</code></dd>
+</dl>
+
+<label>Branch / ref<input name="ref" id="rd-repos-scan-ref" value="{{$form.DefaultRef}}" placeholder="main" required></label>
+<label>Scan profile (optional)<select name="scan_profile" id="rd-repos-scan-profile">
+  <option value="">inherit{{if $form.ProfileMeta.ScanProfile}} ({{profileLabel $form.ProfileMeta.ScanProfile}}){{end}}</option>
+  {{range $form.Profiles}}<option value="{{.ID}}">{{.Label}} — {{.Summary}}</option>{{end}}
+</select></label>
+
+<label class="rd-checkbox-row">
+  <input type="checkbox" name="report_only_dry_run" id="rd-repos-scan-report-only" value="true"
+    {{if $form.DefaultReportOnly}}checked{{end}}
+    {{if $form.FilingPolicy.DryRunCheckboxLocked}}disabled checked{{end}}
+    data-preflight-toggle>
+  Report-only / dry run (no forge issues, no PRs)
+</label>
+<p class="rd-muted" id="rd-repos-scan-filing-note" {{if $form.IssueFilingOn}}hidden{{end}}>
+  Issue filing is disabled by policy — report-only is enforced.
+</p>
+<p class="rd-muted rd-scan-policy-hint" id="rd-scan-issue-filing-line">{{$form.FilingPolicy.IssuesPreflightLine}}</p>
+
+<details class="rd-scan-advanced" id="rd-scan-advanced">
+  <summary>Advanced options</summary>
+  <dl class="rd-dl rd-scan-advanced-dl">
+    <dt>Issue filing</dt><dd>{{if $form.IssueFilingOn}}enabled by policy{{else}}<strong>disabled</strong>{{end}}</dd>
+    <dt>Severity gate</dt><dd><code>{{$form.SeverityGate}}</code></dd>
+    <dt>Confidence gate</dt><dd><code>{{printf "%.2f" $form.ConfidenceGate}}</code></dd>
+    <dt>Max issues / scan</dt><dd>{{if gt $form.MaxIssuesPerScan 0}}{{$form.MaxIssuesPerScan}}{{else}}unlimited{{end}}</dd>
+    <dt>Scanners</dt><dd><code>{{$form.ScannerSummary}}</code></dd>
+    <dt>Code graph</dt><dd>{{if $form.EnableCodeGraph}}enabled{{else}}disabled{{end}}</dd>
+    <dt>SBOM</dt><dd>generated when scanners produce SBOM data</dd>
+    <dt>Runner delegation</dt><dd>{{if $form.RunnerDelegation}}enabled{{else}}disabled{{end}}</dd>
+    <dt>Notifications</dt><dd>{{if $form.NotificationsOn}}enabled{{else}}disabled{{end}}</dd>
+    <dt>Backlog-control</dt><dd>{{if $form.BacklogControlEnabled}}<strong>active</strong> — may block new low/medium issues{{else}}off{{end}}</dd>
+  </dl>
+</details>
+
+<div class="rd-scan-safety-summary" id="rd-scan-preflight">
+  <p class="rd-scan-safety-head">Preflight summary</p>
+  <ul class="rd-scan-safety-list">
+    <li class="{{if $form.FilingPolicy.WillFileIssues}}rd-warn{{else}}rd-safe{{end}}" id="rd-repos-scan-issues-line">
+      {{$form.FilingPolicy.IssuesPreflightLine}}
+    </li>
+    <li class="rd-safe">Remediation PRs are {{if $form.RemediationPREnabled}}enabled{{else}}<strong>disabled</strong>{{end}}.</li>
+    <li class="rd-safe">LLM sanity gate is {{if $form.LLMSanityGateEnabled}}enabled{{else}}<strong>disabled</strong>{{end}}.</li>
+    <li class="rd-safe">Backlog-control is {{if $form.BacklogControlEnabled}}<strong>active</strong>{{else}}off{{end}}.</li>
+    <li class="rd-muted" id="rd-scan-dry-run-line">{{$form.FilingPolicy.ReportOnlyPreflight}}</li>
+    <li>This is a <strong>manual scan</strong>.</li>
+  </ul>
+</div>
+{{end}}

@@ -1,0 +1,40 @@
+{{define "graph.html"}}
+<!DOCTYPE html><html lang="en"><head>{{template "head" .}}</head><body class="rd-app">
+{{template "nav" .}}
+<p class="rd-muted">Repository Detective — Inspect. Analyze. Improve. Interactive repository map with findings overlay.</p>
+<div class="rd-card">
+<div id="graph-state-panel" role="status" aria-live="polite"></div>
+<div id="graph-controls" role="toolbar" aria-label="Graph display options" style="display:none">
+<label for="layout-mode">Layout <select id="layout-mode"><option value="cose">Architecture clusters</option><option value="breadthfirst">Directory tree</option><option value="circle">Dependency ring</option></select></label>
+<label for="filter-type">Node type <select id="filter-type"><option value="">All</option><option value="file">Files</option><option value="package">Packages</option><option value="function">Functions</option><option value="finding">Findings</option><option value="directory">Directories</option></select></label>
+<label for="filter-disconnected"><input type="checkbox" id="filter-disconnected"> Disconnected only</label>
+<label for="filter-findings-off"><input type="checkbox" id="filter-findings-off"> Hide findings overlay</label>
+<label for="filter-entrypoints"><input type="checkbox" id="filter-entrypoints"> Highlight entrypoints</label>
+<a id="export-graph" href="#" class="rd-btn rd-btn-secondary" style="display:none">Download JSON</a>
+<button type="button" id="copy-graph-summary" style="display:none">Copy graph summary</button>
+<button type="button" id="graph-refresh" class="rd-btn rd-btn-ghost" style="display:none">Refresh</button>
+</div>
+<div id="graph-legend" class="rd-muted" aria-label="Graph legend" style="display:none">
+<span class="legend-item"><span class="dot type-file" aria-hidden="true"></span> File</span>
+<span class="legend-item"><span class="dot type-package" aria-hidden="true"></span> Package</span>
+<span class="legend-item"><span class="dot type-function" aria-hidden="true"></span> Function</span>
+<span class="legend-item"><span class="dot type-finding" aria-hidden="true"></span> Finding</span>
+<span class="legend-item"><span class="dot entry" aria-hidden="true"></span> Entrypoint</span>
+<span class="legend-item"><span class="dot disc" aria-hidden="true"></span> Disconnected</span>
+</div>
+<p id="graph-summary" class="rd-graph-summary rd-muted" aria-live="polite"></p>
+<div id="cy" class="rd-graph-canvas" role="img" aria-label="Repository code graph visualization"></div>
+<div id="node-detail" class="rd-muted rd-card" style="margin-top:0.5rem;padding:0.75rem;min-height:2.5rem;display:none" role="region" aria-label="Selected node details">Select a node for details.</div>
+</div>
+<script type="application/json" id="graph-initial-state">{{jsonScript .Data.GraphStateJSON}}</script>
+<div id="graph-app"
+  data-state-url="{{.Data.GraphStateURL}}"
+  data-export-url="{{.Data.ExportURL}}"
+  data-settings-url="{{.Data.GraphSettingsURL}}"
+  data-scan-url="{{.Data.ScanNowURL}}"
+  data-api-key="{{.APIKey}}"></div>
+<script src="{{.BasePath}}/static/cytoscape.min.js"></script>
+<script src="{{.BasePath}}/static/graph.js"></script>
+{{template "foot" .}}
+</body></html>
+{{end}}
