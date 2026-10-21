@@ -1,0 +1,9 @@
+package main
+
+func evalUserInput(userInput string) {
+	evalPattern(userInput)
+}
+
+func evalPattern(x string) {
+	_ = "eval(" + x + ")"
+}

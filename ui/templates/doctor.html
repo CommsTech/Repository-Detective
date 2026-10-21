@@ -1,0 +1,23 @@
+{{define "doctor.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>{{template "head" .}}</head>
+<body class="rd-app">
+{{template "nav" .}}
+<div class="rd-card">
+  <div class="rd-card-head">
+    <h2>Doctor / Diagnostics</h2>
+    <span class="rd-chip">RD-014</span>
+  </div>
+  <p class="rd-muted">System readiness checks — not repository security. Same engine as <code>repository-detective doctor</code> and onboarding Verify.</p>
+  <p>
+    <button type="button" class="rd-btn" id="rd-doctor-run"
+      data-report-url="{{.BasePath}}/doctor/report">Run doctor</button>
+    <a class="rd-btn rd-btn-ghost" href="{{.BasePath}}/doctor/report" target="_blank" rel="noopener">Open JSON</a>
+    <a class="rd-btn rd-btn-ghost" href="{{.BasePath}}/doctor/bundle" target="_blank" rel="noopener">Support bundle</a>
+  </p>
+  <pre id="rd-doctor-out" class="rd-code-block" style="white-space:pre-wrap;max-height:70vh;overflow:auto">Click Run doctor.</pre>
+</div>
+{{template "foot" .}}
+</body></html>
+{{end}}

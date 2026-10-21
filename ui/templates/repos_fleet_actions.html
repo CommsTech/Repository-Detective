@@ -1,0 +1,34 @@
+{{define "repos_fleet_actions.html"}}
+{{$row := index . "Row"}}
+{{$page := index . "Page"}}
+<div class="rd-fleet-actions" data-fleet-actions>
+  {{if $page.Data.ControlPage.ScanTriggerEnabled}}
+  <button type="button" class="rd-btn rd-btn-sm rd-btn-primary" data-scan-open
+    data-repo-id="{{$row.ID}}"
+    data-repo-name="{{$row.FullName}}"
+    data-default-ref="{{$row.DefaultRef}}"
+    data-scan-profile="{{$row.ScanProfile}}"
+    data-issue-filing="{{if $row.IssueFilingOn}}true{{else}}false{{end}}"
+    data-report-only="{{if $row.DefaultReportOnly}}true{{else}}false{{end}}">Scan now</button>
+  {{end}}
+  <div class="rd-action-menu">
+    <button type="button" class="rd-btn rd-btn-sm rd-btn-ghost rd-menu-trigger" aria-haspopup="menu" aria-expanded="false" aria-label="More actions for {{$row.FullName}}">⋯</button>
+    <div class="rd-action-menu-panel" role="menu" hidden>
+      {{if $row.ScanEnabled}}
+      <form method="post" action="{{$page.BasePath}}/repos/{{$row.ID}}/disable-scanning{{if $page.APIKey}}?api_key={{$page.APIKey}}{{end}}" class="rd-inline-form" role="none" data-confirm="Disable scanning for {{$row.FullName}}? Scheduled scans stop. Manual scans still require confirmation. History and findings are kept.">
+        <input type="hidden" name="csrf_token" value="{{$page.CSRFToken}}">
+        <button type="submit" class="rd-menu-item rd-menu-item-warn" role="menuitem">Disable scanning</button>
+      </form>
+      {{else}}
+      <form method="post" action="{{$page.BasePath}}/repos/{{$row.ID}}/enable-scanning{{if $page.APIKey}}?api_key={{$page.APIKey}}{{end}}" class="rd-inline-form" role="none" data-confirm="{{if $page.Data.ControlPage.WebhookSetup.Ready}}Enable scanning for {{$row.FullName}}?{{else}}Enable scanning for {{$row.FullName}}? Push webhooks are not fully configured yet — manual Scan now will work, but Gitea push scans will not until PUBLIC_URL, webhook secret, and forge registration are fixed (see Setup guide).{{end}}">
+        <input type="hidden" name="csrf_token" value="{{$page.CSRFToken}}">
+        <button type="submit" class="rd-menu-item" role="menuitem">Enable scanning</button>
+      </form>
+      {{end}}
+      <a class="rd-menu-item" role="menuitem" href="{{$page.BasePath}}/repos/{{$row.ID}}{{apiKeyQS $page.APIKey}}">Details</a>
+      <a class="rd-menu-item" role="menuitem" href="{{$page.BasePath}}/repos/{{$row.ID}}/settings{{apiKeyQS $page.APIKey}}">Settings</a>
+      <a class="rd-menu-item" role="menuitem" href="{{$page.BasePath}}/repos/{{$row.ID}}/report{{apiKeyQS $page.APIKey}}">Report</a>
+    </div>
+  </div>
+</div>
+{{end}}

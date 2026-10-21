@@ -1,0 +1,4 @@
+# Intentional vulnerable fixture: examples/vulnerable-demo.
+# These IDs are the demo's cryptography/OpenSSL findings, not product dependencies.
+GHSA-537c-gmf6-5ccf
+CVE-2026-26007

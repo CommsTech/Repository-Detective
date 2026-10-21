@@ -1,0 +1,57 @@
+{{define "repo_reconcile.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>{{template "head" .}}</head>
+<body class="rd-app">
+{{template "nav" .}}
+{{with .Data.Repo}}
+<nav class="rd-breadcrumb" aria-label="Breadcrumb">
+  <a href="{{$.BasePath}}/repos{{apiKeyQS $.APIKey}}">Repositories</a>
+  <span>/</span>
+  <a href="{{$.BasePath}}/repos/{{.ID}}{{apiKeyQS $.APIKey}}">{{.FullName}}</a>
+  <span>/</span>
+  <span>Reconcile issues</span>
+</nav>
+
+<div class="rd-card">
+  <div class="rd-card-head">
+    <h2>Reconcile existing issues</h2>
+    <p class="rd-muted">Compare tracked Gitea issues against latest scan data. No issues are deleted.</p>
+  </div>
+  {{if $.Data.Applied}}<div class="rd-alert info">Reconciliation applied. Review results below.</div>{{end}}
+  {{if not $.Data.ReconcileEnabled}}
+  <p class="rd-muted">Issue reconciliation is disabled in config.</p>
+  {{else if $.Data.Items}}
+  <form method="post" action="{{$.BasePath}}/repos/{{.ID}}/reconcile{{apiKeyQS $.APIKey}}" data-confirm="Apply reconciliation actions to Gitea issues for this repository?">
+    <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+    <button type="submit" class="rd-btn">Apply reconciliation</button>
+  </form>
+  <table class="rd-table rd-table-compact" style="margin-top:16px">
+    <tr>
+      <th scope="col">Issue</th>
+      <th scope="col">Title</th>
+      <th scope="col">Status</th>
+      <th scope="col">Proposed action</th>
+      <th scope="col">Reason</th>
+    </tr>
+    {{range $.Data.Items}}
+    <tr>
+      <td><a class="rd-link" href="{{.IssueURL}}" target="_blank" rel="noopener">#{{.IssueNumber}}</a></td>
+      <td>{{.Title}}</td>
+      <td><span class="rd-badge">{{.Status}}</span></td>
+      <td>{{.ProposedAction}}</td>
+      <td class="rd-muted">{{.Reason}}</td>
+    </tr>
+    {{else}}<tr><td colspan="5" class="rd-muted">No open tracked issues to reconcile.</td></tr>{{end}}
+  </table>
+  {{else}}
+  <p class="rd-muted">No preview available.</p>
+  {{end}}
+  <div class="rd-actions">
+    <a class="rd-btn rd-btn-ghost" href="{{$.BasePath}}/repos/{{.ID}}{{apiKeyQS $.APIKey}}">Back to repository</a>
+  </div>
+</div>
+{{end}}
+{{template "foot" .}}
+</body></html>
+{{end}}

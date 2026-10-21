@@ -1,0 +1,13 @@
+package main
+
+import (
+	"database/sql"
+	"fmt"
+)
+
+func query(userInput string) {
+	db, _ := sql.Open("postgres", "postgres://localhost/db")
+	// benchmark inject: SQL string concatenation
+	q := "SELECT * FROM users WHERE id = " + userInput
+	db.Query(q)
+}

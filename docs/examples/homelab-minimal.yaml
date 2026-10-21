@@ -1,0 +1,28 @@
+# Homelab minimal — smallest useful connected-repo deployment
+# Copy relevant keys into config.yaml. No secrets included.
+
+scan_profile: light
+enable_trivy: true
+enable_grype: false
+enable_gitleaks: false
+enable_semgrep: false
+enable_govulncheck: false
+enable_gosec: false
+enable_staticcheck: false
+enable_hadolint: false
+enable_checkov: false
+enable_linters: true
+enable_llm_auditors: false
+
+database_enabled: true
+scheduler_enabled: true
+ui_enabled: true
+
+remediation_planner_enabled: false
+remediation_pr_enabled: false
+evidence_closure_enabled: true
+
+notifications_enabled: false
+preinstall_audit_enabled: false
+runner_delegation_enabled: false
+

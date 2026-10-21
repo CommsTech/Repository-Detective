@@ -1,0 +1,39 @@
+version: '3.7'
+
+# Local development — bridge networking, port 8080 on the host.
+#
+#   cp .env.example .env && edit .env
+#   docker compose -f docker-compose.minimal.yml up -d --build
+#
+# Set REPOSITORY_DETECTIVE_PUBLIC_URL=http://localhost:8080 in .env
+
+services:
+  repository-detective:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: all-in-one
+      args:
+        INSTALL_EXTERNAL_TOOLS: "false"
+    image: repository-detective:all-in-one
+    container_name: repository-detective-dev
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      REPOSITORY_DETECTIVE_PORT: "8080"
+      REPOSITORY_DETECTIVE_LISTEN_HOST: "0.0.0.0"
+      REPOSITORY_DETECTIVE_LOG_LEVEL: info
+      REPOSITORY_DETECTIVE_SKIP_STARTUP_CHECKS: "false"
+      REPOSITORY_DETECTIVE_DATABASE_PATH: /app/data/repository-detective.db
+    volumes:
+      - ./config:/app/config:ro
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/docker-healthcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+    restart: unless-stopped
