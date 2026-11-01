@@ -1,0 +1,6 @@
+// Orphan module — not imported elsewhere in fixture.
+package orphan
+
+func UnusedHelper() string {
+	return "dead"
+}

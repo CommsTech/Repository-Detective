@@ -1,0 +1,40 @@
+{{define "preinstall.html"}}
+<!DOCTYPE html><html lang="en"><head>{{template "head" .}}</head><body class="rd-app">
+{{template "nav" .}}
+{{if not .Data.Enabled}}
+<div class="rd-alert warn" role="status"><strong>Pre-install audit disabled.</strong> Set <code>preinstall_audit_enabled=true</code> in <a href="{{.BasePath}}/configure#preinstall-audit{{if .APIKey}}?api_key={{.APIKey}}{{end}}">Configure</a> and restart. HTTPS public repos only; private IPs blocked unless explicitly allowed.</div>
+{{else}}
+<div class="rd-alert info">Pre-install audit is enabled — report-only by design. Paste a public HTTPS repo URL to generate an install risk summary. Private IPs are blocked unless explicitly allowed in Configure.</div>
+<div class="rd-alert">Third-party audit reports are drafts. Review before sharing or submitting externally. Repository Detective does not auto-file issues, create PRs, or submit disclosures without operator approval.</div>
+{{if .Data.Error}}<div class="rd-alert">{{.Data.Error}}</div>{{end}}
+<div class="rd-card">
+<form method="post" action="{{.BasePath}}/preinstall{{if .APIKey}}?api_key={{.APIKey}}{{end}}">
+<input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+<label>Repository URL (HTTPS)
+<input name="repo_url" type="url" required placeholder="https://github.com/owner/repo" value="{{.Data.RepoURL}}"></label>
+<label>Audit depth
+<select name="audit_depth">
+<option value="quick" {{if eq .Data.Depth "quick"}}selected{{end}}>Quick — secrets + basic manifest checks</option>
+<option value="standard" {{if or (eq .Data.Depth "standard") (eq .Data.Depth "")}}selected{{end}}>Standard — all deterministic scanners</option>
+<option value="deep" {{if eq .Data.Depth "deep"}}selected{{end}}>Deep — same as standard (reserved)</option>
+</select></label>
+<button type="submit" {{if not .Data.Enabled}}disabled{{end}}>Start audit</button>
+</form>
+</div>
+<div class="rd-card">
+  <div class="rd-card-head"><h2>Recent audits</h2></div>
+  <table class="rd-table">
+    <tr><th scope="col">Repo</th><th scope="col">Status</th><th scope="col">Risk</th><th scope="col">Recommendation</th><th scope="col">Started</th></tr>
+    {{range .Data.Audits}}<tr>
+      <td><a class="rd-link" href="{{$.BasePath}}/preinstall/audits/{{.AuditID}}{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}">{{.NormalizedRepoURL}}</a></td>
+      <td><span class="rd-badge {{scanBadge .Status}}">{{.Status}}</span></td>
+      <td>{{if eq .Status "failed"}}unavailable{{else}}{{preinstallRiskDisplay .}}{{end}}</td>
+      <td>{{preinstallRecDisplay .}}</td>
+      <td class="rd-muted">{{.StartedAt}}</td>
+    </tr>{{else}}<tr><td colspan="5" class="rd-muted">No audits yet</td></tr>{{end}}
+  </table>
+</div>
+{{end}}
+{{template "foot" .}}
+</body></html>
+{{end}}

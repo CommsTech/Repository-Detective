@@ -1,0 +1,62 @@
+version: '3.7'
+
+# Private beta deployment — safe defaults baked into environment overrides.
+#
+#   cp .env.example .env && edit secrets (never commit .env)
+#   cp config/private-beta.example.yaml config/config.yaml
+#   docker compose -f docker-compose.beta.yml up -d --build
+#
+# First scan: POST /api/v1/analyze with report_only_dry_run: true
+# Do not enable issue filing until operator approval.
+
+services:
+  repository-detective:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: all-in-one
+      args:
+        INSTALL_EXTERNAL_TOOLS: "true"
+        VERSION: ${RD_VERSION:-beta}
+        COMMIT: ${RD_COMMIT:-local}
+        BUILD_DATE: ${RD_BUILD_DATE:-unknown}
+    image: repository-detective:beta
+    container_name: repository-detective-beta
+    ports:
+      - "127.0.0.1:${REPOSITORY_DETECTIVE_PORT:-8081}:8081"
+    env_file:
+      - .env
+    environment:
+      REPOSITORY_DETECTIVE_PORT: "8081"
+      REPOSITORY_DETECTIVE_LISTEN_HOST: "0.0.0.0"
+      REPOSITORY_DETECTIVE_LOG_LEVEL: info
+      REPOSITORY_DETECTIVE_SKIP_STARTUP_CHECKS: "true"
+      REPOSITORY_DETECTIVE_STARTUP_CHECK_TIMEOUT: "10"
+      REPOSITORY_DETECTIVE_DATABASE_PATH: /app/data/repository-detective.db
+      REPOSITORY_DETECTIVE_API_KEY: ${REPOSITORY_DETECTIVE_API_KEY}
+      REPOSITORY_DETECTIVE_SCAN_PROFILE: standard
+      REPOSITORY_DETECTIVE_AUTO_CREATE_ISSUES: "false"
+      REPOSITORY_DETECTIVE_ENABLE_LLM_AUDITORS: "false"
+      REPOSITORY_DETECTIVE_REMEDIATION_PR_ENABLED: "false"
+      REPOSITORY_DETECTIVE_RUNNER_DELEGATION_ENABLED: "false"
+      REPOSITORY_DETECTIVE_NOTIFICATIONS_ENABLED: "false"
+      REPOSITORY_DETECTIVE_EVIDENCE_CLOSURE_ENABLED: "true"
+      REPOSITORY_DETECTIVE_DOGFOOD_BACKLOG_CONTROL_ENABLED: "true"
+      REPOSITORY_DETECTIVE_PREINSTALL_AUDIT_ENABLED: "true"
+    volumes:
+      - ./config:/app/config:ro
+      - ./data:/app/data
+      - ./certs:/app/certs:ro
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/docker-healthcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - rd-beta-net
+
+networks:
+  rd-beta-net:
+    driver: bridge

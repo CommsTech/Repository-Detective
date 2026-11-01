@@ -1,0 +1,23 @@
+# Strict security gate — more scanners, higher bar before merge
+# Use after baseline dogfooding succeeds.
+
+scan_profile: standard
+enable_trivy: true
+enable_grype: true
+enable_gitleaks: true
+enable_semgrep: true
+enable_govulncheck: true
+enable_gosec: true
+enable_staticcheck: true
+enable_hadolint: true
+enable_checkov: true
+enable_linters: true
+enable_llm_auditors: true
+
+min_issue_confidence: 0.6
+gitea_status_fail_on: high
+gitea_status_warn_on: medium
+
+remediation_planner_enabled: true
+remediation_pr_enabled: false
+evidence_closure_enabled: true

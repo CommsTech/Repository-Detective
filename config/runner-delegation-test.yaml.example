@@ -1,0 +1,15 @@
+# Controlled homelab test overlay — copy to runner-delegation-test.yaml locally only.
+# Default config/config.yaml keeps runner_delegation_enabled: false.
+#
+# Merge these keys into a test window via environment variables (preferred) or a local
+# untracked overlay. Never commit runner_shared_secret.
+
+runner_delegation_enabled: true
+runner_mode: native
+runner_max_concurrent_jobs: 1
+runner_require_hmac: true
+runner_allowed_job_types:
+  - graph
+  - sbom
+  - remediation_verify
+# runner_shared_secret: set via REPOSITORY_DETECTIVE_RUNNER_SHARED_SECRET in .env only

@@ -1,0 +1,16 @@
+version: '3.7'
+
+# Optional override: host networking for homelab deployments that require it.
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.host-network.yml up -d
+#
+# Clears bridge networking from the base file so network_mode: host is valid.
+
+services:
+  repository-detective:
+    network_mode: host
+    ports: []
+
+networks:
+  rd-net:
+    external: true
+    name: rd-net-disabled-for-host-mode

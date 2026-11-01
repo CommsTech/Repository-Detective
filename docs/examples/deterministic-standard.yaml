@@ -1,0 +1,28 @@
+# Deterministic standard — recommended first connected-repo profile
+# Balanced scanners without heavy SAST/IaC by default.
+
+scan_profile: standard
+enable_trivy: true
+enable_grype: true
+enable_gitleaks: false
+enable_semgrep: false
+enable_govulncheck: true
+enable_gosec: false
+enable_staticcheck: true
+enable_hadolint: false
+enable_checkov: false
+enable_linters: true
+enable_llm_auditors: false
+
+database_enabled: true
+scheduler_enabled: true
+ui_enabled: true
+
+remediation_planner_enabled: true
+remediation_pr_enabled: false
+evidence_closure_enabled: true
+evidence_closure_close_issues: false
+evidence_closure_require_scanner_success: true
+
+notifications_enabled: true
+preinstall_audit_enabled: false

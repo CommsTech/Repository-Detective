@@ -1,0 +1,27 @@
+# Native Repository Detective runner worker — environment reference.
+# Do NOT commit real secrets. Use .env or secret manager on the runner host.
+#
+# Core service (enable only for controlled test — default product config stays disabled):
+#   runner_delegation_enabled: true
+#   runner_mode: native
+#   runner_shared_secret: <from env REPOSITORY_DETECTIVE_RUNNER_SHARED_SECRET>
+#   runner_max_concurrent_jobs: 1
+#   runner_allowed_job_types:
+#     - graph
+#     - sbom
+#     - remediation_verify
+#
+# Worker process environment:
+#   REPOSITORY_DETECTIVE_CORE_URL=http://127.0.0.1:8081
+#   REPOSITORY_DETECTIVE_RUNNER_SHARED_SECRET=<same as core>
+#   REPOSITORY_DETECTIVE_RUNNER_ID=rd-native-runner-1
+#   REPOSITORY_DETECTIVE_RUNNER_MODE=worker
+#   REPOSITORY_DETECTIVE_WORKSPACE_ROOT=/tmp/rd-runner-workspaces
+#   REPOSITORY_DETECTIVE_RUNNER_MAX_CONCURRENT_JOBS=1
+#   REPOSITORY_DETECTIVE_RUNNER_ALLOWED_JOB_TYPES=graph,sbom,remediation_verify
+#
+# Local binary:
+#   go build -o bin/repository-detective-runner ./cmd/repository-detective-runner
+#   REPOSITORY_DETECTIVE_CORE_URL=http://127.0.0.1:8081 \
+#   REPOSITORY_DETECTIVE_RUNNER_SHARED_SECRET=... \
+#   ./bin/repository-detective-runner --mode worker

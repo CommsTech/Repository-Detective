@@ -1,0 +1,19 @@
+/* Optional local webfonts. Drop .woff2 files into ./fonts/ and uncomment.
+   Default stack avoids Google Fonts CDN (required for self-hosted trust). */
+
+/*
+@font-face {
+  font-family: "RD Sans";
+  src: url("./fonts/rd-sans.woff2") format("woff2");
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "RD Mono";
+  src: url("./fonts/rd-mono.woff2") format("woff2");
+  font-weight: 400 500;
+  font-style: normal;
+  font-display: swap;
+}
+*/
