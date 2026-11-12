@@ -1,0 +1,41 @@
+name: Container scan issue
+about: Opt-in container image scanning (not enabled by default in beta)
+labels:
+  - type/bug
+  - area/container-scan
+  - status/needs-triage
+body:
+  - type: markdown
+    attributes:
+      value: Container scanning is **opt-in**. Do not paste registry credentials.
+  - type: input
+    id: version
+    attributes:
+      label: Repository Detective commit / version
+    validations:
+      required: true
+  - type: input
+    id: scan_id
+    attributes:
+      label: Container scan ID
+  - type: input
+    id: image
+    attributes:
+      label: Image reference
+      placeholder: alpine:3.20
+  - type: input
+    id: digest
+    attributes:
+      label: Image digest (if known)
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true

@@ -1,0 +1,12 @@
+# Runner-enabled — delegate full scans to remote runners
+# Requires public_url and runner_shared_secret configured separately.
+
+scan_profile: standard
+runner_delegation_enabled: true
+workspace_mode: archive
+workspace_max_size_mb: 500
+
+scheduler_enabled: true
+database_enabled: true
+
+# Default repo runner_policy: runner (set per-repo in UI or API)

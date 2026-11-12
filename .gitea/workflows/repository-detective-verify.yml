@@ -1,0 +1,32 @@
+name: Repository Detective verify
+
+on:
+  workflow_dispatch:
+    inputs:
+      scan_id:
+        description: Repository Detective scan or verification ID
+        required: false
+      mode:
+        description: verification mode (remediation_verify)
+        required: false
+        default: remediation_verify
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Go tests
+        if: hashFiles('go.mod') != ''
+        run: go test ./...
+      - name: Staticcheck
+        if: hashFiles('go.mod') != ''
+        run: |
+          go install honnef.co/go/tools/cmd/staticcheck@latest
+          staticcheck ./...
+      - name: Shellcheck scripts
+        if: hashFiles('scripts/**') != ''
+        run: |
+          sudo apt-get update && sudo apt-get install -y shellcheck
+          find scripts -name '*.sh' -print0 | xargs -0 -r shellcheck

@@ -1,0 +1,9 @@
+package main
+
+func evalOther(other string) {
+	evalPattern(other)
+}
+
+func evalPattern(x string) {
+	_ = "eval(" + x + ")"
+}

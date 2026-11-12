@@ -1,0 +1,95 @@
+{{define "reports.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>{{template "head" .}}</head>
+<body class="rd-app rd-print-report">
+{{template "nav" .}}
+
+<div class="rd-report-toolbar rd-no-print">
+  <div>
+    <p class="rd-report-toolbar-title">Fleet reports</p>
+    <p class="rd-muted">Print or save a PDF of the executive fleet report (sidebar and controls are hidden in the print layout).</p>
+  </div>
+  <button type="button" class="rd-btn" data-rd-print>Print / Save PDF</button>
+</div>
+
+{{with .Data.Summary}}
+{{template "executive_summary.html" (dict "Executive" $.Data.Executive)}}
+
+<div class="rd-report rd-print-block">
+  <h2>Fleet executive report</h2>
+  <p class="rd-report-meta">Generated from live control-plane data · {{.TotalRepositories}} repositories monitored</p>
+  <div class="rd-kpi-row">
+    <div class="rd-kpi"><strong>{{.OpenFindingsCount}}</strong><span>Open findings</span></div>
+    <div class="rd-kpi"><strong>{{index .OpenFindingsBySeverity "critical"}}</strong><span>Critical</span></div>
+    <div class="rd-kpi"><strong>{{index .OpenFindingsBySeverity "high"}}</strong><span>High</span></div>
+    <div class="rd-kpi"><strong>{{.Lifecycle.ResolvedVerified}}</strong><span>Verified fixed</span></div>
+    <div class="rd-kpi"><strong>{{.FailedScansCount}}</strong><span>Failed scans</span></div>
+  </div>
+</div>
+
+<div class="rd-split">
+  <div class="rd-card">
+    <div class="rd-card-head"><h2>Severity breakdown</h2></div>
+    {{if .OpenFindingsBySeverity}}
+    <ul class="rd-severity-list">
+      {{range $sev, $count := .OpenFindingsBySeverity}}
+      <li><span class="rd-badge {{severityBadge $sev}}">{{$sev}}</span><strong>{{$count}}</strong></li>
+      {{end}}
+    </ul>
+    {{else}}<p class="rd-muted">No open findings to report.</p>{{end}}
+  </div>
+  <div class="rd-card">
+    <div class="rd-card-head"><h2>Remediation status</h2></div>
+    <table class="rd-table rd-table-compact">
+      <tr><td>Open findings</td><td><strong>{{.Lifecycle.OpenFindings}}</strong></td></tr>
+      <tr><td>Remediation candidates</td><td>{{.Lifecycle.RemediationCandidates}}</td></tr>
+      <tr><td>Approved plans</td><td>{{.Lifecycle.ApprovedPlans}}</td></tr>
+      <tr><td>PRs opened</td><td>{{.Lifecycle.PROpened}}</td></tr>
+      <tr><td>Verified resolved</td><td>{{.Lifecycle.ResolvedVerified}}</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="rd-card">
+  <div class="rd-card-head"><h2>Repository risk ranking</h2></div>
+  <table class="rd-table">
+    <tr><th scope="col">Repository</th><th scope="col">Open findings</th><th scope="col">Last scan</th><th scope="col">Report</th></tr>
+    {{range $.Data.Repositories}}{{if gt .OpenFindingsCount 0}}
+    <tr>
+      <td><a class="rd-link" href="{{$.BasePath}}/repos/{{.ID}}{{apiKeyQS $.APIKey}}">{{.FullName}}</a></td>
+      <td><strong>{{.OpenFindingsCount}}</strong></td>
+      <td>{{if .LastScanStatus}}<span class="rd-badge {{scanBadge .LastScanStatus}}">{{.LastScanStatus}}</span>{{else}}—{{end}}</td>
+      <td><a class="rd-btn rd-btn-sm rd-btn-ghost" href="{{$.BasePath}}/repos/{{.ID}}/report{{apiKeyQS $.APIKey}}">View</a></td>
+    </tr>
+    {{end}}{{end}}
+  </table>
+  {{if not $.Data.Repositories}}
+  <p class="rd-muted">No repositories registered yet.</p>
+  {{else}}
+  {{$shown := 0}}{{range $.Data.Repositories}}{{if gt .OpenFindingsCount 0}}{{$shown = add $shown 1}}{{end}}{{end}}
+  {{if eq $shown 0}}<p class="rd-muted">No repositories currently have open findings.</p>{{end}}
+  {{end}}
+</div>
+
+<div class="rd-card">
+  <div class="rd-card-head"><h2>Recent scan activity</h2></div>
+  <table class="rd-table rd-table-compact">
+    <tr><th scope="col">Scan</th><th scope="col">Repository</th><th scope="col">Status</th><th scope="col">Findings</th><th scope="col">Date</th></tr>
+    {{range .RecentScans}}
+    <tr>
+      <td><a class="rd-link" href="{{$.BasePath}}/scans/{{.ID}}{{apiKeyQS $.APIKey}}">{{shortID .ID 8}}</a></td>
+      <td>{{.RepoFullName}}</td>
+      <td><span class="rd-badge {{scanBadge .Status}}">{{.Status}}</span></td>
+      <td>{{issuesFromScan .SummaryJSON}}</td>
+      <td class="rd-muted">{{.StartedAt.Format "2006-01-02"}}</td>
+    </tr>
+    {{end}}
+  </table>
+</div>
+
+{{end}}
+
+{{template "foot" .}}
+</body></html>
+{{end}}

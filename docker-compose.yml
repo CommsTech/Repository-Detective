@@ -1,0 +1,68 @@
+version: '3.7'
+
+# Default first-install deploy — published image preferred, host bind on loopback.
+#
+#   cp .env.example .env   # generate API/session secrets; set real forge values
+#   export RD_IMAGE=git.commsnet.org/commstech/repository-detective:v0.1.0-beta.6
+#   docker compose pull && docker compose up -d
+#
+# Source build (contributors / offline): docker compose up -d --build
+# LAN / reverse-proxy: set ports to "8081:8081" and configure bootstrap token —
+#   see docs/SETUP.md and docker-compose.host-network.yml
+#
+# See DEPLOYMENT.md and docs/SETUP.md
+
+services:
+  repository-detective:
+    # Prefer published image (pull) so operators skip ~40 min local builds.
+    # Canonical: Gitea Package Registry. Override for pins or GHCR mirror:
+    #   RD_IMAGE=git.commsnet.org/commstech/repository-detective:v0.1.0-beta.6
+    #   RD_IMAGE=ghcr.io/commstech/repository-detective:v0.1.0-beta.6
+    image: ${RD_IMAGE:-git.commsnet.org/commstech/repository-detective:v0.1.0-beta.6}
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: all-in-one
+      args:
+        INSTALL_EXTERNAL_TOOLS: "true"
+        VERSION: ${RD_VERSION:-dev}
+        COMMIT: ${RD_COMMIT:-local}
+        BUILD_DATE: ${RD_BUILD_DATE:-unknown}
+    container_name: repository-detective
+    # Entrypoint installs /app/certs into the trust store, then drops to repositorydetective.
+    user: "0:0"
+    ports:
+      # Loopback-only by default so a fresh install is not internet-reachable.
+      # For LAN/reverse-proxy: REPOSITORY_DETECTIVE_BIND=0.0.0.0 and set a bootstrap token.
+      - "${REPOSITORY_DETECTIVE_BIND:-127.0.0.1}:${REPOSITORY_DETECTIVE_PORT:-8081}:8081"
+    env_file:
+      - .env
+    environment:
+      REPOSITORY_DETECTIVE_PORT: "8081"
+      REPOSITORY_DETECTIVE_LISTEN_HOST: "0.0.0.0"
+      REPOSITORY_DETECTIVE_LOG_LEVEL: info
+      # Honor .env (default false). Do not force-skip forge/AI readiness checks.
+      REPOSITORY_DETECTIVE_SKIP_STARTUP_CHECKS: ${REPOSITORY_DETECTIVE_SKIP_STARTUP_CHECKS:-false}
+      REPOSITORY_DETECTIVE_STARTUP_CHECK_TIMEOUT: "10"
+      REPOSITORY_DETECTIVE_DATABASE_PATH: /app/data/repository-detective.db
+      REPOSITORY_DETECTIVE_API_KEY: ${REPOSITORY_DETECTIVE_API_KEY}
+      # Homelab OpenClaw with private CA / self-signed gateway:
+      REPOSITORY_DETECTIVE_AI_INSECURE_SKIP_TLS_VERIFY: ${REPOSITORY_DETECTIVE_AI_INSECURE_SKIP_TLS_VERIFY:-false}
+    volumes:
+      - ./config:/app/config:ro
+      - ./data:/app/data
+      - ./certs:/app/certs:ro
+    healthcheck:
+      # Truthful readiness (not mere liveness).
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8081/health/ready"]
+      interval: 30s
+      timeout: 10s
+      start_period: 120s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - rd-net
+
+networks:
+  rd-net:
+    driver: bridge

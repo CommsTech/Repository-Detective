@@ -1,0 +1,35 @@
+name: Feature request
+description: Suggest an enhancement for Repository Detective
+labels: ["type/feature", "status/needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve Repository Detective.
+        Do **not** paste secrets, tokens, `.env`, or customer code.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or opportunity
+      description: What operator pain does this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Suggested priority
+      options:
+        - P0 — public beta blocker
+        - P1 — core workflow
+        - P2 — polish / trust
+        - P3 — nice to have

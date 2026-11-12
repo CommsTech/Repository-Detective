@@ -1,0 +1,30 @@
+version: '3.7'
+
+# Optional overlay: attach Repository Detective to an existing Traefik network.
+# Traefik terminates HTTPS; the app listens on 8080 inside the container.
+#
+#   cp .env.example .env
+#   # Set REPOSITORY_DETECTIVE_PUBLIC_URL=https://detective.example.com
+#   # Edit router Host() label below
+#   docker network create traefik-public   # skip if it already exists
+#   docker compose -f docker-compose.yml -f docker-compose.traefik.yml up -d --build
+
+services:
+  repository-detective:
+    network_mode: bridge
+    ports: []
+    networks:
+      - traefik-public
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.repository-detective.rule=Host(`detective.example.com`)"
+      - "traefik.http.routers.repository-detective.entrypoints=websecure"
+      - "traefik.http.routers.repository-detective.tls=true"
+      - "traefik.http.routers.repository-detective.tls.certresolver=letsencrypt"
+      - "traefik.http.services.repository-detective.loadbalancer.server.port=8080"
+    environment:
+      REPOSITORY_DETECTIVE_PORT: "8080"
+
+networks:
+  traefik-public:
+    external: true
