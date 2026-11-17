@@ -61,6 +61,8 @@
 
 **Runner limitation:** Native RD workers are supported as an opt-in backend, but a conventional Docker worker is **not** a fully isolated sandbox for malicious code. Complete Gitea Actions / GitHub Actions dispatch, polling, artifact verification and safe AI-generated dependency-fix PRs are **not implemented end to end**. Never mark a repository *safe* solely because a scan found no issues. Legacy documents about Gitea Actions dispatch have been corrected; refer to [runner operations](docs/RUNNERS.md).
 
+**Security-platform benchmark (2026-11-17; unreleased):** The [Veracode-inspired improvements assessment](docs/VERACODE_INSPIRED_IMPROVEMENTS.md) compares Repository Detective with current remediation, scan-policy, and supply-chain practices, without adding any proprietary Veracode dependency. The development tree now fails closed on unattended dependency-PR eligibility and adds a fix-review checklist; risk-based fix-first analysis, verified isolated upgrade execution, and release-level supply-chain attestation remain *future work*, not functioning features.
+
 **Support this project:** [GitHub Sponsors](https://github.com/sponsors/CommsTech) — voluntary support for maintenance, testing and documentation. Sponsorship does not buy an SLA, priority fixes or private support.
 
 **Where to start:** [Ten-minute aha](docs/TEN_MINUTE_AHA.md) · [Quick Start](#quick-start) · [Demo](docs/DEMO.md) · [Screenshots](docs/assets/screenshots/README.md) · [Public beta guide](docs/PUBLIC_BETA.md)

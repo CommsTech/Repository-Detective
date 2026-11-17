@@ -2,6 +2,23 @@
 
 All notable changes to Repository Detective (formerly an internal prototype) are documented here.
 
+## [Unreleased — deterministic slop scoring, 2026-11-17]
+
+### Added
+- `slopscore` package: bounded, dependency-free quality scoring (0-100, A-F) for patterns generated code tends to leave behind — placeholders, commented-out code, assertions that cannot fail, swallowed errors, debug output, emoji in source and marketing filler in Markdown. Budget exhaustion is an explicit incomplete result, never a clean one.
+- Opt-in pipeline wiring via `REPOSITORY_DETECTIVE_SLOP_SCORE_ENABLED` (default off). Emits `slopscore` findings and logs score, grade and top tells. It is a quality signal, not a security verdict, and does not feed policy gates.
+
+## [Unreleased — dependency upgrade review hardening, 2026-11-17]
+
+### Fixed
+- Dependency-vulnerability plans (including category aliases) now always require maintainer review and cannot be marked safe for an unattended PR before a verified sandboxed upgrade executor exists.
+- Missing scanner-reported fixed versions now produce an explicit blocker instead of implying a patched dependency can be selected.
+- Deterministic dependency guidance includes direct/transitive dependency identification, compatibility and lockfile checks, isolated builds, and post-change rescans. Added focused regression tests and an in-context operator checklist.
+
+### Verification limitations
+- Twenty-two isolated, dependency-free Go remediation tests passed under the available Go 1.23.2 toolchain (including three new cases). The full project requires Go 1.26.10; full tests and live runner/Gitea remediation are not certified by this change.
+- See [Veracode-inspired opportunity assessment](docs/VERACODE_INSPIRED_IMPROVEMENTS.md) for implemented safeguards, missing product capabilities, and release gates.
+
 ## [Unreleased — custom rules, runner safety and operator trust, 2026-11-17]
 
 ### Implemented (unreleased)

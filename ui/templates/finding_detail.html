@@ -105,6 +105,19 @@
 <div class="rd-workflow-step">Step 2 · Plan and review</div>
 <h2 id="rd-remediation-title">Remediation plan</h2>
 <div class="rd-alert">Planning is advisory. Dependency CVE upgrades require an operator-owned change and review; the current patcher cannot automatically open dependency-upgrade PRs. Repository Detective never merges.</div>
+{{if .Data.Actionable.IsDependencyVuln}}
+<details class="rd-queue-guide" id="rd-dependency-review">
+  <summary>Dependency fix-first checklist · what to verify before a PR</summary>
+  <ol>
+    <li><strong>Validate the finding.</strong> Confirm the scanner's package, installed version, and advisory against the exact source revision.</li>
+    <li><strong>Check the upgrade path.</strong> Determine direct versus transitive dependency ownership, confirm a supported patched version, and inspect release notes for breaking APIs.</li>
+    <li><strong>Prioritize by exposure.</strong> Check known exploitation and actual runtime reachability; an EPSS score is not proof of reachability. Treat unknown exposure as unknown.</li>
+    <li><strong>Test away from production.</strong> Update manifests and lockfiles together in an isolated workspace with restricted credentials and network access. Build and run regression tests.</li>
+    <li><strong>Prove the fix.</strong> Rescan the exact resulting commit with required scanners; only verify closure when coverage is complete and the vulnerability no longer appears.</li>
+  </ol>
+  <p class="rd-muted">AI can recommend changes, but it cannot bypass review or verification. No scanner-reported fixed version? Track a mitigation instead of inventing a safe upgrade.</p>
+</details>
+{{end}}
 {{if .Data.PlannerEnabled}}
 {{with .Data.RemediationPlan}}{{if .ID}}
 <p><strong>Status:</strong> {{.Status}} · <strong>Plan ID:</strong> {{.ID}}</p>

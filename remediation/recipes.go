@@ -91,22 +91,22 @@ func matchRecipe(category, source, rule string, ctx FindingContext) recipe {
 			humanReview: false,
 			safeAutoPR:  true,
 		}
-	case category == "dependency" || source == "govulncheck" || source == "grype" || source == "trivy":
+	case category == "dependency" || category == "dependency_vulnerability" || source == "govulncheck" || source == "grype" || source == "trivy":
 		versionHint := ""
 		if ctx.PackageName != "" {
 			versionHint = " for " + ctx.PackageName
 		}
 		if ctx.FixedVersion != "" {
-			versionHint += " to the scanner-reported fixed release " + ctx.FixedVersion
+			versionHint += "; investigate scanner-reported fixed version " + ctx.FixedVersion
 		} else {
-			versionHint += " after verifying a patched version exists"
+			versionHint += "; no scanner-reported fixed version is available"
 		}
 		return recipe{
-			fixStrategy: "Upgrade vulnerable dependency" + versionHint + ", update lockfiles, and verify with tests and vulnerability rescan",
-			complexity:  ComplexitySmall,
-			summary:     "Dependency vulnerability — prefer patched version from scanner advisory when available",
-			humanReview: strings.Contains(strings.ToLower(ctx.Summary), "major"),
-			safeAutoPR:  !strings.Contains(strings.ToLower(ctx.Summary), "major"),
+			fixStrategy: "Determine whether the dependency is direct or transitive" + versionHint + ". Verify the vendor advisory and supported upgrade path; review API compatibility, update manifests and lockfiles together, run build/tests in isolation, and rescan the exact revision before closure. If no fixed release exists, document mitigation and track the finding.",
+			complexity:  ComplexityMedium, // Upgrades may cross API boundaries even when a fixed release is advertised.
+			summary:     "Dependency vulnerability — investigate a verified upgrade path and breaking changes before implementation",
+			humanReview: true,
+			safeAutoPR:  false, // No verified dependency patch executor is available in this release.
 		}
 	case source == "gosec" || strings.HasPrefix(rule, "gosec"):
 		return recipe{

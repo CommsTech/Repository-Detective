@@ -12,10 +12,16 @@ func AssessRisk(ctx FindingContext, complexity string) (regressionRisk string, r
 	case "secret", "hardcoded_secret":
 		return RiskHigh, true, []string{"secrets require out-of-band rotation and history review"}
 	case "dependency", "dependency_vulnerability":
+		// No dependency-upgrade patcher has completed isolated integration and
+		// lockfile/API-compatibility verification. Even a scanner-reported fixed
+		// version is not evidence that an unattended upgrade is safe.
 		if strings.Contains(strings.ToLower(ctx.Summary), "major") {
 			return RiskHigh, true, []string{"major dependency upgrade requires human approval"}
 		}
-		return RiskMedium, severity == "critical", nil
+		if strings.TrimSpace(ctx.FixedVersion) == "" {
+			return RiskMedium, true, []string{"no scanner-reported fixed version: verify a supported upgrade or mitigation"}
+		}
+		return RiskMedium, true, nil
 	case "architecture":
 		return RiskHigh, true, []string{"architecture changes need design review"}
 	case "security":
@@ -57,11 +63,10 @@ func SafeForAutoPR(ctx FindingContext, complexity, regressionRisk string, blocke
 	switch category {
 	case "secret", "architecture", "security":
 		return false
-	case "dependency":
-		if regressionRisk == RiskHigh {
-			return false
-		}
-		return complexity == ComplexitySmall && !ctx.FromAI
+	case "dependency", "dependency_vulnerability":
+		// Do not advertise auto-PR eligibility until an isolated executor can
+		// validate manifest + lockfile changes, API compatibility and rescans.
+		return false
 	case "code_quality", "maintainability", "tech_debt":
 		return complexity == ComplexitySmall && regressionRisk == RiskLow && !ctx.FromAI
 	case "misconfiguration", "container":
@@ -78,7 +83,7 @@ func SafeForAutoPR(ctx FindingContext, complexity, regressionRisk string, blocke
 // RequiresHumanReviewFlag reports conservative human-review signals on context.
 func (ctx FindingContext) RequiresHumanReviewFlag() bool {
 	category := strings.ToLower(ctx.Category)
-	if category == "secret" {
+	if category == "secret" || category == "dependency" || category == "dependency_vulnerability" {
 		return true
 	}
 	if ctx.FromAI {
