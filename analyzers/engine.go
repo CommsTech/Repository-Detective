@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -22,6 +23,7 @@ import (
 	"git.commsnet.org/commstech/repository-detective/profile"
 	"git.commsnet.org/commstech/repository-detective/sbom"
 	"git.commsnet.org/commstech/repository-detective/scanners"
+	"git.commsnet.org/commstech/repository-detective/slopscore"
 	"git.commsnet.org/commstech/repository-detective/store"
 	"github.com/sirupsen/logrus"
 )
@@ -480,6 +482,30 @@ func (e *Engine) Scan(ctx context.Context, prepare *PrepareReport) ([]CandidateF
 			})
 		}
 		summary.Results = append(summary.Results, scanners.DeterministicRunResult("custom_rules", len(customFindings)))
+	}
+
+	// Optional deterministic slop scoring. This is a quality signal for patterns
+	// generated code tends to leave behind; it is never a security verdict and is
+	// disabled by default so it cannot flood an existing findings queue.
+	if slopScoringEnabled() {
+		inputs := make([]slopscore.File, 0, len(fileContents))
+		for _, f := range fileContents {
+			inputs = append(inputs, slopscore.File{Path: f.Path, Content: f.Content})
+		}
+		slopMetrics, slopFindings, slopErr := slopscore.Analyze(ctx, inputs)
+		if slopErr != nil {
+			e.logger.Warnf("[CAH:SLOP] analysis incomplete: %v", slopErr)
+		} else {
+			for _, f := range slopFindings {
+				allCandidates = append(allCandidates, CandidateFinding{
+					ID: f.ID, Hypothesis: f.Title, Severity: f.Severity, Confidence: 0.60,
+					AuditorType: "slopscore", Category: f.Category, File: f.File, Line: f.Line,
+					Evidence: models.Evidence{ASTNode: f.Detail},
+				})
+			}
+			summary.Results = append(summary.Results, scanners.DeterministicRunResult("slopscore", len(slopFindings)))
+			e.logger.Infof("[CAH:SLOP] score=%d grade=%s findings=%d top=%s", slopMetrics.Score, slopMetrics.Grade, len(slopFindings), slopMetrics.Summarise())
+		}
 	}
 
 	// Stage 2a-health: deterministic repository health checks (depth >= 2)
@@ -1710,4 +1736,14 @@ func (e *Engine) persistSBOMArtifact(ctx context.Context, log *logrus.Entry, src
 	}
 	log.Infof("[CAH:SCAN] SBOM artifact persisted to %s", durable)
 	return durable
+}
+
+// slopScoringEnabled reports whether optional slop scoring is switched on.
+func slopScoringEnabled() bool {
+	switch strings.ToLower(strings.TrimSpace(os.Getenv("REPOSITORY_DETECTIVE_SLOP_SCORE_ENABLED"))) {
+	case "true", "1", "yes", "on":
+		return true
+	default:
+		return false
+	}
 }
