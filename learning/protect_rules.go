@@ -2,15 +2,13 @@ package learning
 
 import "strings"
 
-// AIConfirmedFalsePositive reports whether an AI advisory classification is a
-// clear false-positive confirmation suitable for first-run rule tuning.
+// AIConfirmedFalsePositive is intentionally conservative: an AI prediction,
+// including a "false_positive" label, is not independent evidence for
+// automatically suppressing a repository finding. Human-reviewed, scoped
+// calibration follows the separate acceptance workflow.
 func AIConfirmedFalsePositive(classification string) bool {
-	switch strings.ToLower(strings.TrimSpace(classification)) {
-	case "possible_false_positive", "likely_false_positive", "false_positive":
-		return true
-	default:
-		return false
-	}
+	_ = classification
+	return false
 }
 
 // IsProtectedRuleID reports rule IDs / sources that must never become unattended
@@ -21,7 +19,7 @@ func IsProtectedRuleID(source, ruleID string) bool {
 	rule = strings.Trim(rule, "`\"' ")
 	src := strings.ToLower(strings.TrimSpace(source))
 
-	for _, protectedSource := range []string{"gitleaks", "trivy", "grype", "govulncheck", "semgrep"} {
+	for _, protectedSource := range []string{"gitleaks", "trivy", "grype", "govulncheck", "semgrep", "custom_rule"} {
 		if strings.Contains(src, protectedSource) {
 			return true
 		}
@@ -45,7 +43,7 @@ func IsProtectedRuleID(source, ruleID string) bool {
 			return true
 		}
 	}
-	for _, prefix := range []string{"CVE-", "GHSA-", "TRIVY-", "GRYPE-", "GITLEAKS-", "SEC-", "CKV_SECRET", "G201", "G202", "G703"} {
+	for _, prefix := range []string{"CUSTOM_", "CVE-", "GHSA-", "TRIVY-", "GRYPE-", "GITLEAKS-", "SEC-", "CKV_SECRET", "G201", "G202", "G703"} {
 		if strings.HasPrefix(rule, prefix) {
 			return true
 		}

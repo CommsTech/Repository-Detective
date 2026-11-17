@@ -15,30 +15,16 @@
 <div class="rd-alert">Profiles are deterministic-first. AI is advisory unless explicitly enabled.</div>
 <div class="rd-settings-warn rd-alert">Lowering severity gates or disabling scanners reduces detection coverage. Changes apply on the next scan.</div>
 
-<nav class="rd-settings-nav" aria-label="Settings sections">
-  {{range .Data.SettingsSections}}<a class="rd-link" href="#{{.ID}}">{{.Title}}</a>{{end}}
-</nav>
-
-{{range .Data.SettingsSections}}
-<div class="rd-card rd-settings-section" id="{{.ID}}">
-  <div class="rd-card-head"><h2>{{.Title}}</h2></div>
-  <p class="rd-muted">{{.Summary}}</p>
-  <table class="rd-table rd-table-compact">
-    <thead><tr><th>Setting</th><th>Effective</th><th>Source</th><th>Notes</th></tr></thead>
-    <tbody>
-    {{range .Fields}}
-    <tr>
-      <td><strong>{{.Label}}</strong>{{if .Badge}} <span class="rd-badge {{.BadgeClass}}">{{.Badge}}</span>{{end}}</td>
-      <td><code>{{.EffectiveValue}}</code></td>
-      <td class="rd-muted">{{.Source}}</td>
-      <td class="rd-muted">{{.Explanation}}{{if .BetaNote}} · <em>{{.BetaNote}}</em>{{end}}{{if .RestartRequired}} · restart required{{end}}</td>
-    </tr>
-    {{end}}
-    </tbody>
-  </table>
-</div>
-{{end}}
-
+<section class="rd-card rd-settings-start" aria-labelledby="rd-settings-start-title">
+  <p class="rd-queue-eyebrow">Repository workflow</p>
+  <h2 id="rd-settings-start-title">Set your policy in three steps</h2>
+  <ol class="rd-settings-guide">
+    <li><strong>Choose a profile.</strong> Start with the recommended preset, then run a baseline scan.</li>
+    <li><strong>Choose alerts.</strong> Notify a maintainer when an important issue is detected.</li>
+    <li><strong>Extend only where needed.</strong> Use version-controlled custom rules or advanced overrides.</li>
+  </ol>
+  <p class="rd-muted">Changing a policy affects future scans. Verified closure requires a subsequent scan of the updated revision.</p>
+</section>
 {{if .Data.Error}}<div class="rd-alert">{{.Data.Error}}</div>{{end}}
 <form method="post" action="{{.BasePath}}/repos/{{.Data.Repo.ID}}/settings{{if .APIKey}}?api_key={{.APIKey}}{{end}}">
 <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
@@ -61,6 +47,34 @@
 <span class="badge">AI {{.Data.ProfileMeta.EffectiveProfileSummary.AI}}</span>
 <span class="badge">Runner {{if .Data.ProfileMeta.EffectiveProfileSummary.RunnerEligible}}eligible{{else}}core{{end}}</span>
 </div>
+<section class="rd-inline-help" aria-labelledby="rd-custom-rule-title">
+  <h3 id="rd-custom-rule-title">Custom rules for this repository</h3>
+  <p>Store <code>.repository-detective.rules.json</code> in the repository root and commit it with your code. The next scan checks the rule file and runs your matchers without downloading plugins or executing project scripts.</p>
+  <p>Use rules for project-specific architecture constraints, questionable loops, disallowed code patterns, tech debt, and security policies. Invalid rules stop the custom-rule scan rather than being silently ignored.</p>
+  <p class="rd-muted">Rule configuration is reviewed through Git. See <code>docs/CUSTOM_RULES.md</code> for the complete format, limits, and example. A pattern match is a candidate finding, not proof of exploitation.</p>
+  <details class="rd-rule-builder" data-rule-builder>
+    <summary>Build a custom rule — no coding required</summary>
+    <p class="rd-muted">Design a rule locally and download the JSON configuration. Review it and commit it to your repository; this tool does <strong>not</strong> modify your repository or run scripts.</p>
+    <div class="rd-rule-builder-grid">
+      <label>Rule ID<input data-rule-id type="text" maxlength="48" placeholder="CUSTOM_DEBUG_POLICY" autocomplete="off"></label>
+      <label>What does it detect?<input data-rule-title type="text" maxlength="160" placeholder="Prohibited debug logging" autocomplete="off"></label>
+      <label>Category<select data-rule-category><option value="quality">Code quality</option><option value="security">Security</option><option value="performance">Performance</option><option value="maintainability">Maintainability</option><option value="architecture">Architecture</option><option value="misconfiguration">Misconfiguration</option><option value="supply_chain">Supply chain</option><option value="testing">Testing gaps</option><option value="tech_debt">Technical debt</option></select></label>
+      <label>Severity<select data-rule-severity><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="critical">Critical</option><option value="info">Information</option></select></label>
+      <label>Path filter (optional)<input data-rule-path type="text" maxlength="200" placeholder="src/*.go" autocomplete="off"></label>
+      <label>Pattern (RE2 regular expression)<input data-rule-pattern type="text" maxlength="320" placeholder="TODO\(security\)" autocomplete="off"></label>
+    </div>
+    <p class="rd-muted">Each pattern checks one source line. <code>src/*.go</code> matches files directly in that directory, not recursive subfolders; use a blank path to check all files. Expressions follow Go RE2 syntax.</p>
+    <div class="rd-actions">
+      <button type="button" class="rd-btn rd-btn-sm" data-rule-add>Add rule</button>
+      <button type="button" class="rd-btn rd-btn-sm rd-btn-ghost" data-rule-clear>Reset builder</button>
+    </div>
+    <div data-rule-status role="status" aria-live="polite" class="rd-muted">Add a rule to generate a configuration file.</div>
+    <ul class="rd-rule-created" data-rule-list aria-label="Rules in generated configuration"></ul>
+    <label>Generated configuration (preview only)<textarea data-rule-json readonly rows="9" spellcheck="false" aria-label="JSON configuration preview"></textarea></label>
+    <button type="button" data-rule-download class="rd-btn rd-btn-sm" disabled>Download .repository-detective.rules.json</button>
+    <p class="rd-muted">Downloading or copying the file does not enable the rules. The server validates the committed file during the next scan. Keep a backup of existing rules when editing an established repository.</p>
+  </details>
+</section>
 <h2>Notifications</h2>
 <p class="rd-muted">Global: {{if .Data.NotificationGlobal.Enabled}}enabled{{else}}disabled{{end}} · min severity={{.Data.NotificationGlobal.MinSeverity}} · cooldown={{.Data.NotificationGlobal.CooldownSeconds}}s</p>
 <p class="rd-muted">Channels (global): telegram={{.Data.NotificationGlobal.TelegramEnabled}} · slack={{.Data.NotificationGlobal.SlackEnabled}} · discord={{.Data.NotificationGlobal.DiscordEnabled}} · webhook={{.Data.NotificationGlobal.WebhookEnabled}}</p>
@@ -102,7 +116,7 @@
 {{range index .Data.Allowed "remediation_policy"}}<option value="{{.}}">{{.}}</option>{{end}}</select></label>
 <label>Runner policy<select name="runner_policy"><option value="">inherit</option>
 {{range index .Data.Allowed "runner_policy"}}<option value="{{.}}">{{.}}</option>{{end}}</select></label>
-<p class="rd-muted">Enforced for scheduled/manual full scans when global runner delegation is enabled. Webhook scans remain on core in Phase 12.</p>
+<p class="rd-muted">Native runner delegation supports scheduled/manual scans when enabled by the administrator. GitHub/Gitea Actions dispatch is not implemented in this release. Webhook-triggered scans currently remain on the core service.</p>
 <label>AI policy<select name="ai_policy"><option value="">inherit</option>
 {{range index .Data.Allowed "ai_policy"}}<option value="{{.}}">{{.}}</option>{{end}}</select></label>
 <label>Confidence gate<input name="confidence_gate" type="number" step="0.01" min="0" max="1"></label>
@@ -156,6 +170,33 @@
 <button type="submit">Save</button>
 </div></form>
 <p class="rd-muted">Effective schedule: enabled={{.Data.Effective.ScheduleEnabled}} cron={{.Data.Effective.ScheduleCron}}</p>
+
+<details class="rd-card rd-policy-inspector"><summary><strong>Effective settings &amp; provenance</strong> — inspect current values, overrides, and enforcement</summary>
+<nav class="rd-settings-nav" aria-label="Settings sections">
+  {{range .Data.SettingsSections}}<a class="rd-link" href="#{{.ID}}">{{.Title}}</a>{{end}}
+</nav>
+
+{{range .Data.SettingsSections}}
+<div class="rd-card rd-settings-section" id="{{.ID}}">
+  <div class="rd-card-head"><h2>{{.Title}}</h2></div>
+  <p class="rd-muted">{{.Summary}}</p>
+  <table class="rd-table rd-table-compact">
+    <thead><tr><th>Setting</th><th>Effective</th><th>Source</th><th>Notes</th></tr></thead>
+    <tbody>
+    {{range .Fields}}
+    <tr>
+      <td><strong>{{.Label}}</strong>{{if .Badge}} <span class="rd-badge {{.BadgeClass}}">{{.Badge}}</span>{{end}}</td>
+      <td><code>{{.EffectiveValue}}</code></td>
+      <td class="rd-muted">{{.Source}}</td>
+      <td class="rd-muted">{{.Explanation}}{{if .BetaNote}} · <em>{{.BetaNote}}</em>{{end}}{{if .RestartRequired}} · restart required{{end}}</td>
+    </tr>
+    {{end}}
+    </tbody>
+  </table>
+</div>
+{{end}}
+
+</details>
 
 <div class="rd-card">
   <div class="rd-card-head"><h2>Active suppressions</h2><span class="rd-chip">{{len .Data.Suppressions}}</span></div>

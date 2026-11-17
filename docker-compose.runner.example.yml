@@ -1,15 +1,11 @@
-# Repository Detective — one native runner worker (example only).
+# Hardened native-worker example. Run as an ADDITIONAL service in the same
+# Compose project as the control plane:
+# docker compose -f docker-compose.yml -f docker-compose.runner.example.yml up -d
 #
-# Usage:
-#   cp docker-compose.runner.example.yml docker-compose.runner.yml
-#   cp config/runner.example.yaml config/runner.local.yaml   # edit paths only, no secrets in git
-#   export REPOSITORY_DETECTIVE_RUNNER_SHARED_SECRET="$(openssl rand -hex 32)"  # set in .env, not git
-#   docker compose -f docker-compose.runner.example.yml up -d
-#
-# Requires core service with runner_delegation_enabled=true and matching shared secret.
-
-name: repository-detective-runner
-
+# This is containment in a conventional Docker container, NOT a security
+# boundary for actively hostile repositories. For untrusted third-party repos
+# use a disposable isolated VM/job runner with restricted network egress.
+# No host Docker socket, broad env_file, host networking, or privileged mode.
 services:
   rd-native-runner:
     build:
@@ -19,23 +15,40 @@ services:
       args:
         INSTALL_EXTERNAL_TOOLS: "true"
     image: repository-detective:runner
-    container_name: rd-native-runner-1
     restart: unless-stopped
-    network_mode: host
-    env_file:
-      - .env
+    init: true
+    read_only: true
+    user: "1001:1001"
+    depends_on:
+      repository-detective:
+        condition: service_healthy
+    networks:
+      - rd-net
     environment:
-      REPOSITORY_DETECTIVE_CORE_URL: "http://127.0.0.1:8081"
+      REPOSITORY_DETECTIVE_CORE_URL: "http://repository-detective:8081"
+      # Isolated worker secret, NOT the app's Gitea/API/AI tokens.
+      REPOSITORY_DETECTIVE_RUNNER_SHARED_SECRET: ${REPOSITORY_DETECTIVE_RUNNER_SHARED_SECRET:?Add a strong runner-only secret to .env}
       REPOSITORY_DETECTIVE_RUNNER_MODE: worker
       REPOSITORY_DETECTIVE_RUNNER_ID: rd-native-runner-1
       REPOSITORY_DETECTIVE_WORKSPACE_ROOT: /tmp/rd-runner-workspaces
       REPOSITORY_DETECTIVE_RUNNER_MAX_CONCURRENT_JOBS: "1"
-      REPOSITORY_DETECTIVE_RUNNER_ALLOWED_JOB_TYPES: "graph,sbom,remediation_verify"
+      REPOSITORY_DETECTIVE_RUNNER_ALLOWED_JOB_TYPES: "scan,graph,sbom,remediation_verify"
       REPOSITORY_DETECTIVE_RUNNER_POLL_INTERVAL_SECONDS: "5"
       REPOSITORY_DETECTIVE_RUNNER_HEARTBEAT_SECONDS: "30"
-    entrypoint: ["/usr/local/bin/repository-detective-runner"]
-    command: ["--mode", "worker"]
+      HOME: /tmp
+      TMPDIR: /tmp
+      XDG_CACHE_HOME: /tmp/.cache
+      GOCACHE: /tmp/go-build
+      GOPATH: /tmp/go
+      GOTOOLCHAIN: local
     security_opt:
       - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 128
+    mem_limit: 4g
+    cpus: "2.0"
     tmpfs:
-      - /tmp/rd-runner-workspaces:size=2g,mode=1777
+      - /tmp:rw,size=1g,mode=1777,uid=1001,gid=1001
+    # Egress is still available through rd-net for core/forge connections.
+    # Restrict it at the host/network boundary before scanning hostile code.

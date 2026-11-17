@@ -73,8 +73,11 @@ func TestValidateCalibrationAccept(t *testing.T) {
 	if !learning.IsInformationalToolingRule("golangci-lint", "LINT-GO-typecheck") {
 		t.Fatal("typecheck noise should be informational tooling")
 	}
-	if !learning.AIConfirmedFalsePositive("possible_false_positive") {
-		t.Fatal("possible_false_positive should count as AI-confirmed FP")
+	if learning.AIConfirmedFalsePositive("possible_false_positive") || learning.AIConfirmedFalsePositive("false_positive") {
+		t.Fatal("unattended AI classifications cannot authorize suppressions")
+	}
+	if !learning.IsProtectedRuleID("custom_rule", "CUSTOM_DEBUG") {
+		t.Fatal("custom rules cannot be auto-suppressed")
 	}
 	if learning.AIConfirmedFalsePositive("likely_true_positive") {
 		t.Fatal("likely_true_positive must not count as AI-confirmed FP")

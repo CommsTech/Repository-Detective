@@ -82,7 +82,7 @@ func (s *SQLiteStore) ClaimNextRunnerJob(ctx context.Context, now time.Time) (Ru
 	var jobID string
 	err = tx.QueryRowContext(ctx, `
 		SELECT job_id FROM runner_jobs
-		WHERE status = ? AND (expires_at IS NULL OR expires_at > ?)
+		WHERE status = ? AND runner_mode = 'native' AND (expires_at IS NULL OR expires_at > ?)
 		ORDER BY created_at ASC LIMIT 1
 	`, RunnerJobStatusQueued, formatTime(now)).Scan(&jobID)
 	if err == sql.ErrNoRows {

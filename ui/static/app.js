@@ -412,8 +412,7 @@
         var nextMain = doc.getElementById("main-content");
         var curMain = document.getElementById("main-content");
         if (!nextMain || !curMain) {
-          window.location.reload();
-          return;
+          throw new Error("scan refresh response was incomplete");
         }
         curMain.replaceWith(document.importNode(nextMain, true));
         if (doc.title) {
@@ -422,7 +421,19 @@
         initScanAutoRefresh();
       })
       .catch(function () {
-        window.location.reload();
+        // Never fall back to a full reload here: the white browser navigation
+        // frame can be painful for dark-mode operators. Keep last known state.
+        var banner = document.querySelector("[data-scan-auto-refresh]");
+        var label = document.querySelector("[data-scan-refresh-label]");
+        if (label) {
+          label.textContent = "Update unavailable. Retrying shortly; last displayed data is unchanged.";
+        }
+        if (banner) {
+          banner.removeAttribute("data-scan-refresh-armed");
+          setTimeout(function () {
+            if (document.contains(banner)) initScanAutoRefresh();
+          }, 10000);
+        }
       });
   }
 
@@ -441,6 +452,7 @@
     var timer = setInterval(function () {
       left -= 1;
       if (left <= 0) {
+        if (document.hidden) { left = secs; return; }
         clearInterval(timer);
         if (label) {
           label.textContent = "Updating…";
@@ -550,6 +562,95 @@
     });
   }
 
+  // Local-only rule builder. No forge writes, eval, dynamic scripts, or remote calls.
+  // The Go scanner remains the authority for RE2 syntax and resource limits.
+  function initCustomRuleBuilder() {
+    var root = document.querySelector("[data-rule-builder]");
+    if (!root) return;
+    var rules = [];
+    var status = root.querySelector("[data-rule-status]");
+    var preview = root.querySelector("[data-rule-json]");
+    var list = root.querySelector("[data-rule-list]");
+    var download = root.querySelector("[data-rule-download]");
+    function value(name) { return (root.querySelector("[data-rule-" + name + "]")?.value || "").trim(); }
+    function redraw() {
+      var json = rules.length ? JSON.stringify({ version: 1, rules: rules }, null, 2) + "\n" : "";
+      preview.value = json;
+      download.disabled = !rules.length;
+      list.replaceChildren();
+      rules.forEach(function (rule, index) {
+        var row = document.createElement("li");
+        var summary = document.createElement("span");
+        summary.textContent = rule.id + " · " + rule.title + " (" + rule.severity + ")";
+        var remove = document.createElement("button");
+        remove.type = "button";
+        remove.className = "rd-btn rd-btn-sm rd-btn-ghost";
+        remove.textContent = "Remove";
+        remove.setAttribute("aria-label", "Remove " + rule.id);
+        remove.addEventListener("click", function () {
+          rules.splice(index, 1);
+          redraw();
+          status.textContent = "Rule removed.";
+        });
+        row.append(summary, remove);
+        list.appendChild(row);
+      });
+    }
+    root.querySelector("[data-rule-add]").addEventListener("click", function () {
+      var id = value("id").toUpperCase();
+      var title = value("title");
+      var pattern = value("pattern");
+      var path = value("path");
+      if (!/^[A-Z][A-Z0-9_-]{2,47}$/.test(id)) {
+        status.textContent = "Use a unique rule ID of 3–48 uppercase letters, digits, - or _, starting with a letter.";
+        return;
+      }
+      if (rules.some(function (r) { return r.id === id; })) {
+        status.textContent = "That rule ID already exists in this configuration.";
+        return;
+      }
+      if (!title || title.length > 160 || !pattern || pattern.length > 320) {
+        status.textContent = "Provide a short title and a pattern up to 320 characters.";
+        return;
+      }
+      if (path.length > 200 || path.startsWith("/") || path.includes("\\") || path.includes("..")) {
+        status.textContent = "Use a relative path filter without parent-directory references.";
+        return;
+      }
+      if (rules.length >= 32) { status.textContent = "Maximum 32 rules per repository."; return; }
+      var rule = { id: id, title: title, category: value("category"), severity: value("severity") };
+      if (path) rule.path_glob = path;
+      rule.pattern = pattern;
+      rules.push(rule);
+      redraw();
+      if (new Blob([preview.value]).size > 64 * 1024) {
+        rules.pop(); redraw();
+        status.textContent = "Configuration exceeds the 64 KiB server limit.";
+        return;
+      }
+      status.textContent = "Added " + id + ". Download the JSON, review it, then commit it to your repository.";
+    });
+    root.querySelector("[data-rule-clear]").addEventListener("click", function () {
+      rules.length = 0;
+      redraw();
+      status.textContent = "Builder reset; existing repository rules remain unchanged.";
+    });
+    download.addEventListener("click", function () {
+      if (!rules.length) return;
+      var blob = new Blob([preview.value], { type: "application/json" });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url;
+      a.download = ".repository-detective.rules.json";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+      status.textContent = "Configuration downloaded. Nothing was changed on the server.";
+    });
+    redraw();
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     initMobileNav();
     initTableSearch();
@@ -561,6 +662,7 @@
     initCopyButtons();
     initPrintButtons();
     initDoctorPage();
+    initCustomRuleBuilder();
   });
 })();
 

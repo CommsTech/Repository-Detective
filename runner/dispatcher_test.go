@@ -13,10 +13,10 @@ func TestSelectRunnerModeNativeDefault(t *testing.T) {
 	}
 }
 
-func TestSelectRunnerModeRemediationVerifyGiteaActions(t *testing.T) {
+func TestSelectRunnerModeRemediationVerifyNative(t *testing.T) {
 	cfg := runner.Config{Mode: runner.ModeAuto}
-	if got := runner.SelectRunnerMode(cfg, runner.JobTypeRemediationVerify); got != runner.ModeGiteaActions {
-		t.Fatalf("verify job: got %q want gitea_actions", got)
+	if got := runner.SelectRunnerMode(cfg, runner.JobTypeRemediationVerify); got != runner.ModeNative {
+		t.Fatalf("verify job: got %q want native", got)
 	}
 }
 
@@ -24,5 +24,12 @@ func TestSelectRunnerModeExplicitNative(t *testing.T) {
 	cfg := runner.Config{Mode: runner.ModeNative}
 	if got := runner.SelectRunnerMode(cfg, runner.JobTypeRemediationVerify); got != runner.ModeNative {
 		t.Fatalf("got %q", got)
+	}
+}
+
+func TestRunnerBackendExplicitActionsNotAvailable(t *testing.T) {
+	cfg := runner.Config{Mode: runner.ModeGiteaActions}
+	if got := runner.SelectRunnerMode(cfg, runner.JobTypeScanFullRepo); got != runner.ModeCore {
+		t.Fatalf("unsupported Actions mode must never identify as native: %q", got)
 	}
 }

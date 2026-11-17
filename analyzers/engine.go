@@ -11,6 +11,7 @@ import (
 
 	"git.commsnet.org/commstech/repository-detective/ai"
 	"git.commsnet.org/commstech/repository-detective/calibration"
+	"git.commsnet.org/commstech/repository-detective/customrules"
 	"git.commsnet.org/commstech/repository-detective/forge"
 	"git.commsnet.org/commstech/repository-detective/gitea"
 	"git.commsnet.org/commstech/repository-detective/graph"
@@ -455,6 +456,32 @@ func (e *Engine) Scan(ctx context.Context, prepare *PrepareReport) ([]CandidateF
 		e.logger.Infof("[CAH:SCAN] Static analysis found %d candidate(s)", len(staticFindings))
 	}
 
+	// Repository-owned, declarative rules are evaluated without shell or AI execution.
+	// A malformed or unreadable rule policy fails the scan rather than silently
+	// claiming clean coverage. Missing policy files are optional.
+	rulesJSON, rulesErr := e.repoClient(ctx).GetFileContent(ctx, owner, repo, prepare.Commit, customrules.Filename)
+	if rulesErr != nil && !strings.Contains(rulesErr.Error(), "content not found") {
+		return nil, summary, workspaceMeta, nil, nil, fmt.Errorf("custom rules cannot be verified: %w", rulesErr)
+	}
+	if rulesErr == nil {
+		inputs := make([]customrules.File, 0, len(fileContents))
+		for _, f := range fileContents {
+			inputs = append(inputs, customrules.File{Path: f.Path, Content: f.Content})
+		}
+		customFindings, customErr := customrules.Scan(ctx, []byte(rulesJSON), inputs)
+		if customErr != nil {
+			return nil, summary, workspaceMeta, nil, nil, fmt.Errorf("custom rule coverage incomplete: %w", customErr)
+		}
+		for _, f := range customFindings {
+			allCandidates = append(allCandidates, CandidateFinding{
+				ID: f.RuleID, Hypothesis: f.Title, Severity: f.Severity, Confidence: 0.80,
+				AuditorType: "custom_rule", Category: f.Category, File: f.File, Line: f.Line,
+				Evidence: models.Evidence{ASTNode: f.Description},
+			})
+		}
+		summary.Results = append(summary.Results, scanners.DeterministicRunResult("custom_rules", len(customFindings)))
+	}
+
 	// Stage 2a-health: deterministic repository health checks (depth >= 2)
 	if depth >= 2 && cfg.Health.Enabled {
 		allPaths := make([]string, 0, len(analyzableFiles))
@@ -745,7 +772,7 @@ func toScannerEntries(files []FileContent) []scanners.FileEntry {
 }
 
 func isDeterministicAuditor(auditorType string) bool {
-	if auditorType == "static" {
+	if auditorType == "static" || auditorType == "custom_rule" {
 		return true
 	}
 	return scanners.IsDeterministicSource(auditorType)

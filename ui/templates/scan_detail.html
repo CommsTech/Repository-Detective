@@ -65,6 +65,7 @@
   {{end}}
 
   {{if eq .Status "completed"}}
+  <p class="rd-queue-note">Pipeline finished. A completed job is not proof of complete scanner coverage; review the scanner-by-scanner results, tool failures, and the exact commit before using this report as evidence.</p>
   <div class="rd-pipeline">
     <div class="rd-pipeline-step done">Prepare</div>
     <div class="rd-pipeline-step done">Scan</div>
@@ -83,7 +84,7 @@
     <div class="rd-pipeline-step">Dedup</div>
     <div class="rd-pipeline-step">Prove</div>
   </div>
-  <p class="rd-muted" data-scan-refresh-label>Refreshing soon…</p>
+  <p class="rd-muted" role="status" aria-live="polite" data-scan-refresh-label>Refreshing soon…</p>
   {{end}}
 
   {{if .Error}}<div class="rd-alert">{{.Error}}</div>{{end}}

@@ -40,15 +40,19 @@ func TestExpiredTimestampRejected(t *testing.T) {
 func TestShouldDelegatePolicy(t *testing.T) {
 	cfg := runner.Config{DelegationEnabled: true, Mode: runner.ModeGiteaActions, SharedSecret: "x"}
 	effective := store.EffectiveSettings{RunnerPolicy: "gitea_actions"}
-	if runner.ShouldDelegate(cfg, effective, store.TriggerScheduled) != runner.DecisionDelegate {
-		t.Fatal("expected delegate for scheduled scan")
+	if runner.ShouldDelegate(cfg, effective, store.TriggerScheduled) != runner.DecisionUnsupported {
+		t.Fatal("unsupported Gitea Actions must fail closed")
 	}
-	if runner.ShouldDelegate(cfg, effective, store.TriggerPush) != runner.DecisionCore {
-		t.Fatal("webhook push should stay on core in phase 12")
+	if runner.ShouldDelegate(cfg, effective, store.TriggerPush) != runner.DecisionUnsupported {
+		t.Fatal("explicit unsupported Gitea runner must fail closed")
 	}
 	cfg.Mode = runner.ModeCore
+	if runner.ShouldDelegate(cfg, effective, store.TriggerScheduled) != runner.DecisionUnsupported {
+		t.Fatal("explicit Gitea repository policy must not silently fall back")
+	}
+	effective.RunnerPolicy = "core"
 	if runner.ShouldDelegate(cfg, effective, store.TriggerScheduled) != runner.DecisionCore {
-		t.Fatal("global core mode disables delegation")
+		t.Fatal("explicit core policy should honor the operator override")
 	}
 }
 
@@ -138,8 +142,8 @@ func TestBuildJobSpecExposesForbiddenTasks(t *testing.T) {
 }
 
 func TestShouldFallbackToCore(t *testing.T) {
-	if !runner.ShouldFallbackToCore(store.EffectiveSettings{RunnerPolicy: "auto"}) {
-		t.Fatal("auto policy should allow core fallback")
+	if runner.ShouldFallbackToCore(store.EffectiveSettings{RunnerPolicy: "auto"}) {
+		t.Fatal("auto policy must not silently run untrusted code on core")
 	}
 	if runner.ShouldFallbackToCore(store.EffectiveSettings{RunnerPolicy: "gitea_actions"}) {
 		t.Fatal("gitea_actions policy should not fall back silently")
@@ -150,5 +154,13 @@ func TestStartupValidRequiresSecret(t *testing.T) {
 	cfg := runner.Config{DelegationEnabled: true, Mode: runner.ModeGiteaActions}
 	if err := cfg.StartupValid(); err == nil {
 		t.Fatal("expected secret required when delegation enabled")
+	}
+}
+
+func TestExplicitNativePolicyCannotRunOnCore(t *testing.T) {
+	cfg := runner.Config{DelegationEnabled: true, Mode: runner.ModeCore, SharedSecret: "x"}
+	settings := store.EffectiveSettings{RunnerPolicy: "native"}
+	if got := runner.ShouldDelegate(cfg, settings, store.TriggerManual); got != runner.DecisionUnsupported {
+		t.Fatalf("explicit native policy should fail if no native backend: %d", got)
 	}
 }

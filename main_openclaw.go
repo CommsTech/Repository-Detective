@@ -286,7 +286,7 @@ func maybeEnqueueOpenClawReview(ctx context.Context, scanCtx *store.ScanContext,
 		if _, err := rdStore.GetAIAdvisoryReviewByScanID(bg, scanID); err == nil {
 			// Review already exists (manual/API). Still try first-run apply once.
 			if firstRunTune {
-				applied := applyFirstRunAIConfirmedCalibrations(bg, scanID, repositoryID)
+				applied := 0 // AI classifications remain advisory; no unattended rule suppression.
 				logger.Infof("first-run AI rule tuning for scan %s applied=%d (existing review)", scanID, applied)
 				recomputeAfterAIReview(bg, scanID, true)
 			}
@@ -321,7 +321,7 @@ func maybeEnqueueOpenClawReview(ctx context.Context, scanCtx *store.ScanContext,
 		}
 		logger.Infof("auto ai review for scan %s status=%s recommendations=%d", scanID, review.Status, review.RecommendationsCount)
 		if firstRunTune {
-			applied := applyFirstRunAIConfirmedCalibrations(bg, scanID, repositoryID)
+			applied := 0 // AI classifications remain advisory; no unattended rule suppression.
 			logger.Infof("first-run AI rule tuning for scan %s applied=%d", scanID, applied)
 			raw, rawErr := rdStore.GetOperatorEvidenceJSON(bg, store.EvidenceAIFirstRunRuleTuneKey(repositoryID))
 			if rawErr == nil && strings.TrimSpace(raw) != "" && !strings.Contains(raw, `"status":"in_progress"`) {

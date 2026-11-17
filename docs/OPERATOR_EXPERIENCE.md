@@ -43,3 +43,11 @@
 - [ ] Validate UI with live scanner failures, missing feeds, API failure, no AI, and no network access. Check accessible contrast and screen-reader announcements.
 
 See [Daily triage](OPERATOR_TRIAGE_WORKFLOW.md), [Accessibility](ACCESSIBILITY.md), [CVE safety](CVE_TRIAGE_AND_AI_REMEDIATION.md), and the [verification receipt](release/VERIFICATION_OPERATOR_FLOW_2026-11-16.md).
+
+## 2026-11-17 addition — custom rules and trust-first operations
+
+Repository settings now exposes the high-impact everyday controls before the full settings provenance table. The **Build a custom rule** disclosure supports a local, no-code rule builder for novice maintainers, while experts can check the generated file into Git and review its diff. No builder click edits the repository. The next scan evaluates a bounded RE2 pattern set; see [Custom rules](CUSTOM_RULES.md).
+
+The dashboard **Can I trust the latest results?** guide links to Doctor coverage, immutable scan revision history, and evidence reports. This is a decision aid, not a “safe” certification. Scans can be incomplete even when they report zero findings. The scan auto-refresh path no longer deliberately reloads the document on an error, limiting bright dark-mode flashes; browser-side validation is still required.
+
+See [Sandbox and trust boundaries](SECURITY_SANDBOX_AND_TRUST.md), [runner operations](RUNNERS.md), and [release validation](release/RELEASE_VALIDATION_2026-11-17.md).

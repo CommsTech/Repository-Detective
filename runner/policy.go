@@ -12,15 +12,25 @@ type DelegationDecision int
 const (
 	DecisionCore DelegationDecision = iota
 	DecisionDelegate
+	DecisionUnsupported
 )
 
 // ShouldDelegate reports whether a scan trigger should create a runner job.
 func ShouldDelegate(cfg Config, effective store.EffectiveSettings, triggerType string) DelegationDecision {
 	cfg = cfg.Normalized()
-	if !cfg.DelegationEnabled || cfg.SharedSecret == "" {
+	policy := strings.ToLower(strings.TrimSpace(effective.RunnerPolicy))
+	// Explicit selection of a nonexistent sandbox must be an error, never an
+	// implicit scan of untrusted repository code in the core process.
+	if policy == ModeCore {
 		return DecisionCore
 	}
-	if cfg.Mode == ModeCore {
+	if cfg.DelegationEnabled && (cfg.Mode == ModeGiteaActions || policy == ModeGiteaActions) {
+		return DecisionUnsupported
+	}
+	if cfg.DelegationEnabled && policy == ModeNative && (cfg.Mode == ModeCore || cfg.SharedSecret == "") {
+		return DecisionUnsupported
+	}
+	if !cfg.DelegationEnabled || cfg.SharedSecret == "" || cfg.Mode == ModeCore {
 		return DecisionCore
 	}
 	switch triggerType {
@@ -32,11 +42,10 @@ func ShouldDelegate(cfg Config, effective store.EffectiveSettings, triggerType s
 	switch strings.ToLower(strings.TrimSpace(effective.RunnerPolicy)) {
 	case "core":
 		return DecisionCore
-	case ModeGiteaActions, ModeAuto:
-		if cfg.Mode == ModeGiteaActions || cfg.Mode == ModeAuto || cfg.Mode == ModeNative {
-			return DecisionDelegate
-		}
-		return DecisionCore
+	case ModeGiteaActions:
+		return DecisionUnsupported
+	case ModeAuto:
+		return DecisionDelegate // native worker only until Actions integration is complete
 	case ModeNative:
 		if cfg.Mode == ModeNative || cfg.Mode == ModeAuto {
 			return DecisionDelegate
@@ -47,7 +56,8 @@ func ShouldDelegate(cfg Config, effective store.EffectiveSettings, triggerType s
 	}
 }
 
-// ShouldFallbackToCore reports whether auto policy should fall back when delegation fails.
-func ShouldFallbackToCore(effective store.EffectiveSettings) bool {
-	return strings.ToLower(strings.TrimSpace(effective.RunnerPolicy)) == ModeAuto
+// ShouldFallbackToCore is fail-closed: a requested isolated scan must never
+// execute in the control plane just because a runner was unavailable.
+func ShouldFallbackToCore(_ store.EffectiveSettings) bool {
+	return false
 }

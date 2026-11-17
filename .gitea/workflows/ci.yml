@@ -53,6 +53,17 @@ jobs:
           fi
           echo "gofmt-clean: $(echo "$FILES" | wc -l) tracked files"
 
+      # Operator UI is shipped to users from the main Go binary.
+      # A JS parse regression must block merges before container publishing.
+      - name: Operator UI JavaScript syntax and rule-builder contract
+        run: |
+          node --check ui/static/app.js
+          node scripts/test-ui-rule-builder.cjs
+
+      - name: Custom rule and worker regression tests
+        run: |
+          go test -count=1 ./customrules ./runner ./store
+
       - name: Go vet
         run: |
           pkgs=$(go list ./... | grep -v '/e2e/results/')

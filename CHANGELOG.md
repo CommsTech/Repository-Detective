@@ -2,6 +2,18 @@
 
 All notable changes to Repository Detective (formerly an internal prototype) are documented here.
 
+## [Unreleased — custom rules, runner safety and operator trust, 2026-11-17]
+
+### Implemented (unreleased)
+- Added non-executable per-repository `.repository-detective.rules.json` policies with strict JSON/RE2 validation, bounded resource usage, and deterministic finding integration on core and native worker. Added a no-code local JSON-rule builder in repository settings.
+- Changed native worker file collection to fail on source-file count/size excess or unsafe symlinks instead of producing misleading clean results. Clone now rejects unsafe transports and credentials and checks the exact commit when provided.
+- Removed automatic core fallback for failed delegation, refused unsupported Gitea Actions job claims, added direct dispatcher/backend rejection, and checked job identifiers before workspace deletion.
+- Disabled unattended AI-only false-positive calibrations, protected custom rules against automatic suppression, and added regression tests.
+- Added evidence-first dashboard guidance, an accessible custom-rule settings flow, additional dark-mode refresh protections, a hardened sample native-worker Compose overlay, and corrected misleading runner documentation. Gitea CI now checks UI JS syntax, a dependency-free rule-builder interaction contract and targeted runner/store/rule tests.
+
+### Verification limitations
+- Isolated custom-rule tests, JavaScript syntax, CSS parse, template parse, Go formatting and Compose YAML syntax passed. **Full module Go 1.26.10 tests, Docker, production-like browser, Gitea integration, sandbox penetration tests and verified AI PR workflows remain pending.** See [verification record](docs/release/RELEASE_VALIDATION_2026-11-17.md).
+
 ## [Unreleased — operator journey and findings search, 2026-11-16]
 
 ### Improved

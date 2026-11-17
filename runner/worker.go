@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"syscall"
@@ -111,7 +112,14 @@ func (w *Worker) heartbeatLoop(ctx context.Context, wg *sync.WaitGroup) {
 	}
 }
 
+var safeRunnerJobID = regexp.MustCompile(`^rj-[a-zA-Z0-9_-]{1,80}$`)
+
 func (w *Worker) processJob(ctx context.Context, jobID string, spec JobSpec) error {
+	// Workspaces are aggressively deleted at completion. Only server-generated
+	// job names may ever be used as path components.
+	if !safeRunnerJobID.MatchString(jobID) {
+		return fmt.Errorf("unsafe runner job ID")
+	}
 	jobCtx, cancel := context.WithTimeout(ctx, w.cfg.JobTimeout)
 	defer cancel()
 
@@ -127,7 +135,7 @@ func (w *Worker) processJob(ctx context.Context, jobID string, spec JobSpec) err
 		jobType = JobTypeScanFullRepo
 	}
 	if jobType != JobTypeContainerImageScan {
-		if err := CloneRepository(jobCtx, spec.Repository.CloneURL, ref, workspace, w.cfg.CloneTimeout); err != nil {
+		if err := CloneRepositoryAtCommit(jobCtx, spec.Repository.CloneURL, ref, spec.CommitSHA, workspace, w.cfg.CloneTimeout); err != nil {
 			result := JobResult{
 				Version: ContractVersion, JobID: jobID, ScanID: spec.ScanID,
 				Status: JobStatusFailed, StartedAt: time.Now().UTC(), FinishedAt: time.Now().UTC(),

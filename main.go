@@ -2569,7 +2569,10 @@ func tryDelegateScan(ctx context.Context, scanCtx *store.ScanContext, repo store
 	if runnerDispatcher == nil {
 		return false, nil
 	}
-	if runner.ShouldDelegate(runnerCfg, effective, scanCtx.TriggerType) != runner.DecisionDelegate {
+	switch runner.ShouldDelegate(runnerCfg, effective, scanCtx.TriggerType) {
+	case runner.DecisionUnsupported:
+		return false, fmt.Errorf("selected runner backend is unavailable: Gitea Actions job dispatch/verification is not implemented; configure a native worker or explicitly select core")
+	case runner.DecisionCore:
 		return false, nil
 	}
 	policy := analyzers.SnapshotFromPolicy(scanPolicyFromEffective(effective))

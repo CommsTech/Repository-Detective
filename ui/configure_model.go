@@ -69,12 +69,12 @@ func buildConfigureSections(
 			ID: "runner-delegation", Title: "Runner delegation",
 			Status:      runnerDelegationConfigureStatus(f.RunnerDelegationEnabled, platform),
 			StatusClass: runnerDelegationConfigureClass(f.RunnerDelegationEnabled, platform),
-			Summary:     "Delegate heavy scans to authenticated Repository Detective native runners (optional Gitea Actions for repo-native tests).",
-			SafetyNote:  "Disabled by default. Native runners use HMAC auth; Gitea act_runner registration tokens belong in secrets only — never in git.",
+			Summary:     "Delegate manual/scheduled scans to authenticated native workers. Gitea Actions dispatch is not implemented.",
+			SafetyNote:  "Disabled by default. Native workers use HMAC; a Docker worker is not a hostile-code sandbox. Gitea Actions mode is unsupported.",
 			BetaDefault: "disabled", RestartRequired: true, DocPath: "docs/RUNNER_DELEGATION.md",
 			Settings: []ConfigureSetting{
 				boolSetting("runner_delegation_enabled", f.RunnerDelegationEnabled),
-				{Key: "runner_mode", DisplayValue: emptyOrValue(platform.RunnerMode), Source: "config", Hint: "native (scans) or gitea_actions (repo tests) — see docs/RUNNER_DELEGATION.md"},
+				{Key: "runner_mode", DisplayValue: emptyOrValue(platform.RunnerMode), Source: "config", Hint: "native/auto supported; gitea_actions unsupported — see docs/RUNNERS.md"},
 				secretSetting("runner_shared_secret", platform.RunnerSharedSecretSet),
 				boolSetting("runner_require_hmac", platform.RunnerRequireHMAC),
 				{Key: "runner_callback_base_url", DisplayValue: emptyOrValue(platform.RunnerCallbackBaseURL), Source: "config"},
@@ -279,6 +279,9 @@ func emptyOrValue(v string) string {
 }
 
 func runnerDelegationConfigureStatus(on bool, p PlatformContext) string {
+	if on && p.RunnerMode == "gitea_actions" {
+		return "unsupported"
+	}
 	if on && !p.RunnerSharedSecretSet {
 		return "degraded"
 	}
@@ -286,6 +289,9 @@ func runnerDelegationConfigureStatus(on bool, p PlatformContext) string {
 }
 
 func runnerDelegationConfigureClass(on bool, p PlatformContext) string {
+	if on && p.RunnerMode == "gitea_actions" {
+		return "medium"
+	}
 	if on && !p.RunnerSharedSecretSet {
 		return "medium"
 	}

@@ -1,71 +1,15 @@
-# Gitea Actions verification backend
+# Gitea Actions backend — implementation status
 
-Optional integration for **repo-native test execution** after remediation planning. This is **not** the primary scan path.
+**NOT OPERATIONAL as an end-to-end Repository Detective execution backend (2026-11-17).**
 
-## Separation from native runners
+This repository contains a Gitea Actions workflow template and a request-builder structure, but RD does not yet provide the necessary workflow dispatch, run-status polling, artifact/result ingestion, commit/policy binding, and final independent verification to treat an Actions job as completed remediation evidence. Configuration options named `gitea_actions_*` are **not** evidence that that backend is live.
 
-| Use case | Backend |
-|----------|---------|
-| Full-repo scan, SBOM, graph | Native RD runner |
-| Pre-install audit | Native RD runner (report-only on core) |
-| Remediation patch verification | Native runner **or** Gitea Actions workflow |
-| PR creation | Core only, after tests pass + operator approval |
+Gitea `act_runner` itself is a separate CI service and can execute repository workflows independent of Repository Detective. CI on a shared or privileged runner can execute untrusted project code and must not be used as a security sandbox without separate host-level isolation and strict network, secret and privilege controls.
 
-## Configuration
+Use the [native worker](RUNNERS.md) for supported delegated RD jobs, or manually run the checked-in `.gitea/workflows/repository-detective-verify.yml` in a properly isolated Gitea Actions environment as **external CI**. Do not automatically accept external CI as verified closure without checking the target commit, workflow identity, results and artifact integrity.
 
-```yaml
-gitea_actions_test_backend_enabled: false
-gitea_actions_workflow_name: repository-detective-verify.yml
-gitea_actions_trigger_mode: workflow_dispatch
-gitea_actions_timeout_seconds: 1800
-gitea_actions_require_operator_approval: true
-```
+## Work required before activation
 
-## Workflow template
+Implement and test: authenticated dispatch, job correlation and expiry, least-privilege tokens, exact commit pinning, repository-scope constraints, Gitea API error/retry handling, safe workflow permissions, status monitoring, signed/validated artifact ingestion, failure and cancellation semantics, per-job resource isolation, and evidence-backed closure. Include adversarial tests for forged results, mutable branch refs, malicious workflow options, missing artifacts and runner compromise.
 
-Repository Detective ships a reusable workflow at:
-
-`.gitea/workflows/repository-detective-verify.yml`
-
-Typical steps:
-
-- Checkout
-- Language-specific tests (when detected)
-- Optional staticcheck / ruff / shellcheck
-- Optional SBOM check
-
-## act_runner registration
-
-Gitea act_runner uses a **registration token** obtained from your Gitea instance (instance/org/repo scope). Store this token only in runner configuration or secrets — **never** in the Repository Detective git repo.
-
-**If a registration token was pasted in chat or screenshots, rotate/revoke it in Gitea before registering new act_runner instances.**
-
-Repository Detective native workers use `REPOSITORY_DETECTIVE_RUNNER_SHARED_SECRET` (HMAC) — this is a different credential from Gitea act_runner registration tokens.
-
-## When Repository Detective triggers a workflow
-
-- Remediation plan approved by operator
-- `remediation_pr_use_runner_verification: true`
-- `gitea_actions_test_backend_enabled: true`
-- Operator approval gate satisfied (`gitea_actions_require_operator_approval`)
-
-Repository Detective records:
-
-- Workflow run ID
-- Status
-- Logs URL
-- Pass/fail result
-
-## Not used for
-
-- Pre-install audits on untrusted repos
-- Automatic PR creation without explicit remediation PR enablement
-- Running arbitrary repo scripts without approval gates
-
-## Failure handling
-
-- Failed workflow → remediation PR blocked, failure logs shown
-- Timeout → job marked failed, operator notified
-- Backend disabled → verification falls back to native runner or local sandbox
-
-See [RUNNER_DELEGATION.md](RUNNER_DELEGATION.md) and [REMEDIATION_PR.md](REMEDIATION_PR.md).
+See [Security, sandboxing and trust](SECURITY_SANDBOX_AND_TRUST.md) and [Release validation](release/RELEASE_VALIDATION_2026-11-17.md).

@@ -146,3 +146,9 @@ See [BETA_READINESS.md](BETA_READINESS.md). Recommended: `scan_profile: standard
 | [CONFIGURATION.md](CONFIGURATION.md) | All config keys |
 | [BETA_SMOKE_TEST.md](BETA_SMOKE_TEST.md) | Full validation checklist |
 | [BACKUP_RESTORE.md](BACKUP_RESTORE.md) | Before production use |
+
+## Optional: custom scans and delegated compute (unreleased build)
+
+For repository-specific code conventions, open **Repositories → Policy settings → Build a custom rule**. Download and review `.repository-detective.rules.json`, then commit it to the repository and run a baseline scan. The file can define 1–32 safe, bounded, non-executable patterns. See [Custom Rules](CUSTOM_RULES.md).
+
+Native RD worker delegation is opt-in and **must be staged**. Use the [worker quickstart](RUNNER_WORKER_QUICKSTART.md). A Docker worker is not a hostile-source sandbox; for untrusted code use an isolated VM/job host. Gitea Actions and GitHub Actions are not complete RD scan/remediation backends. Never interpret a missing or failed scanner as a clean repository. [Security and trust](SECURITY_SANDBOX_AND_TRUST.md) · [Release validation](release/RELEASE_VALIDATION_2026-11-17.md).

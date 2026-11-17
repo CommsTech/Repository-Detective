@@ -1,103 +1,22 @@
-# Runner delegation architecture
+# Runner delegation — operator quick reference
 
-Repository Detective supports **two distinct execution backends**. Do not conflate them.
+**Native worker:** supported, opt-in, requires shared HMAC secret and a reachable authenticated core endpoint. Manual and scheduled scans may be delegated under `native` or `auto` policy. If no worker is available, the queued job remains pending until completion/expiry; if enqueuing fails, the operation fails. It **does not** silently execute on the core.
 
-## Concepts
+**Gitea Actions / GitHub Actions:** do not enable as Repository Detective job-dispatch backends; the complete dispatch/result/verification pipeline has not been implemented. Forge CI workflows may still run independently, with their own trust and isolation requirements.
 
-| Backend | Purpose | Registration |
-|---------|---------|--------------|
-| **Native RD runner** | Scans, SBOM, graph, pre-install audits, remediation verify jobs | HMAC + `runner_shared_secret` |
-| **Gitea act_runner** | Repo-native test/build workflows (optional) | Gitea registration token (secrets only) |
+## Compose deployment example
 
-## Architecture
+Run the core plus the native-worker overlay from the repository root:
 
-```mermaid
-flowchart LR
-  subgraph core [Repository Detective server]
-    Q[Job queue]
-    API[Runner API]
-    DB[(SQLite)]
-  end
-  subgraph native [Native runner worker]
-    W[Poll / claim]
-    S[Clone + scan in sandbox]
-    U[Upload result + logs]
-  end
-  subgraph gitea [Gitea Actions optional]
-    AR[act_runner]
-    WF[repository-detective-verify.yml]
-  end
-  Q --> API
-  W -->|HMAC| API
-  S --> U --> API --> DB
-  core -->|remediation verify only| AR --> WF
+```bash
+cp .env.example .env
+# Configure forge credentials and a strong runner-only HMAC secret in .env.
+# Set runner_delegation_enabled=true and runner_mode=native on core.
+docker compose -f docker-compose.yml -f docker-compose.runner.example.yml config
+# Review effective config, mounts and credentials before starting services.
+docker compose -f docker-compose.yml -f docker-compose.runner.example.yml up -d
 ```
 
-## When to use native runner
+The overlay runs as UID/GID 1001, with read-only root, no Docker socket, CPU/memory/pid limits and temporary storage. **This is not a security boundary for actively hostile source code.** The worker can still reach the core and forge over its bridge network. Place it on an isolated host or disposable VM for third-party/repository supply-chain investigations. Private repo clone authentication requires explicit design; do not embed access tokens in clone URLs.
 
-- Scheduled or manual full-repo scans (`runner_policy: auto` / `native`)
-- SBOM and graph generation
-- Pre-install audit compute (still report-only on core)
-- Remediation verification jobs (patch validation, no PR creation on runner)
-
-## When to use Gitea Actions
-
-- Run the repository’s own test suite after remediation plan approval
-- Optional workflow_dispatch verification via `gitea_actions_test_backend_enabled`
-- **Not** used for untrusted pre-install repo execution
-
-## Security model
-
-- **HMAC request signing** on all runner worker endpoints when `runner_require_hmac: true`
-- **Nonce replay protection** via `runner_nonce_ttl_seconds` (default 300)
-- **Minimal job payload** — no forge tokens in job spec unless explicitly required
-- **Log redaction** before persistence
-- **Job timeout** via `runner_job_timeout_seconds`
-- **Runner identity** recorded on ping/heartbeat
-- **Forbidden tasks** in job spec: `issue_create`, `pull_request_create`, `dependency_install`, etc.
-
-## Configuration
-
-```yaml
-runner_delegation_enabled: false
-runner_mode: native          # native | gitea_actions | auto | core
-runner_shared_secret: ""     # env / secrets only
-runner_max_concurrent_jobs: 2
-runner_require_hmac: true
-runner_nonce_ttl_seconds: 300
-runner_allowed_job_types:
-  - scan
-  - sbom
-  - graph
-  - preinstall_audit
-  - remediation_verify
-```
-
-**Startup rule:** If `runner_delegation_enabled=true` and `runner_mode` is not `core`, `runner_shared_secret` must be set or startup fails.
-
-## Job lifecycle
-
-1. Core enqueues job (`queued`)
-2. Worker `POST /api/v1/runner/ping` (heartbeat)
-3. Worker `POST /api/v1/runner/jobs/claim` (HMAC)
-4. Worker fetches spec, executes in isolated workspace
-5. Worker `POST /api/v1/runner/jobs/:id/result` or failure
-6. Core ingests findings / marks job completed or failed
-7. Expired jobs marked timed out
-
-## Why disabled by default
-
-- Prevents unsigned runner callbacks on fresh installs
-- Operators must explicitly configure shared secret and callback URL
-- Reduces surprise compute on the main server until workers are provisioned
-
-## Enable safely
-
-1. Generate a strong `runner_shared_secret` (env var, not git)
-2. Set `public_url` or `runner_callback_base_url`
-3. Set `runner_mode: native`
-4. Deploy one or more runner workers (container recommended)
-5. Set `runner_delegation_enabled: true` and restart
-6. Verify System Health → Runner job queue and Configure → Runner delegation
-
-See also [RUNNERS.md](RUNNERS.md) (legacy operator guide) and [GITEA_ACTIONS_BACKEND.md](GITEA_ACTIONS_BACKEND.md).
+Verify worker heartbeats, job status, exact repository revision, scanner completeness, result correlation and timeout behavior. Record failures as failures. See [Runner operations](RUNNERS.md), [Sandbox and trust](SECURITY_SANDBOX_AND_TRUST.md), and [Quickstart](RUNNER_WORKER_QUICKSTART.md).

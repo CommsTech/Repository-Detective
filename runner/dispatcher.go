@@ -26,8 +26,21 @@ func NewDispatcher(s store.QueryStore, cfg Config, logger *logrus.Logger) *Dispa
 	return &Dispatcher{store: s, cfg: cfg.Normalized(), logger: logger}
 }
 
+// checkDispatchBackend prevents direct API enqueues from creating jobs that
+// the native receiver cannot claim (or implying external Actions dispatch).
+func (d *Dispatcher) checkDispatchBackend() error {
+	mode := d.cfg.Normalized().Mode
+	if mode != ModeNative && mode != ModeAuto {
+		return fmt.Errorf("runner mode %q has no supported delegated execution backend (configure native/auto)", mode)
+	}
+	return nil
+}
+
 // CreateScanJob enqueues a runner job for a started scan.
 func (d *Dispatcher) CreateScanJob(ctx context.Context, repo store.Repository, scanID, ref, commitSHA string, policy analyzers.PolicySnapshot) (store.RunnerJob, error) {
+	if err := d.checkDispatchBackend(); err != nil {
+		return store.RunnerJob{}, err
+	}
 	if d.store == nil {
 		return store.RunnerJob{}, fmt.Errorf("database disabled")
 	}
@@ -84,6 +97,9 @@ func (d *Dispatcher) CreateScanJob(ctx context.Context, repo store.Repository, s
 
 // CreateTypedJob enqueues a delegated job of a specific type (graph, sbom, remediation_verify).
 func (d *Dispatcher) CreateTypedJob(ctx context.Context, jobType string, repo store.Repository, scanID, ref, commitSHA string, policy analyzers.PolicySnapshot) (store.RunnerJob, error) {
+	if err := d.checkDispatchBackend(); err != nil {
+		return store.RunnerJob{}, err
+	}
 	if d.store == nil {
 		return store.RunnerJob{}, fmt.Errorf("database disabled")
 	}
@@ -147,6 +163,9 @@ func (d *Dispatcher) CreateTypedJob(ctx context.Context, jobType string, repo st
 
 // CreateContainerImageScanJob enqueues a runner job to scan a container image.
 func (d *Dispatcher) CreateContainerImageScanJob(ctx context.Context, repo store.Repository, scanID string, payload ContainerScanPayload, policy analyzers.PolicySnapshot) (store.RunnerJob, error) {
+	if err := d.checkDispatchBackend(); err != nil {
+		return store.RunnerJob{}, err
+	}
 	if d.store == nil {
 		return store.RunnerJob{}, fmt.Errorf("database disabled")
 	}
@@ -199,12 +218,11 @@ func selectRunnerMode(cfg Config, jobType string) string {
 func SelectRunnerMode(cfg Config, jobType string) string {
 	cfg = cfg.Normalized()
 	switch cfg.Mode {
-	case ModeNative, ModeGiteaActions, ModeCore:
+	case ModeNative, ModeCore:
 		return cfg.Mode
+	case ModeGiteaActions:
+		return ModeCore // no workflow dispatch implementation; do not mislabel the job
 	case ModeAuto:
-		if jobType == JobTypeRemediationVerify {
-			return ModeGiteaActions
-		}
 		return ModeNative
 	default:
 		return ModeNative

@@ -2,6 +2,7 @@ package runner
 
 import (
 	"context"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	"git.commsnet.org/commstech/repository-detective/analyzers"
+	"git.commsnet.org/commstech/repository-detective/customrules"
 	"git.commsnet.org/commstech/repository-detective/graph"
 	"git.commsnet.org/commstech/repository-detective/health"
 	"git.commsnet.org/commstech/repository-detective/issues"
@@ -72,6 +74,34 @@ func ExecuteWorkspaceScan(ctx context.Context, spec JobSpec, in ExecuteInput) (J
 	if depth >= 1 && taskAllowed(spec, "scanners") {
 		static := analyzers.RunStaticAnalysis(files, true, true)
 		candidates = append(candidates, static...)
+	}
+
+	// Apply the same declarative repository rules used by core API scans.
+	// Invalid policies block the job instead of producing false clean results.
+	for _, f := range files {
+		if f.Path != customrules.Filename {
+			continue
+		}
+		inputs := make([]customrules.File, 0, len(files))
+		for _, source := range files {
+			inputs = append(inputs, customrules.File{Path: source.Path, Content: source.Content})
+		}
+		matches, ruleErr := customrules.Scan(ctx, []byte(f.Content), inputs)
+		if ruleErr != nil {
+			result.Status = JobStatusFailed
+			result.Errors = append(result.Errors, "custom rules: "+ruleErr.Error())
+			result.FinishedAt = time.Now().UTC()
+			return result, nil
+		}
+		for _, match := range matches {
+			candidates = append(candidates, models.CandidateFinding{
+				ID: match.RuleID, Hypothesis: match.Title, Severity: match.Severity, Confidence: 0.80,
+				AuditorType: "custom_rule", Category: match.Category, File: match.File, Line: match.Line,
+				Evidence: models.Evidence{ASTNode: match.Description},
+			})
+		}
+		result.ScannerResults = append(result.ScannerResults, ScannerResultDTO{Scanner: "custom_rules", Status: "completed", FindingsCount: len(matches)})
+		break
 	}
 
 	if depth >= 2 && taskAllowed(spec, "health") && in.HealthCfg.Enabled {
@@ -157,7 +187,7 @@ func collectWorkspaceFiles(root string, skipPatterns []string, maxFiles int) ([]
 	var entries []scanners.FileEntry
 	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return fmt.Errorf("scan coverage incomplete: walk failed: %w", err)
 		}
 		if d.IsDir() {
 			if shouldSkipDir(path, root, skipPatterns) {
@@ -165,31 +195,56 @@ func collectWorkspaceFiles(root string, skipPatterns []string, maxFiles int) ([]
 			}
 			return nil
 		}
-		if len(files) >= maxFiles {
-			return fs.SkipAll
-		}
 		rel, err := filepath.Rel(root, path)
 		if err != nil {
 			return nil
 		}
 		rel = filepath.ToSlash(rel)
-		if shouldSkipPath(rel, skipPatterns) {
+		if shouldSkipPath(rel, skipPatterns) || skipGeneratedNonSource(rel) {
 			return nil
 		}
+		if d.Type()&os.ModeSymlink != 0 {
+			return fmt.Errorf("scan coverage incomplete: symlink %s requires explicit review", rel)
+		}
 		if _, err := scanners.ValidateWorkspacePath(root, rel); err != nil {
-			return nil
+			return fmt.Errorf("scan coverage incomplete: unsafe path %s: %w", rel, err)
+		}
+		if len(files) >= maxFiles {
+			return fmt.Errorf("scan coverage incomplete: source file count exceeds %d", maxFiles)
+		}
+		info, statErr := d.Info()
+		if statErr != nil {
+			return fmt.Errorf("scan coverage incomplete: cannot stat %s: %w", rel, statErr)
+		}
+		if info.Size() > customrules.MaxFileBytes {
+			return fmt.Errorf("scan coverage incomplete: %s exceeds %d-byte worker file budget", rel, customrules.MaxFileBytes)
 		}
 		content, err := os.ReadFile(path)
 		if err != nil {
-			return nil
+			return fmt.Errorf("scan coverage incomplete: cannot read %s: %w", rel, err)
 		}
+		text := string(content) // share underlying string for both scanner representations
 		files = append(files, analyzers.FileContent{
-			Path: rel, Content: string(content), Language: detectLanguage(rel),
+			Path: rel, Content: text, Language: detectLanguage(rel),
 		})
-		entries = append(entries, scanners.FileEntry{Path: rel, Content: string(content)})
+		entries = append(entries, scanners.FileEntry{Path: rel, Content: text})
 		return nil
 	})
 	return files, entries, err
+}
+
+// Generated SBOM outputs and binary media are not source to analyze as text.
+// Dedicated SBOM, secret, and container scanners cover their respective formats.
+func skipGeneratedNonSource(rel string) bool {
+	rel = strings.ToLower(filepath.ToSlash(rel))
+	if strings.HasPrefix(rel, "docs/release/sbom/") {
+		return true
+	}
+	switch strings.ToLower(filepath.Ext(rel)) {
+	case ".png", ".jpg", ".jpeg", ".gif", ".ico", ".webp", ".pdf", ".woff", ".woff2", ".ttf", ".otf", ".eot", ".zip", ".gz", ".xz", ".7z", ".tar", ".mp4", ".mp3", ".wav", ".bin", ".wasm", ".exe", ".dll", ".so", ".a", ".o", ".class", ".jar", ".pyc":
+		return true
+	}
+	return false
 }
 
 func shouldSkipDir(path, root string, patterns []string) bool {

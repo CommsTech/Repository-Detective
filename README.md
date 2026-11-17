@@ -57,6 +57,12 @@
 
 **Operator UX (unreleased working-tree):** Findings has Priority / All / Resolved views and server-side CVE/package/rule/repository search. Finding detail now presents investigation, a human-reviewed remediation plan and closure evidence as a visible workflow; first-run and mobile navigation have been improved. These changes are **not part of the published beta image** and require Go 1.26.10 + UI/Gitea staging acceptance. See [Operator experience](docs/OPERATOR_EXPERIENCE.md).
 
+**Current development pass (2026-11-17; source only, not published):** Per-repository [declarative custom scanning rules](docs/CUSTOM_RULES.md) are implemented for core and the native worker; the repository settings UI includes a local-only no-code rule builder. Native worker clone validation, commit pinning, explicit workspace-limit failures, and fail-closed delegation have been tightened; automatic AI-only false-positive suppression is disabled. Dark scan-page updates now retain the page on refresh failure rather than reloading. See [isolation and trust boundaries](docs/SECURITY_SANDBOX_AND_TRUST.md) and [verification record](docs/release/RELEASE_VALIDATION_2026-11-17.md). **These changes are not released or fully end-to-end verified.**
+
+**Runner limitation:** Native RD workers are supported as an opt-in backend, but a conventional Docker worker is **not** a fully isolated sandbox for malicious code. Complete Gitea Actions / GitHub Actions dispatch, polling, artifact verification and safe AI-generated dependency-fix PRs are **not implemented end to end**. Never mark a repository *safe* solely because a scan found no issues. Legacy documents about Gitea Actions dispatch have been corrected; refer to [runner operations](docs/RUNNERS.md).
+
+**Support this project:** [GitHub Sponsors](https://github.com/sponsors/CommsTech) — voluntary support for maintenance, testing and documentation. Sponsorship does not buy an SLA, priority fixes or private support.
+
 **Where to start:** [Ten-minute aha](docs/TEN_MINUTE_AHA.md) · [Quick Start](#quick-start) · [Demo](docs/DEMO.md) · [Screenshots](docs/assets/screenshots/README.md) · [Public beta guide](docs/PUBLIC_BETA.md)
 
 ---

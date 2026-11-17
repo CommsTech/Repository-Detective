@@ -10,7 +10,7 @@
   <div class="rd-hero-copy">
     <p class="rd-hero-kicker">Operator command center</p>
     <h2>{{.Backlog.OpenUnique}} open unique findings across {{.TotalRepositories}} repositories</h2>
-    <p class="rd-muted">Visual intelligence below — severity, categories, scan velocity, and repo risk. Raw detector hits stay in the secondary panel.</p>
+    <p class="rd-muted">Prioritize verified evidence and scan failures first. A quiet dashboard is not proof that every scanner succeeded or every dependency is safe.</p>
   </div>
   <div class="rd-hero-metrics">
     <div class="rd-hero-metric rd-hero-metric-danger">
@@ -57,6 +57,16 @@
   <a href="{{$.BasePath}}/scans{{apiKeyQS $.APIKey}}"><span>03</span> Rescan and verify closure</a>
 </nav>
 {{end}}
+
+<section class="rd-card rd-trust-panel" aria-labelledby="rd-trust-title">
+  <div class="rd-card-head"><div><p class="rd-queue-eyebrow">Evidence, not marketing claims</p><h2 id="rd-trust-title">Can I trust the latest results?</h2></div><span class="rd-chip">Review required</span></div>
+  <p class="rd-muted">No automated scan can guarantee software is free of exploitable defects. Review the scope, actual scanner results, scan revision, and independent test evidence before deploying a repository.</p>
+  <div class="rd-trust-steps">
+    <a href="{{$.BasePath}}/doctor{{apiKeyQS $.APIKey}}"><strong>01 · Coverage</strong><span>Which scanners were available, failed, or skipped?</span></a>
+    <a href="{{$.BasePath}}/scans{{apiKeyQS $.APIKey}}"><strong>02 · Provenance</strong><span>Which revision and execution path produced the findings?</span></a>
+    <a href="{{$.BasePath}}/reports{{apiKeyQS $.APIKey}}"><strong>03 · Evidence</strong><span>Review findings, SBOM reports, and remediation status.</span></a>
+  </div>
+</section>
 
 <section class="rd-chart-text-summary" aria-labelledby="rd-chart-summary-heading">
   <h2 id="rd-chart-summary-heading" class="rd-visually-hidden">Chart data text summary</h2>

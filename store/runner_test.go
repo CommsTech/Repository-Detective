@@ -23,7 +23,7 @@ func TestRunnerJobLifecycle(t *testing.T) {
 	job, err := s.CreateRunnerJob(ctx, store.RunnerJob{
 		JobID: "rj-test0001", RepositoryID: repo.ID, ScanID: scanID,
 		JobType: store.RunnerJobTypeScanFullRepo, Status: store.RunnerJobStatusQueued,
-		RunnerMode: "gitea_actions", Ref: "main", JobSpecJSON: spec, PolicySnapshotJSON: policy,
+		RunnerMode: "native", Ref: "main", JobSpecJSON: spec, PolicySnapshotJSON: policy,
 		ExpiresAt: &expires,
 	})
 	if err != nil {
@@ -105,5 +105,25 @@ func TestExpireStaleRunnerJobsMarksRunningExpired(t *testing.T) {
 	got, err := s.GetRunnerJob(ctx, "rj-stale-run")
 	if err != nil || got.Status != store.RunnerJobStatusExpired {
 		t.Fatalf("status=%s err=%v", got.Status, err)
+	}
+}
+
+// A native worker must never claim an Actions-dispatch job left in the DB by
+// an older build. Those jobs require a real Actions backend and must expire.
+func TestRunnerDoesNotClaimUnsupportedActionsJob(t *testing.T) {
+	s := openTestStore(t)
+	ctx := context.Background()
+	repo, err := s.UpsertRepository(ctx, store.Repository{Owner: "o", Name: "unsupported", FullName: "o/unsupported"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = s.CreateRunnerJob(ctx, store.RunnerJob{JobID: "rj-unsupported", RepositoryID: repo.ID,
+		JobType: store.RunnerJobTypeScanFullRepo, Status: store.RunnerJobStatusQueued,
+		RunnerMode: "gitea_actions", JobSpecJSON: json.RawMessage(`{}`), PolicySnapshotJSON: json.RawMessage(`{}`)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.ClaimNextRunnerJob(ctx, time.Now().UTC()); err == nil {
+		t.Fatal("native worker claimed an unsupported Gitea Actions job")
 	}
 }
