@@ -108,11 +108,16 @@ func (r *Receiver) SubmitResult(ctx context.Context, jobID string, result JobRes
 	effective := policyToEffective(policy)
 
 	now := time.Now().UTC()
+	// A worker may send status=completed alongside errors. Treat the error
+	// evidence as authoritative so the UI and ingestion cannot declare success.
+	if len(result.Errors) > 0 {
+		result.Status = JobStatusFailed
+	}
 	job.ResultSummaryJSON = result.SummaryJSON()
 	job.UpdatedAt = now
 	job.FinishedAt = &now
 
-	if result.Status == JobStatusFailed || len(result.Errors) > 0 && result.Status != JobStatusCompleted {
+	if result.Status == JobStatusFailed {
 		job.Status = store.RunnerJobStatusFailed
 		if len(result.Errors) > 0 {
 			job.Error = result.Errors[0]

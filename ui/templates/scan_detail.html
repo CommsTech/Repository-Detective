@@ -71,7 +71,7 @@
     <div class="rd-pipeline-step done">Scan</div>
     <div class="rd-pipeline-step done">Validate</div>
     <div class="rd-pipeline-step done">Dedup</div>
-    <div class="rd-pipeline-step done">Prove</div>
+    <div class="rd-pipeline-step">Review coverage</div>
   </div>
   {{else if or (eq .Status "running") (eq .Status "started")}}
   <div class="rd-alert info" data-scan-auto-refresh="5">
@@ -82,7 +82,7 @@
     <div class="rd-pipeline-step active">Scan</div>
     <div class="rd-pipeline-step">Validate</div>
     <div class="rd-pipeline-step">Dedup</div>
-    <div class="rd-pipeline-step">Prove</div>
+    <div class="rd-pipeline-step">Review coverage</div>
   </div>
   <p class="rd-muted" role="status" aria-live="polite" data-scan-refresh-label>Refreshing soon…</p>
   {{end}}
@@ -156,10 +156,13 @@
   <p class="rd-muted"><strong>binary_missing</strong> means the tool was not installed in this runtime — the repo was <em>not</em> scanned by that engine. A missing scanner does <em>not</em> mean the repository is clean.</p>
   <p class="rd-muted"><strong>parse_failed</strong> means the scanner ran but its output could not be parsed — treat coverage for that tool as incomplete and check Detail/Error below.</p>
   <p class="rd-muted"><strong>timed_out</strong> / <strong>failed</strong> mean the tool did not finish successfully.</p>
+  {{if not $.Data.ScannerResults}}
+  <div class="rd-alert rd-alert-danger" role="alert"><strong>No scanner evidence recorded.</strong> Do not interpret this scan as a clean or verified result. Check the runner status, enabled scanners, and the application logs before trusting its findings count.</div>
+  {{end}}
   <table class="rd-table">
     <tr><th>Scanner</th><th>Status</th><th>Findings</th><th>Detail</th></tr>
     {{range $.Data.ScannerResults}}
-    <tr {{if or (eq .Status "parse_failed") (eq .Status "timed_out") (eq .Status "failed") (eq .Status "error")}}class="rd-row-warn"{{end}}>
+    <tr {{if or (eq .Status "parse_failed") (eq .Status "timed_out") (eq .Status "failed") (eq .Status "error") (eq .Status "binary_missing") (eq .Status "scanner_unavailable")}}class="rd-row-warn"{{end}}>
       <td><strong>{{.ScannerName}}</strong></td>
       <td><span class="rd-badge {{scannerBadge .Status}}">{{.Status}}</span></td>
       <td>{{.FindingsCount}}</td>

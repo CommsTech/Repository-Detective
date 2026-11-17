@@ -45,7 +45,14 @@ func ExecuteJob(ctx context.Context, spec JobSpec, in JobExecuteInput) (JobResul
 	case JobTypeScanFullRepo, JobTypePreinstallAudit:
 		return ExecuteWorkspaceScan(ctx, spec, ExecuteInput(in))
 	default:
-		return ExecuteWorkspaceScan(ctx, spec, ExecuteInput(in))
+		// Unknown job types are not aliases for full repository scans.
+		// A job spec is untrusted worker input; never widen its authority.
+		now := time.Now().UTC()
+		return JobResult{
+			Version: ContractVersion, JobID: spec.JobID, ScanID: spec.ScanID,
+			Status: JobStatusFailed, StartedAt: now, FinishedAt: now,
+			Errors: []string{fmt.Sprintf("unsupported runner job type %q", jobType)},
+		}, nil
 	}
 }
 
@@ -104,6 +111,10 @@ func executeSBOMJob(ctx context.Context, spec JobSpec, in JobExecuteInput) (JobR
 	return result, nil
 }
 
+// executeRemediationVerifyJob performs a fresh deterministic scan. Successful
+// execution is evidence of scan coverage, NOT a certification that a specific
+// AI patch is safe: target-specific diffs, tests, and PR acceptance are separate
+// mandatory release gates. Missing scanner coverage must not look like success.
 func executeRemediationVerifyJob(ctx context.Context, spec JobSpec, in JobExecuteInput) (JobResult, error) {
 	started := time.Now().UTC()
 	result := JobResult{
@@ -116,28 +127,72 @@ func executeRemediationVerifyJob(ctx context.Context, spec JobSpec, in JobExecut
 		result.FinishedAt = time.Now().UTC()
 		return result, nil
 	}
-	// Verification-only: run lightweight static analysis as a stand-in for allowlisted test commands.
+	// At depth 1 the worker silently skips external scanners entirely. Require
+	// the external scanner stage instead of returning an empty green result.
 	verifySpec := spec
 	verifySpec.AllowedTasks = []string{"scanners"}
 	policy := verifySpec.EffectiveSettings
-	policy.AnalysisDepth = 1
+	policy.AnalysisDepth = 2
 	verifySpec.EffectiveSettings = policy
 	verifyIn := in
 	verifyIn.HealthCfg = health.Config{Enabled: false}
 	verifyIn.GraphCfg = graph.Config{Enabled: false}
 	scanResult, err := ExecuteWorkspaceScan(ctx, verifySpec, ExecuteInput(verifyIn))
+	result.ScannerResults = scanResult.ScannerResults
+	result.Findings = scanResult.Findings
+	result.FilesAnalyzed = scanResult.FilesAnalyzed
+	result.Warnings = append(result.Warnings, scanResult.Warnings...)
 	if err != nil {
-		result.Status = JobStatusFailed
 		result.Errors = append(result.Errors, RedactLogLine(err.Error()))
-	} else if scanResult.Status == JobStatusFailed || len(scanResult.Errors) > 0 {
-		result.Status = JobStatusFailed
-		result.Errors = append(result.Errors, scanResult.Errors...)
 	} else {
-		result.ScannerResults = scanResult.ScannerResults
-		result.FilesAnalyzed = scanResult.FilesAnalyzed
+		result.Errors = append(result.Errors, scanResult.Errors...)
+		if scanResult.Status == JobStatusFailed {
+			result.Errors = append(result.Errors, "remediation verification scan failed")
+		}
+		result.Errors = append(result.Errors, remediationVerificationGaps(scanResult)...)
+	}
+	if len(result.Errors) > 0 {
+		result.Status = JobStatusFailed
 	}
 	result.FinishedAt = time.Now().UTC()
 	return result, nil
+}
+
+// remediationVerificationGaps requires at least one actually executed external
+// analyzer and rejects missing, failed, and finding-bearing scans. This is
+// conservative until target-specific patch verification is implemented.
+func remediationVerificationGaps(scan JobResult) []string {
+	var gaps []string
+	if scan.FilesAnalyzed == 0 {
+		gaps = append(gaps, "remediation verification has no analyzed source files")
+	}
+	completed := 0
+	for _, sr := range scan.ScannerResults {
+		switch scanners.Status(sr.Status) {
+		case scanners.StatusClean:
+			// Several scanner adapters report "clean" when a repository has no
+			// supported files. That is non-applicability, not proof of a scan.
+			detail := strings.ToLower(strings.TrimSpace(sr.Detail))
+			if strings.HasPrefix(detail, "no ") || strings.HasPrefix(detail, "not applicable") {
+				continue
+			}
+			completed++
+		case scanners.StatusDisabled, scanners.StatusNoSupportedManifest:
+			// Disabled and non-applicable scanners are not verification evidence.
+		case scanners.StatusFound:
+			completed++
+			gaps = append(gaps, fmt.Sprintf("scanner %s reports unresolved findings", sr.Scanner))
+		default:
+			gaps = append(gaps, fmt.Sprintf("scanner %s incomplete: %s", sr.Scanner, sr.Status))
+		}
+	}
+	if completed == 0 {
+		gaps = append(gaps, "remediation verification has no completed applicable external scanner")
+	}
+	if len(scan.Findings) > 0 {
+		gaps = append(gaps, fmt.Sprintf("remediation verification found %d unresolved finding(s); target-specific closure is not supported", len(scan.Findings)))
+	}
+	return gaps
 }
 
 func executeContainerImageScanJob(ctx context.Context, spec JobSpec, in JobExecuteInput) (JobResult, error) {
@@ -244,7 +299,7 @@ func graphFromPolicySnapshot(p analyzers.PolicySnapshot) graph.Config {
 // JobTypeAllowed reports whether a worker may execute a job type.
 func JobTypeAllowed(allowed []string, jobType string) bool {
 	if len(allowed) == 0 {
-		return true
+		return false // An empty worker allowlist grants no capabilities.
 	}
 	jobType = strings.TrimSpace(jobType)
 	if jobType == JobTypeScanFullRepoLegacy {

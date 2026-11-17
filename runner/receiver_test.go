@@ -213,3 +213,33 @@ func TestReceiverJobsExpiredCallback(t *testing.T) {
 		t.Fatalf("expected expired callback count > 0, got %d", expired)
 	}
 }
+
+// Inconsistent worker callbacks must not be reported to operators as successes.
+func TestReceiverCompletedStatusWithErrorsFailsClosed(t *testing.T) {
+	s := openReceiverStore(t)
+	jobID, scanID := "rj-errorstatus", "scan-errorstatus"
+	seedRunnerJob(t, s, jobID, scanID, time.Now().UTC().Add(time.Hour))
+	r := newReceiver(t, s)
+	result := completedResult(jobID, scanID)
+	result.Errors = []string{"scanner timed out"}
+	if err := r.SubmitResult(context.Background(), jobID, result); err != nil {
+		t.Fatalf("submit result: %v", err)
+	}
+	job, err := s.GetRunnerJob(context.Background(), jobID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if job.Status != store.RunnerJobStatusFailed {
+		t.Fatalf("completed-with-errors incorrectly succeeded: %s", job.Status)
+	}
+	if job.Error != "scanner timed out" {
+		t.Fatalf("error not preserved: %q", job.Error)
+	}
+	var summary map[string]any
+	if err := json.Unmarshal(job.ResultSummaryJSON, &summary); err != nil {
+		t.Fatal(err)
+	}
+	if summary["status"] != runner.JobStatusFailed {
+		t.Fatalf("summary falsely reports success: %v", summary)
+	}
+}

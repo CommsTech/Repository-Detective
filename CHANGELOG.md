@@ -2,6 +2,18 @@
 
 All notable changes to Repository Detective (formerly an internal prototype) are documented here.
 
+## [Unreleased — runner verification integrity, 2026-11-17]
+
+### Fixed
+- `remediation_verify` now actually invokes the external scanner stage, preserves the findings and scanner coverage, and fails when scanners did not run, failed, or still report issues. This is a conservative scan-evidence gate **not** automated PR/fix certification.
+- Runner callbacks with `status=completed` and an error list are recorded and summarized as failed rather than silently marked complete.
+- Unknown worker job types no longer fall back to a full scan, and empty job-type allowlists no longer allow every job.
+- Scan detail no longer visually labels coverage review as a completed proof step; absent scanner evidence and missing binaries are more visible.
+
+### Verification
+- Added targeted runner and receiver regression cases; full Go tests and disposable Gitea/native-worker integration remain **NOT RUN** in the available Go 1.23.2 environment (required Go 1.26.10).
+- [Detailed safeguards and outstanding acceptance gates](docs/release/RUNNER_VERIFICATION_FAIL_CLOSED_2026-11-17.md).
+
 ## [Unreleased — deterministic slop scoring, 2026-11-17]
 
 ### Added

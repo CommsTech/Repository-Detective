@@ -27,10 +27,10 @@ REPOSITORY_DETECTIVE_REMEDIATION_PLANNER_ENABLED=true
 REPOSITORY_DETECTIVE_REMEDIATION_USE_AI=false
 REPOSITORY_DETECTIVE_REMEDIATION_PR_ENABLED=false
 REPOSITORY_DETECTIVE_AUTO_CREATE_ISSUES=false
-REPOSITORY_DETECTIVE_CVE_INTELLIGENCE_ENABLED=false
+REPOSITORY_DETECTIVE_CVE_INTELLIGENCE_ENABLED=true
 ```
 
-For public CVE intelligence **opt in** with `REPOSITORY_DETECTIVE_CVE_INTELLIGENCE_ENABLED=true` and restart. Open a dependency finding and select **Check live signals**. No public lookups occur on page load; the authenticated `/ui/findings/:id/intelligence` endpoint only sends the CVE ID to CISA and FIRST. KEV is cached for up to six hours; EPSS for up to an hour; upstream errors are explicitly marked as unavailable. Keep off for fully isolated networks.
+For public CVE intelligence **opt in** with `REPOSITORY_DETECTIVE_CVE_INTELLIGENCE_ENABLED=true` and restart. Open a dependency finding and select **Check live signals**. Enrichment is on by default and still only runs on explicit operator action; the authenticated `/ui/findings/:id/intelligence` endpoint sends only the CVE ID to CISA and FIRST. There are no background lookups and no page-load requests. Set the flag to `false` for air-gapped or fully local-only deployments. KEV is cached for up to six hours; EPSS for up to an hour; upstream errors are explicitly marked as unavailable. Keep off for fully isolated networks.
 
 For **local AI advisory remediation**, additionally set:
 
@@ -81,4 +81,4 @@ The dashboard's **Triage critical/high** action opens `/ui/findings?focus=1`: th
 
 ## Rollback
 
-Set `REPOSITORY_DETECTIVE_CVE_INTELLIGENCE_ENABLED=false`, `REPOSITORY_DETECTIVE_REMEDIATION_USE_AI=false`, and `REPOSITORY_DETECTIVE_REMEDIATION_PR_ENABLED=false`, then restart the container. Retain plans and findings as historical records; reverting the app image does not reverse any manually merged code changes.
+Set `REPOSITORY_DETECTIVE_CVE_INTELLIGENCE_ENABLED=true`, `REPOSITORY_DETECTIVE_REMEDIATION_USE_AI=false`, and `REPOSITORY_DETECTIVE_REMEDIATION_PR_ENABLED=false`, then restart the container. Retain plans and findings as historical records; reverting the app image does not reverse any manually merged code changes.
