@@ -1,3 +1,10 @@
+## [Unreleased — delegated scanner evidence fidelity, 2026-11-17]
+
+- Preserved worker-reported scanner finding counts and sanitized scanner errors through core ingestion and scan persistence; scanner `error` evidence now invalidates a nominal `clean` outcome.
+- Standardized custom-rule scanner results to `found`/`clean`; passed pinned job commit identity into the persisted analysis result.
+- Rejected unsupported runner result versions/statuses and invalid negative counts and timestamp order. Added targeted regression tests.
+- Full Go 1.26.11 CI and a disposable Gitea/native-worker E2E **remain pending**. See [runner evidence release gate](docs/release/RUNNER_RESULT_EVIDENCE_INTEGRITY_2026-11-17.md).
+
 # Changelog
 
 ## [Unreleased — capability-aware runners, AI result fidelity and safe issue filing, 2026-11-17]

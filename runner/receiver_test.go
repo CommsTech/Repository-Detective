@@ -62,7 +62,8 @@ func newReceiver(t *testing.T, s store.QueryStore) *runner.Receiver {
 
 func completedResult(jobID, scanID string) runner.JobResult {
 	return runner.JobResult{
-		JobID: jobID, ScanID: scanID, Status: runner.JobStatusCompleted,
+		Version: runner.ContractVersion,
+		JobID:   jobID, ScanID: scanID, Status: runner.JobStatusCompleted,
 		StartedAt: time.Now().UTC(), FinishedAt: time.Now().UTC(),
 	}
 }

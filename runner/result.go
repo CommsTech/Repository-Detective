@@ -2,6 +2,7 @@ package runner
 
 import (
 	"encoding/json"
+	"strings"
 	"time"
 
 	"git.commsnet.org/commstech/repository-detective/ai"
@@ -92,10 +93,27 @@ func (r JobResult) ToAnalysisResult(repoFullName, ref string, policy *analyzers.
 		out.Commit = r.WorkspaceMeta.RefUsed
 	}
 	for _, sr := range r.ScannerResults {
+		// Worker results carry scanner totals independently of the normalized
+		// findings array. Dropping them makes the audit evidence incorrectly show
+		// zero scanner findings even when the worker detected vulnerabilities.
+		detail := RedactLogLine(sr.Detail)
+		if sr.Error != "" {
+			if detail != "" {
+				detail += "; "
+			}
+			detail += "error: " + RedactLogLine(sr.Error)
+		}
+		detail = RedactLogLine(strings.TrimSpace(detail))
+		status := scanners.Status(sr.Status)
+		if sr.Error != "" {
+			// An error-bearing tool outcome is not proof of complete coverage.
+			status = scanners.StatusFailed
+		}
 		out.ScannerResults = append(out.ScannerResults, scanners.RunResult{
-			Scanner: sr.Scanner,
-			Status:  scanners.Status(sr.Status),
-			Detail:  sr.Detail,
+			Scanner:               sr.Scanner,
+			Status:                status,
+			ReportedFindingsCount: sr.FindingsCount,
+			Detail:                detail,
 		})
 	}
 	for _, f := range r.Findings {

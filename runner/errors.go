@@ -41,6 +41,23 @@ func ValidateResultBasic(job JobView, result JobResult, maxSizeBytes int64) erro
 	if maxSizeBytes > 0 && size > maxSizeBytes {
 		return ErrResultTooLarge
 	}
+	if result.Version != ContractVersion {
+		return fmt.Errorf("unsupported runner result contract version %d", result.Version)
+	}
+	if result.Status != JobStatusCompleted && result.Status != JobStatusFailed {
+		return fmt.Errorf("invalid runner result status %q", result.Status)
+	}
+	if result.FilesAnalyzed < 0 {
+		return fmt.Errorf("negative runner files_analyzed")
+	}
+	for _, sr := range result.ScannerResults {
+		if sr.FindingsCount < 0 {
+			return fmt.Errorf("negative finding count for scanner %q", sr.Scanner)
+		}
+	}
+	if !result.StartedAt.IsZero() && !result.FinishedAt.IsZero() && result.FinishedAt.Before(result.StartedAt) {
+		return fmt.Errorf("runner finished_at precedes started_at")
+	}
 	return nil
 }
 

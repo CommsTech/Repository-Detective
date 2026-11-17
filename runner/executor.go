@@ -100,7 +100,11 @@ func ExecuteWorkspaceScan(ctx context.Context, spec JobSpec, in ExecuteInput) (J
 				Evidence: models.Evidence{ASTNode: match.Description},
 			})
 		}
-		result.ScannerResults = append(result.ScannerResults, ScannerResultDTO{Scanner: "custom_rules", Status: "completed", FindingsCount: len(matches)})
+		customStatus := scanners.StatusClean
+		if len(matches) > 0 {
+			customStatus = scanners.StatusFound
+		}
+		result.ScannerResults = append(result.ScannerResults, ScannerResultDTO{Scanner: "custom_rules", Status: string(customStatus), FindingsCount: len(matches)})
 		break
 	}
 

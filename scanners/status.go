@@ -24,11 +24,15 @@ const (
 
 // RunResult is the normalized outcome for one scanner.
 type RunResult struct {
-	Scanner             string
-	Status              Status
-	Findings            []Finding
-	Detail              string
-	ApplicabilityReason string
+	Scanner  string
+	Status   Status
+	Findings []Finding
+	// ReportedFindingsCount is set by remote workers that transmit normalized
+	// findings separately from scanner outcomes. A zero value is also the
+	// correct count for clean local scanner runs.
+	ReportedFindingsCount int
+	Detail                string
+	ApplicabilityReason   string
 }
 
 // RunSummary aggregates scanner outcomes for one workspace scan.

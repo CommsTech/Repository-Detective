@@ -2315,10 +2315,14 @@ func finishPersistedScan(ctx context.Context, scanCtx *store.ScanContext, reposi
 	if result != nil {
 		scanners := make([]store.ScanCompletionScanner, 0, len(result.ScannerResults))
 		for _, sr := range result.ScannerResults {
+			count := len(sr.Findings)
+			if sr.ReportedFindingsCount > count {
+				count = sr.ReportedFindingsCount
+			}
 			scanners = append(scanners, store.ScanCompletionScanner{
 				Scanner:             sr.Scanner,
 				Status:              string(sr.Status),
-				FindingsCount:       len(sr.Findings),
+				FindingsCount:       count,
 				Detail:              sr.Detail,
 				ApplicabilityReason: sr.ApplicabilityReason,
 			})
@@ -2627,6 +2631,12 @@ func ingestRunnerResult(ctx context.Context, job store.RunnerJob, result runner.
 	}
 
 	analysisResult := result.ToAnalysisResult(repo.FullName, job.Ref, &policy)
+	// The worker only accepts the pinned checkout when HEAD matches the job's
+	// requested commit. Preserve that immutable identity in scan persistence
+	// and forge issue evidence; a mutable branch ref is not a commit SHA.
+	if looksLikeGitCommitSHA(job.CommitSHA) {
+		analysisResult.CommitSHA = job.CommitSHA
+	}
 	runnerScanCtx := &store.ScanContext{
 		Owner: repo.Owner, Repo: repo.Name, ScanID: job.ScanID,
 		TriggerType: store.TriggerScheduled, Ref: job.Ref, CommitSHA: job.CommitSHA, PRNumber: job.PRNumber,
