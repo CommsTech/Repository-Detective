@@ -849,12 +849,12 @@ func (s *SQLiteStore) buildDashboardSummary(ctx context.Context, recentLimit int
 		var sev string
 		var count int
 		if err := rows.Scan(&sev, &count); err != nil {
-			rows.Close()
+			closeRows(rows)
 			return summary, err
 		}
 		summary.OpenFindingsBySeverity[sev] = count
 	}
-	rows.Close()
+	closeRows(rows)
 
 	summary.OpenFindingsByCategory = map[string]int{}
 	catRows, err := s.db.QueryContext(ctx, `
@@ -867,7 +867,7 @@ func (s *SQLiteStore) buildDashboardSummary(ctx context.Context, recentLimit int
 		var cat string
 		var count int
 		if err := catRows.Scan(&cat, &count); err != nil {
-			catRows.Close()
+			closeRows(catRows)
 			return summary, err
 		}
 		if cat == "" {
@@ -875,7 +875,7 @@ func (s *SQLiteStore) buildDashboardSummary(ctx context.Context, recentLimit int
 		}
 		summary.OpenFindingsByCategory[cat] = count
 	}
-	catRows.Close()
+	closeRows(catRows)
 
 	recentRows, err := s.db.QueryContext(ctx, `
 		SELECT s.id, s.repository_id, s.trigger_type, s.ref, s.commit_sha, s.pr_number,

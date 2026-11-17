@@ -184,7 +184,7 @@ func (s *SQLiteStore) FindingQualityMetrics(ctx context.Context, window FindingQ
 			}
 			hours = append(hours, last.Sub(first).Hours())
 		}
-		ttrRows.Close()
+		closeRows(ttrRows)
 		if len(hours) > 0 {
 			sort.Float64s(hours)
 			med := hours[len(hours)/2]
@@ -239,7 +239,7 @@ func (s *SQLiteStore) FindingQualityMetrics(ctx context.Context, window FindingQ
 				out.PolicyOutcomes[k] = v
 			}
 		}
-		rows.Close()
+		closeRows(rows)
 	}
 
 	supQ := `SELECT COUNT(1) FROM findings WHERE status = 'suppressed'`

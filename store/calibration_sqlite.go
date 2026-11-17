@@ -231,7 +231,7 @@ func (s *SQLiteStore) GenerateCalibrationRecommendations(ctx context.Context, mi
 		var total int
 		var fpRate float64
 		if err := rows.Scan(&source, &ruleID, &category, &total, &fpRate, &recAction); err != nil {
-			rows.Close()
+			closeRows(rows)
 			return 0, err
 		}
 		candidates = append(candidates, candidate{
@@ -240,10 +240,10 @@ func (s *SQLiteStore) GenerateCalibrationRecommendations(ctx context.Context, mi
 		})
 	}
 	if err := rows.Err(); err != nil {
-		rows.Close()
+		closeRows(rows)
 		return 0, err
 	}
-	rows.Close()
+	closeRows(rows)
 
 	existing := make(map[string]struct{})
 	existRows, err := s.db.QueryContext(ctx, `
@@ -256,16 +256,16 @@ func (s *SQLiteStore) GenerateCalibrationRecommendations(ctx context.Context, mi
 	for existRows.Next() {
 		var source, ruleID string
 		if err := existRows.Scan(&source, &ruleID); err != nil {
-			existRows.Close()
+			closeRows(existRows)
 			return 0, err
 		}
 		existing[source+"\x00"+ruleID] = struct{}{}
 	}
 	if err := existRows.Err(); err != nil {
-		existRows.Close()
+		closeRows(existRows)
 		return 0, err
 	}
-	existRows.Close()
+	closeRows(existRows)
 
 	count := 0
 	for _, c := range candidates {

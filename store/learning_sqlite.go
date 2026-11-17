@@ -350,7 +350,7 @@ func (s *SQLiteStore) GenerateRepoScopedRecommendations(ctx context.Context, rep
 		var source, ruleID string
 		var fp, tp, dispositionTotal int
 		if err := rows.Scan(&source, &ruleID, &fp, &tp, &dispositionTotal); err != nil {
-			rows.Close()
+			closeRows(rows)
 			return 0, err
 		}
 		if dispositionTotal <= 0 {
@@ -392,13 +392,13 @@ func (s *SQLiteStore) GenerateRepoScopedRecommendations(ctx context.Context, rep
 	for existRows.Next() {
 		var source, ruleID string
 		if err := existRows.Scan(&source, &ruleID); err != nil {
-			existRows.Close()
+			closeRows(existRows)
 			return 0, err
 		}
 		existing[source+"\x00"+ruleID] = struct{}{}
 	}
 	if err := existRows.Err(); err != nil {
-		existRows.Close()
+		closeRows(existRows)
 		return 0, err
 	}
 	if err := existRows.Close(); err != nil {

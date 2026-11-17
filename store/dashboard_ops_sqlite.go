@@ -164,16 +164,16 @@ func (s *SQLiteStore) loadScanHealth(ctx context.Context, summary *DashboardSumm
 	for bucketRows.Next() {
 		var errMsg string
 		if err := bucketRows.Scan(&errMsg); err != nil {
-			bucketRows.Close()
+			closeRows(bucketRows)
 			return err
 		}
 		buckets[ClassifyScanFailure(errMsg)]++
 	}
 	if err := bucketRows.Err(); err != nil {
-		bucketRows.Close()
+		closeRows(bucketRows)
 		return err
 	}
-	bucketRows.Close()
+	closeRows(bucketRows)
 
 	failRows, err := s.db.QueryContext(ctx, `
 		SELECT s.id, s.repository_id, s.error, s.started_at, r.full_name

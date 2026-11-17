@@ -76,16 +76,16 @@ func (s *SQLiteStore) IngestAIAdvisoryCalibrateSuggestions(ctx context.Context, 
 	for rows.Next() {
 		var p pending
 		if err := rows.Scan(&p.recID, &p.repoID, &p.scanID, &p.fingerprint, &p.action, &p.classification, &p.reason, &p.source, &p.ruleID, &p.category); err != nil {
-			rows.Close()
+			closeRows(rows)
 			return 0, err
 		}
 		batch = append(batch, p)
 	}
 	if err := rows.Err(); err != nil {
-		rows.Close()
+		closeRows(rows)
 		return 0, err
 	}
-	rows.Close()
+	closeRows(rows)
 
 	ingested := 0
 	for _, p := range batch {

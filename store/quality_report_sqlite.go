@@ -81,12 +81,12 @@ func (s *SQLiteStore) ScanQualityReport(ctx context.Context) (ScanQualityReport,
 		var k string
 		var v int
 		if err := rows.Scan(&k, &v); err != nil {
-			rows.Close()
+			closeRows(rows)
 			return report, err
 		}
 		report.FindingsBySeverity[k] = v
 	}
-	rows.Close()
+	closeRows(rows)
 
 	catRows, err := s.db.QueryContext(ctx, `SELECT LOWER(category), COUNT(1) FROM findings GROUP BY LOWER(category)`)
 	if err != nil {
@@ -96,12 +96,12 @@ func (s *SQLiteStore) ScanQualityReport(ctx context.Context) (ScanQualityReport,
 		var k string
 		var v int
 		if err := catRows.Scan(&k, &v); err != nil {
-			catRows.Close()
+			closeRows(catRows)
 			return report, err
 		}
 		report.FindingsByCategory[k] = v
 	}
-	catRows.Close()
+	closeRows(catRows)
 
 	srcRows, err := s.db.QueryContext(ctx, `SELECT LOWER(source), COUNT(1) FROM findings GROUP BY LOWER(source)`)
 	if err != nil {
@@ -111,12 +111,12 @@ func (s *SQLiteStore) ScanQualityReport(ctx context.Context) (ScanQualityReport,
 		var k string
 		var v int
 		if err := srcRows.Scan(&k, &v); err != nil {
-			srcRows.Close()
+			closeRows(srcRows)
 			return report, err
 		}
 		report.FindingsBySource[k] = v
 	}
-	srcRows.Close()
+	closeRows(srcRows)
 
 	chRow := s.db.QueryRowContext(ctx, `
 		SELECT COUNT(1) FROM findings WHERE status = 'open' AND LOWER(severity) IN ('critical', 'high')
@@ -144,7 +144,7 @@ func (s *SQLiteStore) ScanQualityReport(ctx context.Context) (ScanQualityReport,
 				report.TopNoisyRules = append(report.TopNoisyRules, rc)
 			}
 		}
-		ruleRows.Close()
+		closeRows(ruleRows)
 	}
 	supRows, err := s.db.QueryContext(ctx, `
 		SELECT rule_id, COALESCE(source,''), COUNT(1) FROM finding_suppressions
@@ -157,7 +157,7 @@ func (s *SQLiteStore) ScanQualityReport(ctx context.Context) (ScanQualityReport,
 				report.TopSuppressedRules = append(report.TopSuppressedRules, rc)
 			}
 		}
-		supRows.Close()
+		closeRows(supRows)
 	}
 	failRows, err := s.db.QueryContext(ctx, `
 		SELECT scanner_name, status, COUNT(1) FROM scanner_results
