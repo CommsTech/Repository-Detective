@@ -214,6 +214,17 @@ html[data-theme="light"] {
   box-shadow: var(--rd-focus);
 }
 
+/* Windows high-contrast and forced-colors modes drop box-shadow, so restore a
+   real outline there; otherwise keyboard users lose the visible focus ring. */
+@media (forced-colors: active) {
+  .rd-skip-link:focus,
+  a:focus-visible,
+  .rd-btn:focus-visible {
+    outline: 2px solid CanvasText;
+    outline-offset: 2px;
+  }
+}
+
 .rd-nav a:focus-visible,
 .rd-btn:focus-visible,
 .rd-link:focus-visible,

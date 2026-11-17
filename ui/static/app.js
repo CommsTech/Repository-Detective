@@ -482,7 +482,10 @@
           navigator.clipboard.writeText(text).then(done).catch(function () {
             src.hidden = false;
             src.select();
-            try { document.execCommand("copy"); done(); } catch (e) {}
+            try { document.execCommand("copy"); done(); } catch (err) {
+              btn.textContent = "Copy failed";
+              setTimeout(function () { btn.textContent = prev; }, 2000);
+            }
             src.hidden = true;
           });
           return;
