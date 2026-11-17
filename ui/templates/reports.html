@@ -5,20 +5,32 @@
 <body class="rd-app rd-print-report">
 {{template "nav" .}}
 
-<div class="rd-report-toolbar rd-no-print">
+<section class="rd-report-intro rd-print-block" id="fleet-overview" aria-labelledby="fleet-report-title">
   <div>
-    <p class="rd-report-toolbar-title">Fleet reports</p>
-    <p class="rd-muted">Print or save a PDF of the executive fleet report (sidebar and controls are hidden in the print layout).</p>
+    <p class="rd-eyebrow">Fleet / Security &amp; code health</p>
+    <h2 id="fleet-report-title">Fleet audit</h2>
+    <p class="rd-muted">A decision-ready view of persisted findings, remediation progress, and scan health. Review coverage before interpreting a low finding count.</p>
+    <p class="rd-report-meta">Snapshot {{.Data.GeneratedAt.Format "2006-01-02 15:04:05"}} UTC · Fleet summary · Up to 20 recent scans</p>
   </div>
-  <button type="button" class="rd-btn" data-rd-print>Print / Save PDF</button>
-</div>
+  <div class="rd-report-intro-actions rd-no-print">
+    <a class="rd-btn rd-btn-secondary" href="{{.BasePath}}/findings?focus=1{{if .APIKey}}&amp;api_key={{.APIKey}}{{end}}">Review priorities</a>
+    <button type="button" class="rd-btn" data-rd-print>Print / Save PDF</button>
+  </div>
+</section>
+<nav class="rd-report-index rd-no-print" aria-label="Fleet report sections">
+  <a href="#fleet-decision">Decision &amp; limits</a>
+  <a href="#fleet-metrics">Key metrics</a>
+  <a href="#fleet-breakdown">Findings &amp; fixes</a>
+  <a href="#fleet-repositories">Repositories</a>
+  <a href="#fleet-scans">Scan activity</a>
+</nav>
 
 {{with .Data.Summary}}
-{{template "executive_summary.html" (dict "Executive" $.Data.Executive)}}
+<div id="fleet-decision">{{template "executive_summary.html" (dict "Executive" $.Data.Executive)}}</div>
 
-<div class="rd-report rd-print-block">
-  <h2>Fleet executive report</h2>
-  <p class="rd-report-meta">Generated from live control-plane data · {{.TotalRepositories}} repositories monitored</p>
+<section class="rd-report rd-print-block" id="fleet-metrics" aria-labelledby="fleet-metrics-title">
+  <h2 id="fleet-metrics-title">Fleet metrics</h2>
+  <p class="rd-report-meta">Persisted control-plane snapshot · {{.TotalRepositories}} repositories registered</p>
   <div class="rd-kpi-row">
     <div class="rd-kpi"><strong>{{.OpenFindingsCount}}</strong><span>Open findings</span></div>
     <div class="rd-kpi"><strong>{{index .OpenFindingsBySeverity "critical"}}</strong><span>Critical</span></div>
@@ -26,9 +38,9 @@
     <div class="rd-kpi"><strong>{{.Lifecycle.ResolvedVerified}}</strong><span>Verified fixed</span></div>
     <div class="rd-kpi"><strong>{{.FailedScansCount}}</strong><span>Failed scans</span></div>
   </div>
-</div>
+</section>
 
-<div class="rd-split">
+<div class="rd-split" id="fleet-breakdown">
   <div class="rd-card">
     <div class="rd-card-head"><h2>Severity breakdown</h2></div>
     {{if .OpenFindingsBySeverity}}
@@ -51,8 +63,10 @@
   </div>
 </div>
 
-<div class="rd-card">
-  <div class="rd-card-head"><h2>Repository risk ranking</h2></div>
+<section class="rd-card" id="fleet-repositories" aria-labelledby="fleet-repos-title">
+  <div class="rd-card-head"><h2 id="fleet-repos-title">Repositories by open finding count</h2><span class="rd-chip">Not an exploitability ranking</span></div>
+  <p class="rd-muted">Sorted by number of open findings; the latest scan may be incomplete or outdated. Use each repository report to review evidence and scanner coverage.</p>
+  {{if $.Data.RepositoryListLimited}}<p class="rd-alert warn"><strong>Partial repository list:</strong> only the first {{len $.Data.Repositories}} repositories are included in this table; fleet-wide totals above include more repositories. Do not treat this as a full fleet ranking.</p>{{end}}
   <table class="rd-table">
     <tr><th scope="col">Repository</th><th scope="col">Open findings</th><th scope="col">Last scan</th><th scope="col">Report</th></tr>
     {{range $.Data.Repositories}}{{if gt .OpenFindingsCount 0}}
@@ -70,10 +84,11 @@
   {{$shown := 0}}{{range $.Data.Repositories}}{{if gt .OpenFindingsCount 0}}{{$shown = add $shown 1}}{{end}}{{end}}
   {{if eq $shown 0}}<p class="rd-muted">No repositories currently have open findings.</p>{{end}}
   {{end}}
-</div>
+</section>
 
-<div class="rd-card">
-  <div class="rd-card-head"><h2>Recent scan activity</h2></div>
+<section class="rd-card" id="fleet-scans" aria-labelledby="fleet-scans-title">
+  <div class="rd-card-head"><h2 id="fleet-scans-title">Recent scan activity</h2></div>
+  <p class="rd-muted">A recent-activity sample, not proof that every repository has been scanned successfully.</p>
   <table class="rd-table rd-table-compact">
     <tr><th scope="col">Scan</th><th scope="col">Repository</th><th scope="col">Status</th><th scope="col">Findings</th><th scope="col">Date</th></tr>
     {{range .RecentScans}}
@@ -86,7 +101,8 @@
     </tr>
     {{end}}
   </table>
-</div>
+  <p class="rd-report-meta">Coverage depends on completed scans and installed scanners. A completed pipeline does not necessarily mean every enabled scanner executed.</p>
+</section>
 
 {{end}}
 

@@ -2784,3 +2784,165 @@ input:focus-visible, select:focus-visible, button:focus-visible {
 .rd-rule-created li { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: .55rem 0; border-bottom: 1px solid var(--rd-border); }
 .rd-rule-created span { overflow-wrap: anywhere; }
 @media(max-width: 760px) { .rd-rule-builder-grid { grid-template-columns: 1fr; } .rd-rule-created li { align-items: flex-start; } }
+
+/* Design system refinement — Audit and navigation experience, November 2026.
+   Keep components lightweight: no framework, remote fonts, or chart runtime. */
+:root {
+  --rd-radius: 11px;
+  --rd-radius-sm: 7px;
+  --rd-sidebar: 244px;
+}
+html { scroll-behavior: smooth; }
+/* Simpler operator chrome: flatter surfaces and consistent focus hierarchy. */
+.rd-sidebar {
+  background: #101a29;
+  padding: 19px 12px;
+  border-right: 1px solid rgba(148, 163, 184, .14);
+}
+.rd-brand { margin-bottom: 13px; padding: 9px 10px 15px; }
+.rd-brand img { width: 42px; height: 42px; border-radius: 8px; }
+.rd-brand-text strong { font-size: .92rem; }
+.rd-brand-text span { font-size: .56rem; letter-spacing: .055em; }
+.rd-nav { gap: 2px; }
+.rd-nav-label { padding: 15px 12px 6px; font-weight: 700; font-size: .65rem; color: #93a4ba; }
+.rd-nav a { padding: 9px 11px; font-size: .84rem; border-radius: 7px; color: #c2cddd; }
+.rd-nav a:hover { background: rgba(148, 163, 184, .13); color: #fff; transform: none; }
+.rd-nav a.active, .rd-nav a[aria-current="page"] {
+  background: rgba(14, 165, 164, .15);
+  border-color: rgba(14, 165, 164, .22);
+  color: #f0fdfa;
+  box-shadow: inset 3px 0 0 var(--rd-teal);
+}
+.rd-nav-icon, .rd-quicknav-icon {
+  display: inline-block; width: 17px; height: 17px; flex: none;
+  fill: none; stroke: currentColor; stroke-width: 1.8;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+.rd-sidebar-foot { margin-top: 18px; font-size: .7rem; }
+.rd-topbar {
+  padding: 15px clamp(16px, 2.3vw, 34px);
+  background: var(--rd-topbar-bg);
+  backdrop-filter: blur(12px);
+}
+.rd-topbar h1 { font-size: clamp(1.15rem, 1.7vw, 1.5rem); letter-spacing: -.028em; }
+.rd-topbar-kicker { letter-spacing: .06em; text-transform: none; font-size: .72rem; }
+.rd-topbar-kicker span { padding: 0 7px; color: var(--rd-text-dim); }
+.rd-content { max-width: 1500px; }
+.rd-card, .rd-chart-card, .rd-report {
+  border: 1px solid var(--rd-border-strong);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .025);
+}
+.rd-card { padding: clamp(16px, 2vw, 26px); }
+.rd-card h2, .rd-card-head h2 { font-size: 1.03rem; letter-spacing: -.02em; }
+.rd-report { border-left: 1px solid var(--rd-border-strong); margin: 0 0 18px; }
+.rd-report-exec-section { margin: 0 0 18px; }
+.rd-topbar-meta kbd, .rd-quicknav kbd {
+  font: 600 .7rem var(--rd-mono);
+  padding: 3px 5px;
+  border: 1px solid var(--rd-border-strong);
+  border-radius: 5px;
+  color: var(--rd-text-dim);
+  white-space: nowrap;
+}
+.rd-quicknav-trigger { display: inline-flex; gap: 8px; align-items: center; white-space: nowrap; }
+.rd-quicknav-trigger .rd-quicknav-icon { width: 14px; height: 14px; }
+.rd-quicknav {
+  position: fixed;
+  top: 10vh;
+  left: 50%;
+  right: auto;
+  bottom: auto;
+  transform: translateX(-50%);
+  width: min(580px, calc(100vw - 24px));
+  max-height: min(75vh, 660px);
+  margin: 0 auto;
+  overflow: auto;
+  padding: 19px;
+  border: 1px solid var(--rd-border-strong);
+  border-radius: 13px;
+  background: var(--rd-card);
+  color: var(--rd-text);
+  box-shadow: var(--rd-shadow-lg);
+}
+.rd-quicknav::backdrop { background: rgba(5, 12, 24, .67); backdrop-filter: blur(3px); }
+.rd-quicknav-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; }
+.rd-quicknav-heading h2 { font-size: 1.1rem; margin: 0; color: var(--rd-heading); }
+#rd-quicknav-search { width: 100%; font-size: 1rem; padding: 12px 13px; }
+#rd-quicknav-results { margin-top: 10px; max-height: min(43vh, 420px); overflow: auto; display: grid; gap: 3px; }
+.rd-quicknav-result {
+  display: block; text-decoration: none; color: var(--rd-text);
+  padding: 11px 13px; border-radius: 7px; border: 1px solid transparent;
+}
+.rd-quicknav-result:hover, .rd-quicknav-result:focus-visible {
+  background: var(--rd-overlay-hover); border-color: var(--rd-border-strong);
+  outline: none; box-shadow: var(--rd-focus);
+}
+.rd-quicknav-foot { color: var(--rd-text-dim); margin: 14px 0 0; font-size: .73rem; }
+.rd-report-intro {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 20px; padding: 24px clamp(18px, 2.2vw, 30px);
+  margin-bottom: 14px; background: var(--rd-card);
+  border: 1px solid var(--rd-border-strong); border-radius: var(--rd-radius);
+}
+.rd-report-intro > div:first-child { min-width: 0; }
+.rd-eyebrow { font-weight: 750; letter-spacing: .12em; font-size: .7rem; text-transform: uppercase; color: var(--rd-teal); margin: 0 0 8px; }
+.rd-report-intro h2 { font-size: clamp(1.35rem, 2vw, 1.8rem); margin: 0 0 8px; letter-spacing: -.035em; color: var(--rd-heading); overflow-wrap: anywhere; }
+.rd-report-intro p { max-width: 75ch; }
+.rd-report-intro .rd-report-meta { margin: 9px 0 0; }
+.rd-report-intro .rd-muted { margin: 0; line-height: 1.55; }
+.rd-report-intro-actions { display: flex; flex-wrap: wrap; gap: 9px; justify-content: end; flex: none; }
+.rd-report-index {
+  display: flex; flex-wrap: wrap; gap: 5px;
+  padding: 9px 0 18px; margin-bottom: 4px;
+}
+.rd-report-index a {
+  display: inline-flex; padding: 7px 11px; border-radius: 6px;
+  border: 1px solid var(--rd-border-strong); background: var(--rd-card);
+  color: var(--rd-text); font-size: .8rem; text-decoration: none;
+}
+.rd-report-index a:hover { border-color: var(--rd-teal); color: var(--rd-heading); background: var(--rd-overlay-hover); }
+.rd-report-index a:focus-visible { outline: 2px solid var(--rd-teal); outline-offset: 2px; }
+.rd-print-report [id^="fleet-"], .rd-print-report [id^="repo-"] { scroll-margin-top: 105px; }
+.rd-category-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 9px; }
+.rd-category-item { padding: 11px 13px; border: 1px solid var(--rd-border-strong); border-radius: 7px; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; }
+.rd-category-item span { overflow-wrap: anywhere; color: var(--rd-text-dim); font-size: .85rem; }
+.rd-category-item strong { font: 700 1.1rem var(--rd-font); font-variant-numeric: tabular-nums; color: var(--rd-heading); }
+.rd-kpi strong { font-variant-numeric: tabular-nums; }
+.rd-kpi-critical strong { color: var(--rd-red); }
+.rd-report-table-explainer { padding: 14px 17px 0; font-size: .83rem; line-height: 1.5; }
+.rd-severity-list { list-style: none; padding: 0; }
+@media (max-width: 1100px) {
+  .rd-report-intro { align-items: flex-start; flex-direction: column; }
+  .rd-report-intro-actions { justify-content: flex-start; }
+  .rd-quicknav-trigger kbd { display: none; }
+}
+@media (max-width: 560px) {
+  .rd-report-intro { padding: 18px; }
+  .rd-report-intro-actions, .rd-report-intro-actions > * { width: 100%; }
+  .rd-quicknav { inset-block-start: 4vh; max-height: 84vh; }
+  .rd-quicknav-trigger { font-size: 0; padding: 9px; }
+  .rd-quicknav-trigger .rd-quicknav-icon { width: 20px; height: 20px; }
+  .rd-category-grid { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+@media print {
+  .rd-report-intro { border: 0; border-bottom: 2px solid #111; padding: 0 0 14px; }
+  .rd-report-intro h2 { color: #000 !important; }
+  .rd-eyebrow { color: #333 !important; }
+  .rd-quicknav, .rd-report-index { display: none !important; }
+  .rd-category-item { border-color: #ddd; }
+  .rd-category-item strong { color: #000 !important; }
+  .rd-card, .rd-report { box-shadow: none; }
+}
+
+.rd-report-appendix-heading { margin: 0; padding: 19px 18px 0; font-size: 1rem; color: var(--rd-heading); }
+@media print { .rd-report-appendix-heading { color: #000 !important; } }
+
+/* Long evidence tables scroll inside the report card instead of forcing
+   horizontal page scrolling on a phone. Print retains full table width. */
+@media screen and (max-width: 768px) {
+  body.rd-print-report .rd-card,
+  body.rd-print-report .rd-report,
+  body.rd-print-report .rd-chart-card { overflow-x: auto; min-width: 0; }
+  body.rd-print-report .rd-split > * { min-width: 0; }
+}

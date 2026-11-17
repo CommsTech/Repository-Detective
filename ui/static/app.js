@@ -654,8 +654,100 @@
     redraw();
   }
 
+  // Purely client-side page switcher. Reuses already rendered, authorized
+  // navigation links; never fetches content or makes up a new route.
+  function initQuickNavigation() {
+    var dialog = document.getElementById('rd-quicknav');
+    var input = document.getElementById('rd-quicknav-search');
+    var results = document.getElementById('rd-quicknav-results');
+    var empty = document.getElementById('rd-quicknav-empty');
+    var openButton = document.querySelector('[data-rd-quicknav-open]');
+    if (!dialog || !input || !results || !empty || !openButton || !dialog.showModal) return;
+    var lastFocus = null;
+    var destinations = Array.prototype.map.call(
+      document.querySelectorAll('#rd-primary-nav a[href]'),
+      function (link) {
+        return { label: link.textContent.trim().replace(/\s+/g, ' '), href: link.href };
+      }
+    );
+    // Do not add anything not already present in the authenticated sidebar.
+    function render() {
+      var term = input.value.trim().toLowerCase();
+      var count = 0;
+      results.replaceChildren();
+      destinations.forEach(function (item) {
+        if (term && item.label.toLowerCase().indexOf(term) < 0) return;
+        var link = document.createElement('a');
+        link.href = item.href;
+        link.textContent = item.label;
+        link.className = 'rd-quicknav-result';
+        results.appendChild(link);
+        count++;
+      });
+      empty.hidden = count > 0;
+    }
+    function open() {
+      if (dialog.open) return;
+      lastFocus = document.activeElement;
+      input.value = '';
+      render();
+      dialog.showModal();
+      input.focus();
+    }
+    function close() { if (dialog.open) dialog.close(); }
+    openButton.addEventListener('click', open);
+    var closeButton = dialog.querySelector('[data-rd-quicknav-close]');
+    if (closeButton) closeButton.addEventListener('click', close);
+    dialog.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        event.stopPropagation();
+        close();
+      }
+    });
+    dialog.addEventListener('close', function () {
+      if (lastFocus && lastFocus.isConnected && lastFocus.focus) lastFocus.focus();
+    });
+    dialog.addEventListener('click', function (event) {
+      if (event.target === dialog) close();
+    });
+    input.addEventListener('input', render);
+    input.addEventListener('keydown', function (event) {
+      if (event.key === 'Enter') {
+        var first = results.querySelector('a[href]');
+        if (first) { event.preventDefault(); window.location.assign(first.href); }
+      } else if (event.key === 'ArrowDown') {
+        var result = results.querySelector('a[href]');
+        if (result) { event.preventDefault(); result.focus(); }
+      }
+    });
+    results.addEventListener('keydown', function (event) {
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        var links = Array.prototype.slice.call(results.querySelectorAll('a[href]'));
+        var current = links.indexOf(document.activeElement);
+        if (current < 0 || !links.length) return;
+        var index = event.key === 'ArrowDown' ? Math.min(current + 1, links.length - 1) : current - 1;
+        event.preventDefault();
+        if (index < 0) input.focus(); else links[index].focus();
+      }
+    });
+    document.addEventListener('keydown', function (event) {
+      if (event.defaultPrevented || event.isComposing) return;
+      var target = event.target;
+      var tag = target && target.tagName;
+      var editing = target && (target.isContentEditable || tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT');
+      if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        if (dialog.open) close(); else open();
+      } else if (event.key === '/' && !editing && !event.ctrlKey && !event.metaKey && !event.altKey && !dialog.open) {
+        event.preventDefault(); open();
+      }
+    });
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     initMobileNav();
+    initQuickNavigation();
     initTableSearch();
     initConfirmForms();
     initRiskWarnings();

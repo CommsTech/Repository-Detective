@@ -104,3 +104,9 @@ reporting:
 Repository Detective detects nested manifests and profiles each subpath. Scoped scans (PR/push) still run profile detection on changed paths; full scans list all repository files for layout detection.
 
 See also [FALSE_POSITIVES.md](FALSE_POSITIVES.md) and [POLICY.md](POLICY.md).
+
+## Operator audit reports (working tree, November 2026)
+
+The **Reports** page presents a snapshot of fleet finding counts, remediation lifecycle, representative scan activity and a capped repository listing. Repository reports provide a decision summary, configured scanners, **actual outcomes from the most recent scan**, SBOM availability, and a filtered technical appendix. Each page displays a UTC snapshot time. Printing preserves its visible evidence and caveats, not all historical pages.
+
+**Do not interpret an empty finding list as verified safe.** Missing, stale, incomplete, and failed scan evidence are visible as limitations; policy-enabled scanners are not assumed to have executed. The fleet repository listing can contain only the first 200 records and is ordered by raw finding count, not exploitation risk. See [the report operator guide and verification checklist](OPERATOR_REPORTS_AND_NAVIGATION.md) for specific UI controls, exact data limits and unreleased status.

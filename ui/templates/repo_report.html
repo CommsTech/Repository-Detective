@@ -12,39 +12,58 @@
   <span>{{.FullName}}</span>
 </nav>
 
-<div class="rd-report-toolbar rd-no-print">
+<section class="rd-report-intro rd-print-block" aria-labelledby="repo-report-title" id="repo-overview">
   <div>
-    <p class="rd-report-toolbar-title">Repository report</p>
-    <p class="rd-muted">Print or save a PDF of this audit report (sidebar and controls are hidden in the print layout).</p>
+    <p class="rd-eyebrow">Repository / Audit dossier</p>
+    <h2 id="repo-report-title">{{.FullName}}</h2>
+    <p class="rd-muted">Findings, scanner configuration, remediation guidance, and evidence needed to decide next actions.</p>
+    <p class="rd-report-meta">Snapshot {{$.Data.GeneratedAt.Format "2006-01-02 15:04:05"}} UTC · {{.ForgeType}} · {{len $.Data.Scans}} recent scans displayed</p>
   </div>
-  <button type="button" class="rd-btn" data-rd-print>Print / Save PDF</button>
+  <div class="rd-report-intro-actions rd-no-print">
+    <a class="rd-btn rd-btn-secondary" href="{{$.BasePath}}/findings?repo_id={{.ID}}{{if $.APIKey}}&amp;api_key={{$.APIKey}}{{end}}">Review findings</a>
+    <button type="button" class="rd-btn" data-rd-print>Print / Save PDF</button>
+  </div>
+</section>
+<nav class="rd-report-index rd-no-print" aria-label="Repository report sections">
+  <a href="#repo-decision">Decision &amp; limits</a>
+  <a href="#repo-metrics">Key metrics</a>
+  <a href="#repo-coverage">Coverage</a>
+  <a href="#repo-scan-outcomes">Scanner results</a>
+  <a href="#repo-inventory">SBOM</a>
+  <a href="#repo-findings">Findings</a>
+  <a href="#repo-evidence">Scan evidence</a>
+</nav>
+<div id="repo-decision">
+{{template "executive_summary.html" (dict "Executive" $.Data.Executive)}}
 </div>
 
-{{template "executive_summary.html" (dict "Executive" $.Data.Executive)}}
-
-<div class="rd-report rd-print-block">
-  <h2>Repository audit report — {{.FullName}}</h2>
+<section class="rd-report rd-print-block" id="repo-metrics" aria-labelledby="repo-metrics-title">
+  <h2 id="repo-metrics-title">Audit at a glance</h2>
   <p class="rd-report-meta">{{.ForgeType}} · Policy: {{$.Data.Effective.PolicyLevel}} · Profile: {{profileLabel $.Data.ProfileMeta.ScanProfile}}</p>
   <div class="rd-kpi-row">
-    {{range $sev, $count := $.Data.SeverityCounts}}
-    <div class="rd-kpi"><strong>{{$count}}</strong><span>{{$sev}} open</span></div>
-    {{end}}
+    <div class="rd-kpi rd-kpi-critical"><strong>{{index $.Data.SeverityCounts "critical"}}</strong><span>Critical open</span></div>
+    <div class="rd-kpi"><strong>{{index $.Data.SeverityCounts "high"}}</strong><span>High open</span></div>
+    <div class="rd-kpi"><strong>{{index $.Data.SeverityCounts "medium"}}</strong><span>Medium open</span></div>
+    <div class="rd-kpi"><strong>{{index $.Data.SeverityCounts "low"}}</strong><span>Low open</span></div>
     <div class="rd-kpi"><strong>{{$.Data.FindingsTotal}}</strong><span>Matching findings</span></div>
     <div class="rd-kpi"><strong>{{len $.Data.Scans}}</strong><span>Recent scans</span></div>
     <div class="rd-kpi"><strong>{{len $.Data.ExternalIssues}}</strong><span>Forge issues</span></div>
   </div>
-</div>
+</section>
 
-<div class="rd-chart-card rd-print-block">
-  <div class="rd-card-head"><h2>Category radar</h2><span class="rd-chip">Open findings</span></div>
-  <div class="rd-chart-canvas-wrap rd-chart-radar">
-    <canvas id="rd-report-radar" role="img" aria-label="Finding categories radar"></canvas>
+<section class="rd-card rd-print-block" aria-labelledby="repo-category-title">
+  <div class="rd-card-head"><h2 id="repo-category-title">Finding categories</h2><span class="rd-chip">Open findings</span></div>
+  {{if $.Data.CategoryCounts}}
+  <div class="rd-category-grid">
+    {{range $cat, $count := $.Data.CategoryCounts}}<div class="rd-category-item"><span>{{$cat}}</span><strong>{{$count}}</strong></div>{{end}}
   </div>
-</div>
+  {{else}}<p class="rd-muted">No open findings are grouped into categories in the current snapshot.</p>{{end}}
+</section>
 
-<div class="rd-split">
+<div class="rd-split" id="repo-coverage">
   <div class="rd-card">
-    <div class="rd-card-head"><h2>Scanner coverage (effective)</h2></div>
+    <div class="rd-card-head"><h2>Scanner configuration</h2></div>
+    <p class="rd-muted">These badges indicate what is <strong>enabled in policy</strong>, not what executed successfully. Check individual scan evidence before relying on coverage.</p>
     <div class="rd-badge-row">
       <span class="rd-badge {{if $.Data.Effective.EnableTrivy}}found{{else}}skipped{{end}}">Trivy</span>
       <span class="rd-badge {{if $.Data.Effective.EnableGrype}}found{{else}}skipped{{end}}">Grype</span>
@@ -77,7 +96,29 @@
   </div>
 </div>
 
-<div class="rd-card rd-print-block">
+<section class="rd-card rd-print-block" id="repo-scan-outcomes" aria-labelledby="repo-scanner-evidence-title">
+  <div class="rd-card-head"><h2 id="repo-scanner-evidence-title">Latest scan · actual scanner outcomes</h2>
+    <a class="rd-link rd-no-print" href="#repo-evidence">Scan history</a>
+  </div>
+  {{if $.Data.Scans}}
+    <p class="rd-report-meta">Most recent scan: {{(index $.Data.Scans 0).ID}} · {{(index $.Data.Scans 0).Status}} · results recorded: {{len $.Data.LatestScannerResults}}</p>
+    {{if $.Data.LatestScannerResults}}
+    <div class="rd-table-scroll"><table class="rd-table rd-table-compact">
+      <thead><tr><th scope="col">Scanner</th><th scope="col">Result</th><th scope="col">Findings</th><th scope="col">Error / detail</th></tr></thead>
+      <tbody>
+        {{range $.Data.LatestScannerResults}}
+        <tr><td>{{.ScannerName}}</td><td><span class="rd-badge {{scannerBadge .Status}}">{{.Status}}</span></td><td>{{.FindingsCount}}</td><td>{{if .Error}}{{.Error}}{{else if .Detail}}{{.Detail}}{{else}}—{{end}}</td></tr>
+        {{end}}
+      </tbody>
+    </table></div>
+    {{else}}<p class="rd-alert warn"><strong>No scanner results recorded.</strong> Treat this as missing coverage evidence, even if the job status says completed.</p>{{end}}
+  {{else}}
+  <p class="rd-alert warn"><strong>No scans recorded.</strong> This report cannot establish security posture. Run a scan and review its evidence.</p>
+  {{end}}
+  <p class="rd-muted">A successful scanner record proves that tool reported an outcome; it does not guarantee every file, language, dependency, or attack path was covered.</p>
+</section>
+
+<div class="rd-card rd-print-block" id="repo-inventory">
   <div class="rd-card-head"><h2>Software Bill of Materials</h2>
     {{if $.Data.SBOMMissing}}<span class="rd-chip">not generated</span>{{else}}<span class="rd-chip">{{$.Data.SBOM.Status}}</span>{{end}}
   </div>
@@ -103,7 +144,7 @@
 
 <form method="get" class="rd-card rd-no-print" action="{{$.BasePath}}/repos/{{.ID}}/report">
   <div class="rd-card-head">
-    <h2>Technical findings</h2>
+    <h2>Filter technical findings</h2>
     <span class="rd-chip">{{$.Data.FindingsTotal}} total · showing {{len $.Data.Findings}}</span>
   </div>
   <div class="rd-toolbar">
@@ -134,7 +175,9 @@
   <div class="rd-actions"><button type="submit">Apply filters</button></div>
 </form>
 
-<div class="rd-card rd-card-flush">
+<div class="rd-card rd-card-flush" id="repo-findings">
+  <h2 class="rd-report-appendix-heading">Technical findings</h2>
+  <p class="rd-muted rd-report-table-explainer">Technical appendix: displaying {{len $.Data.Findings}} of {{$.Data.FindingsTotal}} findings matching the selected filters. Printed reports include only this page; use pagination to inspect the rest. Sorted by severity within the displayed page.</p>
   {{template "findings_table" (dict "BasePath" $.BasePath "APIKey" $.APIKey "Findings" $.Data.Findings "ShowRepo" false)}}
   {{$total := $.Data.FindingsTotal}}
   {{$size := $.Data.FindingsPageSize}}
@@ -180,8 +223,9 @@
 </div>
 {{end}}
 
-<div class="rd-card">
+<section class="rd-card" id="repo-evidence">
   <div class="rd-card-head"><h2>Recent scans</h2></div>
+  <p class="rd-muted">Open a scan to inspect tool outcomes, errors, skipped checks, commit identity, and closure evidence.</p>
   <table class="rd-table rd-table-compact">
     <thead>
       <tr><th scope="col">Scan</th><th scope="col">Status</th><th scope="col">Findings</th><th scope="col">Date</th></tr>
@@ -197,13 +241,9 @@
     {{end}}
     </tbody>
   </table>
-</div>
+</section>
 
 {{end}}
-
-<script type="application/json" id="rd-report-chart-data">{{jsonScript .Data.ChartJSON}}</script>
-<script src="{{.BasePath}}/static/chart.umd.min.js" defer></script>
-<script src="{{.BasePath}}/static/repo-report-charts.js" defer></script>
 {{template "foot" .}}
 </body></html>
 {{end}}

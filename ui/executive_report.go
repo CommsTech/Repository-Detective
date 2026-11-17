@@ -63,6 +63,16 @@ func buildFleetExecutiveSummary(summary store.DashboardSummary) ExecutiveSummary
 			summary.Lifecycle.ResolvedVerified),
 	}
 	out.Recommendation, out.RecommendationLabel = fleetRecommendation(crit, high, summary.UnhealthyReposCount)
+	if summary.TotalRepositories == 0 || len(summary.RecentScans) == 0 {
+		if out.Recommendation != "blocked" {
+			out.Recommendation, out.RecommendationLabel = "caution", "Insufficient scan evidence — investigate before release"
+		}
+		if crit == 0 {
+			out.RiskPosture = "Indeterminate — no recent scans in the control-plane summary"
+		}
+		out.EvidenceBacked = "No recent scan evidence available; a zero finding count is not a security verdict"
+		out.KnownLimitations = append(out.KnownLimitations, "No recent scan records appear in the fleet summary; confirm repository coverage before relying on the findings counts.")
+	}
 	out.ChangesSinceLastScan = fmt.Sprintf("%d raw issues detected in completed scans (7d window)",
 		summary.IssuesDetectedInScans)
 	if summary.UnhealthyReposCount > 0 {
@@ -84,6 +94,7 @@ func buildRepoExecutiveSummary(
 	confidenceBands map[string]int,
 	findings []store.FindingListItem,
 	scans []store.Scan,
+	latestScannerResults []store.ScannerResultRecord,
 	effective store.EffectiveSettings,
 	profileName string,
 ) ExecutiveSummary {
@@ -110,11 +121,42 @@ func buildRepoExecutiveSummary(
 		ReviewCount:     confidenceBands["review"],
 	}
 	out.Recommendation, out.RecommendationLabel = repoRecommendation(crit, high, totalOpen, scans)
+	if len(scans) == 0 {
+		out.ConfidenceLevel = "Not established — no scan evidence recorded"
+		out.BusinessImpact = fmt.Sprintf("%s has no recorded scans. Missing findings are not evidence of safe code.", repo.FullName)
+	} else if !strings.EqualFold(scans[0].Status, "completed") {
+		out.ConfidenceLevel = "Limited — latest scan did not complete successfully"
+	}
+	if len(scans) > 0 && len(latestScannerResults) == 0 {
+		out.RiskPosture = "Indeterminate — latest scan has no recorded scanner outcomes"
+		out.KnownLimitations = append(out.KnownLimitations, "Latest scan has no scanner result records. A completed job alone does not establish scan coverage.")
+	}
+	if len(latestScannerResults) > 0 {
+		failedOrSkipped := 0
+		for _, result := range latestScannerResults {
+			status := strings.ToLower(result.Status)
+			if (status != "success" && status != "completed") || result.Error != "" {
+				failedOrSkipped++
+			}
+		}
+		if failedOrSkipped > 0 {
+			out.KnownLimitations = append(out.KnownLimitations, fmt.Sprintf("%d of %d recorded scanner outcomes are skipped, incomplete, or failed; inspect scan evidence.", failedOrSkipped, len(latestScannerResults)))
+		}
+	}
+	out.Recommendation, out.RecommendationLabel = repoRecommendationWithEvidence(crit, high, totalOpen, scans, latestScannerResults)
 	out.RemediationProgress = fmt.Sprintf("%d open findings · %d categories represented",
 		totalOpen, len(categoryCounts))
 	out.ChangesSinceLastScan = scanDeltaMessage(scans)
 	out.RiskTrend = repoRiskTrend(scans, totalOpen)
-	out.EvidenceBacked = "Status based on last completed scan evidence stored in Repository Detective"
+	if len(scans) == 0 {
+		out.EvidenceBacked = "Not verified — no scan records exist"
+	} else if !strings.EqualFold(scans[0].Status, "completed") {
+		out.EvidenceBacked = "Not verified — latest scan is not complete; inspect scan details"
+	} else if len(latestScannerResults) == 0 {
+		out.EvidenceBacked = "Not verified — latest completed scan has no recorded scanner results"
+	} else {
+		out.EvidenceBacked = fmt.Sprintf("%d scanner outcomes recorded for latest scan; inspect skips/errors and commit before approving a release", len(latestScannerResults))
+	}
 	return out
 }
 
@@ -134,15 +176,11 @@ func fleetRiskPosture(crit, high, open, failed int) string {
 }
 
 func repoRiskPosture(crit, high, open int, scans []store.Scan) string {
-	lastFailed := false
-	for _, s := range scans {
-		if strings.EqualFold(s.Status, "failed") {
-			lastFailed = true
-			break
-		}
+	if len(scans) == 0 {
+		return "Indeterminate — repository has no recorded scans"
 	}
-	if lastFailed {
-		return "Indeterminate — latest scan failed; posture may be stale"
+	if !strings.EqualFold(scans[0].Status, "completed") {
+		return "Indeterminate — latest scan is not complete; posture may be stale"
 	}
 	return fleetRiskPosture(crit, high, open, 0)
 }
@@ -185,17 +223,44 @@ func fleetRecommendation(crit, high, failed int) (string, string) {
 }
 
 func repoRecommendation(crit, high, open int, scans []store.Scan) (string, string) {
-	for _, s := range scans {
-		if strings.EqualFold(s.Status, "failed") {
-			return "caution", "Proceed with caution — rescan required"
-		}
+	if crit > 0 {
+		return "blocked", "Critical finding present — release blocked pending review"
+	}
+	if len(scans) == 0 {
+		return "caution", "No scan evidence — do not approve release on this report"
+	}
+	latest := scans[0] // ListScansByRepository orders newest first.
+	if !strings.EqualFold(latest.Status, "completed") {
+		return "caution", "Latest scan incomplete — rescan and review coverage"
+	}
+	if time.Since(latest.StartedAt) > 14*24*time.Hour {
+		return "caution", "Scan is older than 14 days — review freshness"
 	}
 	return fleetRecommendation(crit, high, 0)
 }
 
+// Scanner outcomes are evidence of execution, not proof of complete coverage.
+// A verified release decision requires a separate policy/coverage evaluation.
+func repoRecommendationWithEvidence(crit, high, open int, scans []store.Scan, results []store.ScannerResultRecord) (string, string) {
+	recommendation, label := repoRecommendation(crit, high, open, scans)
+	if recommendation == "blocked" || len(scans) == 0 || !strings.EqualFold(scans[0].Status, "completed") {
+		return recommendation, label
+	}
+	if len(results) == 0 {
+		return "caution", "Scanner evidence missing — review before release"
+	}
+	for _, result := range results {
+		status := strings.ToLower(result.Status)
+		if (status != "success" && status != "completed") || result.Error != "" {
+			return "caution", "Scanner coverage incomplete — inspect skipped and failed checks"
+		}
+	}
+	return recommendation, label
+}
+
 func fleetConfidenceLevel(summary store.DashboardSummary) string {
 	if summary.OpenFindingsCount == 0 {
-		return "High — no open findings in summary"
+		return "Limited — zero open findings does not establish complete scanner coverage"
 	}
 	if summary.Backlog.CriticalOpen+summary.Backlog.HighOpen > 0 {
 		return "Medium–high — critical/high counts based on scanner evidence with calibration layer"

@@ -392,8 +392,8 @@ func (s *SQLiteStore) OpenFindingsConfidenceBandsForRepository(ctx context.Conte
 	}
 	row := s.db.QueryRowContext(ctx, `
 		SELECT
-			SUM(CASE WHEN confidence >= ? OR LOWER(severity) IN ('critical', 'high') AND confidence >= 0.5 THEN 1 ELSE 0 END),
-			SUM(CASE WHEN NOT (confidence >= ? OR LOWER(severity) IN ('critical', 'high') AND confidence >= 0.5) THEN 1 ELSE 0 END),
+			COALESCE(SUM(CASE WHEN confidence >= ? OR LOWER(severity) IN ('critical', 'high') AND confidence >= 0.5 THEN 1 ELSE 0 END), 0),
+			COALESCE(SUM(CASE WHEN NOT (confidence >= ? OR LOWER(severity) IN ('critical', 'high') AND confidence >= 0.5) THEN 1 ELSE 0 END), 0),
 			COUNT(1)
 		FROM findings
 		WHERE repository_id = ? AND status = 'open'

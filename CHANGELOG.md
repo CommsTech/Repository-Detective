@@ -2,6 +2,18 @@
 
 All notable changes to Repository Detective (formerly an internal prototype) are documented here.
 
+## [Unreleased — report clarity and operator navigation, 2026-11-17]
+
+### Improved
+- Fleet and per-repository audit reports now have a clear cover, UTC snapshot timestamp, section jump links, an evidence-first reading order and printer-friendly headings. Replaced repository radar chart with an accessible, printable category summary (no chart runtime on repo reports).
+- Report caveats now distinguish enabled scanners from scanner outcomes, first-page findings from full counts, a 200-repository listing cap from fleet totals, and finding-count ordering from actual exploitability risk. Repository reports show actual scanner result records from the newest scan.
+- Recommendations now treat no scans, absent scanner records, incomplete latest jobs, scanner errors and stale scans as reasons to seek review rather than to imply a verified clean release. Past failed scans no longer automatically override a newer completed scan.
+- Refined shared visual styling, local SVG navigation icons, current-page semantics, and an accessible Ctrl/⌘+K or `/` page switcher based on the existing authorized navigation links.
+- Critical report database fetch failures now return an explicit 500 rather than rendering potentially misleading empty metrics.
+
+### Verification limits
+- Standard-library template parsing and synthetic fleet/repository page rendering passed; JavaScript syntax, static CSS validation and isolated headless Chromium switcher/dark-mode interaction passed. Full Go 1.26.10 tests and real Gitea/runner/report E2E remain **NOT RUN**. See [operator guide and acceptance](docs/OPERATOR_REPORTS_AND_NAVIGATION.md).
+
 ## [Unreleased — runner verification integrity, 2026-11-17]
 
 ### Fixed

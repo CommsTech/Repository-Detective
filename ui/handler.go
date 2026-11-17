@@ -508,6 +508,9 @@ func (h *Handler) Dashboard(c *gin.Context) {
 
 	repos, _ := h.store.ListRepositoriesWithSummary(ctx, store.ListOptions{Limit: 20})
 	sort.Slice(repos, func(i, j int) bool {
+		if repos[i].OpenFindingsCount == repos[j].OpenFindingsCount {
+			return repos[i].FullName < repos[j].FullName
+		}
 		return repos[i].OpenFindingsCount > repos[j].OpenFindingsCount
 	})
 	topRisk := repos
@@ -572,13 +575,19 @@ func (h *Handler) Reports(c *gin.Context) {
 		c.String(http.StatusInternalServerError, "failed to load report data")
 		return
 	}
-	repos, _ := h.store.ListRepositoriesWithSummary(c.Request.Context(), store.ListOptions{Limit: 200})
+	repos, err := h.store.ListRepositoriesWithSummary(c.Request.Context(), store.ListOptions{Limit: 200})
+	if err != nil {
+		c.String(http.StatusInternalServerError, "failed to load repository report data")
+		return
+	}
 	sort.Slice(repos, func(i, j int) bool {
 		return repos[i].OpenFindingsCount > repos[j].OpenFindingsCount
 	})
 	h.renderNav(c, "reports.html", "Reports", "reports", map[string]any{
 		"Summary": summary, "Repositories": repos,
-		"Executive": buildFleetExecutiveSummary(summary),
+		"GeneratedAt":           time.Now().UTC(),
+		"RepositoryListLimited": summary.TotalRepositories > len(repos),
+		"Executive":             buildFleetExecutiveSummary(summary),
 	})
 }
 
@@ -609,30 +618,74 @@ func (h *Handler) RepoReport(c *gin.Context) {
 		Limit:        findingsPageSize,
 		Offset:       offset,
 	}
-	scans, _ := h.store.ListScansByRepository(c.Request.Context(), id, store.ListOptions{Limit: 10})
-	findings, _ := h.store.ListFindings(c.Request.Context(), findingsFilter)
-	findingsTotal, _ := h.store.CountFindings(c.Request.Context(), findingsFilter)
+	scans, err := h.store.ListScansByRepository(c.Request.Context(), id, store.ListOptions{Limit: 10})
+	if err != nil {
+		c.String(http.StatusInternalServerError, "failed to load scan evidence")
+		return
+	}
+	findings, err := h.store.ListFindings(c.Request.Context(), findingsFilter)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "failed to load findings")
+		return
+	}
+	findingsTotal, err := h.store.CountFindings(c.Request.Context(), findingsFilter)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "failed to count findings")
+		return
+	}
 	sortFindingsBySeverity(findings)
-	external, _ := h.store.ListExternalIssuesByRepository(c.Request.Context(), id, store.ListOptions{Limit: 100})
-	settings, _ := h.store.GetRepoSettings(c.Request.Context(), id)
+	external, err := h.store.ListExternalIssuesByRepository(c.Request.Context(), id, store.ListOptions{Limit: 100})
+	if err != nil {
+		c.String(http.StatusInternalServerError, "failed to load linked issues")
+		return
+	}
+	settings, err := h.store.GetRepoSettings(c.Request.Context(), id)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "failed to load repository policy")
+		return
+	}
 	effective, meta := store.ResolveEffectiveSettingsFull(h.global, settings)
-	severityCounts, _ := h.store.OpenFindingsBySeverityForRepository(c.Request.Context(), id)
+	severityCounts, err := h.store.OpenFindingsBySeverityForRepository(c.Request.Context(), id)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "failed to load severity counts")
+		return
+	}
 	if severityCounts == nil {
 		severityCounts = map[string]int{}
 	}
-	categoryCounts, _ := h.store.OpenFindingsByCategoryForRepository(c.Request.Context(), id)
+	categoryCounts, err := h.store.OpenFindingsByCategoryForRepository(c.Request.Context(), id)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "failed to load category counts")
+		return
+	}
 	if categoryCounts == nil {
 		categoryCounts = map[string]int{}
 	}
-	confidenceBands, _ := h.store.OpenFindingsConfidenceBandsForRepository(c.Request.Context(), id, effective.ConfidenceGate)
+	confidenceBands, err := h.store.OpenFindingsConfidenceBandsForRepository(c.Request.Context(), id, effective.ConfidenceGate)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "failed to load confidence bands")
+		return
+	}
 	if confidenceBands == nil {
 		confidenceBands = map[string]int{}
 	}
-	topFindings, _ := h.store.ListFindings(c.Request.Context(), store.FindingFilter{
+	topFindings, err := h.store.ListFindings(c.Request.Context(), store.FindingFilter{
 		RepositoryID: id, Status: "open", Limit: 20,
 	})
+	if err != nil {
+		c.String(http.StatusInternalServerError, "failed to load priority findings")
+		return
+	}
 	sortFindingsBySeverity(topFindings)
-	executive := buildRepoExecutiveSummary(repo, severityCounts, categoryCounts, confidenceBands, topFindings, scans, effective, meta.ScanProfile)
+	var latestScannerResults []store.ScannerResultRecord
+	if len(scans) > 0 {
+		latestScannerResults, err = h.store.ListScannerResultsByScan(c.Request.Context(), scans[0].ID)
+		if err != nil {
+			c.String(http.StatusInternalServerError, "failed to load latest scanner evidence")
+			return
+		}
+	}
+	executive := buildRepoExecutiveSummary(repo, severityCounts, categoryCounts, confidenceBands, topFindings, scans, latestScannerResults, effective, meta.ScanProfile)
 	sbomArtifact, sbomErr := h.store.GetLatestSBOMArtifactForRepository(c.Request.Context(), id)
 	sbomMissing, sbomFileMissing := classifySBOMAvailability(sbomErr, sbomArtifact)
 	sbomDownload := ""
@@ -640,10 +693,10 @@ func (h *Handler) RepoReport(c *gin.Context) {
 		sbomDownload = fmt.Sprintf("%s/scans/%s/sbom/download%s", h.basePath, sbomArtifact.ScanID, apiKeyQueryString(displayAPIKey(c)))
 	}
 	h.renderNav(c, "repo_report.html", "Report — "+repo.FullName, "reports", map[string]any{
-		"Repo": repo, "Scans": scans, "Findings": findings, "ExternalIssues": external,
+		"Repo": repo, "Scans": scans, "LatestScannerResults": latestScannerResults, "Findings": findings, "ExternalIssues": external,
 		"Effective": effective, "ProfileMeta": meta, "SeverityCounts": severityCounts,
 		"CategoryCounts": categoryCounts, "ConfidenceBands": confidenceBands,
-		"Executive": executive, "ChartJSON": buildRepoReportChartJSON(severityCounts, categoryCounts),
+		"Executive": executive, "GeneratedAt": time.Now().UTC(),
 		"FindingsFilter": findingsFilter, "FindingsTotal": findingsTotal, "FindingsPageSize": findingsPageSize,
 		"SBOM": sbomArtifact, "SBOMMissing": sbomMissing, "SBOMFileMissing": sbomFileMissing, "SBOMDownloadPath": sbomDownload,
 	})

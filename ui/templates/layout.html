@@ -51,26 +51,26 @@
     </button>
     <nav class="rd-nav" id="rd-primary-nav" aria-label="Primary">
       <span class="rd-nav-label">Operations</span>
-      <a href="{{.BasePath}}{{apiKeyQS .APIKey}}" class="{{navActive "dashboard" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">◉</span> Dashboard</a>
-      <a href="{{.BasePath}}/repos{{apiKeyQS .APIKey}}" class="{{navActive "repos" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">▣</span> Repositories</a>
-      <a href="{{.BasePath}}/scans{{apiKeyQS .APIKey}}" class="{{navActive "scans" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">◎</span> Scans</a>
-      <a href="{{.BasePath}}/findings?focus=1{{if .APIKey}}&amp;api_key={{.APIKey}}{{end}}" class="{{navActive "findings" .NavSection}}" {{if eq .NavSection "findings"}}aria-current="page"{{end}}><span class="rd-nav-icon" aria-hidden="true">◇</span> Priority findings</a>
+      <a href="{{.BasePath}}{{apiKeyQS .APIKey}}" class="{{navActive "dashboard" .NavSection}}" {{if eq .NavSection "dashboard"}}aria-current="page"{{end}}><svg class="rd-nav-icon" aria-hidden="true" focusable="false"><use href="{{.BasePath}}/static/icons.svg#overview"></use></svg> Dashboard</a>
+      <a href="{{.BasePath}}/repos{{apiKeyQS .APIKey}}" class="{{navActive "repos" .NavSection}}" {{if eq .NavSection "repos"}}aria-current="page"{{end}}><svg class="rd-nav-icon" aria-hidden="true" focusable="false"><use href="{{.BasePath}}/static/icons.svg#repository"></use></svg> Repositories</a>
+      <a href="{{.BasePath}}/scans{{apiKeyQS .APIKey}}" class="{{navActive "scans" .NavSection}}" {{if eq .NavSection "scans"}}aria-current="page"{{end}}><svg class="rd-nav-icon" aria-hidden="true" focusable="false"><use href="{{.BasePath}}/static/icons.svg#scan"></use></svg> Scans</a>
+      <a href="{{.BasePath}}/findings?focus=1{{if .APIKey}}&amp;api_key={{.APIKey}}{{end}}" class="{{navActive "findings" .NavSection}}" {{if eq .NavSection "findings"}}aria-current="page"{{end}}><svg class="rd-nav-icon" aria-hidden="true" focusable="false"><use href="{{.BasePath}}/static/icons.svg#shield"></use></svg> Priority findings</a>
       <span class="rd-nav-label">Intelligence</span>
-      <a href="{{.BasePath}}/reports{{apiKeyQS .APIKey}}" class="{{navActive "reports" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">▤</span> Reports</a>
-      <a href="{{.BasePath}}/learning{{apiKeyQS .APIKey}}" class="{{navActive "learning" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">↻</span> Noise reduction</a>
+      <a href="{{.BasePath}}/reports{{apiKeyQS .APIKey}}" class="{{navActive "reports" .NavSection}}" {{if eq .NavSection "reports"}}aria-current="page"{{end}}><svg class="rd-nav-icon" aria-hidden="true" focusable="false"><use href="{{.BasePath}}/static/icons.svg#report"></use></svg> Reports</a>
+      <a href="{{.BasePath}}/learning{{apiKeyQS .APIKey}}" class="{{navActive "learning" .NavSection}}" {{if eq .NavSection "learning"}}aria-current="page"{{end}}><svg class="rd-nav-icon" aria-hidden="true" focusable="false"><use href="{{.BasePath}}/static/icons.svg#learning"></use></svg> Noise reduction</a>
       <span class="rd-nav-label">Platform</span>
-      <a href="{{.BasePath}}/health{{apiKeyQS .APIKey}}" class="{{navActive "health" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">♥</span> System Health</a>
-      <a href="{{.BasePath}}/doctor{{apiKeyQS .APIKey}}" class="{{navActive "doctor" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">⌖</span> Doctor</a>
-      <a href="{{.BasePath}}/preinstall{{apiKeyQS .APIKey}}" class="{{navActive "preinstall" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">⌕</span> Pre-install audit</a>
-      <a href="{{.BasePath}}/projects{{apiKeyQS .APIKey}}" class="{{navActive "projects" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">◫</span> Project groups</a>
+      <a href="{{.BasePath}}/health{{apiKeyQS .APIKey}}" class="{{navActive "health" .NavSection}}" {{if eq .NavSection "health"}}aria-current="page"{{end}}><svg class="rd-nav-icon" aria-hidden="true" focusable="false"><use href="{{.BasePath}}/static/icons.svg#health"></use></svg> System Health</a>
+      <a href="{{.BasePath}}/doctor{{apiKeyQS .APIKey}}" class="{{navActive "doctor" .NavSection}}" {{if eq .NavSection "doctor"}}aria-current="page"{{end}}><svg class="rd-nav-icon" aria-hidden="true" focusable="false"><use href="{{.BasePath}}/static/icons.svg#doctor"></use></svg> Doctor</a>
+      <a href="{{.BasePath}}/preinstall{{apiKeyQS .APIKey}}" class="{{navActive "preinstall" .NavSection}}" {{if eq .NavSection "preinstall"}}aria-current="page"{{end}}><svg class="rd-nav-icon" aria-hidden="true" focusable="false"><use href="{{.BasePath}}/static/icons.svg#search"></use></svg> Pre-install audit</a>
+      <a href="{{.BasePath}}/projects{{apiKeyQS .APIKey}}" class="{{navActive "projects" .NavSection}}" {{if eq .NavSection "projects"}}aria-current="page"{{end}}><svg class="rd-nav-icon" aria-hidden="true" focusable="false"><use href="{{.BasePath}}/static/icons.svg#projects"></use></svg> Project groups</a>
       {{if .AuthLocal}}
-      <a href="{{.BasePath}}/users{{apiKeyQS .APIKey}}" class="{{navActive "users" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">☺</span> Users</a>
-      <a href="{{.BasePath}}/audit{{apiKeyQS .APIKey}}" class="{{navActive "audit" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">☰</span> Audit trail</a>
+      <a href="{{.BasePath}}/users{{apiKeyQS .APIKey}}" class="{{navActive "users" .NavSection}}" {{if eq .NavSection "users"}}aria-current="page"{{end}}><svg class="rd-nav-icon" aria-hidden="true" focusable="false"><use href="{{.BasePath}}/static/icons.svg#users"></use></svg> Users</a>
+      <a href="{{.BasePath}}/audit{{apiKeyQS .APIKey}}" class="{{navActive "audit" .NavSection}}" {{if eq .NavSection "audit"}}aria-current="page"{{end}}><svg class="rd-nav-icon" aria-hidden="true" focusable="false"><use href="{{.BasePath}}/static/icons.svg#settings"></use></svg> Audit trail</a>
       {{end}}
       {{if .SetupComplete}}
-      <a href="{{.BasePath}}/configure{{apiKeyQS .APIKey}}" class="{{navActive "settings" .NavSection}}"><span class="rd-nav-icon" aria-hidden="true">☰</span> Configure</a>
+      <a href="{{.BasePath}}/configure{{apiKeyQS .APIKey}}" class="{{navActive "settings" .NavSection}}" {{if eq .NavSection "settings"}}aria-current="page"{{end}}><svg class="rd-nav-icon" aria-hidden="true" focusable="false"><use href="{{.BasePath}}/static/icons.svg#settings"></use></svg> Configure</a>
       {{else}}
-      <a href="/onboard/" target="_blank" rel="noopener"><span class="rd-nav-icon" aria-hidden="true">↗</span> Setup wizard</a>
+      <a href="/onboard/" target="_blank" rel="noopener"><svg class="rd-nav-icon" aria-hidden="true" focusable="false"><use href="{{.BasePath}}/static/icons.svg#external"></use></svg> Setup wizard</a>
       {{end}}
     </nav>
     <div class="rd-sidebar-foot">
@@ -82,10 +82,11 @@
   <div class="rd-main">
     <header class="rd-topbar">
       <div>
-        <p class="rd-topbar-kicker">Control center</p>
+        <p class="rd-topbar-kicker">Repository Detective <span aria-hidden="true">/</span> {{.Title}}</p>
         <h1>{{.Title}}</h1>
       </div>
       <div class="rd-topbar-meta">
+        <button class="rd-btn rd-btn-secondary rd-quicknav-trigger" type="button" data-rd-quicknav-open aria-haspopup="dialog" aria-controls="rd-quicknav"><svg class="rd-quicknav-icon" aria-hidden="true"><use href="{{.BasePath}}/static/icons.svg#search"></use></svg> Find a page <kbd>Ctrl K</kbd></button>
         {{if .CurrentUser}}
         <div class="rd-user-meta">
           <span class="rd-user-name" title="{{.CurrentUser.Email}}">{{.CurrentUser.DisplayName}}</span>
@@ -108,6 +109,17 @@
         </span>
       </div>
     </header>
+    <dialog class="rd-quicknav" id="rd-quicknav" aria-labelledby="rd-quicknav-title">
+      <div class="rd-quicknav-heading">
+        <h2 id="rd-quicknav-title">Go to a page</h2>
+        <button type="button" class="rd-btn rd-btn-sm rd-btn-ghost" data-rd-quicknav-close aria-label="Close page switcher">Close <kbd>Esc</kbd></button>
+      </div>
+      <label for="rd-quicknav-search" class="rd-visually-hidden">Search application pages</label>
+      <input id="rd-quicknav-search" type="search" autocomplete="off" placeholder="Search dashboard, findings, reports…" aria-controls="rd-quicknav-results">
+      <nav id="rd-quicknav-results" aria-label="Pages"></nav>
+      <p id="rd-quicknav-empty" class="rd-muted" hidden>No matching pages. Try another search.</p>
+      <p class="rd-quicknav-foot">Ctrl/⌘ + K or / to open · Enter to navigate · Esc to close</p>
+    </dialog>
     <main class="rd-content" id="main-content">
 {{end}}
 
