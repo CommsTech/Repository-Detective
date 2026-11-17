@@ -25,7 +25,7 @@ func (s *SQLiteStore) ListFindingsByIDs(ctx context.Context, ids []int64) (map[i
 	if err != nil {
 		return nil, fmt.Errorf("list findings by ids: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 	for rows.Next() {
 		var finding Finding
 		var firstSeen, lastSeen string

@@ -97,7 +97,7 @@ func (s *SQLiteStore) ListAIAdvisoryRecommendations(ctx context.Context, reviewI
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 	var out []AIAdvisoryRecommendation
 	for rows.Next() {
 		var rec AIAdvisoryRecommendation
@@ -128,7 +128,7 @@ func (s *SQLiteStore) ListPendingAIAdvisoryRecommendations(ctx context.Context, 
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 	var out []AIAdvisoryRecommendation
 	for rows.Next() {
 		var rec AIAdvisoryRecommendation

@@ -39,7 +39,7 @@ func (s *SQLiteStore) ListFindingsForScan(ctx context.Context, scanID string, li
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 	var out []Finding
 	for rows.Next() {
 		var f Finding
@@ -101,7 +101,7 @@ func (s *SQLiteStore) ListFindingsForAIReview(ctx context.Context, scanID string
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 	var out []Finding
 	for rows.Next() {
 		var f Finding
@@ -126,7 +126,7 @@ func (s *SQLiteStore) ListFindingInstancesByScan(ctx context.Context, scanID str
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 	out := make(map[int64]FindingInstance)
 	for rows.Next() {
 		var inst FindingInstance

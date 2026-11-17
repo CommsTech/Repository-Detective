@@ -46,7 +46,7 @@ func (s *SQLiteStore) ListRepositoriesWithSummary(ctx context.Context, opts List
 	if err != nil {
 		return nil, fmt.Errorf("list repositories with summary: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 
 	var out []RepositorySummary
 	for rows.Next() {
@@ -89,7 +89,7 @@ func (s *SQLiteStore) ListScansByRepository(ctx context.Context, repositoryID in
 	if err != nil {
 		return nil, fmt.Errorf("list scans: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 	return scanScanRows(rows)
 }
 
@@ -102,7 +102,7 @@ func (s *SQLiteStore) ListScannerResultsByScan(ctx context.Context, scanID strin
 	if err != nil {
 		return nil, fmt.Errorf("list scanner results: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 
 	var out []ScannerResultRecord
 	for rows.Next() {
@@ -150,7 +150,7 @@ func (s *SQLiteStore) ListRecentScannerFailures(ctx context.Context, limit int) 
 	if err != nil {
 		return nil, fmt.Errorf("list recent scanner failures: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 
 	var out []ScannerFailureEvent
 	for rows.Next() {
@@ -253,7 +253,7 @@ func (s *SQLiteStore) ListFindings(ctx context.Context, filter FindingFilter) ([
 	if err != nil {
 		return nil, fmt.Errorf("list findings: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 
 	var out []FindingListItem
 	for rows.Next() {
@@ -326,7 +326,7 @@ func (s *SQLiteStore) OpenFindingsBySeverityForRepository(ctx context.Context, r
 	if err != nil {
 		return nil, fmt.Errorf("open findings by severity: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 
 	out := map[string]int{}
 	for rows.Next() {
@@ -367,7 +367,7 @@ func (s *SQLiteStore) OpenFindingsByCategoryForRepositories(ctx context.Context,
 	if err != nil {
 		return nil, fmt.Errorf("open findings by category batch: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 
 	for rows.Next() {
 		var repoID int64
@@ -467,7 +467,7 @@ func (s *SQLiteStore) listFindingInstances(ctx context.Context, findingID int64)
 	if err != nil {
 		return nil, fmt.Errorf("list finding instances: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 
 	var out []FindingInstance
 	for rows.Next() {
@@ -493,7 +493,7 @@ func (s *SQLiteStore) ListLifecycleEventsByFinding(ctx context.Context, findingI
 	if err != nil {
 		return nil, fmt.Errorf("list lifecycle events: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 	return scanLifecycleRows(rows)
 }
 
@@ -510,7 +510,7 @@ func (s *SQLiteStore) ListExternalIssuesByRepository(ctx context.Context, reposi
 	if err != nil {
 		return nil, fmt.Errorf("list external issues by repo: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 	return scanExternalIssueRows(rows)
 }
 
@@ -523,7 +523,7 @@ func (s *SQLiteStore) ListExternalIssuesByFinding(ctx context.Context, findingID
 	if err != nil {
 		return nil, fmt.Errorf("list external issues: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 	return scanExternalIssueRows(rows)
 }
 
@@ -541,7 +541,7 @@ func (s *SQLiteStore) ListRecentScans(ctx context.Context, opts ListOptions) ([]
 	if err != nil {
 		return nil, fmt.Errorf("list recent scans: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 
 	var out []ScanWithRepo
 	for rows.Next() {
@@ -586,7 +586,7 @@ func (s *SQLiteStore) CountCompletedScansByDay(ctx context.Context, since time.T
 	if err != nil {
 		return nil, fmt.Errorf("count completed scans by day: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 
 	out := map[string]int{}
 	for rows.Next() {
@@ -632,7 +632,7 @@ func (s *SQLiteStore) CountAutoRemediatedFindingsByDay(ctx context.Context, sinc
 	if err != nil {
 		return nil, fmt.Errorf("count auto-remediated findings by day: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 
 	out := map[string]int{}
 	for rows.Next() {
@@ -668,7 +668,7 @@ func (s *SQLiteStore) CountRemediationPlansByDay(ctx context.Context, since time
 	if err != nil {
 		return nil, fmt.Errorf("count remediation plans by day: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 
 	out := map[string]int{}
 	for rows.Next() {
@@ -889,7 +889,7 @@ func (s *SQLiteStore) buildDashboardSummary(ctx context.Context, recentLimit int
 	if err != nil {
 		return summary, fmt.Errorf("recent scans: %w", err)
 	}
-	defer recentRows.Close()
+	defer closeRows(recentRows)
 
 	for recentRows.Next() {
 		var item ScanWithRepo
@@ -1114,7 +1114,7 @@ func (s *SQLiteStore) ListScheduledRepositories(ctx context.Context) ([]Schedule
 	if err != nil {
 		return nil, fmt.Errorf("list scheduled repositories: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 
 	var out []ScheduledRepository
 	for rows.Next() {
@@ -1236,7 +1236,7 @@ func (s *SQLiteStore) ListRecentScheduledScans(ctx context.Context, limit int) (
 	if err != nil {
 		return nil, fmt.Errorf("list recent scheduled scans: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 
 	var out []ScanWithRepo
 	for rows.Next() {

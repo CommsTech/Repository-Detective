@@ -47,7 +47,7 @@ func (s *SQLiteStore) listFleetAuditRows(ctx context.Context) ([]fleetAuditBase,
 	if err != nil {
 		return nil, fmt.Errorf("fleet audit rows: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 	var out []fleetAuditBase
 	for rows.Next() {
 		var b fleetAuditBase

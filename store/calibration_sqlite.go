@@ -76,7 +76,7 @@ func (s *SQLiteStore) GetReconciliationRun(ctx context.Context, runID string) (R
 	if err != nil {
 		return run, nil, err
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 	var items []ReconciliationItemRecord
 	for rows.Next() {
 		var item ReconciliationItemRecord
@@ -113,7 +113,7 @@ func (s *SQLiteStore) RecomputeCalibrationRuleStats(ctx context.Context) (int, e
 	if err != nil {
 		return 0, fmt.Errorf("aggregate rule stats: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 
 	type statRow struct {
 		source, ruleID, category, lastSeen      string
@@ -202,7 +202,7 @@ func (s *SQLiteStore) ListCalibrationRuleStats(ctx context.Context, limit int) (
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 	return scanCalibrationRuleStats(rows)
 }
 
@@ -335,7 +335,7 @@ func (s *SQLiteStore) ListCalibrationRecommendations(ctx context.Context, status
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 	var out []CalibrationRecommendation
 	for rows.Next() {
 		rec, err := scanCalibrationRecommendation(rows)
@@ -417,7 +417,7 @@ func (s *SQLiteStore) ListCalibrationRuleStatsByActionable(ctx context.Context, 
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 	return scanCalibrationRuleStats(rows)
 }
 
@@ -434,7 +434,7 @@ func (s *SQLiteStore) ScannerReliabilitySummary(ctx context.Context, limit int) 
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 	var out []ScannerStatusCount
 	for rows.Next() {
 		var sc ScannerStatusCount

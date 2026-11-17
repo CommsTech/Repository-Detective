@@ -330,7 +330,7 @@ func (s *SQLiteStore) ListRepositories(ctx context.Context) ([]Repository, error
 	if err != nil {
 		return nil, fmt.Errorf("list repositories: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 
 	var repos []Repository
 	for rows.Next() {

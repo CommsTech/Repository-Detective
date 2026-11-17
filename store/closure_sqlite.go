@@ -71,7 +71,7 @@ func (s *SQLiteStore) ListClosureEvidenceByRepositoryAndStatus(ctx context.Conte
 	if err != nil {
 		return nil, fmt.Errorf("list closure evidence: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 	var out []ClosureEvidenceRecord
 	for rows.Next() {
 		rec, err := scanClosureEvidenceRows(rows)
@@ -125,7 +125,7 @@ func (s *SQLiteStore) ListPatchAttemptsByRepositoryAndStatus(ctx context.Context
 	if err != nil {
 		return nil, fmt.Errorf("list patch attempts: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 	var out []PatchAttemptRecord
 	for rows.Next() {
 		rec, err := scanPatchAttemptRow(rows)

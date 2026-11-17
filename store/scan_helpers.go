@@ -25,7 +25,7 @@ func (s *SQLiteStore) ListFingerprintsInScan(ctx context.Context, scanID string,
 	if err != nil {
 		return nil, fmt.Errorf("fingerprints in scan: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 	for rows.Next() {
 		var fp string
 		if err := rows.Scan(&fp); err != nil {

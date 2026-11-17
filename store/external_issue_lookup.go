@@ -77,7 +77,7 @@ func (s *SQLiteStore) ListExternalIssueNumbersByRepository(ctx context.Context, 
 	if err != nil {
 		return nil, fmt.Errorf("list external issue numbers: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 	out := map[int]int64{}
 	for rows.Next() {
 		var num int

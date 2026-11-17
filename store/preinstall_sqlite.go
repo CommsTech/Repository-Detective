@@ -87,7 +87,7 @@ func (s *SQLiteStore) ListAuditRequests(ctx context.Context, opts ListOptions) (
 	if err != nil {
 		return nil, fmt.Errorf("list audit requests: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 
 	var out []AuditRequest
 	for rows.Next() {
@@ -157,7 +157,7 @@ func (s *SQLiteStore) ListAuditFindings(ctx context.Context, auditID string) ([]
 	if err != nil {
 		return nil, fmt.Errorf("list audit findings: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 
 	var out []AuditFinding
 	for rows.Next() {
@@ -209,7 +209,7 @@ func (s *SQLiteStore) ListDisclosureReports(ctx context.Context, auditID string)
 	if err != nil {
 		return nil, fmt.Errorf("list disclosure reports: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 
 	var out []DisclosureReport
 	for rows.Next() {

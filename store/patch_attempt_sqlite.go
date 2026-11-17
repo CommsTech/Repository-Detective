@@ -81,7 +81,7 @@ func (s *SQLiteStore) ListPatchAttemptsByPlanID(ctx context.Context, planID stri
 	if err != nil {
 		return nil, fmt.Errorf("list patch attempts: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 	var out []PatchAttemptRecord
 	for rows.Next() {
 		rec, err := scanPatchAttemptRow(rows)

@@ -74,7 +74,7 @@ func (s *SQLiteStore) ListContainerImageReferences(ctx context.Context, repoID i
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 	var out []ContainerImageReference
 	for rows.Next() {
 		var ref ContainerImageReference
@@ -154,7 +154,7 @@ func (s *SQLiteStore) ListContainerImageScans(ctx context.Context, repoID int64,
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 	return scanContainerImageRows(rows)
 }
 

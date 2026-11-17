@@ -290,7 +290,7 @@ func (s *SQLiteStore) ListUsers(ctx context.Context, limit int) ([]User, error) 
 	if err != nil {
 		return nil, fmt.Errorf("list users: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 	var out []User
 	for rows.Next() {
 		var u User
@@ -320,7 +320,7 @@ func (s *SQLiteStore) ListAuthAuditEvents(ctx context.Context, limit int) ([]Aut
 	if err != nil {
 		return nil, fmt.Errorf("list auth audit events: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 	var out []AuthAuditEvent
 	for rows.Next() {
 		var e AuthAuditEvent

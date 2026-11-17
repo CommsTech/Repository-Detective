@@ -88,7 +88,7 @@ func (s *SQLiteStore) GetLatestReconcilableScanForRepository(ctx context.Context
 }
 
 func scanReconcilableCandidatesFromRows(rows *sql.Rows) ([]Scan, error) {
-	defer rows.Close()
+	defer closeRows(rows)
 	var candidates []Scan
 	for rows.Next() {
 		scan, err := scanReconcilableCandidateFromRow(rows)

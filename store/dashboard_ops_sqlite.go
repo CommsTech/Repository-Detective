@@ -71,7 +71,7 @@ func (s *SQLiteStore) loadScannerPlatformRollups(ctx context.Context, summary *D
 	if err != nil {
 		return fmt.Errorf("scanner platform rollups: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 
 	rollups := map[string]scannerDBRollup{}
 	for rows.Next() {

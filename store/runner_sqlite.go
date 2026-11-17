@@ -160,7 +160,7 @@ func (s *SQLiteStore) ListRunnerJobs(ctx context.Context, opts ListOptions) ([]R
 	if err != nil {
 		return nil, fmt.Errorf("list runner jobs: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 	return scanRunnerJobs(rows)
 }
 
@@ -175,7 +175,7 @@ func (s *SQLiteStore) ListRunnerJobsByRepository(ctx context.Context, repository
 	if err != nil {
 		return nil, fmt.Errorf("list runner jobs by repo: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 	return scanRunnerJobs(rows)
 }
 
@@ -241,7 +241,7 @@ func (s *SQLiteStore) CountRunnerJobsByStatus(ctx context.Context) (map[string]i
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 	out := map[string]int{}
 	for rows.Next() {
 		var status string

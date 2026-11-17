@@ -274,7 +274,7 @@ func scanKeyedCounts(ctx context.Context, s *SQLiteStore, query string, args []a
 	if err != nil {
 		return err
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 	for rows.Next() {
 		var k string
 		var v int

@@ -19,7 +19,7 @@ func (s *SQLiteStore) batchRepoSettings(ctx context.Context, repoIDs []int64) (m
 	if err != nil {
 		return nil, fmt.Errorf("batch repo settings: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 	for rows.Next() {
 		var id int64
 		var enabled, scheduleEnabled sql.NullInt64
@@ -86,7 +86,7 @@ func (s *SQLiteStore) batchLastScanMetrics(ctx context.Context, repoIDs []int64,
 	if err != nil {
 		return err
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 	for rows.Next() {
 		var repoID int64
 		var scanID string
@@ -121,7 +121,7 @@ func (s *SQLiteStore) batchForgeOpenCounts(ctx context.Context, repoIDs []int64,
 	if err != nil {
 		return err
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 	for rows.Next() {
 		var repoID int64
 		var n int
@@ -146,7 +146,7 @@ func (s *SQLiteStore) batchReportOnlyFindingCounts(ctx context.Context, repoIDs 
 	if err != nil {
 		return err
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 	for rows.Next() {
 		var repoID int64
 		var n int
@@ -189,7 +189,7 @@ func (s *SQLiteStore) batchActivePresentCounts(ctx context.Context, repoIDs []in
 	if err != nil {
 		return err
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 	for rows.Next() {
 		var scanID string
 		var n int
@@ -219,7 +219,7 @@ func (s *SQLiteStore) batchResolvedVerifiedCounts(ctx context.Context, repoIDs [
 	if err != nil {
 		return err
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 	for rows.Next() {
 		var repoID int64
 		var n int
@@ -243,7 +243,7 @@ func (s *SQLiteStore) batchDuplicateCounts(ctx context.Context, repoIDs []int64,
 	if err != nil {
 		return err
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 	for rows.Next() {
 		var repoID int64
 		var n int
@@ -287,7 +287,7 @@ func (s *SQLiteStore) batchUnmappedIssueCounts(ctx context.Context, repoIDs []in
 	if err != nil {
 		return err
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 	for rows.Next() {
 		var repoID int64
 		var n int

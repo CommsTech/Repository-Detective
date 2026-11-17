@@ -16,7 +16,7 @@ func (s *SQLiteStore) ListProjectGroups(ctx context.Context) ([]ProjectGroup, er
 	if err != nil {
 		return nil, fmt.Errorf("list project groups: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 	var out []ProjectGroup
 	var ids []int64
 	for rows.Next() {
@@ -50,7 +50,7 @@ func (s *SQLiteStore) listProjectGroupRepoIDs(ctx context.Context, groupID int64
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 	var ids []int64
 	for rows.Next() {
 		var id int64

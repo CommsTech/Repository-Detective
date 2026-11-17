@@ -103,7 +103,7 @@ func (s *SQLiteStore) ListFindingSuppressions(ctx context.Context, filter Suppre
 	if err != nil {
 		return nil, fmt.Errorf("list suppressions: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 	var out []FindingSuppression
 	for rows.Next() {
 		sup, err := scanFindingSuppression(rows)
@@ -131,7 +131,7 @@ func (s *SQLiteStore) ListActiveSuppressionsForRepository(ctx context.Context, r
 	if err != nil {
 		return nil, fmt.Errorf("list active suppressions: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 	now := time.Now().UTC()
 	var out []FindingSuppression
 	for rows.Next() {

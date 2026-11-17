@@ -113,7 +113,7 @@ func (s *SQLiteStore) ListLearningEvents(ctx context.Context, repositoryID int64
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 	return scanLearningEvents(rows)
 }
 
@@ -128,7 +128,7 @@ func (s *SQLiteStore) CountLearningEventsByType(ctx context.Context) (map[string
 	if err != nil {
 		return nil, fmt.Errorf("count learning events by type: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 	out := map[string]int{}
 	for rows.Next() {
 		var typ string
@@ -255,7 +255,7 @@ func (s *SQLiteStore) ListRepoCalibrationRules(ctx context.Context, repositoryID
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 	var out []RepoCalibrationRule
 	for rows.Next() {
 		var r RepoCalibrationRule
@@ -462,7 +462,7 @@ func (s *SQLiteStore) BackfillFalsePositiveLearningEvents(ctx context.Context, l
 	if err != nil {
 		return 0, fmt.Errorf("query findings for backfill: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 
 	type backfillRow struct {
 		findingID, repoID                           int64
@@ -616,7 +616,7 @@ func (s *SQLiteStore) ListRepositoryIDsAffectedByRule(ctx context.Context, sourc
 	if err != nil {
 		return nil, fmt.Errorf("list repos affected by rule: %w", err)
 	}
-	defer rows.Close()
+	defer closeRows(rows)
 	var out []int64
 	for rows.Next() {
 		var id int64
