@@ -1,0 +1,140 @@
+{{define "repo_detail.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>{{template "head" .}}</head>
+<body class="rd-app">
+{{template "nav" .}}
+{{if .Notice}}
+<div class="rd-alert info">
+  {{.Notice}}
+  {{if .Data.ScanStartedID}}<a class="rd-link" href="{{$.BasePath}}/scans/{{.Data.ScanStartedID}}{{apiKeyQS $.APIKey}}">View scan status →</a>{{end}}
+</div>
+{{end}}
+
+{{with .Data.Repo}}
+<nav class="rd-breadcrumb" aria-label="Breadcrumb">
+  <a href="{{$.BasePath}}/repos{{apiKeyQS $.APIKey}}">Repositories</a>
+  <span>/</span>
+  <span>{{.FullName}}</span>
+</nav>
+{{end}}
+
+<div class="rd-grid rd-grid-stats">
+  <div class="rd-stat info">
+    <div class="rd-stat-value">{{len $.Data.Findings}}</div>
+    <div class="rd-stat-label">Recent findings shown</div>
+  </div>
+  <div class="rd-stat">
+    <div class="rd-stat-value">{{len $.Data.Scans}}</div>
+    <div class="rd-stat-label">Recent scans</div>
+  </div>
+  <div class="rd-stat">
+    <div class="rd-stat-value"><span class="rd-badge {{if eq $.Data.Effective.PolicyLevel "enforce"}}enforce{{else}}monitor{{end}}">{{$.Data.Effective.PolicyLevel}}</span></div>
+    <div class="rd-stat-label">Policy level</div>
+  </div>
+</div>
+
+<section class="rd-repo-ops" aria-label="Repository operations">
+{{with .Data.Repo}}
+  <div class="rd-card rd-repo-ops-card">
+    <div class="rd-card-head">
+      <div>
+        <h2>{{.FullName}}</h2>
+        <p class="rd-muted rd-repo-id">Repo ID <code>{{.ID}}</code> · <span class="rd-chip">{{.ForgeType}}</span></p>
+      </div>
+      <div class="rd-actions rd-repo-ops-actions">
+        {{if $.Data.ScanTriggerEnabled}}
+        <button type="button" class="rd-btn rd-btn-primary" id="rd-scan-now-open" aria-haspopup="dialog" aria-controls="rd-scan-now-modal">Scan now</button>
+        {{else}}
+        <button type="button" class="rd-btn rd-btn-primary" disabled title="Scan engine not configured">Scan now</button>
+        {{end}}
+        <a class="rd-btn rd-btn-secondary" href="{{$.BasePath}}/repos/{{.ID}}/settings{{apiKeyQS $.APIKey}}">Policy settings</a>
+        <a class="rd-btn rd-btn-secondary" href="{{$.BasePath}}/repos/{{.ID}}/report{{apiKeyQS $.APIKey}}">Executive report</a>
+        <a class="rd-btn rd-btn-ghost" href="{{$.BasePath}}/repos/{{.ID}}/graph{{apiKeyQS $.APIKey}}">Repository map</a>
+        {{if $.Data.ScanTriggerEnabled}}<a class="rd-btn rd-btn-ghost rd-btn-sm" href="{{$.BasePath}}/repos/{{.ID}}/scan{{apiKeyQS $.APIKey}}">Full-page scan form</a>{{end}}
+        {{if $.Data.ReconcileEnabled}}<a class="rd-btn rd-btn-ghost" href="{{$.BasePath}}/repos/{{.ID}}/reconcile{{apiKeyQS $.APIKey}}">Reconcile existing issues</a>{{end}}
+      </div>
+    </div>
+  </div>
+{{end}}
+
+  {{template "reconciliation_panel.html" .}}
+  {{if .Data.ScanTriggerEnabled}}{{template "scan_now_modal.html" .}}{{end}}
+</section>
+
+<div class="rd-split">
+  <div class="rd-card">
+    <div class="rd-card-head"><h2>Schedule</h2></div>
+    <dl class="rd-dl">
+      <dt>Enabled</dt><dd>{{.Data.Effective.ScheduleEnabled}}</dd>
+      <dt>Cron</dt><dd><code>{{if .Data.Effective.ScheduleCron}}{{.Data.Effective.ScheduleCron}}{{else}}—{{end}}</code></dd>
+      {{with .Data.CronInfo}}{{if .Valid}}<dt>Next run</dt><dd class="rd-muted">{{.NextRun}}</dd>{{else if .Error}}<dt>Cron error</dt><dd class="rd-alert">{{.Error}}</dd>{{end}}{{end}}
+    </dl>
+  </div>
+  <div class="rd-card">
+    <div class="rd-card-head"><h2>Effective policy</h2></div>
+    <dl class="rd-dl">
+      <dt>Profile</dt><dd>{{profileLabel .Data.ProfileMeta.ScanProfile}}</dd>
+      <dt>Workspace</dt><dd>{{.Data.Effective.WorkspaceMode}}</dd>
+      <dt>Severity gate</dt><dd>{{.Data.Effective.SeverityGate}}</dd>
+      <dt>Issue policy</dt><dd>{{.Data.Effective.IssuePolicy}}</dd>
+    </dl>
+  </div>
+</div>
+
+<div class="rd-card">
+  <div class="rd-card-head">
+    <h2>Scan history</h2>
+    <a class="rd-link" href="{{$.BasePath}}/scans{{apiKeyQS $.APIKey}}">All scans →</a>
+  </div>
+  <table class="rd-table rd-table-compact">
+    <tr><th scope="col">Scan</th><th scope="col">Trigger</th><th scope="col">Status</th><th scope="col">Findings</th><th scope="col">Started</th></tr>
+    {{range .Data.Scans}}
+    <tr>
+      <td><a class="rd-link" href="{{$.BasePath}}/scans/{{.ID}}{{apiKeyQS $.APIKey}}">{{shortID .ID 10}}</a></td>
+      <td>{{.TriggerType}}</td>
+      <td><span class="rd-badge {{scanBadge .Status}}">{{.Status}}</span></td>
+      <td>{{issuesFromScan .SummaryJSON}}</td>
+      <td class="rd-muted">{{.StartedAt.Format "2006-01-02 15:04"}}</td>
+    </tr>
+    {{else}}<tr><td colspan="5" class="rd-muted">No scans recorded</td></tr>{{end}}
+  </table>
+</div>
+
+<div class="rd-card">
+  <div class="rd-card-head">
+    <h2>Open findings</h2>
+    <a class="rd-link" href="{{$.BasePath}}/findings?repo_id={{.Data.Repo.ID}}{{if $.APIKey}}&amp;api_key={{$.APIKey}}{{end}}">Triage all →</a>
+  </div>
+  <table class="rd-table rd-table-compact">
+    <tr><th scope="col">Severity</th><th scope="col">Finding</th><th scope="col">Category</th><th scope="col">Status</th></tr>
+    {{range .Data.Findings}}
+    <tr>
+      <td><span class="rd-badge {{severityBadge .Severity}}">{{.Severity}}</span></td>
+      <td><a class="rd-link" href="{{$.BasePath}}/findings/{{.ID}}{{apiKeyQS $.APIKey}}">{{.Title}}</a></td>
+      <td><span class="rd-badge {{categoryBadge .Category}}">{{.Category}}</span></td>
+      <td><span class="rd-badge {{statusBadge .Status}}">{{.Status}}</span></td>
+    </tr>
+    {{else}}<tr><td colspan="4" class="rd-muted">No findings for this repository</td></tr>{{end}}
+  </table>
+</div>
+
+{{if .Data.ExternalIssues}}
+<div class="rd-card">
+  <div class="rd-card-head"><h2>External issues (Gitea)</h2></div>
+  <table class="rd-table rd-table-compact">
+    <tr><th scope="col">Issue</th><th scope="col">State</th><th scope="col">Finding</th></tr>
+    {{range .Data.ExternalIssues}}
+    <tr>
+      <td><a class="rd-link" href="{{.IssueURL}}" target="_blank" rel="noopener">#{{.IssueNumber}}</a></td>
+      <td>{{.State}}</td>
+      <td><a class="rd-link" href="{{$.BasePath}}/findings/{{.FindingID}}{{apiKeyQS $.APIKey}}">View finding</a></td>
+    </tr>
+    {{end}}
+  </table>
+</div>
+{{end}}
+
+{{template "foot" .}}
+</body></html>
+{{end}}

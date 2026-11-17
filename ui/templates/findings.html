@@ -1,0 +1,128 @@
+{{define "findings.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>{{template "head" .}}</head>
+<body class="rd-app">
+{{template "nav" .}}
+
+<section class="rd-queue-hero" aria-labelledby="rd-triage-title">
+  <div>
+    <p class="rd-queue-eyebrow">Vulnerability operations / triage</p>
+    <h2 id="rd-triage-title">Find it. Assess it. Fix it. Verify it.</h2>
+    <p>Use the priority queue for what needs attention. Search the current view by CVE, package, rule, path, fingerprint, or repository. Switch to All findings to search the entire inventory.</p>
+  </div>
+  <div class="rd-queue-hero-actions">
+    <a class="rd-btn rd-btn-secondary" href="{{.BasePath}}/doctor{{apiKeyQS .APIKey}}">Check scan coverage</a>
+    <a class="rd-btn rd-btn-secondary" href="{{.BasePath}}/scans{{apiKeyQS .APIKey}}">Scan history</a>
+  </div>
+</section>
+
+<nav class="rd-queue-tabs" aria-label="Findings views">
+  <a href="{{.BasePath}}/findings?focus=1{{if .APIKey}}&amp;api_key={{.APIKey}}{{end}}" {{if .Data.FocusMode}}aria-current="page" class="is-active"{{end}}>Priority <span>Open critical/high</span></a>
+  <a href="{{.BasePath}}/findings{{apiKeyQS .APIKey}}" {{if and (not .Data.FocusMode) (ne .Data.Filter.Status "resolved")}}aria-current="page" class="is-active"{{end}}>All findings <span>Explore all statuses</span></a>
+  <a href="{{.BasePath}}/findings?status=resolved{{if .APIKey}}&amp;api_key={{.APIKey}}{{end}}" {{if and (not .Data.FocusMode) (eq .Data.Filter.Status "resolved")}}aria-current="page" class="is-active"{{end}}>Resolved <span>Review closure history</span></a>
+</nav>
+
+<form method="get" class="rd-card rd-queue-filter-card" id="rd-findings-filters" role="search">
+  {{if .Data.FocusMode}}<input type="hidden" name="focus" value="1">{{end}}
+  {{if .APIKey}}<input type="hidden" name="api_key" value="{{.APIKey}}">{{end}}
+  <div class="rd-queue-search-row">
+    <label class="rd-queue-search-label" for="rd-findings-query">Search the findings database
+      <input id="rd-findings-query" name="q" type="search" maxlength="120" autocomplete="off" value="{{.Data.Filter.Search}}" placeholder="CVE-2026-… · openssl · repo/name · scanner rule">
+    </label>
+    <button type="submit" class="rd-btn">Search / apply</button>
+    {{if .Data.FocusMode}}
+    <a class="rd-btn rd-btn-ghost" href="{{.BasePath}}/findings?focus=1{{if .APIKey}}&amp;api_key={{.APIKey}}{{end}}">Clear</a>
+    {{else}}
+    <a class="rd-btn rd-btn-ghost" href="{{.BasePath}}/findings{{apiKeyQS .APIKey}}">Clear</a>
+    {{end}}
+  </div>
+  <details class="rd-queue-advanced" {{if .Data.HasAdvancedFilter}}open{{end}}>
+    <summary>Advanced filters <span class="rd-muted">Repository, severity, scanner, lifecycle</span></summary>
+    <div class="rd-toolbar">
+      <label>Severity
+        <select name="severity" aria-label="Filter by severity">
+          <option value="">{{if .Data.FocusMode}}Critical and high{{else}}All severities{{end}}</option>
+          <option value="critical" {{if eq .Data.Filter.Severity "critical"}}selected{{end}}>Critical</option>
+          <option value="high" {{if eq .Data.Filter.Severity "high"}}selected{{end}}>High</option>
+          {{if not .Data.FocusMode}}
+          <option value="medium" {{if eq .Data.Filter.Severity "medium"}}selected{{end}}>Medium</option>
+          <option value="low" {{if eq .Data.Filter.Severity "low"}}selected{{end}}>Low</option>
+          {{end}}
+        </select>
+      </label>
+      <label>Repository
+        <select name="repo_id" aria-label="Filter by repository">
+          <option value="">All repositories</option>
+          {{range .Data.Repositories}}
+          <option value="{{.ID}}" {{if eq $.Data.Filter.RepositoryID .ID}}selected{{end}}>{{.FullName}}</option>
+          {{end}}
+        </select>
+      </label>
+      <label>Category
+        <input name="category" value="{{.Data.Filter.Category}}" placeholder="dependency, secret…" aria-label="Filter by category">
+      </label>
+      <label>Scanner
+        <input name="source" value="{{.Data.Filter.Source}}" placeholder="trivy, grype…" aria-label="Filter by scanner source">
+      </label>
+      <label>Status
+        <select name="status" aria-label="Filter by status" {{if .Data.FocusMode}}disabled{{end}}>
+          <option value="">All statuses</option>
+          <option value="open" {{if eq .Data.Filter.Status "open"}}selected{{end}}>Open</option>
+          <option value="suppressed" {{if eq .Data.Filter.Status "suppressed"}}selected{{end}}>Suppressed</option>
+          <option value="false_positive" {{if eq .Data.Filter.Status "false_positive"}}selected{{end}}>False positive</option>
+          <option value="resolved" {{if eq .Data.Filter.Status "resolved"}}selected{{end}}>Resolved</option>
+        </select>
+      </label>
+      <label class="rd-checkbox-label">
+        <input type="checkbox" name="show_suppressed" value="1" {{if .Data.Filter.IncludeSuppressed}}checked{{end}} {{if .Data.FocusMode}}disabled{{end}}>
+        Include suppressed / false positives
+      </label>
+      <label class="rd-checkbox-label">
+        <input type="checkbox" name="only_suppressed" value="1" {{if .Data.Filter.OnlySuppressed}}checked{{end}} {{if .Data.FocusMode}}disabled{{end}}>
+        Only suppressed
+      </label>
+    </div>
+    {{if .Data.FocusMode}}<p class="rd-muted">Priority mode always restricts results to open critical/high findings. Switch to All findings for other statuses.</p>{{end}}
+    <button class="rd-btn rd-btn-secondary rd-btn-sm" type="submit">Apply advanced filters</button>
+  </details>
+</form>
+
+<section class="rd-card" aria-labelledby="rd-queue-heading">
+  <div class="rd-card-head rd-queue-results-head">
+    <div>
+      <p class="rd-queue-eyebrow">{{if .Data.FocusMode}}Work first{{else}}Inventory &amp; evidence{{end}}</p>
+      <h2 id="rd-queue-heading">{{if .Data.FocusMode}}Priority triage queue{{else}}Findings queue{{end}}</h2>
+      <p class="rd-muted" role="status" aria-live="polite">{{if .Data.TotalFindings}}Showing {{.Data.FirstResult}}–{{.Data.LastResult}} of {{.Data.TotalFindings}} matches, ordered by severity{{else}}No matching findings{{end}}{{if .Data.Filter.Search}} · search: “{{.Data.Filter.Search}}”{{end}}</p>
+    </div>
+    <div class="rd-queue-exports" aria-label="Export matching findings">
+      <a class="rd-btn rd-btn-ghost rd-btn-sm" href="{{.BasePath}}/findings/export?format=csv{{if .Data.ExportQuery}}&amp;{{.Data.ExportQuery}}{{else}}{{if .APIKey}}&amp;api_key={{.APIKey}}{{end}}{{end}}">Export CSV</a>
+      <a class="rd-btn rd-btn-ghost rd-btn-sm" href="{{.BasePath}}/findings/export?format=json{{if .Data.ExportQuery}}&amp;{{.Data.ExportQuery}}{{else}}{{if .APIKey}}&amp;api_key={{.APIKey}}{{end}}{{end}}">Export JSON</a>
+    </div>
+  </div>
+  <p class="rd-queue-note"><strong>Before treating a finding as exploitable:</strong> confirm scanner coverage, affected assets, and deployment exposure. AI guidance is advisory; a PR is not evidence of closure.</p>
+  <details class="rd-queue-guide">
+    <summary>How to work this queue</summary>
+    <ol>
+      <li><strong>Confirm the scanner ran.</strong> Incomplete coverage is not a clean bill of health.</li>
+      <li><strong>Investigate the exposure.</strong> An affected package or CVE does not prove exploitability in your deployment.</li>
+      <li><strong>Review the plan.</strong> AI suggestions are advisory; verify vendor fixes, tests and rollback.</li>
+      <li><strong>Implement with approval.</strong> Dependency upgrades and risky changes are not unattended.</li>
+      <li><strong>Rescan and verify.</strong> A merged pull request does not automatically close an issue.</li>
+    </ol>
+  </details>
+  <div class="rd-queue-table-wrap" role="region" aria-label="Scrollable findings results" tabindex="0">
+    {{template "findings_table" (dict "BasePath" .BasePath "APIKey" .APIKey "Findings" .Data.Findings "ShowRepo" true "FocusMode" .Data.FocusMode)}}
+  </div>
+  <nav class="rd-queue-pages" aria-label="Findings pages">
+    <span class="rd-muted">Page {{.Data.Page}} of {{.Data.Pages}}</span>
+    <div class="rd-actions">
+      {{if .Data.PrevURL}}<a class="rd-btn rd-btn-secondary rd-btn-sm" href="{{.Data.PrevURL}}" rel="prev">Previous page</a>{{end}}
+      {{if .Data.NextURL}}<a class="rd-btn rd-btn-secondary rd-btn-sm" href="{{.Data.NextURL}}" rel="next">Next page</a>{{end}}
+    </div>
+  </nav>
+  <p class="rd-muted">CSV/JSON exports include all matching rows up to the documented 20,000-row safety cap. Narrow the filters for larger inventories; an export never silently truncates.</p>
+</section>
+{{template "foot" .}}
+</body></html>
+{{end}}

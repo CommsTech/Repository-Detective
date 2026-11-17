@@ -1,0 +1,181 @@
+{{define "repo_settings.html"}}
+<!DOCTYPE html><html lang="en"><head>{{template "head" .}}</head><body class="rd-app">
+{{template "nav" .}}
+{{with .Data.Repo}}
+<nav class="rd-breadcrumb" aria-label="Breadcrumb">
+  <a href="{{$.BasePath}}/repos{{apiKeyQS $.APIKey}}">Repositories</a>
+  <span>/</span>
+  <a href="{{$.BasePath}}/repos/{{.ID}}{{apiKeyQS $.APIKey}}">{{.FullName}}</a>
+  <span>/</span>
+  <span>Policy settings</span>
+</nav>
+{{end}}
+<div class="rd-alert info">{{.Notice}}</div>
+{{if not .Data.IssueFilingEnabled}}<div class="rd-alert info"><strong>Issue filing is disabled</strong> — findings persist in report-only mode; forge issue counts may be lower than scan findings.</div>{{end}}
+<div class="rd-alert">Profiles are deterministic-first. AI is advisory unless explicitly enabled.</div>
+<div class="rd-settings-warn rd-alert">Lowering severity gates or disabling scanners reduces detection coverage. Changes apply on the next scan.</div>
+
+<nav class="rd-settings-nav" aria-label="Settings sections">
+  {{range .Data.SettingsSections}}<a class="rd-link" href="#{{.ID}}">{{.Title}}</a>{{end}}
+</nav>
+
+{{range .Data.SettingsSections}}
+<div class="rd-card rd-settings-section" id="{{.ID}}">
+  <div class="rd-card-head"><h2>{{.Title}}</h2></div>
+  <p class="rd-muted">{{.Summary}}</p>
+  <table class="rd-table rd-table-compact">
+    <thead><tr><th>Setting</th><th>Effective</th><th>Source</th><th>Notes</th></tr></thead>
+    <tbody>
+    {{range .Fields}}
+    <tr>
+      <td><strong>{{.Label}}</strong>{{if .Badge}} <span class="rd-badge {{.BadgeClass}}">{{.Badge}}</span>{{end}}</td>
+      <td><code>{{.EffectiveValue}}</code></td>
+      <td class="rd-muted">{{.Source}}</td>
+      <td class="rd-muted">{{.Explanation}}{{if .BetaNote}} · <em>{{.BetaNote}}</em>{{end}}{{if .RestartRequired}} · restart required{{end}}</td>
+    </tr>
+    {{end}}
+    </tbody>
+  </table>
+</div>
+{{end}}
+
+{{if .Data.Error}}<div class="rd-alert">{{.Data.Error}}</div>{{end}}
+<form method="post" action="{{.BasePath}}/repos/{{.Data.Repo.ID}}/settings{{if .APIKey}}?api_key={{.APIKey}}{{end}}">
+<input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+<div class="rd-card">
+<h2>Scan profile</h2>
+<p class="rd-muted">Effective profile: <strong>{{profileLabel .Data.ProfileMeta.ScanProfile}}</strong>
+{{if .Data.ProfileMeta.ProfileModified}}<span class="rd-alert">(modified)</span>{{end}}
+· source={{.Data.ProfileMeta.ProfileSource}}</p>
+<label>Scan profile<select name="scan_profile">
+<option value="">inherit ({{profileLabel .Data.ProfileMeta.ScanProfile}})</option>
+{{range .Data.Profiles}}<option value="{{.ID}}" {{if eq $.Data.SelectedProfile .ID}}selected{{end}}>{{.Label}} — {{.Summary}}</option>{{end}}
+</select></label>
+<p class="rd-muted">{{profileDesc .Data.ProfileMeta.ScanProfile}}</p>
+<div class="badges">
+<span class="badge">Security {{if .Data.ProfileMeta.EffectiveProfileSummary.SecurityScanners}}on{{else}}off{{end}}</span>
+<span class="badge">Go {{if .Data.ProfileMeta.EffectiveProfileSummary.GoScanners}}on{{else}}off{{end}}</span>
+<span class="badge">IaC {{if .Data.ProfileMeta.EffectiveProfileSummary.IACScanners}}on{{else}}off{{end}}</span>
+<span class="badge">Health {{if .Data.ProfileMeta.EffectiveProfileSummary.HealthChecks}}on{{else}}off{{end}}</span>
+<span class="badge">Graph {{if .Data.ProfileMeta.EffectiveProfileSummary.CodeGraph}}on{{else}}off{{end}}</span>
+<span class="badge">AI {{.Data.ProfileMeta.EffectiveProfileSummary.AI}}</span>
+<span class="badge">Runner {{if .Data.ProfileMeta.EffectiveProfileSummary.RunnerEligible}}eligible{{else}}core{{end}}</span>
+</div>
+<h2>Notifications</h2>
+<p class="rd-muted">Global: {{if .Data.NotificationGlobal.Enabled}}enabled{{else}}disabled{{end}} · min severity={{.Data.NotificationGlobal.MinSeverity}} · cooldown={{.Data.NotificationGlobal.CooldownSeconds}}s</p>
+<p class="rd-muted">Channels (global): telegram={{.Data.NotificationGlobal.TelegramEnabled}} · slack={{.Data.NotificationGlobal.SlackEnabled}} · discord={{.Data.NotificationGlobal.DiscordEnabled}} · webhook={{.Data.NotificationGlobal.WebhookEnabled}}</p>
+<p class="rd-muted">Effective for this repo: enabled={{.Data.EffectiveNotifications.Enabled}} · min severity={{.Data.EffectiveNotifications.MinSeverity}} · cooldown={{.Data.EffectiveNotifications.CooldownSeconds}}s</p>
+<label>Repo notifications enabled<select name="notifications_enabled"><option value="">inherit</option><option value="true">true</option><option value="false">false</option></select></label>
+<label>Notification min severity<select name="notification_min_severity"><option value="">inherit</option>
+{{range index .Data.Allowed "notification_min_severity"}}<option value="{{.}}">{{.}}</option>{{end}}</select></label>
+<label>Notification events (comma-separated)<input name="notification_events" placeholder="critical_finding,scan_failed" value="{{if .Data.Settings.NotificationEvents}}{{.Data.Settings.NotificationEvents}}{{end}}"></label>
+<p class="rd-muted">Allowed: {{join (index .Data.Allowed "notification_events") ", "}}. Empty inherits global defaults.</p>
+<label>Notification cooldown (seconds)<input name="notification_cooldown_seconds" type="number" min="0" max="86400" placeholder="inherit"></label>
+<p class="rd-muted">Test via <code>POST /api/v1/notifications/test</code>. Tokens and webhook URLs are never shown here.</p>
+<details>
+<summary>Advanced settings</summary>
+<h2>Schedule (Phase 7)</h2>
+<label>Schedule enabled<select name="schedule_enabled"><option value="">inherit ({{.Data.Effective.ScheduleEnabled}})</option><option value="true">true</option><option value="false">false</option></select></label>
+<label>Schedule cron (5-field)<input name="schedule_cron" placeholder="0 2 * * *" value="{{if .Data.Settings.ScheduleCron}}{{.Data.Settings.ScheduleCron}}{{end}}"></label>
+<p class="rd-muted">Examples: <code>0 2 * * *</code> daily 02:00 · <code>0 */6 * * *</code> every 6h · <code>30 3 * * 1</code> Mon 03:30</p>
+{{with .Data.CronInfo}}{{if .Valid}}<p class="rd-muted">Next run (approx): {{.NextRun}}</p>{{else if .Error}}<p class="rd-alert">Cron: {{.Error}}</p>{{end}}{{end}}
+<h2>Policy (stored — enforced on scans)</h2>
+<label>Repo enabled<select name="enabled"><option value="">inherit</option><option value="true">true</option><option value="false">false</option></select></label>
+<label>Policy level (Observe / Warn / Enforce)<select name="policy_level" data-risk-warn aria-label="Policy enforcement mode">
+<option value="">inherit ({{.Data.Effective.PolicyLevel}} — {{enforcementLabel .Data.Effective.PolicyLevel}})</option>
+<option value="monitor_only">observe — {{enforcementLabel "monitor_only"}}</option>
+<option value="issue_only">warn — {{enforcementLabel "issue_only"}}</option>
+<option value="gate_pr">enforce — {{enforcementLabel "gate_pr"}}</option>
+<option value="suggest_fix">suggest_fix (legacy remediation)</option>
+<option value="auto_pr_with_approval">auto_pr_with_approval (reserved)</option>
+<option value="auto_pr_low_risk">auto_pr_low_risk (reserved)</option>
+</select>
+<span class="rd-risk-hint rd-muted" hidden>Observe mode never blocks the development workflow. Enforce only blocks when Gitea branch protection requires the Repository Detective status context. Outcomes describe owner policy compliance — not that code is safe or secure.</span></label>
+<label>Workspace mode<select name="workspace_mode"><option value="">inherit</option>
+{{range index .Data.Allowed "workspace_mode"}}<option value="{{.}}">{{.}}</option>{{end}}</select></label>
+<label>Analysis depth<select name="analysis_depth"><option value="">inherit</option><option>1</option><option>2</option><option>3</option></select></label>
+<label>Severity gate<select name="severity_gate"><option value="">inherit</option>
+{{range index .Data.Allowed "severity_gate"}}<option value="{{.}}">{{.}}</option>{{end}}</select></label>
+<label>Issue policy<select name="issue_policy"><option value="">inherit</option>
+{{range index .Data.Allowed "issue_policy"}}<option value="{{.}}">{{.}}</option>{{end}}</select></label>
+<label>Remediation policy<select name="remediation_policy"><option value="">inherit</option>
+{{range index .Data.Allowed "remediation_policy"}}<option value="{{.}}">{{.}}</option>{{end}}</select></label>
+<label>Runner policy<select name="runner_policy"><option value="">inherit</option>
+{{range index .Data.Allowed "runner_policy"}}<option value="{{.}}">{{.}}</option>{{end}}</select></label>
+<p class="rd-muted">Enforced for scheduled/manual full scans when global runner delegation is enabled. Webhook scans remain on core in Phase 12.</p>
+<label>AI policy<select name="ai_policy"><option value="">inherit</option>
+{{range index .Data.Allowed "ai_policy"}}<option value="{{.}}">{{.}}</option>{{end}}</select></label>
+<label>Confidence gate<input name="confidence_gate" type="number" step="0.01" min="0" max="1"></label>
+<label>Enable LLM auditors<select name="enable_llm_auditors"><option value="">inherit ({{.Data.Effective.EnableLLMAuditors}})</option><option value="true">true</option><option value="false">false</option></select></label>
+<label>Enable Trivy<select name="enable_trivy"><option value="">inherit ({{.Data.Effective.EnableTrivy}})</option><option value="true">true</option><option value="false">false</option></select></label>
+<label>Enable Grype<select name="enable_grype"><option value="">inherit ({{.Data.Effective.EnableGrype}})</option><option value="true">true</option><option value="false">false</option></select></label>
+<label>Enable gitleaks<select name="enable_gitleaks"><option value="">inherit ({{.Data.Effective.EnableGitleaks}})</option><option value="true">true</option><option value="false">false</option></select></label>
+<label>Enable Semgrep<select name="enable_semgrep"><option value="">inherit ({{.Data.Effective.EnableSemgrep}})</option><option value="true">true</option><option value="false">false</option></select></label>
+<label>Enable linters<select name="enable_linters"><option value="">inherit ({{.Data.Effective.EnableLinters}})</option><option value="true">true</option><option value="false">false</option></select></label>
+<h2>Go scanners (Phase 13A)</h2>
+<p class="rd-muted">Effective: govulncheck={{.Data.Effective.EnableGovulncheck}} · gosec={{.Data.Effective.EnableGosec}} · staticcheck={{.Data.Effective.EnableStaticcheck}} · max findings={{.Data.Effective.GoScannerMaxFindings}}</p>
+<label>Enable govulncheck<select name="enable_govulncheck"><option value="">inherit ({{.Data.Effective.EnableGovulncheck}})</option><option value="true">true</option><option value="false">false</option></select></label>
+<label>Enable gosec<select name="enable_gosec"><option value="">inherit ({{.Data.Effective.EnableGosec}})</option><option value="true">true</option><option value="false">false</option></select></label>
+<label>Enable staticcheck<select name="enable_staticcheck"><option value="">inherit ({{.Data.Effective.EnableStaticcheck}})</option><option value="true">true</option><option value="false">false</option></select></label>
+<label>Govulncheck timeout (seconds)<input name="govulncheck_timeout_seconds" type="number" min="0" max="3600" placeholder="inherit ({{.Data.Effective.GovulncheckTimeoutSeconds}})"></label>
+<label>Gosec timeout (seconds)<input name="gosec_timeout_seconds" type="number" min="0" max="3600" placeholder="inherit ({{.Data.Effective.GosecTimeoutSeconds}})"></label>
+<label>Staticcheck timeout (seconds)<input name="staticcheck_timeout_seconds" type="number" min="0" max="3600" placeholder="inherit ({{.Data.Effective.StaticcheckTimeoutSeconds}})"></label>
+<label>Max findings per Go scanner<input name="go_scanner_max_findings" type="number" min="1" max="1000" placeholder="inherit ({{.Data.Effective.GoScannerMaxFindings}})"></label>
+<p class="rd-muted">Requires analysis depth ≥ 2 and Go files or go.mod. No dependency-changing commands.</p>
+<h2>IaC / Container scanners (Phase 13B)</h2>
+<p class="rd-muted">Effective: hadolint={{.Data.Effective.EnableHadolint}} · checkov={{.Data.Effective.EnableCheckov}} · max findings={{.Data.Effective.IACScannerMaxFindings}}</p>
+<label>Enable hadolint<select name="enable_hadolint"><option value="">inherit ({{.Data.Effective.EnableHadolint}})</option><option value="true">true</option><option value="false">false</option></select></label>
+<label>Enable checkov<select name="enable_checkov"><option value="">inherit ({{.Data.Effective.EnableCheckov}})</option><option value="true">true</option><option value="false">false</option></select></label>
+<label>Hadolint timeout (seconds)<input name="hadolint_timeout_seconds" type="number" min="0" max="3600" placeholder="inherit ({{.Data.Effective.HadolintTimeoutSeconds}})"></label>
+<label>Checkov timeout (seconds)<input name="checkov_timeout_seconds" type="number" min="0" max="3600" placeholder="inherit ({{.Data.Effective.CheckovTimeoutSeconds}})"></label>
+<label>Max findings per IaC scanner<input name="iac_scanner_max_findings" type="number" min="1" max="1000" placeholder="inherit ({{.Data.Effective.IACScannerMaxFindings}})"></label>
+<h2>Health checks (Phase 10B)</h2>
+<p class="rd-muted">Effective: health={{.Data.Effective.EnableHealthChecks}} · AI-risk={{.Data.Effective.EnableAIRiskChecks}} · large file lines={{.Data.Effective.HealthLargeFileLines}}</p>
+<label>Enable health checks<select name="enable_health_checks"><option value="">inherit ({{.Data.Effective.EnableHealthChecks}})</option><option value="true">true</option><option value="false">false</option></select></label>
+<label>Tech debt<select name="enable_tech_debt_checks"><option value="">inherit ({{.Data.Effective.EnableTechDebtChecks}})</option><option value="true">true</option><option value="false">false</option></select></label>
+<label>Reliability<select name="enable_reliability_checks"><option value="">inherit ({{.Data.Effective.EnableReliabilityChecks}})</option><option value="true">true</option><option value="false">false</option></select></label>
+<label>Maintainability<select name="enable_maintainability_checks"><option value="">inherit ({{.Data.Effective.EnableMaintainabilityChecks}})</option><option value="true">true</option><option value="false">false</option></select></label>
+<label>Test gaps<select name="enable_test_gap_checks"><option value="">inherit ({{.Data.Effective.EnableTestGapChecks}})</option><option value="true">true</option><option value="false">false</option></select></label>
+<label>Performance<select name="enable_performance_checks"><option value="">inherit ({{.Data.Effective.EnablePerformanceChecks}})</option><option value="true">true</option><option value="false">false</option></select></label>
+<label>AI-generated-risk signals<select name="enable_ai_risk_checks"><option value="">inherit ({{.Data.Effective.EnableAIRiskChecks}})</option><option value="true">true</option><option value="false">false</option></select></label>
+<label>Max findings<input name="health_max_findings" type="number" min="1" max="1000" placeholder="inherit ({{.Data.Effective.HealthMaxFindings}})"></label>
+<label>Large file lines<input name="health_large_file_lines" type="number" min="100" max="50000" placeholder="inherit ({{.Data.Effective.HealthLargeFileLines}})"></label>
+<label>Large function lines<input name="health_large_function_lines" type="number" min="20" max="5000" placeholder="inherit ({{.Data.Effective.HealthLargeFunctionLines}})"></label>
+<label>Max nesting depth<input name="health_max_nesting_depth" type="number" min="2" max="50" placeholder="inherit ({{.Data.Effective.HealthMaxNestingDepth}})"></label>
+<label>Max function params<input name="health_max_function_params" type="number" min="1" max="50" placeholder="inherit ({{.Data.Effective.HealthMaxFunctionParams}})"></label>
+<h2>Repository map / code graph (Phase 11B)</h2>
+<p class="rd-muted">Effective: graph={{.Data.Effective.EnableCodeGraph}} · max nodes={{.Data.Effective.GraphMaxNodes}} · max edges={{.Data.Effective.GraphMaxEdges}} · timeout={{.Data.Effective.GraphTimeoutSeconds}}s</p>
+<label>Enable code graph<select name="enable_code_graph"><option value="">inherit ({{.Data.Effective.EnableCodeGraph}})</option><option value="true">true</option><option value="false">false</option></select></label>
+<label>Include functions<select name="graph_include_functions"><option value="">inherit ({{.Data.Effective.GraphIncludeFunctions}})</option><option value="true">true</option><option value="false">false</option></select></label>
+<label>Include findings overlay<select name="graph_include_findings"><option value="">inherit ({{.Data.Effective.GraphIncludeFindings}})</option><option value="true">true</option><option value="false">false</option></select></label>
+<label>Max nodes<input name="graph_max_nodes" type="number" min="100" max="50000" placeholder="inherit ({{.Data.Effective.GraphMaxNodes}})"></label>
+<label>Max edges<input name="graph_max_edges" type="number" min="100" max="200000" placeholder="inherit ({{.Data.Effective.GraphMaxEdges}})"></label>
+<label>Timeout (seconds)<input name="graph_timeout_seconds" type="number" min="5" max="1800" placeholder="inherit ({{.Data.Effective.GraphTimeoutSeconds}})"></label>
+<p class="rd-muted">Changing advanced toggles automatically switches the repo to the <code>custom</code> profile.</p>
+</details>
+<button type="submit">Save</button>
+</div></form>
+<p class="rd-muted">Effective schedule: enabled={{.Data.Effective.ScheduleEnabled}} cron={{.Data.Effective.ScheduleCron}}</p>
+
+<div class="rd-card">
+  <div class="rd-card-head"><h2>Active suppressions</h2><span class="rd-chip">{{len .Data.Suppressions}}</span></div>
+  <p class="rd-muted">Repo-scoped and global rules that hide matching findings from issues, PR gates, and remediation. Use the <a class="rd-link" href="{{$.BasePath}}/findings?repo_id={{.Data.Repo.ID}}{{if $.APIKey}}&amp;api_key={{$.APIKey}}{{end}}">findings queue</a> to mark false positives.</p>
+  <table class="rd-table">
+    <thead><tr><th>Scope</th><th>Match</th><th>Reason</th><th>Expires</th></tr></thead>
+    <tbody>
+    {{range .Data.Suppressions}}
+    <tr>
+      <td>{{.Scope}}</td>
+      <td class="rd-muted"><code>{{if .Fingerprint}}{{.Fingerprint}}{{else}}{{.RuleID}}{{if .Source}} / {{.Source}}{{end}}{{end}}</code></td>
+      <td>{{.Reason}}</td>
+      <td class="rd-muted">{{if .ExpiresAt}}{{.ExpiresAt.Format "2006-01-02"}}{{else}}—{{end}}</td>
+    </tr>
+    {{else}}
+    <tr><td colspan="4" class="rd-muted">No active suppressions for this repository.</td></tr>
+    {{end}}
+    </tbody>
+  </table>
+</div>
+{{template "foot" .}}
+</body></html>
+{{end}}

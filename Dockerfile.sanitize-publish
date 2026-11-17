@@ -1,0 +1,34 @@
+# Sanitize a local all-in-one image that accidentally baked live config.yaml.
+# Does NOT reinstall scanners — strips operator secrets and retags for publish.
+#
+#   docker build -f Dockerfile.sanitize-publish \
+#     --build-arg SOURCE_IMAGE=repository-detective:v0.1.0-beta.3 \
+#     -t repository-detective:all-in-one-publish .
+
+# Default to a versioned tag (not :latest). Override SOURCE_IMAGE for other digests/tags.
+ARG SOURCE_IMAGE=repository-detective:v0.1.0-beta.3
+# checkov:skip=CKV_DOCKER_7: SOURCE_IMAGE is an operator-supplied publish input; default is version-pinned
+FROM ${SOURCE_IMAGE}
+
+USER root
+
+# Remove any live/operator config copies; keep only examples + gitleaks allowlist.
+RUN rm -f /app/config/config.yaml /app/config/config.yaml.bak* \
+        /app/config/*.local.yaml /app/.env /app/data/*.db 2>/dev/null || true
+
+COPY config/config.yaml.example \
+     config/gitleaks.toml \
+     config/private-beta.example.yaml \
+     config/runner.example.yaml \
+     config/runner-delegation-test.yaml.example \
+     /app/config/
+
+RUN chown -R repositorydetective:repositorydetective /app/config /app/data \
+ && find /app/config -type f -name 'config.yaml' -delete 2>/dev/null || true \
+ && test ! -f /app/config/config.yaml \
+ && test -f /app/config/config.yaml.example
+
+USER repositorydetective
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+  CMD wget -qO- http://127.0.0.1:8081/health >/dev/null || exit 1

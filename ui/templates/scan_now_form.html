@@ -1,0 +1,15 @@
+{{define "scan_now_form.html"}}
+{{$form := .Data.ScanForm}}
+<form class="rd-scan-form" method="post" action="{{$.BasePath}}/repos/{{$form.Repo.ID}}/scan{{if $.APIKey}}?api_key={{$.APIKey}}{{end}}" data-scan-form data-confirm="Start manual scan for {{$form.Repo.FullName}}?">
+  <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+  <input type="hidden" name="format" value="json">
+
+  {{template "scan_form_body.html" dict "Form" $form "Page" .}}
+
+  <div class="rd-scan-form-actions">
+    <button type="submit" class="rd-btn rd-btn-primary">Start scan</button>
+    <button type="button" class="rd-btn rd-btn-ghost" data-scan-cancel>Cancel</button>
+  </div>
+  <div class="rd-scan-result" data-scan-result hidden></div>
+</form>
+{{end}}

@@ -1,0 +1,55 @@
+{{define "projects.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>{{template "head" .}}</head>
+<body class="rd-app">
+{{template "nav" .}}
+{{if .Notice}}<div class="rd-alert info" role="status">{{.Notice}}</div>{{end}}
+
+<div class="rd-card">
+  <div class="rd-card-head"><h2>Project groups</h2><span class="rd-chip">Beta</span></div>
+  <p class="rd-muted">Group related repositories (app + infra, frontend + backend) for shared reporting. Cross-repo issue filing is not enabled in beta.</p>
+  <form method="post" action="{{.BasePath}}/projects{{apiKeyQS .APIKey}}">
+    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+    <label>Name <input name="name" required placeholder="My application"></label>
+    <label>Description <input name="description" placeholder="Optional"></label>
+    <label>Primary repository
+      <select name="primary_repository_id">
+        <option value="">— select —</option>
+        {{range .Data.Repos}}<option value="{{.ID}}">{{.FullName}}</option>{{end}}
+      </select>
+    </label>
+    <fieldset>
+      <legend>Member repositories</legend>
+      {{range .Data.Repos}}
+      <label><input type="checkbox" name="repository_ids" value="{{.ID}}"> {{.FullName}}</label>
+      {{end}}
+    </fieldset>
+    <button type="submit">Create group</button>
+  </form>
+</div>
+
+<div class="rd-card">
+  <h2>Existing groups</h2>
+  <table class="rd-table">
+    <tr><th>Name</th><th>Primary</th><th>Members</th></tr>
+    {{range .Data.Groups}}
+    <tr>
+      <td><strong>{{.Name}}</strong><br><span class="rd-muted">{{.Description}}</span></td>
+      <td>{{with index $.Data.RepoNames .PrimaryRepositoryID}}{{.}}{{else}}{{if .PrimaryRepositoryID}}repo-{{.PrimaryRepositoryID}}{{else}}—{{end}}{{end}}</td>
+      <td>
+        {{if .RepositoryIDs}}
+        <ul class="rd-inline-list">
+          {{range .RepositoryIDs}}
+          <li>{{with index $.Data.RepoNames .}}{{.}}{{else}}repo-{{.}}{{end}}</li>
+          {{end}}
+        </ul>
+        {{else}}<span class="rd-muted">None</span>{{end}}
+      </td>
+    </tr>
+    {{else}}<tr><td colspan="3" class="rd-muted">No project groups yet</td></tr>{{end}}
+  </table>
+</div>
+{{template "foot" .}}
+</body></html>
+{{end}}

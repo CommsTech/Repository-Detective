@@ -1,0 +1,28 @@
+name: Documentation gap
+about: Missing, wrong, or unclear documentation
+labels:
+  - type/docs
+  - area/docs
+  - status/needs-triage
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Repository Detective commit / version
+  - type: input
+    id: doc_path
+    attributes:
+      label: Doc path or URL
+      placeholder: docs/SETUP.md, README, beta guide
+    validations:
+      required: true
+  - type: textarea
+    id: gap
+    attributes:
+      label: What is missing or wrong?
+    validations:
+      required: true
+  - type: textarea
+    id: suggested
+    attributes:
+      label: Suggested improvement

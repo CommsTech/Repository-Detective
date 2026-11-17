@@ -1,0 +1,17 @@
+# Pre-install only — audit third-party repos before adoption
+# No connected-repo scanning required.
+
+preinstall_audit_enabled: true
+preinstall_allow_git_clone: true
+preinstall_allow_private_networks: false
+preinstall_max_repo_size_mb: 500
+preinstall_max_files: 5000
+preinstall_timeout_seconds: 600
+
+enable_health_checks: true
+enable_llm_auditors: false
+
+# Connected repo features off by default for this profile
+scheduler_enabled: false
+remediation_planner_enabled: false
+remediation_pr_enabled: false
