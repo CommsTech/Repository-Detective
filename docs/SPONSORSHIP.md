@@ -20,7 +20,11 @@ Public acknowledgment is opt-in. Anonymous sponsors are never listed.
 
 ## Status
 
-Not yet enrolled. GitHub Sponsors enrollment is completed by the account owner
+**Tiers approved by the project owner on 2026-11-17.** The $5 / $15 / $50
+monthly tiers above are the agreed amounts and benefits.
+
+Enrollment is still pending: `github.com/sponsors/CommsTech` currently
+redirects to the account profile, which means no sponsor profile is live yet. GitHub Sponsors enrollment is completed by the account owner
 in the GitHub UI; it cannot be enabled through the API. Until the sponsor
 profile is approved and publicly reachable, no `.github/FUNDING.yml` is
 committed, because a funding file that points at a missing profile is a broken
