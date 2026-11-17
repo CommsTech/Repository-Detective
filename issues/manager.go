@@ -196,7 +196,7 @@ func (m *Manager) BackfillMissingMappings(ctx context.Context, req *IssueCreatio
 
 func (m *Manager) forgeFor(forgeType string) IssueForge {
 	forgeType = strings.ToLower(strings.TrimSpace(forgeType))
-	if forgeType == "github" && m.githubForge != nil {
+	if forgeType == "github" {
 		return m.githubForge
 	}
 	return m.giteaForge
@@ -232,6 +232,9 @@ func (m *Manager) CreateIssuesFromAnalysis(ctx context.Context, req *IssueCreati
 		m.logger.Info("Auto issue creation is disabled, skipping")
 		return result, nil
 	}
+	if m.forgeFor(req.ForgeType) == nil {
+		return result, fmt.Errorf("no configured issue client for forge %s", m.normalizeForgeType(req.ForgeType))
+	}
 
 	repository := fmt.Sprintf("%s/%s", req.Owner, req.Repository)
 	seenFingerprints := make(map[string]struct{})
@@ -252,8 +255,8 @@ func (m *Manager) CreateIssuesFromAnalysis(ctx context.Context, req *IssueCreati
 			if minConfidence <= 0 {
 				minConfidence = 0.5
 			}
-			if issue.Confidence > 0 && issue.Confidence < minConfidence {
-				m.logger.Debugf("Skipping low-confidence issue: %s (%.2f)", issue.Title, issue.Confidence)
+			if eligible, reason := EligibleForAutomaticFiling(issue, minConfidence); !eligible {
+				m.logger.Warnf("Skipping issue %q: %s", issue.Title, reason)
 				result.IssuesSkipped++
 				continue
 			}
@@ -333,7 +336,7 @@ func (m *Manager) createOrUpdateIssue(ctx context.Context, req *IssueCreationReq
 	}
 
 	if match, err := FindIssueByFingerprint(ctx, forge, req.Owner, req.Repository, issue.Fingerprint); err != nil {
-		m.logger.Warnf("Fingerprint lookup failed: %v", err)
+		return "", fmt.Errorf("cannot verify remote issue deduplication; refusing to create possible duplicate: %w", err)
 	} else if match != nil {
 		if m.mappingLookup != nil && req.RepositoryID > 0 {
 			m.mappingLookup.LinkForgeIssue(ctx, req.RepositoryID, forgeType, issue.Fingerprint, req.ScanID, match.IssueNumber, match.IssueURL)
@@ -354,7 +357,7 @@ func (m *Manager) createOrUpdateIssue(ctx context.Context, req *IssueCreationReq
 	if m.claims != nil && req.RepositoryID > 0 && issue.Fingerprint != "" {
 		claim, err := m.claims.AcquireIssueFilingClaim(ctx, req.RepositoryID, forgeType, issue.Fingerprint, m.holder, filingAcquireLease)
 		if err != nil {
-			m.logger.Warnf("Issue filing claim unavailable (%v); continuing with in-process serialization only", err)
+			return "", fmt.Errorf("durable filing claim unavailable; refusing duplicate-prone issue creation: %w", err)
 		} else if claim.Holder == m.holder {
 			claimHeld = true
 		} else {

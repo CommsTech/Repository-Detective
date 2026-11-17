@@ -27,7 +27,11 @@ func ShouldDelegate(cfg Config, effective store.EffectiveSettings, triggerType s
 	if cfg.DelegationEnabled && (cfg.Mode == ModeGiteaActions || policy == ModeGiteaActions) {
 		return DecisionUnsupported
 	}
-	if cfg.DelegationEnabled && policy == ModeNative && (cfg.Mode == ModeCore || cfg.SharedSecret == "") {
+	// A repository explicitly requesting an off-core execution policy must
+	// never execute its untrusted source in the control plane due to a missing
+	// secret, disabled delegation or an unsupported trigger.
+	wantsSandbox := policy == ModeNative || policy == ModeAuto || policy == ModeGiteaActions
+	if wantsSandbox && (!cfg.DelegationEnabled || cfg.SharedSecret == "" || cfg.Mode == ModeCore) {
 		return DecisionUnsupported
 	}
 	if !cfg.DelegationEnabled || cfg.SharedSecret == "" || cfg.Mode == ModeCore {
@@ -35,8 +39,11 @@ func ShouldDelegate(cfg Config, effective store.EffectiveSettings, triggerType s
 	}
 	switch triggerType {
 	case store.TriggerScheduled, store.TriggerManual:
-		// Phase 12: scheduled and manual full scans only.
+		// Native delegation currently supports scheduled and manual scans.
 	default:
+		if wantsSandbox {
+			return DecisionUnsupported
+		}
 		return DecisionCore
 	}
 	switch strings.ToLower(strings.TrimSpace(effective.RunnerPolicy)) {
@@ -50,7 +57,7 @@ func ShouldDelegate(cfg Config, effective store.EffectiveSettings, triggerType s
 		if cfg.Mode == ModeNative || cfg.Mode == ModeAuto {
 			return DecisionDelegate
 		}
-		return DecisionCore
+		return DecisionUnsupported
 	default:
 		return DecisionCore
 	}

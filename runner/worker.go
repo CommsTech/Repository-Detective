@@ -51,6 +51,11 @@ func (w *Worker) Run(ctx context.Context) error {
 		return err
 	}
 
+	// Register capabilities before first claim; a worker must not win the
+	// claim race against its own asynchronous heartbeat.
+	if err := w.client.Ping(ctx, w.cfg.RunnerID, w.cfg.Version, w.cfg.AllowedJobTypes); err != nil {
+		return fmt.Errorf("initial runner registration failed: %w", err)
+	}
 	var active sync.WaitGroup
 	active.Add(1)
 	go w.heartbeatLoop(ctx, &active)
@@ -65,13 +70,21 @@ func (w *Worker) Run(ctx context.Context) error {
 		default:
 		}
 
-		jobID, spec, err := w.client.ClaimNextJob(ctx)
+		jobID, spec, err := w.client.ClaimNextJobForWorker(ctx, w.cfg.RunnerID, w.cfg.AllowedJobTypes)
 		if err != nil {
 			if ctx.Err() != nil {
 				active.Wait()
 				return ctx.Err()
 			}
-			time.Sleep(w.cfg.PollInterval)
+			if !strings.Contains(err.Error(), "no compatible runner jobs available") {
+				w.logger.Warnf("runner claim failed: %v", err)
+			}
+			select {
+			case <-ctx.Done():
+				active.Wait()
+				return ctx.Err()
+			case <-time.After(w.cfg.PollInterval):
+			}
 			continue
 		}
 		if !JobTypeAllowed(w.cfg.AllowedJobTypes, spec.JobType) {

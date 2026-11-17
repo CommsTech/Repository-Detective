@@ -1,5 +1,20 @@
 # Changelog
 
+## [Unreleased — capability-aware runners, AI result fidelity and safe issue filing, 2026-11-17]
+
+### Fixed / improved
+- Native workers now register capabilities before claiming; server-side SQLite claims select only compatible queued jobs, preventing a specialist worker from stealing and failing another worker's job.
+- Calibration can no longer auto-quiet gosec G104/G204/G304 rule families. Individual finding dispositions remain available for reviewed scanner operations.
+- Malformed AI audits and code reviews now return failures instead of falsely successful empty scans or fabricated 100%-confidence parse-error findings. Attack-surface JSON now correctly decodes the model’s snake_case fields, and missing required arrays fail explicitly.
+- Forge issue routing fails closed on missing GitHub credentials; zero-confidence or uncorroborated AI-origin findings are ineligible for automatic filing. Remote deduplication / durable claim failures now prevent duplicate-prone creation.
+- Refined the learning page with an evidence-first 3-step operator workflow, mobile layouts and more accurate calibration copy.
+- Proposed refreshed runtime/toolchain versions: Go 1.26.11, Alpine 3.24 and a pinned gosec v2.30.0. Docker builds and scanner compatibility require CI validation.
+
+### Verification
+- New regression tests cover AI format failures, capability claims, heartbeat gating, calibration protections and filing eligibility. Local Go 1.23.2 cannot download the required toolchain; **tests not yet executed**. See [acceptance matrix](docs/release/DELEGATION_AI_CALIBRATION_ACCEPTANCE_2026-11-17.md).
+- No automatic third-party preinstall posting, new Gitea/GitHub Actions backend or verified AI patch executor is claimed.
+
+
 ## [Unreleased — deep-scan report integrity, 2026-11-17]
 
 ### Fixed

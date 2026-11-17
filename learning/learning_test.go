@@ -53,13 +53,15 @@ func TestValidateCalibrationAccept(t *testing.T) {
 	if err := learning.ValidateCalibrationAccept("security", "global"); err == nil {
 		t.Fatal("protected global category should still be blocked")
 	}
-	// Informational gosec rules are tagged "security" by the scanner but are safe
-	// to calibrate when FP rates are high — rule ID must override category.
-	if err := learning.ValidateCalibrationAcceptRule("security", "global", "gosec", "G104"); err != nil {
-		t.Fatalf("gosec G104 should be accept-eligible: %v", err)
-	}
-	if err := learning.ValidateCalibrationAcceptRule("security", "repo", "gosec", "G304"); err != nil {
-		t.Fatalf("gosec G304 should be accept-eligible: %v", err)
+	// A scanner's own risky path/command operations do not authorize
+	// blanket gosec suppression in OTHER repositories.
+	for _, rule := range []string{"G104", "G204", "G304"} {
+		if err := learning.ValidateCalibrationAcceptRule("security", "repo", "gosec", rule); err == nil {
+			t.Fatalf("gosec %s must require finding-specific review", rule)
+		}
+		if !learning.IsProtectedRuleID("gosec", rule) || learning.IsInformationalToolingRule("gosec", rule) {
+			t.Fatalf("gosec %s protection mismatch", rule)
+		}
 	}
 	if err := learning.ValidateCalibrationAcceptRule("security", "repo", "static", "SEC-HARDCODED-SECRET"); err == nil {
 		t.Fatal("expected SEC-HARDCODED-SECRET accept to be rejected")
@@ -69,6 +71,12 @@ func TestValidateCalibrationAccept(t *testing.T) {
 	}
 	if err := learning.ValidateCalibrationAcceptRule("security", "global", "gosec", "G201"); err == nil {
 		t.Fatal("gosec G201 SQL formatting must remain blocked")
+	}
+	if err := learning.ValidateCalibrationAcceptRule("security", "repo", "gitleaks", "LINT-SHELL-SC2086"); err == nil {
+		t.Fatal("protected scanner source must override an informational-looking rule ID")
+	}
+	if err := learning.ValidateCalibrationAcceptRule("security", "repo", "static", "SEC-HARDCODED-SECRET"); err == nil {
+		t.Fatal("secret rule must override report-only calibration shortcuts")
 	}
 	if !learning.IsInformationalToolingRule("golangci-lint", "LINT-GO-typecheck") {
 		t.Fatal("typecheck noise should be informational tooling")

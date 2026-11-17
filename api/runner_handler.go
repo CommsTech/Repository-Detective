@@ -114,9 +114,35 @@ func (h *RunnerHandler) ClaimJob(c *gin.Context) {
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "runner receiver disabled"})
 		return
 	}
-	job, spec, err := h.receiver.ClaimNextJob(c.Request.Context())
+	var req struct {
+		RunnerID string   `json:"runner_id"`
+		JobTypes []string `json:"job_types"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil || len(req.JobTypes) == 0 || len(req.JobTypes) > 16 || len(req.RunnerID) == 0 || len(req.RunnerID) > 128 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "runner_id and 1-16 job_types are required"})
+		return
+	}
+	allowed := h.cfg.Normalized().AllowedJobTypes
+	for _, jobType := range req.JobTypes {
+		if !runner.JobTypeAllowed(allowed, jobType) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "worker requested a job type not allowed by this server"})
+			return
+		}
+	}
+	if h.registry == nil || !h.registry.MatchesCapabilities(req.RunnerID, req.JobTypes, 2*time.Minute) {
+		c.JSON(http.StatusForbidden, gin.H{"error": "worker must register its matching capabilities before claiming jobs"})
+		return
+	}
+	job, spec, err := h.receiver.ClaimNextJobForTypes(c.Request.Context(), req.JobTypes)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "no jobs available"})
+		if strings.Contains(err.Error(), "no runner jobs available") {
+			c.JSON(http.StatusNotFound, gin.H{"error": "no compatible runner jobs available"})
+		} else {
+			if h.logger != nil {
+				h.logger.Errorf("runner job claim: %v", err)
+			}
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "runner claim unavailable"})
+		}
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"job": toRunnerJobResponse(job), "spec": spec})

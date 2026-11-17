@@ -28,10 +28,11 @@ func TestProtectedRuleIDForLearningConformance(t *testing.T) {
 		{"govulncheck", "GO-2026-0001", true, "govulncheck source protected"},
 		{"semgrep", "html.security.plaintext-http-link", true, "semgrep source protected"},
 
-		// gosec: informational tooling allowed through, everything else protected.
-		{"gosec", "G104", false, "gosec informational allowed"},
-		{"gosec", "G304", false, "gosec informational allowed"},
-		{"gosec", "G204", false, "gosec informational allowed"},
+		// gosec: every rule family is protected. Path access, subprocess and
+		// ignored-error findings need site-specific review before suppression.
+		{"gosec", "G104", true, "gosec ignored error protected"},
+		{"gosec", "G304", true, "gosec file inclusion protected"},
+		{"gosec", "G204", true, "gosec subprocess protected"},
 		{"gosec", "G401", true, "gosec crypto weakness protected"},
 		{"gosec", "G501", true, "gosec blocked import protected"},
 

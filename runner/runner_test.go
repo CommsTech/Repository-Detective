@@ -164,3 +164,23 @@ func TestExplicitNativePolicyCannotRunOnCore(t *testing.T) {
 		t.Fatalf("explicit native policy should fail if no native backend: %d", got)
 	}
 }
+
+// Explicit worker policies must never silently run untrusted code on core.
+func TestExplicitRunnerPolicyNeverSilentlyFallsBack(t *testing.T) {
+	for _, policy := range []string{runner.ModeNative, runner.ModeAuto} {
+		effective := store.EffectiveSettings{RunnerPolicy: policy}
+		for _, cfg := range []runner.Config{
+			{DelegationEnabled: false, Mode: runner.ModeNative, SharedSecret: "secret"},
+			{DelegationEnabled: true, Mode: runner.ModeCore, SharedSecret: "secret"},
+			{DelegationEnabled: true, Mode: runner.ModeNative},
+		} {
+			if got := runner.ShouldDelegate(cfg, effective, store.TriggerManual); got != runner.DecisionUnsupported {
+				t.Errorf("policy=%s cfg=%+v incorrectly fell back: %v", policy, cfg, got)
+			}
+		}
+		enabled := runner.Config{DelegationEnabled: true, Mode: runner.ModeNative, SharedSecret: "secret"}
+		if got := runner.ShouldDelegate(enabled, effective, store.TriggerPush); got != runner.DecisionUnsupported {
+			t.Errorf("unsupported push trigger incorrectly used core: %v", got)
+		}
+	}
+}

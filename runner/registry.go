@@ -53,3 +53,28 @@ func (r *Registry) ListHeartbeats(maxAge time.Duration) []WorkerHeartbeat {
 	}
 	return out
 }
+
+// MatchesCapabilities verifies the worker recently registered exactly the same
+// capabilities that it is requesting. This is a scheduling constraint, not a
+// substitute for per-worker credentials or an isolation boundary.
+func (r *Registry) MatchesCapabilities(runnerID string, requested []string, maxAge time.Duration) bool {
+	if r == nil || runnerID == "" || len(requested) == 0 || len(requested) > 16 {
+		return false
+	}
+	r.mu.RLock()
+	hb, ok := r.workers[runnerID]
+	r.mu.RUnlock()
+	if !ok || !hb.LastSeenAt.After(time.Now().UTC().Add(-maxAge)) {
+		return false
+	}
+	actual := make(map[string]struct{}, len(hb.Capabilities))
+	for _, typ := range hb.Capabilities {
+		actual[typ] = struct{}{}
+	}
+	for _, typ := range requested {
+		if _, ok := actual[typ]; !ok {
+			return false
+		}
+	}
+	return true
+}

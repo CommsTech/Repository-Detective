@@ -20,3 +20,7 @@ For new deployments:
 **Important:** An always-on Docker worker is not a disposable sandbox. To handle malicious repositories, run the worker itself in an isolated, disposable VM or equivalent environment with network policy and ephemeral credentials. Do not expose the host Docker socket. See [Threat model and evidence](SECURITY_SANDBOX_AND_TRUST.md).
 
 Gitea Actions example workflows may be executed separately by Gitea as part of normal forge CI, but the app must not report them as verified RD job results without real traceable ingestion. This is an **open engineering milestone**.
+
+## Scanner image release gate
+
+Build the worker image, then run `sh /path/to/scripts/acceptance-scanner-image.sh` inside it and follow with scanner-specific known-positive/negative fixtures. The install script contains older pinned scanner versions. Missing tools, stale databases, unsupported output formats or untrusted image provenance must fail promotion; mere presence of a CLI is insufficient.

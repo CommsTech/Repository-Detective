@@ -47,7 +47,17 @@ func (c *Client) Ping(ctx context.Context, runnerID, version string, capabilitie
 
 // ClaimNextJob claims the oldest queued runner job.
 func (c *Client) ClaimNextJob(ctx context.Context) (string, JobSpec, error) {
-	resp, err := c.do(ctx, http.MethodPost, "/api/v1/runner/jobs/claim", []byte(`{}`))
+	return c.ClaimNextJobForWorker(ctx, "", nil)
+}
+
+// ClaimNextJobForWorker requests only job types the worker is configured to execute.
+// The core requires a recent heartbeat with the matching runner ID.
+func (c *Client) ClaimNextJobForWorker(ctx context.Context, runnerID string, jobTypes []string) (string, JobSpec, error) {
+	request, err := json.Marshal(map[string]any{"runner_id": runnerID, "job_types": jobTypes})
+	if err != nil {
+		return "", JobSpec{}, err
+	}
+	resp, err := c.do(ctx, http.MethodPost, "/api/v1/runner/jobs/claim", request)
 	if err != nil {
 		return "", JobSpec{}, err
 	}

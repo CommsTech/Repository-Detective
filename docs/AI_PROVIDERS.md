@@ -157,3 +157,9 @@ git push origin v1.1.0
 ```
 
 Set `GITEA_TOKEN` repository secret for automated release upload.
+
+## Malformed model output (working-tree update)
+
+Auditor and code-review calls now **fail** if the model response is invalid JSON or has no expected structured fields. Failed model parsing is not recorded as a clean audit or fabricated high-confidence finding. Tune output format and max tokens on your provider, check the error evidence, and retry deliberately with a bounded token budget. This is a reliability safeguard, not end-to-end autonomous patch execution.
+
+Attack-surface parsing now requires explicit `entry_points`, `attack_surface`, and `trust_boundaries` arrays. Nested `function_name` and `data_flow` fields are decoded using the model JSON schema rather than silently discarded. Invalid or missing fields are treated as incomplete model output.

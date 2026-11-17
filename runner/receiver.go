@@ -58,6 +58,39 @@ func (r *Receiver) ClaimNextJob(ctx context.Context) (store.RunnerJob, JobSpec, 
 	return job, spec, nil
 }
 
+// ClaimNextJobForTypes selects queued native work by the worker's capabilities.
+// The store must support server-side filtering; do not fall back to claiming an
+// arbitrary job when that operation is unavailable.
+func (r *Receiver) ClaimNextJobForTypes(ctx context.Context, jobTypes []string) (store.RunnerJob, JobSpec, error) {
+	if r == nil || r.store == nil {
+		return store.RunnerJob{}, JobSpec{}, fmt.Errorf("database disabled")
+	}
+	filtered, ok := r.store.(interface {
+		ClaimNextRunnerJobForTypes(context.Context, time.Time, []string) (store.RunnerJob, error)
+	})
+	if !ok {
+		return store.RunnerJob{}, JobSpec{}, fmt.Errorf("runner store does not support capability-filtered claims")
+	}
+	now := time.Now().UTC()
+	if n, err := r.store.ExpireStaleRunnerJobs(ctx, now); err != nil {
+		return store.RunnerJob{}, JobSpec{}, err
+	} else if n > 0 && r.onJobsExpired != nil {
+		r.onJobsExpired(ctx, n)
+	}
+	job, err := filtered.ClaimNextRunnerJobForTypes(ctx, now, jobTypes)
+	if err != nil {
+		return store.RunnerJob{}, JobSpec{}, err
+	}
+	var spec JobSpec
+	if err := json.Unmarshal(job.JobSpecJSON, &spec); err != nil {
+		return store.RunnerJob{}, JobSpec{}, fmt.Errorf("invalid job spec: %w", err)
+	}
+	if spec.JobID != job.JobID || spec.JobType != job.JobType {
+		return store.RunnerJob{}, JobSpec{}, fmt.Errorf("runner job/spec identity mismatch")
+	}
+	return job, spec, nil
+}
+
 // GetJobSpec returns the spec for a known job.
 func (r *Receiver) GetJobSpec(ctx context.Context, jobID string) (store.RunnerJob, JobSpec, error) {
 	job, err := r.store.GetRunnerJob(ctx, jobID)

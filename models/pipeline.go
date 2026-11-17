@@ -20,28 +20,28 @@ type PrepareReport struct {
 
 // EntryPoint represents a public-facing function or endpoint.
 type EntryPoint struct {
-	File         string
-	Line         int
-	FunctionName string
-	Type         string
-	AuthRequired bool
+	File         string `json:"file"`
+	Line         int    `json:"line"`
+	FunctionName string `json:"function_name"`
+	Type         string `json:"type"`
+	AuthRequired bool   `json:"auth_required"`
 }
 
 // AttackSurfaceEntry is an I/O boundary or data entry point.
 type AttackSurfaceEntry struct {
-	File     string
-	Line     int
-	Type     string
-	DataFlow string
+	File     string `json:"file"`
+	Line     int    `json:"line"`
+	Type     string `json:"type"`
+	DataFlow string `json:"data_flow"`
 }
 
 // TrustBoundary represents a transition between trusted and untrusted zones.
 type TrustBoundary struct {
-	File      string
-	Line      int
-	FromZone  string
-	ToZone    string
-	Operation string
+	File      string `json:"file"`
+	Line      int    `json:"line"`
+	FromZone  string `json:"from_zone"`
+	ToZone    string `json:"to_zone"`
+	Operation string `json:"operation"`
 }
 
 // VulnContext is a vulnerability pattern from git history.

@@ -166,7 +166,7 @@
       <label><input type="checkbox" name="enable_llm_auditors" value="true" {{if .EnableLLMAuditors}}checked{{end}}> Enable LLM auditors (scan-time CAH — expensive)</label>
       <label><input type="checkbox" name="ai_recommendations_enabled" value="true" {{if .AIRecommendationsEnabled}}checked{{end}}> Enable AI recommendations</label>
       <label><input type="checkbox" name="ai_recommendations_auto_after_scan" value="true" {{if .AIRecommendationsAutoAfterScan}}checked{{end}}> Auto-run AI recommendations after every scan</label>
-      <label><input type="checkbox" name="ai_first_run_rule_tuning_enabled" value="true" {{if .AIFirstRunRuleTuningEnabled}}checked{{end}}> First-run AI repo rule tuning (apply report_only only after AI confirms false positives)</label>
+      <label><input type="checkbox" name="ai_first_run_rule_tuning_enabled" value="true" {{if .AIFirstRunRuleTuningEnabled}}checked{{end}}> First-run AI review suggestions (advisory only; AI labels never authorize automatic suppression)</label>
     </div>
     <label for="ai_recommendations_max_tokens_per_scan">Max tokens per scan</label>
     <input id="ai_recommendations_max_tokens_per_scan" name="ai_recommendations_max_tokens_per_scan" type="number" min="0" step="1" value="{{.AIRecommendationsMaxTokensPerScan}}">

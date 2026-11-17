@@ -134,3 +134,7 @@ Messages include safe repo host/name only — no raw evidence. See [NOTIFICATION
 1. Set `preinstall_audit_enabled: false` (or `REPOSITORY_DETECTIVE_PREINSTALL_AUDIT_ENABLED=false`).
 2. Restart the service.
 3. Schema v2 tables are harmless if unused; downgrade requires manual DB backup/restore to v1 if needed.
+
+## Future external issue publishing — non-negotiable gate
+
+Operators have requested opt-in issue filing in **other people's** Gitea, GitHub and Forgejo projects. That is not implemented in the pre-install audit. Current behavior intentionally remains report-only. Before this feature can launch, it must prove exact-commit, repeatable findings; verify current ownership, vulnerability severity and expected disclosure channel; redact all secrets; prevent duplicate issues across workers; rate limit; obtain the operator's permission; honor repository security policies and private disclosure guidance; and attach a useful remediation plus scanner evidence. Project attribution may be included as an optional factual link, never used as a reason to submit weak findings.

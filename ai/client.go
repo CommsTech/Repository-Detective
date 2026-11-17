@@ -56,6 +56,9 @@ func (c *Client) Chat(ctx context.Context, req ChatRequest) (*ChatResponse, erro
 		}
 		return nil, err
 	}
+	if resp == nil {
+		return nil, fmt.Errorf("AI provider returned an empty response")
+	}
 	return resp, nil
 }
 
@@ -122,7 +125,19 @@ Respond with JSON:
 	if err := json.Unmarshal([]byte(content), &result); err != nil {
 		snippet := truncateString(strings.TrimSpace(resp.Content), 160)
 		c.logger.Warnf("Failed to parse attack surface response as JSON: %v (snippet=%q)", err, snippet)
-		return &AttackSurfaceResponse{}, nil
+		return nil, fmt.Errorf("attack surface response not valid JSON: %w", err)
+	}
+	// An empty object or null is an incomplete model answer, not evidence of
+	// zero entry points. Verify the three schema fields independently.
+	var envelope map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(content), &envelope); err != nil {
+		return nil, fmt.Errorf("attack surface response invalid envelope: %w", err)
+	}
+	for _, key := range []string{"entry_points", "attack_surface", "trust_boundaries"} {
+		raw, ok := envelope[key]
+		if !ok || len(raw) == 0 || raw[0] != '[' {
+			return nil, fmt.Errorf("attack surface response incomplete: %s must be an array", key)
+		}
 	}
 	return &result, nil
 }
@@ -154,7 +169,17 @@ func (c *Client) RunAuditor(ctx context.Context, req *AuditorRequest) (*AuditorR
 	if err := json.Unmarshal([]byte(content), &result); err != nil {
 		snippet := truncateString(strings.TrimSpace(resp.Content), 160)
 		c.logger.Warnf("Failed to parse auditor response: %v (snippet=%q)", err, snippet)
-		return &AuditorResponse{}, nil
+		return nil, fmt.Errorf("auditor response not valid JSON: %w", err)
+	}
+	// A syntactically valid JSON object may still lack findings entirely.
+	// Treat missing/NULL findings as incomplete, not as a clean scan.
+	var envelope map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(content), &envelope); err != nil {
+		return nil, fmt.Errorf("auditor response invalid envelope: %w", err)
+	}
+	raw, ok := envelope["findings"]
+	if !ok || len(raw) == 0 || string(raw) == "null" || raw[0] != '[' {
+		return nil, fmt.Errorf("auditor response incomplete: missing findings array")
 	}
 	return &result, nil
 }
@@ -205,7 +230,7 @@ Respond with JSON:
 	var result DebaterResponse
 	content := DecodeModelJSON(resp.Content)
 	if err := json.Unmarshal([]byte(content), &result); err != nil {
-		return &DebaterResponse{Confidence: 0.5, Arguments: truncateString(resp.Content, 200)}, nil
+		return nil, fmt.Errorf("debater response not valid JSON: %w", err)
 	}
 	return &result, nil
 }
@@ -247,7 +272,7 @@ Respond with JSON:
 	var result PoCResponse
 	content := DecodeModelJSON(resp.Content)
 	if err := json.Unmarshal([]byte(content), &result); err != nil {
-		return &PoCResponse{Type: "text", Command: truncateString(resp.Content, 500), Explanation: "Raw output"}, nil
+		return nil, fmt.Errorf("PoC response not valid JSON: %w", err)
 	}
 	return &result, nil
 }
@@ -396,26 +421,26 @@ func parseAnalysisResponse(logger *logrus.Logger, content string, req *CodeAnaly
 	}
 
 	decoded := DecodeModelJSON(content)
-	if err := json.Unmarshal([]byte(decoded), &jsonResult); err == nil {
-		return &CodeAnalysisResult{
-			Issues:       jsonResult.Issues,
-			Suggestions:  jsonResult.Suggestions,
-			OverallScore: jsonResult.OverallScore,
-		}, nil
-	} else {
-		logger.Warnf("Failed to parse JSON response, using fallback: %v (snippet=%q)", err, truncateString(strings.TrimSpace(content), 160))
+	if err := json.Unmarshal([]byte(decoded), &jsonResult); err != nil {
+		if logger != nil {
+			logger.Warnf("AI analysis response invalid JSON: %v", err)
+		}
+		return nil, fmt.Errorf("code analysis incomplete: invalid provider JSON: %w", err)
 	}
-	return &CodeAnalysisResult{
-		Issues: []CodeIssue{{
-			Severity:    "medium",
-			Category:    "quality",
-			Title:       "Analysis Response Parsing Failed",
-			Description: "The AI response could not be parsed as structured data. Manual review recommended.",
-			Confidence:  1.0,
-		}},
-		Suggestions:  []CodeSuggestion{},
-		OverallScore: 0.5,
-	}, nil
+	var envelope map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(decoded), &envelope); err != nil {
+		return nil, fmt.Errorf("code analysis incomplete: invalid schema: %w", err)
+	}
+	// Only explicit empty arrays are a valid clean assessment. Null values,
+	// nested lookalike keys or missing top-level fields do not qualify.
+	issueData, issuesPresent := envelope["issues"]
+	suggestionData, suggestionsPresent := envelope["suggestions"]
+	if (!issuesPresent && !suggestionsPresent) ||
+		(issuesPresent && (len(issueData) == 0 || issueData[0] != '[')) ||
+		(suggestionsPresent && (len(suggestionData) == 0 || suggestionData[0] != '[')) {
+		return nil, fmt.Errorf("code analysis incomplete: issues/suggestions must be arrays")
+	}
+	return &CodeAnalysisResult{Issues: jsonResult.Issues, Suggestions: jsonResult.Suggestions, OverallScore: jsonResult.OverallScore}, nil
 }
 
 func truncateString(value string, maxLen int) string {

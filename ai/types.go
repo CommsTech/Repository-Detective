@@ -15,9 +15,9 @@ type AttackSurfaceRequest struct {
 
 // AttackSurfaceResponse is the output of attack surface analysis.
 type AttackSurfaceResponse struct {
-	EntryPoints     []models.EntryPoint
-	AttackSurface   []models.AttackSurfaceEntry
-	TrustBoundaries []models.TrustBoundary
+	EntryPoints     []models.EntryPoint         `json:"entry_points"`
+	AttackSurface   []models.AttackSurfaceEntry `json:"attack_surface"`
+	TrustBoundaries []models.TrustBoundary      `json:"trust_boundaries"`
 }
 
 // FileContent is source code passed to auditor prompts.

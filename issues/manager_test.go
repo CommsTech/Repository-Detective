@@ -103,3 +103,30 @@ func TestCreateIssuesUpdatesExistingFingerprint(t *testing.T) {
 		t.Fatalf("expected silent still-present (0 comments), got %d", comments)
 	}
 }
+
+func TestRemoteDedupOutageNeverCreatesIssue(t *testing.T) {
+	var postCalls int
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			postCalls++
+			http.Error(w, "unexpected issue submission", http.StatusInternalServerError)
+			return
+		}
+		http.Error(w, "forge unavailable", http.StatusBadGateway)
+	}))
+	defer server.Close()
+
+	manager := NewManager(gitea.NewClient(server.URL, "token", logrus.New()), nil, GetDefaultConfig(), logrus.New())
+	result, err := manager.CreateIssuesFromAnalysis(context.Background(), &IssueCreationRequest{
+		Owner: "owner", Repository: "repo", AnalysisResult: &ai.CodeAnalysisResult{Issues: []ai.CodeIssue{{
+			Title: "Unsafe dependency", Category: "dependency", Severity: "high", Source: "trivy",
+			RuleID: "CVE-test", Confidence: 0.98, Description: "test-only fixture",
+		}}},
+	})
+	if err != nil {
+		t.Fatalf("issue processing should return structured errors: %v", err)
+	}
+	if result.IssuesCreated != 0 || len(result.Errors) == 0 || postCalls != 0 {
+		t.Fatalf("dedup outage must prevent posting, got created=%d errors=%v posts=%d", result.IssuesCreated, result.Errors, postCalls)
+	}
+}

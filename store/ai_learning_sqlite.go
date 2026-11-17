@@ -256,17 +256,16 @@ func categoryProtectedFromAutoCalibrate(category string) bool {
 }
 
 // informationalToolingRuleForLearning mirrors learning.IsInformationalToolingRule
-// so AI calibrate suggestions for gosec G104/G304/G204 and graph/lint noise can
-// train the learner even when scanners label the category as "security".
+// so graph/lint/health noise can train the learner even when scanners label the
+// category as "security". gosec is deliberately excluded.
 func informationalToolingRuleForLearning(source, ruleID string) bool {
 	src := strings.ToLower(strings.TrimSpace(source))
 	rule := strings.ToUpper(strings.TrimSpace(ruleID))
 	rule = strings.Trim(rule, "`\"' ")
+	// gosec findings are security-relevant in a scanner and are no longer
+	// treated as informational tooling noise.
 	if strings.Contains(src, "gosec") {
-		switch rule {
-		case "G104", "G304", "G204":
-			return true
-		}
+		return false
 	}
 	if strings.HasPrefix(rule, "LINT-") || strings.HasPrefix(rule, "GRAPH-") ||
 		strings.HasPrefix(rule, "OPT-") || strings.HasPrefix(rule, "QUAL-") {
@@ -292,13 +291,10 @@ func protectedRuleIDForLearning(source, ruleID string) bool {
 			return true
 		}
 	}
+	// Every gosec family, including G104/G304/G204, requires a reviewed,
+	// finding-specific disposition before it can be learned away.
 	if strings.Contains(src, "gosec") {
-		switch rule {
-		case "G104", "G304", "G204":
-			return false
-		default:
-			return true
-		}
+		return true
 	}
 	if strings.Contains(src, "checkov") && (strings.Contains(rule, "SECRET") || strings.HasPrefix(rule, "CKV_SECRET")) {
 		return true

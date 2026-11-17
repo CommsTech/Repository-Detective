@@ -11,9 +11,9 @@ import (
 // Global-scope recommendations are allowed: accept expands them into repo-scoped rules
 // (never a fleet-wide global suppression).
 //
-// source/ruleID may be empty for legacy callers; when present, known informational
-// tooling rules (gosec G104/G304/G204, lint noise) may be accepted even if the
-// scanner labeled the finding category as "security".
+// source/ruleID may be empty for legacy callers. Only proven informational
+// lint patterns may pass the security category gate; gosec findings require
+// individual reviewed dispositions regardless of the rule's prevalence.
 func ValidateCalibrationAccept(category, scope string) error {
 	return ValidateCalibrationAcceptRule(category, scope, "", "")
 }
@@ -25,11 +25,14 @@ func ValidateCalibrationAcceptRule(category, scope, source, ruleID string) error
 	if strings.TrimSpace(scope) == "" {
 		return fmt.Errorf("recommendation scope is required")
 	}
-	if IsInformationalToolingRule(source, ruleID) {
-		return nil
-	}
+	// Protected scanner sources and rule IDs win over superficial lint-shaped
+	// rule names. An attacker or faulty adapter must not relabel a secret/CVE
+	// as "LINT-SHELL" to sneak past the calibration review gate.
 	if IsProtectedRuleID(source, ruleID) {
 		return fmt.Errorf("recommendation targets protected security rule %s/%s — mark findings false-positive individually; do not fleet-quiet secrets/CVEs", strings.TrimSpace(source), strings.TrimSpace(ruleID))
+	}
+	if IsInformationalToolingRule(source, ruleID) {
+		return nil
 	}
 	if IsProtectedFromAutoDowngrade("", category) {
 		return fmt.Errorf("recommendation affects protected security category — mark findings false-positive individually or use an explicit operator override")
@@ -44,11 +47,10 @@ func IsInformationalToolingRule(source, ruleID string) bool {
 	rule := strings.ToUpper(strings.TrimSpace(ruleID))
 	rule = strings.Trim(rule, "`\"' ")
 
+	// Do not downgrade gosec rule families. G204/G304 in particular are
+	// security boundaries in a scanner and require site-specific evidence.
 	if strings.Contains(src, "gosec") {
-		switch rule {
-		case "G104", "G304", "G204":
-			return true
-		}
+		return false
 	}
 	if strings.EqualFold(rule, "LINT-GO-TYPECHECK") || strings.HasPrefix(rule, "LINT-GO-TYPECHECK") {
 		return true

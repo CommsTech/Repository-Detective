@@ -172,6 +172,7 @@ type QueryStore interface {
 	GetRunnerJob(ctx context.Context, jobID string) (RunnerJob, error)
 	GetRunnerJobByScanID(ctx context.Context, scanID string) (RunnerJob, error)
 	CountRunnerJobsByStatus(ctx context.Context) (map[string]int, error)
+	ClaimNextRunnerJobForTypes(ctx context.Context, now time.Time, jobTypes []string) (RunnerJob, error)
 
 	SaveRemediationPlan(ctx context.Context, plan RemediationPlanRecord) (RemediationPlanRecord, error)
 	GetRemediationPlanByPlanID(ctx context.Context, planID string) (RemediationPlanRecord, error)

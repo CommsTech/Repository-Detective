@@ -24,14 +24,11 @@ func IsProtectedRuleID(source, ruleID string) bool {
 			return true
 		}
 	}
-	// gosec: only allow well-known informational tooling rules through.
+	// gosec reports security-relevant command execution, path access and ignored
+	// errors. They require individual, reviewed dispositions with containment
+	// evidence, not fleet-wide or rule-wide learning exemptions.
 	if strings.Contains(src, "gosec") {
-		switch rule {
-		case "G104", "G304", "G204":
-			return false
-		default:
-			return true
-		}
+		return true
 	}
 	// checkov secret rules and static security family.
 	if strings.Contains(src, "checkov") && (strings.Contains(rule, "SECRET") || strings.HasPrefix(rule, "CKV_SECRET")) {

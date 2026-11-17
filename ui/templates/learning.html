@@ -5,6 +5,19 @@
 <body class="rd-app">
 {{template "nav" .}}
 
+<section class="rd-workflow" aria-label="Noise reduction workflow">
+  <div class="rd-workflow-intro">
+    <span class="rd-overline">SIGNAL QUALITY</span>
+    <h2>Improve precision without hiding risk.</h2>
+    <p>Calibrate with confirmed outcomes, inspect every recommendation and rescan the exact revision. AI suggestions do not automatically dismiss vulnerabilities.</p>
+  </div>
+  <ol class="rd-workflow-steps">
+    <li><span class="rd-step-index">01</span><strong>Measure</strong><span>Inspect scanner errors, repeat findings and false-positive evidence</span></li>
+    <li><span class="rd-step-index">02</span><strong>Review</strong><span>Approve only scoped, time-limited rule adjustments</span></li>
+    <li><span class="rd-step-index">03</span><strong>Verify</strong><span>Rescan to confirm impact and watch for false negatives</span></li>
+  </ol>
+</section>
+
 <section class="rd-card rd-learn-hero" aria-labelledby="learn-health-title">
   <div class="rd-card-head">
     <h2 id="learn-health-title">Learning health</h2>
@@ -47,7 +60,7 @@
       <div class="rd-meter-track" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{pct .AvgFalsePositiveRate}}" aria-label="Average false-positive rate">
         <div class="rd-meter-fill {{rateClass .AvgFalsePositiveRate}}" style="width:{{rateWidth .AvgFalsePositiveRate}}"></div>
       </div>
-      <p class="rd-muted" style="margin:.45rem 0 0">From rules with enough evidence (≥3 findings).</p>
+      <p class="rd-muted" style="margin:.45rem 0 0">Derived from labeled findings with ≥3 samples; not a validated false-negative rate.</p>
     </div>
     <div class="rd-meter">
       <div class="rd-meter-head">
@@ -67,7 +80,7 @@
     <p class="rd-muted" style="margin:.5rem 0 0">
       <a class="rd-link" href="{{.BasePath}}/configure{{apiKeyQS .APIKey}}">Configure</a>
       · <a class="rd-link" href="{{.BasePath}}/health{{apiKeyQS .APIKey}}">System Health</a>
-      · <a class="rd-link" href="https://git.example.com/<your-org>/Repository-Detective/issues/new?template=scanner_false_positive" target="_blank" rel="noopener">Report false positive</a>
+      · <a class="rd-link" href="{{.BasePath}}/findings{{apiKeyQS .APIKey}}">Review finding evidence</a>
     </p>
   </div>
 </section>
@@ -139,7 +152,7 @@
     <h2 id="cal-recs-title">Calibration recommendations</h2>
     <span class="rd-chip">Repo-scoped default</span>
   </div>
-  <p class="rd-muted">Accept applies <strong>repo-scoped</strong> suppressions (global tiles expand to every repository that already has that rule). Security/secret categories stay blocked. High/critical findings are never auto-downgraded at scan time.</p>
+  <p class="rd-muted">Accept installs <strong>repo-scoped report-only rules</strong>; findings remain visible and are not silently suppressed. Security-sensitive rule families (including gosec path and command execution) require finding-specific review. High/critical findings remain actionable.</p>
   {{if .Data.ActionNotice}}
   <p class="rd-chip" role="status">{{.Data.ActionNotice}}</p>
   {{end}}

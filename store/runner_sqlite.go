@@ -116,6 +116,77 @@ func (s *SQLiteStore) ClaimNextRunnerJob(ctx context.Context, now time.Time) (Ru
 	return job, nil
 }
 
+// ClaimNextRunnerJobForTypes atomically claims only jobs this worker advertises.
+// Capability filtering occurs in SQL BEFORE claiming: an SBOM-only worker must
+// never steal a remediation verification job and mark it failed.
+// The HTTP layer separately validates these names against the server allowlist.
+func (s *SQLiteStore) ClaimNextRunnerJobForTypes(ctx context.Context, now time.Time, jobTypes []string) (RunnerJob, error) {
+	if len(jobTypes) == 0 || len(jobTypes) > 16 {
+		return RunnerJob{}, fmt.Errorf("worker must provide 1-16 job capabilities")
+	}
+	seen := make(map[string]struct{}, len(jobTypes))
+	types := make([]string, 0, len(jobTypes))
+	for _, jobType := range jobTypes {
+		jobType = strings.TrimSpace(jobType)
+		if jobType == "" || len(jobType) > 64 {
+			return RunnerJob{}, fmt.Errorf("invalid worker job capability")
+		}
+		if _, ok := seen[jobType]; !ok {
+			seen[jobType] = struct{}{}
+			types = append(types, jobType)
+		}
+	}
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return RunnerJob{}, err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	placeholders := strings.TrimSuffix(strings.Repeat("?,", len(types)), ",")
+	args := make([]any, 0, len(types)+2)
+	args = append(args, RunnerJobStatusQueued)
+	for _, jobType := range types {
+		args = append(args, jobType)
+	}
+	args = append(args, formatTime(now))
+	query := `SELECT job_id FROM runner_jobs
+        WHERE status = ? AND runner_mode = 'native' AND job_type IN (` + placeholders + `)
+        AND (expires_at IS NULL OR expires_at > ?)
+        ORDER BY created_at ASC, id ASC LIMIT 1`
+	var jobID string
+	if err := tx.QueryRowContext(ctx, query, args...).Scan(&jobID); err != nil {
+		if err == sql.ErrNoRows {
+			return RunnerJob{}, fmt.Errorf("no runner jobs available for worker capabilities")
+		}
+		return RunnerJob{}, fmt.Errorf("select runner job by capability: %w", err)
+	}
+	res, err := tx.ExecContext(ctx, `UPDATE runner_jobs
+        SET status = ?, started_at = ?, updated_at = ?
+        WHERE job_id = ? AND status = ? AND runner_mode = 'native'`,
+		RunnerJobStatusRunning, formatTime(now), formatTime(now), jobID, RunnerJobStatusQueued)
+	if err != nil {
+		return RunnerJob{}, fmt.Errorf("claim runner job: %w", err)
+	}
+	updated, err := res.RowsAffected()
+	if err != nil {
+		return RunnerJob{}, err
+	}
+	if updated != 1 {
+		return RunnerJob{}, fmt.Errorf("runner job was claimed concurrently")
+	}
+	job, err := scanRunnerJob(tx.QueryRowContext(ctx, `SELECT id, job_id, repository_id, scan_id, job_type, status, runner_mode,
+        ref, commit_sha, pr_number, policy_snapshot_json, job_spec_json,
+        result_summary_json, error, created_at, updated_at, started_at, finished_at, expires_at
+        FROM runner_jobs WHERE job_id = ?`, jobID))
+	if err != nil {
+		return RunnerJob{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return RunnerJob{}, err
+	}
+	return job, nil
+}
+
 func (s *SQLiteStore) UpdateRunnerJob(ctx context.Context, job RunnerJob) error {
 	job.UpdatedAt = time.Now().UTC()
 	_, err := s.db.ExecContext(ctx, `

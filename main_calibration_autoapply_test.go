@@ -19,6 +19,11 @@ func TestRuleIDProtectedFromAutoApply(t *testing.T) {
 		{"static", "REL-AWS-TOKEN-REUSE"},
 		{"graph (AI auditor)", "`SEC-EVAL`"},
 		{"staticcheck", "U1000"},
+		// gosec families are security-relevant in a scanner and require
+		// finding-specific review, not rule-wide auto-apply.
+		{"gosec", "G104"},
+		{"gosec", "G204"},
+		{"gosec", "G304"},
 	}
 	for _, tc := range protected {
 		if !ruleIDProtectedFromAutoApply(tc.source, tc.ruleID) {
@@ -35,7 +40,6 @@ func TestRuleIDProtectedFromAutoApply(t *testing.T) {
 		{"static", "QUAL-DEBUG"},
 		{"golangci-lint", "LINT-GO-typecheck"},
 		{"ruff", "LINT-RUFF-E902-1"},
-		{"gosec", "G104"},
 	}
 	for _, tc := range allowed {
 		if ruleIDProtectedFromAutoApply(tc.source, tc.ruleID) {

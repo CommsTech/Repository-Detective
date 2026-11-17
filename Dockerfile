@@ -2,7 +2,7 @@
 # Repository Detective multi-target image: core | runner | all-in-one
 # See README and scripts/docker-build-verify.sh for build examples.
 
-ARG GO_VERSION=1.26.10
+ARG GO_VERSION=1.26.11
 
 FROM golang:${GO_VERSION}-alpine AS builder
 
@@ -39,13 +39,13 @@ RUN if [ -f vendor/modules.txt ]; then \
 
 # Install analysis CLIs required by the all-in-one/runner images. Fail the build
 # if any binary is missing (older loop + `|| sleep` could mask install failures).
-# Builder is Go 1.26.10 (see ARG GO_VERSION). That patch clears reachable
+# Builder is Go 1.26.11 (see ARG GO_VERSION). That patch clears reachable
 # stdlib advisory GO-2026-6809. staticcheck v0.7.0 cannot typecheck Go 1.26
 # modules. v0.8.2 matches that toolchain.
 # govulncheck v1.8.0 matches Go 1.26.
 RUN set -eu; \
     go install golang.org/x/vuln/cmd/govulncheck@v1.8.0; \
-    go install github.com/securego/gosec/v2/cmd/gosec@latest; \
+    go install github.com/securego/gosec/v2/cmd/gosec@v2.30.0; \
     go install honnef.co/go/tools/cmd/staticcheck@v0.8.2; \
     go install github.com/CycloneDX/cyclonedx-gomod/cmd/cyclonedx-gomod@v1.9.0; \
     test -x /go/bin/govulncheck; \
@@ -59,7 +59,7 @@ USER nobody
 # ---------------------------------------------------------------------------
 # Scanner toolchain layer (shared by runner + all-in-one)
 # ---------------------------------------------------------------------------
-FROM alpine:3.20 AS scanner-tools
+FROM alpine:3.24 AS scanner-tools
 
 ARG INSTALL_EXTERNAL_TOOLS=true
 ARG VERSION=dev
@@ -104,7 +104,7 @@ USER scanner
 # ---------------------------------------------------------------------------
 # core — web/API/UI, migrations, scheduler; no external scanner binaries
 # ---------------------------------------------------------------------------
-FROM alpine:3.20 AS core
+FROM alpine:3.24 AS core
 
 ARG VERSION=dev
 ARG COMMIT=unknown
