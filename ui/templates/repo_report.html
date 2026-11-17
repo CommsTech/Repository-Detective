@@ -177,7 +177,7 @@
 
 <div class="rd-card rd-card-flush" id="repo-findings">
   <h2 class="rd-report-appendix-heading">Technical findings</h2>
-  <p class="rd-muted rd-report-table-explainer">Technical appendix: displaying {{len $.Data.Findings}} of {{$.Data.FindingsTotal}} findings matching the selected filters. Printed reports include only this page; use pagination to inspect the rest. Sorted by severity within the displayed page.</p>
+  <p class="rd-muted rd-report-table-explainer">Technical appendix: displaying {{len $.Data.Findings}} of {{$.Data.FindingsTotal}} findings matching the selected filters. Printed reports include only this page; use pagination to inspect the rest. Sorted by severity across all matching findings before pagination.</p>
   {{template "findings_table" (dict "BasePath" $.BasePath "APIKey" $.APIKey "Findings" $.Data.Findings "ShowRepo" false)}}
   {{$total := $.Data.FindingsTotal}}
   {{$size := $.Data.FindingsPageSize}}

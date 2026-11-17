@@ -110,7 +110,7 @@ func TestListFindingsFilters(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer s.Close()
+	defer closeTestStore(t, s)
 
 	repo, _ := s.UpsertRepository(ctx, store.Repository{Owner: "o", Name: "r", FullName: "o/r"})
 	now := time.Now().UTC()
@@ -130,7 +130,7 @@ func TestCountFindingsAndSeverityByRepo(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer s.Close()
+	defer closeTestStore(t, s)
 
 	repo, _ := s.UpsertRepository(ctx, store.Repository{Owner: "o", Name: "r", FullName: "o/r"})
 	now := time.Now().UTC()
@@ -158,7 +158,7 @@ func TestListFindingsIgnoresSQLInjectionPayloads(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer s.Close()
+	defer closeTestStore(t, s)
 
 	repo, _ := s.UpsertRepository(ctx, store.Repository{Owner: "o", Name: "r", FullName: "o/r"})
 	now := time.Now().UTC()

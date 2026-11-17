@@ -12,7 +12,7 @@ func TestOperatorEvidenceWebhookAndFirstScan(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer s.Close()
+	defer closeTestStore(t, s)
 	ctx := context.Background()
 	if err := s.RecordWebhookDelivery(ctx, store.WebhookDeliveryEvidence{
 		EventKind:  "push",

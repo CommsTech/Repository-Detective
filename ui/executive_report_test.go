@@ -3,6 +3,7 @@ package ui
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"git.commsnet.org/commstech/repository-detective/notify"
 	"git.commsnet.org/commstech/repository-detective/operator"
@@ -88,5 +89,60 @@ func TestRepoRecommendationRequiresActualScannerEvidence(t *testing.T) {
 	rec, _ = repoRecommendationWithEvidence(1, 0, 1, scans, nil)
 	if rec != "blocked" {
 		t.Fatalf("critical finding should remain blocked, got %q", rec)
+	}
+}
+
+func TestRepositoryScannerOutcomesRecognizeSuccessfulFindingStatuses(t *testing.T) {
+	scans := []store.Scan{{Status: "completed", StartedAt: time.Now().UTC()}}
+	results := []store.ScannerResultRecord{
+		{ScannerName: "trivy", Status: "found", FindingsCount: 2},
+		{ScannerName: "gitleaks", Status: "clean"},
+		{ScannerName: "govulncheck", Status: "passed"},
+		{ScannerName: "graph", Status: "ok"},
+	}
+	for _, result := range results {
+		if scannerOutcomeIncomplete(result) {
+			t.Errorf("scanner %s should be recognized as completed with status %q", result.ScannerName, result.Status)
+		}
+	}
+	rec, _ := repoRecommendationWithEvidence(0, 0, 0, scans, results)
+	if rec != "proceed" {
+		t.Fatalf("complete scanner evidence should not be misclassified: %q", rec)
+	}
+	results = append(results, store.ScannerResultRecord{ScannerName: "golangci-lint", Status: "binary_missing"})
+	rec, _ = repoRecommendationWithEvidence(0, 0, 0, scans, results)
+	if rec != "caution" {
+		t.Fatalf("missing binary must limit coverage: %q", rec)
+	}
+	if !scannerOutcomeIncomplete(store.ScannerResultRecord{Status: "found", Error: "tool exited unexpectedly"}) {
+		t.Fatal("explicit error must override apparently successful status")
+	}
+	if !scannerOutcomeIncomplete(store.ScannerResultRecord{Status: "unknown"}) {
+		t.Fatal("unknown status must fail conservatively")
+	}
+	rec, _ = repoRecommendationWithEvidence(0, 0, 0, scans,
+		[]store.ScannerResultRecord{{ScannerName: "graph", Status: "clean"}, {ScannerName: "static", Status: "found"}})
+	if rec != "caution" {
+		t.Fatalf("internal-only stages must not imply independent AppSec coverage: %q", rec)
+	}
+}
+
+func TestRepoExecutiveSummaryScannerLimitationsCountOnlyIncomplete(t *testing.T) {
+	results := []store.ScannerResultRecord{
+		{ScannerName: "trivy", Status: "found", FindingsCount: 2},
+		{ScannerName: "gitleaks", Status: "clean"},
+		{ScannerName: "golangci-lint", Status: "binary_missing"},
+	}
+	ex := buildRepoExecutiveSummary(store.Repository{FullName: "org/app"}, nil, nil,
+		map[string]int{}, nil, []store.Scan{{Status: "completed", StartedAt: time.Now().UTC()}},
+		results, store.EffectiveSettings{}, "standard")
+	var incomplete string
+	for _, limit := range ex.KnownLimitations {
+		if strings.Contains(limit, "recorded scanner outcomes") {
+			incomplete = limit
+		}
+	}
+	if !strings.Contains(incomplete, "1 of 3") {
+		t.Fatalf("expected one missing binary, not three failures: %q", incomplete)
 	}
 }

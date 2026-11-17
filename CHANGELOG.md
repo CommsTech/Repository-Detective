@@ -1,5 +1,16 @@
 # Changelog
 
+## [Unreleased — deep-scan report integrity, 2026-11-17]
+
+### Fixed
+- Repository audit now recognizes scanner outcomes `clean`, `found`, `passed` and `ok` as completed execution, while keeping `binary_missing`, skipped, failed and error-bearing results visible as coverage limitations. An independent scanner outcome is required before the report can suggest proceeding.
+- Report top-risk selection and technical appendix now order by severity **in SQLite before pagination**, preventing older high-risk findings from being obscured by recent low-severity alerts.
+- A bounded test-data cleanup batch now reports database close errors rather than ignoring them.
+
+### Evidence and acceptance
+- Added focused report, scan-outcome and priority regression cases. Full Go 1.26.10 CI and live staging report E2E **remain pending** for this patch; the maintainer's previous full test pass applies to the deployed base commit, not this change.
+- Historical errcheck/G304/G204 records require same-commit reconciliation and site-by-site review; no blanket `gosec` exclusions were added. See [deep-scan findings reconciliation](docs/release/DEEP_SCAN_FINDINGS_RECONCILIATION_2026-11-17.md).
+
 All notable changes to Repository Detective (formerly an internal prototype) are documented here.
 
 ## [Unreleased — report clarity and operator navigation, 2026-11-17]

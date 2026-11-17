@@ -15,7 +15,7 @@ func TestPatchAttemptCRUD(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer s.Close()
+	defer closeTestStore(t, s)
 
 	ctx := context.Background()
 	repo, _ := s.UpsertRepository(ctx, store.Repository{Owner: "o", Name: "r", FullName: "o/r", ConnectedRepo: true})

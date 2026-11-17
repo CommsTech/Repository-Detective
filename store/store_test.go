@@ -15,6 +15,15 @@ import (
 	"git.commsnet.org/commstech/repository-detective/store"
 )
 
+// closeTestStore reports teardown errors rather than allowing errcheck to hide
+// a failed resource close during a database regression test.
+func closeTestStore(t *testing.T, s interface{ Close() error }) {
+	t.Helper()
+	if err := s.Close(); err != nil {
+		t.Errorf("close test database: %v", err)
+	}
+}
+
 func openTestStore(t *testing.T) store.QueryStore {
 	t.Helper()
 	dir := t.TempDir()
@@ -23,7 +32,7 @@ func openTestStore(t *testing.T) store.QueryStore {
 	if err != nil {
 		t.Fatalf("open test store: %v", err)
 	}
-	t.Cleanup(func() { _ = s.Close() })
+	t.Cleanup(func() { closeTestStore(t, s) })
 	return s
 }
 
@@ -35,7 +44,7 @@ func TestSQLiteInitCreatesSchema(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open: %v", err)
 	}
-	defer s.Close()
+	defer closeTestStore(t, s)
 
 	if _, err := os.Stat(path); err != nil {
 		t.Fatalf("database file not created: %v", err)

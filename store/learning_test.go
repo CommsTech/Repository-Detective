@@ -18,7 +18,7 @@ func TestLearningEventIdempotent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer s.Close()
+	defer closeTestStore(t, s)
 	repo, _ := s.UpsertRepository(ctx, store.Repository{Owner: "o", Name: "r", FullName: "o/r"})
 	ev := store.LearningEvent{
 		RepositoryID: repo.ID, EventType: learning.EventResolvedVerified,
@@ -40,7 +40,7 @@ func TestRepoScopedRecommendationRequiresEvidence(t *testing.T) {
 	ctx := context.Background()
 	dir := t.TempDir()
 	s, _ := store.Open(store.Config{Enabled: true, Path: filepath.Join(dir, "rec.db")})
-	defer s.Close()
+	defer closeTestStore(t, s)
 	repo, _ := s.UpsertRepository(ctx, store.Repository{Owner: "o", Name: "a", FullName: "o/a"})
 	n, err := s.GenerateRepoScopedRecommendations(ctx, repo.ID, 5)
 	if err != nil {
@@ -55,7 +55,7 @@ func TestStructuralGroupAssign(t *testing.T) {
 	ctx := context.Background()
 	dir := t.TempDir()
 	s, _ := store.Open(store.Config{Enabled: true, Path: filepath.Join(dir, "struct.db")})
-	defer s.Close()
+	defer closeTestStore(t, s)
 	repo, _ := s.UpsertRepository(ctx, store.Repository{Owner: "o", Name: "r", FullName: "o/r"})
 	now := time.Now().UTC()
 	f1, _ := s.UpsertFinding(ctx, store.Finding{
@@ -72,7 +72,7 @@ func TestRepoCalibrationRuleCRUD(t *testing.T) {
 	ctx := context.Background()
 	dir := t.TempDir()
 	s, _ := store.Open(store.Config{Enabled: true, Path: filepath.Join(dir, "rule.db")})
-	defer s.Close()
+	defer closeTestStore(t, s)
 	repo, _ := s.UpsertRepository(ctx, store.Repository{Owner: "o", Name: "r", FullName: "o/r"})
 	rid := repo.ID
 	rule, err := s.CreateRepoCalibrationRule(ctx, store.RepoCalibrationRule{

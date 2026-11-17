@@ -99,7 +99,7 @@ func joinStrings(items []string, sep ...string) string {
 
 func scannerStatusBadgeClass(status string) string {
 	switch status {
-	case "found", "success", "completed":
+	case "found", "success", "completed", "ok", "passed", "clean":
 		return "found"
 	case "running", "started":
 		return "running"

@@ -41,7 +41,7 @@ func TestRecordFindingsBeforeIssueSync(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open: %v", err)
 	}
-	defer s.Close()
+	defer closeTestStore(t, s)
 
 	repo, _ := s.UpsertRepository(ctx, store.Repository{Owner: "o", Name: "r", FullName: "o/r"})
 	scanID := "persistscan01"
@@ -86,7 +86,7 @@ func TestPersistFindingsWithRepoCalibrationRules(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open: %v", err)
 	}
-	defer s.Close()
+	defer closeTestStore(t, s)
 
 	repo, _ := s.UpsertRepository(ctx, store.Repository{Owner: "o", Name: "r", FullName: "o/r"})
 	rid := repo.ID
@@ -138,7 +138,7 @@ func TestMarkIssueSyncCompleteAfterFilingPhase(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open: %v", err)
 	}
-	defer s.Close()
+	defer closeTestStore(t, s)
 
 	repo, _ := s.UpsertRepository(ctx, store.Repository{Owner: "o", Name: "r", FullName: "o/r"})
 	scanID := "issuesyncscan01"
@@ -165,7 +165,7 @@ func TestPersistScanFindingsBatchIsTransactional(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open: %v", err)
 	}
-	defer s.Close()
+	defer closeTestStore(t, s)
 
 	repo, _ := s.UpsertRepository(ctx, store.Repository{Owner: "o", Name: "r", FullName: "o/r"})
 	scanID := "batchscan01"
@@ -202,7 +202,7 @@ func TestGetLatestReconcilableScanSkipsPartial(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open: %v", err)
 	}
-	defer s.Close()
+	defer closeTestStore(t, s)
 
 	repo, _ := s.UpsertRepository(ctx, store.Repository{Owner: "o", Name: "r", FullName: "o/r"})
 	partialSummary := []byte(`{"issues_found":3,"persistence_status":"pending","persistence_expected_count":3}`)

@@ -988,3 +988,53 @@ func min(a, b int) int {
 	}
 	return b
 }
+
+// A report must rank the entire backlog before taking the top twenty.
+// New low-severity noise must not bury an older high-priority risk.
+func TestRepoReportTopRisksSelectedBeforeLimit(t *testing.T) {
+	ctx := context.Background()
+	s, err := store.Open(store.Config{Enabled: true, Path: filepath.Join(t.TempDir(), "report-priority.db")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := s.Close(); err != nil {
+			t.Errorf("close test database: %v", err)
+		}
+	}()
+	repo, err := s.UpsertRepository(ctx, store.Repository{Owner: "team", Name: "app", FullName: "team/app"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now().UTC()
+	_, err = s.UpsertFinding(ctx, store.Finding{
+		RepositoryID: repo.ID, Fingerprint: "priority-high-old", Title: "Older high priority finding",
+		Severity: "high", Category: "security", Source: "gosec", Status: "open",
+		Confidence: 0.99, FirstSeenAt: now.Add(-48 * time.Hour), LastSeenAt: now.Add(-48 * time.Hour),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 25; i++ {
+		_, err := s.UpsertFinding(ctx, store.Finding{
+			RepositoryID: repo.ID, Fingerprint: "new-low-" + strconv.Itoa(i), Title: "Recent low finding",
+			Severity: "low", Category: "quality", Source: "static", Status: "open", Confidence: 0.99,
+			FirstSeenAt: now.Add(time.Duration(i) * time.Second), LastSeenAt: now.Add(time.Duration(i) * time.Second),
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	r, _ := testUI(t, s)
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, "/ui/repos/"+strconv.FormatInt(repo.ID, 10)+"/report", nil)
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("report status %d: %.200s", w.Code, w.Body.String())
+	}
+	body := w.Body.String()
+	top := strings.Index(body, "Top risks")
+	if top < 0 || !strings.Contains(body[top:], "Older high priority finding") {
+		t.Fatal("older high severity was hidden from executive priorities by newer low findings")
+	}
+}

@@ -617,6 +617,7 @@ func (h *Handler) RepoReport(c *gin.Context) {
 		Source:       c.Query("source"),
 		Limit:        findingsPageSize,
 		Offset:       offset,
+		Prioritize:   true,
 	}
 	scans, err := h.store.ListScansByRepository(c.Request.Context(), id, store.ListOptions{Limit: 10})
 	if err != nil {
@@ -670,7 +671,7 @@ func (h *Handler) RepoReport(c *gin.Context) {
 		confidenceBands = map[string]int{}
 	}
 	topFindings, err := h.store.ListFindings(c.Request.Context(), store.FindingFilter{
-		RepositoryID: id, Status: "open", Limit: 20,
+		RepositoryID: id, Status: "open", Prioritize: true, Limit: 20,
 	})
 	if err != nil {
 		c.String(http.StatusInternalServerError, "failed to load priority findings")

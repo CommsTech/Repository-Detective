@@ -134,8 +134,7 @@ func buildRepoExecutiveSummary(
 	if len(latestScannerResults) > 0 {
 		failedOrSkipped := 0
 		for _, result := range latestScannerResults {
-			status := strings.ToLower(result.Status)
-			if (status != "success" && status != "completed") || result.Error != "" {
+			if scannerOutcomeIncomplete(result) {
 				failedOrSkipped++
 			}
 		}
@@ -249,13 +248,40 @@ func repoRecommendationWithEvidence(crit, high, open int, scans []store.Scan, re
 	if len(results) == 0 {
 		return "caution", "Scanner evidence missing — review before release"
 	}
+	independentScannerRecorded := false
 	for _, result := range results {
-		status := strings.ToLower(result.Status)
-		if (status != "success" && status != "completed") || result.Error != "" {
+		if scannerOutcomeIncomplete(result) {
 			return "caution", "Scanner coverage incomplete — inspect skipped and failed checks"
 		}
+		// Deterministic internal stages are valuable code-quality evidence,
+		// but cannot alone substantiate external AppSec scanner coverage.
+		switch strings.ToLower(strings.TrimSpace(result.ScannerName)) {
+		case "graph", "static", "health", "custom_rules":
+		default:
+			independentScannerRecorded = true
+		}
+	}
+	if !independentScannerRecorded {
+		return "caution", "External scanner evidence absent — review coverage before release"
 	}
 	return recommendation, label
+}
+
+// scannerOutcomeIncomplete classifies recorded *execution status*, not the
+// finding count. A scanner that returns "found" completed its analysis but
+// discovered findings; it is not a coverage failure. This list must stay in
+// sync with the durable scanner-status vocabulary used in the store quality
+// metrics. A tool with an explicit error remains incomplete in all cases.
+func scannerOutcomeIncomplete(result store.ScannerResultRecord) bool {
+	if strings.TrimSpace(result.Error) != "" {
+		return true
+	}
+	switch strings.ToLower(strings.TrimSpace(result.Status)) {
+	case "ok", "success", "completed", "passed", "clean", "found":
+		return false
+	default:
+		return true
+	}
 }
 
 func fleetConfidenceLevel(summary store.DashboardSummary) string {
