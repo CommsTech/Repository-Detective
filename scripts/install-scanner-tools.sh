@@ -120,8 +120,31 @@ install_checkov() {
 }
 
 install_golangci() {
-  curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh \
-    | sh -s -- -b /usr/local/bin "v${GOLANGCI_VERSION}"
+  # Direct release tarball — upstream install.sh has been failing checksum verify
+  # against re-published assets (binary_missing at scan time). Prefer deploy/bin when present.
+  if [ -x /tmp/deploy-bin/golangci-lint ]; then
+    install -m 0755 /tmp/deploy-bin/golangci-lint /usr/local/bin/golangci-lint
+    return
+  fi
+  golangci_tgz="golangci-lint-${GOLANGCI_VERSION}-linux-amd64.tar.gz"
+  for attempt in 1 2 3 4 5; do
+    tmp="/tmp/${golangci_tgz}"
+    extract="/tmp/golangci-lint-${GOLANGCI_VERSION}"
+    rm -rf "$extract"
+    mkdir -p "$extract"
+    if download_to "$tmp" \
+      "https://github.com/golangci/golangci-lint/releases/download/v${GOLANGCI_VERSION}/${golangci_tgz}" \
+      && tar xz -C "$extract" -f "$tmp" \
+      && install -m 0755 "$extract/golangci-lint-${GOLANGCI_VERSION}-linux-amd64/golangci-lint" /usr/local/bin/golangci-lint; then
+      rm -rf "$tmp" "$extract"
+      return
+    fi
+    rm -rf "$tmp" "$extract"
+    echo "golangci-lint download attempt $attempt failed; retrying..." >&2
+    sleep $((attempt * 5))
+  done
+  echo "golangci-lint install failed after retries" >&2
+  return 1
 }
 
 install_shellcheck() {
@@ -150,7 +173,11 @@ install_gitleaks || echo "gitleaks install skipped"
 install_hadolint || echo "hadolint install skipped"
 install_semgrep || echo "semgrep install skipped"
 install_checkov || echo "checkov install skipped"
-install_golangci || echo "golangci-lint install skipped (optional)"
+# Keep optional so a flaky GitHub release does not fail the whole image build,
+# but log loudly — silent skip previously left scanners reporting binary_missing.
+if ! install_golangci; then
+  echo "WARNING: golangci-lint install failed; Go lint coverage will be incomplete until rebuilt" >&2
+fi
 install_shellcheck || echo "shellcheck install skipped"
 install_ruff || echo "ruff install skipped"
 

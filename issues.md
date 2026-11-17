@@ -2,6 +2,17 @@
 
 Product issues belong on the forge you use to track this repository.
 
+## Operator log triage (2026-11-17)
+
+Live `repository-detective:ux2-20261117` (`cd3aaf4c`) review ~7–15 minutes after restart:
+
+1. **App runtime** — healthy on `:8081`; Gitea + GitHub OK; OpenClaw gateway live; **0** `error`/`fatal` log lines since start (2 warnings only).
+2. **`[SCANNER:golangci-lint] binary not found`** — real gap, also present on `hotfix5` / `cve-20261116` images. Root cause: upstream `install.sh` checksum verify fails (`hash_sha256_verify` mismatch), and the build treated that as optional skip. **Mitigated live** by installing `v2.14.0` into the running container; **durable fix** in `scripts/install-scanner-tools.sh` (direct GitHub release tarball + louder failure log). Needs image rebuild to persist across recreate.
+3. **`No config file found`** — expected; `/app/config` only has `.example` / `.bak` files. Runtime is env-driven from Compose/`.env`.
+4. **Active scan silence after scanners** — CAH continued into SBOM (`cyclonedx-gomod` / `grype sbom:` / `gitleaks detect` history). Status stayed `started` with empty summary while that phase ran; not a hang.
+5. **Edition banner vs inventory** — logs say Community connected-repo limit=10 while API lists ~40 connected repos with schedules. No hard failure observed; treat as license/edition messaging drift.
+6. **Stale repos** — AMMBER, Dockhand, talos_cluster last completed scans are weeks old (worth a manual/schedule review, not a container crash).
+
 ## Operator log triage (2026-11-16)
 
 Live `repository-detective:v0.1.0-beta.6-hotfix5` review:

@@ -138,7 +138,7 @@ Verify all targets:
 | staticcheck | 0.7.0 | `go install` (Go 1.26 typecheck) |
 | hadolint | 2.12.0 | Release binary |
 | checkov | 3.2.254 | pip (`checkov==…`) |
-| golangci-lint | 2.14.0 | install.sh (optional linters, Go 1.26) |
+| golangci-lint | 2.14.0 | Direct GitHub release tarball (optional linters; upstream install.sh checksum verify has been unreliable) |
 
 Override at build time via env in `scripts/install-scanner-tools.sh` (e.g. `TRIVY_VERSION=…`).
 

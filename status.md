@@ -1,8 +1,17 @@
 # Repository Detective status
 
-Current public prerelease: `v0.1.0-beta.6` (live overlay: `v0.1.0-beta.6-hotfix5` — Deep AI + runtime log fixes).
+Current public prerelease: `v0.1.0-beta.6` (live overlay: `repository-detective:ux2-20261117` / commit `cd3aaf4c`).
 
 Operator notes, scan history, and forge inventory stay outside this repository. Use your own Gitea or GitHub settings, `.env`, and database. Shipped examples use empty/required fields — published placeholders are rejected at startup.
+
+## 2026-11-17 ux2 container triage
+
+- Live container **healthy** on `:8081` (`RestartCount=0`, ~200–270MiB RAM).
+- Startup OK: Gitea + GitHub connected; OpenClaw gateway `/health` live; scheduler loaded 36 repo cron entries; DB/calibration healthy.
+- Manual dogfood scan of Repository-Detective in progress after deploy (external scanners completed; SBOM/history phase continuing — not stuck).
+- **Fixed (live hotpatch):** `golangci-lint` was missing in `ux2` and prior recent images because upstream `install.sh` checksum verify failed. Binary `v2.14.0` copied into the running container; `scripts/install-scanner-tools.sh` now uses the direct release tarball so the next image rebuild keeps it.
+- Non-blocking: no `config.yaml` (env-driven only — expected); Community edition banner still says connected-repo limit=10 while 40 repos are connected/scheduled (grandfathered behavior, not a runtime error).
+- Stale scheduled coverage: AMMBER / Dockhand / talos_cluster last completed scans are >36h old.
 
 ## 2026-11-16 operator recovery
 
