@@ -15,10 +15,10 @@
   </thead>
   <tbody>
   {{range .Findings}}
-  <tr>
+  <tr class="rd-finding-row rd-severity-{{.Severity}}">
     <td><span class="rd-badge {{severityBadge .Severity}}">{{.Severity}}</span></td>
     <td><span class="rd-badge {{categoryBadge .Category}}">{{.Category}}</span></td>
-    <td class="rd-finding-cell">
+    <td class="rd-finding-cell rd-finding-title-cell">
       <a class="rd-link" href="{{$.BasePath}}/findings/{{.ID}}{{apiKeyQS $.APIKey}}"><strong>{{.Title}}</strong></a>
       {{if .Suppressed}}<span class="rd-badge skipped">suppressed</span>{{end}}
       {{if .FilePath}}<div class="rd-muted rd-finding-loc">{{displayPath .FilePath}}{{if .Line}}:{{.Line}}{{end}}</div>{{end}}

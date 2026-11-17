@@ -3125,3 +3125,114 @@ html { scroll-behavior: smooth; }
 }
 
 .rd-dashboard-v2 .rd-dash-table td:last-child .rd-btn { white-space:nowrap; min-width:0; }
+
+/* Finding investigation workbench — visual hierarchy shared with dashboard.
+   Scoped to finding/queue routes; no additional JS or remote assets. */
+.rd-case-page { padding: clamp(1.15rem, 2.2vw, 2rem); border-left: 0; overflow: hidden; }
+.rd-case-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 1.25rem; padding-bottom: 1.25rem; border-bottom: 1px solid var(--rd-border-strong); }
+.rd-case-title { min-width: 0; flex: 1 1 0; }
+.rd-case-heading .rd-finding-headline { font-size: clamp(1.45rem, 2.4vw, 2rem); letter-spacing: -0.035em; line-height: 1.18; max-width: 34ch; overflow-wrap: anywhere; margin: 0 0 .65rem; }
+.rd-case-heading .rd-finding-brief-top { margin: .5rem 0 .8rem; }
+.rd-case-context { font-size: .87rem; color: var(--rd-text-dim); margin: 0; overflow-wrap: anywhere; line-height: 1.5; }
+.rd-case-context strong { color: var(--rd-text); font-weight: 650; }
+.rd-case-primary-link { flex: 0 0 auto; white-space: nowrap; margin-top: .75rem; }
+.rd-case-body { display: grid; grid-template-columns: minmax(0, 1.75fr) minmax(235px, 1fr); gap: clamp(1rem, 2.1vw, 1.75rem); margin: 1.5rem 0 1.25rem; }
+.rd-case-primary, .rd-case-aside { min-width: 0; }
+.rd-case-subhead { font-size: .71rem; letter-spacing: .09em; text-transform: uppercase; font-weight: 800; color: var(--rd-text-dim); margin: 0 0 1rem; }
+.rd-case-primary .rd-finding-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem 1rem; margin-bottom: 1.35rem; }
+.rd-case-primary .rd-finding-facts > div { min-width: 0; }
+.rd-case-primary .rd-finding-facts dd { font-size: .9rem; overflow-wrap: anywhere; }
+.rd-case-primary .rd-finding-facts code { white-space: normal; overflow-wrap: anywhere; }
+.rd-case-primary .rd-finding-why { border-top: 1px solid var(--rd-border); padding-top: 1.1rem; }
+.rd-case-primary .rd-finding-why p { line-height: 1.6; color: var(--rd-text-dim); max-width: 70ch; }
+.rd-case-primary .rd-finding-action { padding: 1rem 1.15rem; border-radius: var(--rd-radius-sm); border: 1px solid var(--rd-border-strong); background: var(--rd-overlay); margin: 0; }
+.rd-case-primary .rd-finding-action h3 { color: var(--rd-heading); }
+.rd-case-primary .rd-action-line { line-height: 1.5; overflow-wrap: anywhere; }
+.rd-case-primary .rd-action-line code { display: block; white-space: pre-wrap; overflow-wrap: anywhere; background: transparent; padding: 0; color: var(--rd-text); font-family: var(--rd-font); font-size: .95rem; }
+.rd-case-aside { border: 1px solid var(--rd-border-strong); border-radius: var(--rd-radius-sm); background: var(--rd-overlay); padding: 1.2rem; align-self: start; }
+.rd-case-confidence { margin-bottom: 1.2rem; padding-bottom: 1.1rem; border-bottom: 1px solid var(--rd-border); }
+.rd-case-confidence-head { display: flex; align-items: baseline; justify-content: space-between; gap: .6rem; font-size: .83rem; color: var(--rd-text-dim); font-weight: 650; }
+.rd-case-confidence-head strong { color: var(--rd-heading); font-size: 1.45rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.rd-case-confidence meter { display: block; width: 100%; height: .8rem; margin: .75rem 0 .6rem; accent-color: var(--rd-teal); }
+.rd-case-confidence meter::-webkit-meter-bar { border: 0; border-radius: 999px; background: var(--rd-border-strong); }
+.rd-case-confidence meter::-webkit-meter-optimum-value { border-radius: 999px; background: var(--rd-teal); }
+.rd-case-confidence p { font-size: .76rem; line-height: 1.5; color: var(--rd-text-dim); margin: 0; }
+.rd-case-aside .rd-finding-assessment { margin: 0; }
+.rd-case-aside .rd-finding-assessment h3 { margin-bottom: .85rem; }
+.rd-case-aside .rd-assessment-list { padding: 0; list-style: none; display: grid; gap: .75rem; }
+.rd-case-aside .rd-assessment-list li { margin: 0; font-size: .84rem; line-height: 1.45; overflow-wrap: anywhere; }
+.rd-case-aside .rd-assessment-list strong { display: block; margin-bottom: .1rem; color: var(--rd-text-dim); font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; }
+.rd-case-page .rd-intel-panel { margin: .5rem 0 1.15rem; }
+.rd-case-journey { border-top: 1px solid var(--rd-border); padding: 1.1rem 0 .45rem; }
+.rd-case-journey-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; }
+.rd-case-journey-heading h3 { font-size: 1rem; margin: 0; }
+.rd-case-journey-heading > span { font-size: .79rem; color: var(--rd-text-dim); }
+.rd-case-page .rd-operator-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .7rem; margin: .8rem 0 1rem; }
+.rd-case-page .rd-operator-steps a { min-width: 0; min-height: 66px; display: flex; align-items: center; border-radius: var(--rd-radius-sm); line-height: 1.4; background: var(--rd-overlay); padding: .65rem .8rem; }
+.rd-case-page .rd-operator-steps a span { font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+.rd-case-capabilities { border-top: 1px solid var(--rd-border); padding: .85rem 0; }
+.rd-case-capabilities > summary { color: var(--rd-text-dim); font-size: .88rem; font-weight: 650; cursor: pointer; }
+.rd-case-capabilities[open] > summary { color: var(--rd-text); margin-bottom: .75rem; }
+.rd-case-capabilities .rd-finding-capabilities { margin: 0; padding: .8rem .1rem .1rem; }
+.rd-case-page .rd-finding-after { max-width: 80ch; line-height: 1.55; margin: .5rem 0 1rem; }
+.rd-case-page .rd-actions { margin-top: .8rem; }
+.rd-case-section-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--rd-border); margin-bottom: 1rem; }
+.rd-case-section-head .rd-workflow-step { margin-bottom: .35rem; }
+.rd-case-section-head h2 { font-size: clamp(1.2rem, 1.9vw, 1.55rem); margin: 0; letter-spacing: -.02em; }
+.rd-case-section-head p.rd-muted { margin: .35rem 0 0; font-size: .87rem; }
+.rd-case-constraint { display: flex; align-items: baseline; flex-wrap: wrap; gap: .35rem .75rem; background: var(--rd-overlay); border: 1px solid var(--rd-border); border-radius: var(--rd-radius-sm); padding: .8rem 1rem; font-size: .85rem; line-height: 1.55; margin-bottom: 1.15rem; }
+.rd-case-constraint strong { color: var(--rd-heading); flex-shrink: 0; }
+.rd-case-constraint span { color: var(--rd-text-dim); flex: 1 1 18rem; }
+.rd-case-plan { background: var(--rd-overlay); border: 1px solid var(--rd-border-strong); border-radius: var(--rd-radius-sm); padding: clamp(1rem, 1.9vw, 1.45rem); margin: 1rem 0; }
+.rd-case-plan h3 { margin: .95rem 0 .35rem; font-size: 1.08rem; line-height: 1.35; overflow-wrap: anywhere; }
+.rd-case-plan > p { max-width: 85ch; line-height: 1.6; overflow-wrap: anywhere; }
+.rd-case-plan-meta { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: center; font-size: .82rem; overflow-wrap: anywhere; }
+.rd-case-plan-meta code { white-space: normal; overflow-wrap: anywhere; }
+.rd-case-plan-facts { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: .75rem; padding-top: 1rem; border-top: 1px solid var(--rd-border); margin: 1rem 0 0; }
+.rd-case-plan-facts > div { min-width: 0; }
+.rd-case-plan-facts dt { color: var(--rd-text-dim); text-transform: uppercase; font-size: .71rem; font-weight: 700; letter-spacing: .04em; margin-bottom: .3rem; }
+.rd-case-plan-facts dd { margin: 0; font-size: .85rem; overflow-wrap: anywhere; }
+.rd-case-evidence summary { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem 1rem; }
+.rd-case-evidence summary > span:last-child { font-weight: 400; font-size: .79rem; }
+.rd-case-evidence .rd-pre { max-width: 100%; white-space: pre-wrap; overflow-wrap: anywhere; }
+.rd-case-evidence .rd-dl dd { overflow-wrap: anywhere; }
+.rd-case-disposition > summary { cursor: pointer; font-size: 1rem; font-weight: 650; }
+.rd-case-disposition[open] > summary { margin-bottom: 1.1rem; }
+.rd-case-disposition input[name="reason"] { max-width: 100%; }
+.rd-queue-hero h2 { letter-spacing: -.03em; }
+.rd-findings-row { position: relative; }
+.rd-findings-row > td:first-child { box-shadow: inset 3px 0 var(--rd-border-strong); }
+.rd-severity-critical > td:first-child { box-shadow: inset 3px 0 var(--rd-red); }
+.rd-severity-high > td:first-child { box-shadow: inset 3px 0 var(--rd-orange-hot); }
+.rd-severity-medium > td:first-child { box-shadow: inset 3px 0 var(--rd-orange); }
+.rd-finding-title-cell { overflow-wrap: anywhere; }
+.rd-finding-title-cell strong { line-height: 1.4; }
+@media (max-width: 1160px) {
+  .rd-case-body { grid-template-columns: minmax(0,1.5fr) minmax(215px,1fr); }
+  .rd-case-page .rd-operator-steps { grid-template-columns: 1fr; }
+  .rd-case-page .rd-operator-steps a { min-height: 44px; }
+}
+@media (max-width: 860px) {
+  .rd-case-body { grid-template-columns: minmax(0, 1fr); }
+  .rd-case-heading { flex-direction: column; gap: .65rem; }
+  .rd-case-primary-link { margin: 0; }
+  .rd-case-aside { padding: 1rem; }
+  .rd-case-aside .rd-assessment-list { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+@media (max-width: 560px) {
+  .rd-case-page { padding: 1rem; }
+  .rd-case-page .rd-finding-headline { font-size: 1.4rem; }
+  .rd-case-primary .rd-finding-facts { grid-template-columns: 1fr; }
+  .rd-case-aside .rd-assessment-list { grid-template-columns: 1fr; }
+  .rd-case-plan-facts { grid-template-columns: 1fr; }
+  .rd-case-heading .rd-case-primary-link { width: 100%; justify-content: center; white-space: normal; }
+  .rd-case-section-head > a { width: 100%; text-align: center; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rd-case-page *, .rd-case-page *::before, .rd-case-page *::after { scroll-behavior: auto; transition-duration: 0ms; }
+}
+
+/* An explicit disclosure affordance remains visible in flex summaries. */
+.rd-case-evidence summary::after, .rd-case-disposition > summary::after, .rd-case-capabilities > summary::after { content: "▾"; color: var(--rd-teal); font-size: 1.05rem; margin-left: auto; }
+.rd-case-evidence[open] summary::after, .rd-case-disposition[open] > summary::after, .rd-case-capabilities[open] > summary::after { content: "▴"; }
+.rd-case-disposition > summary, .rd-case-capabilities > summary { display: flex; align-items: center; gap: .75rem; }

@@ -47,7 +47,7 @@ func TestOperatorWorkflowOrderAndMobileNavigation(t *testing.T) {
 		t.Fatal(err)
 	}
 	detail := check("/ui/findings/" + strconv.FormatInt(finding.ID, 10))
-	brief := strings.Index(detail, `class="rd-card rd-finding-brief"`)
+	brief := strings.Index(detail, `class="rd-card rd-finding-brief rd-case-page"`)
 	plan := strings.Index(detail, `id="rd-remediation"`)
 	evidence := strings.Index(detail, `id="rd-evidence"`)
 	if brief < 0 || plan <= brief || evidence <= plan {

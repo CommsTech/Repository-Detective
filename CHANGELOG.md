@@ -1,3 +1,10 @@
+## [Unreleased — finding investigation UX workbench, 2026-11-17]
+
+- Reworked the finding page into an investigation brief with the affected repository, scanner, actionable context, and a prominent remediation action. Separated scanner-match confidence, technical assessment, and explicit unknown exposure into a scannable side panel.
+- Refined remediation and closure sections with clear plan status, risk, approval boundaries, supporting evidence links, and well-labeled review controls. Collapsed optional capability inventories and false-positive disposition controls without removing existing authorization or POST handlers.
+- Improved long-text wrapping, mobile stacking and responsive severity-accented finding rows. Uses built-in HTML meter, native details and existing CSS instead of additional charting dependencies.
+- Added a rendering contract test and a read-only 10-viewport/theme Playwright acceptance script. Standard-library HTML fixtures rendered and static checks passed; real Chromium navigation was denied in this container, and full Go 1.26.11/staging tests remain pending. See [finding workbench QA](docs/FINDING_WORKBENCH_DESIGN_AND_UX_QA.md).
+
 ## [Unreleased — dashboard visual hierarchy and responsive QA, 2026-11-17]
 
 - Rebuilt the dashboard around priority decisions, concise metrics, meaningful trend/severity/category visuals and prominent investigation links; moved scanner inventories and calibration into accessible expandable evidence panels.

@@ -8,8 +8,8 @@
 <section class="rd-queue-hero" aria-labelledby="rd-triage-title">
   <div>
     <p class="rd-queue-eyebrow">Vulnerability operations / triage</p>
-    <h2 id="rd-triage-title">Find it. Assess it. Fix it. Verify it.</h2>
-    <p>Use the priority queue for what needs attention. Search the current view by CVE, package, rule, path, fingerprint, or repository. Switch to All findings to search the entire inventory.</p>
+    <h2 id="rd-triage-title">Investigation queue</h2>
+    <p>Prioritize confirmed work, locate a finding, then move directly into remediation and verification. The queue is an inventory—not a proof that every path was scanned.</p>
   </div>
   <div class="rd-queue-hero-actions">
     <a class="rd-btn rd-btn-secondary" href="{{.BasePath}}/doctor{{apiKeyQS .APIKey}}">Check scan coverage</a>
@@ -100,7 +100,7 @@
       <a class="rd-btn rd-btn-ghost rd-btn-sm" href="{{.BasePath}}/findings/export?format=json{{if .Data.ExportQuery}}&amp;{{.Data.ExportQuery}}{{else}}{{if .APIKey}}&amp;api_key={{.APIKey}}{{end}}{{end}}">Export JSON</a>
     </div>
   </div>
-  <p class="rd-queue-note"><strong>Before treating a finding as exploitable:</strong> confirm scanner coverage, affected assets, and deployment exposure. AI guidance is advisory; a PR is not evidence of closure.</p>
+  <p class="rd-queue-note"><strong>How to use these results:</strong> open a finding to confirm coverage and exposure, review the fix, and verify closure after rescanning.</p>
   <details class="rd-queue-guide">
     <summary>How to work this queue</summary>
     <ol>

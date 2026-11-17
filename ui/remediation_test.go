@@ -26,7 +26,7 @@ func TestFindingDetailShowsRemediationSection(t *testing.T) {
 	req, _ := http.NewRequest(http.MethodGet, "/ui/findings/"+strconv.FormatInt(finding.ID, 10), nil)
 	r.ServeHTTP(w, req)
 	body := w.Body.String()
-	if w.Code != http.StatusOK || !strings.Contains(body, "Remediation plan") {
+	if w.Code != http.StatusOK || !strings.Contains(body, "Remediation workbench") {
 		t.Fatalf("expected remediation section: %d", w.Code)
 	}
 	if !strings.Contains(body, "Planning is advisory") {
