@@ -66,7 +66,7 @@
     });
     chartHandles = [];
     document.querySelectorAll(".rd-chart-empty").forEach(function (el) { el.remove(); });
-    document.querySelectorAll(".rd-charts-grid canvas").forEach(function (c) {
+    document.querySelectorAll(".rd-dashboard-v2 canvas").forEach(function (c) {
       c.style.display = "";
     });
     var err = document.querySelector(".rd-chart-error");
@@ -114,7 +114,7 @@
         maintainAspectRatio: false,
         cutout: "62%",
         plugins: {
-          legend: { position: "right", labels: { color: palette.text } },
+          legend: { display: false },
         },
       },
     }));
@@ -134,41 +134,17 @@
           borderRadius: 6,
         }],
       },
-      options: baseOptions(),
-    }));
-  }
-
-  function initRadarChart(ctx, data) {
-    var max = Math.max.apply(null, data.categoryValues.concat([1]));
-    trackChart(new Chart(ctx, {
-      type: "radar",
-      data: {
-        labels: data.categoryLabels,
-        datasets: [{
-          label: "Finding categories",
-          data: data.categoryValues,
-          backgroundColor: "rgba(37, 99, 235, 0.25)",
-          borderColor: palette.blue,
-          pointBackgroundColor: palette.teal,
-          pointBorderColor: palette.card,
-          borderWidth: 2,
-        }],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          r: {
-            angleLines: { color: palette.grid },
-            grid: { color: palette.grid },
-            pointLabels: { color: palette.text, font: { size: 10 } },
-            ticks: { display: false, backdropColor: "transparent" },
-            suggestedMin: 0,
-            suggestedMax: max * 1.15,
-          },
-        },
+      options: Object.assign(baseOptions(), {
+        indexAxis: "y",
         plugins: { legend: { display: false } },
-      },
+        scales: {
+          x: { beginAtZero: true, ticks: { color: palette.text, precision: 0 }, grid: { color: palette.grid } },
+          y: { ticks: { color: palette.text, autoSkip: false, font: { size: 11 }, callback: function (value) {
+            var label = this.getLabelForValue(value);
+            return label.length > 22 ? label.slice(0, 21) + "…" : label;
+          } }, grid: { display: false } }
+        }
+      }),
     }));
   }
 
@@ -202,7 +178,7 @@
     }
     if (remediation.length) {
       datasets.push({
-        label: "Auto-remediated findings",
+        label: "Auto-remediation PRs",
         data: remediation,
         borderColor: "#22c55e",
         backgroundColor: "rgba(34, 197, 94, 0.12)",
@@ -214,6 +190,9 @@
       });
     }
     var opts = baseOptions();
+    // Dense date labels on phones are harder to interpret than fewer clear ticks.
+    opts.scales.x.ticks.maxTicksLimit = 7;
+    opts.scales.x.ticks.maxRotation = 0;
     opts.plugins.legend = {
       display: true,
       position: "bottom",
@@ -304,7 +283,7 @@
   }
 
   function showChartError(message) {
-    var grid = document.querySelector(".rd-charts-grid");
+    var grid = document.querySelector(".rd-dash-visuals");
     if (!grid || grid.querySelector(".rd-chart-error")) return;
     var alert = document.createElement("div");
     alert.className = "rd-alert rd-chart-error";
@@ -335,7 +314,6 @@
 
     var severity = document.getElementById("rd-chart-severity");
     var category = document.getElementById("rd-chart-category");
-    var radar = document.getElementById("rd-chart-radar");
     var trend = document.getElementById("rd-chart-trend");
     var repoMap = document.getElementById("rd-chart-repos");
 
@@ -348,16 +326,10 @@
     }
     if (category) {
       if (data.categoryLabels && data.categoryLabels.length) {
+        category.parentElement.style.height = Math.max(270, data.categoryLabels.length * 34 + 56) + "px";
         initCategoryChart(category, data);
       } else {
         showEmptyChart(category, "No category breakdown yet.");
-      }
-    }
-    if (radar) {
-      if (data.categoryLabels && data.categoryLabels.length) {
-        initRadarChart(radar, data);
-      } else {
-        showEmptyChart(radar, "No category data for radar.");
       }
     }
     if (trend) {
@@ -367,7 +339,9 @@
         showEmptyChart(trend, "No completed scan activity in the last 14 days.");
       }
     }
-    if (repoMap) {
+    // The repository map is inside a closed disclosure. Avoid rendering a zero-width
+    // canvas at startup; initialize only when an operator opens the evidence panel.
+    if (repoMap && (!repoMap.closest("details") || repoMap.closest("details").open)) {
       var hasStacks = false;
       if (data.repoMapStacks) {
         for (var i = 0; i < data.repoMapStacks.length; i++) {
@@ -388,4 +362,8 @@
     window.addEventListener("load", mountCharts);
   }
   document.documentElement.addEventListener("rd-theme-change", mountCharts);
+  var advanced = document.getElementById("rd-dash-advanced");
+  if (advanced) advanced.addEventListener("toggle", function () {
+    if (advanced.open) mountCharts();
+  });
 })();

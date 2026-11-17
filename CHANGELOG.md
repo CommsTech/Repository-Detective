@@ -1,3 +1,10 @@
+## [Unreleased — dashboard visual hierarchy and responsive QA, 2026-11-17]
+
+- Rebuilt the dashboard around priority decisions, concise metrics, meaningful trend/severity/category visuals and prominent investigation links; moved scanner inventories and calibration into accessible expandable evidence panels.
+- Removed the dashboard category radar and duplicate backlog/report walls, simplified action colors, wrapped long finding paths and made priority tables scroll inside cards. A visually hidden table header was found to cause mobile document overflow; it was replaced with a visible column label. Theme bootstrap styling is now released after CSS load so switching themes is not overridden by the anti-flash guard.
+- Optimized Chart.js labeling and deferred repository-map rendering until the operator opens the advanced panel. Added a ten-viewport dark/light browser QA script and operator design guide.
+- Synthetic template rendering, JavaScript/CSS static checks and in-browser viewport checks passed; Go 1.26.11 full suite and live Gitea staging remain pending. See [dashboard QA guide](docs/DASHBOARD_DESIGN_AND_UX_QA.md).
+
 ## [Unreleased — delegated scanner evidence fidelity, 2026-11-17]
 
 - Preserved worker-reported scanner finding counts and sanitized scanner errors through core ingestion and scan persistence; scanner `error` evidence now invalidates a nominal `clean` outcome.

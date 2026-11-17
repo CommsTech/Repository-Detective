@@ -68,6 +68,10 @@
     var resolved = resolvedTheme(mode);
     document.documentElement.style.colorScheme = resolved;
     document.documentElement.style.backgroundColor = resolved === "dark" ? "#0a1018" : "#f0f4f8";
+    // The inline pre-paint guard uses !important to prevent a white flash.
+    // Once theme.css has loaded, remove it or it would override theme toggles.
+    var prepaintGuard = document.getElementById("rd-theme-boot");
+    if (prepaintGuard) prepaintGuard.remove();
     updateThemeColorMeta(mode);
     syncToggleUI(mode);
     if (opts.emit !== false) {

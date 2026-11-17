@@ -32,7 +32,9 @@ func TestOperatorWorkflowOrderAndMobileNavigation(t *testing.T) {
 	if !strings.Contains(dashboard, `data-mobile-nav-toggle`) || !strings.Contains(dashboard, `id="rd-primary-nav"`) {
 		t.Fatal("accessible mobile navigation missing")
 	}
-	if !strings.Contains(dashboard, "First-run checklist") {
+	// The dashboard redesign replaced the first-run checklist with the
+	// "Start here" onboarding block; assert the operator path, not old copy.
+	if !strings.Contains(dashboard, `rd-dash-onboarding`) || !strings.Contains(dashboard, "Set up your first trustworthy scan") {
 		t.Fatal("zero-repository dashboard needs useful onboarding")
 	}
 	ctx := context.Background()
