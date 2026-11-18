@@ -1,0 +1,40 @@
+{{define "users.html"}}
+<!DOCTYPE html><html lang="en"><head>{{template "head" .}}</head><body class="rd-app">
+{{template "nav" .}}
+<div class="rd-card">
+  <h2>Users &amp; roles</h2>
+  {{if .Data.Upsell}}
+  <div class="rd-alert">{{.Data.Upsell}}</div>
+  <p class="rd-muted">Commercial unlocks Admin / Security / Developer / Viewer RBAC on top of the owner account.</p>
+  {{else}}
+  {{if .Data.Notice}}<div class="rd-alert success">User created.</div>{{end}}
+  <table class="rd-table">
+    <thead><tr><th>Email</th><th>Name</th><th>Role</th><th>Enabled</th></tr></thead>
+    <tbody>
+    {{range .Data.Users}}
+      <tr><td>{{.Email}}</td><td>{{.DisplayName}}</td><td><span class="rd-chip">{{.Role}}</span></td><td>{{if .Enabled}}yes{{else}}no{{end}}</td></tr>
+    {{else}}
+      <tr><td colspan="4" class="rd-muted">No users yet.</td></tr>
+    {{end}}
+    </tbody>
+  </table>
+  {{if .Data.CanManage}}
+  <h3>Add user</h3>
+  <form method="post" action="{{.BasePath}}/users" class="rd-form">
+    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+    <label>Email <input name="email" type="email" required></label>
+    <label>Display name <input name="display_name" required></label>
+    <label>Password <input name="password" type="password" required minlength="12"></label>
+    <label>Role
+      <select name="role">
+        {{range .Data.Roles}}<option value="{{.}}">{{.}}</option>{{end}}
+      </select>
+    </label>
+    <button type="submit" class="rd-btn">Create user</button>
+  </form>
+  {{end}}
+  {{end}}
+</div>
+{{template "foot" .}}
+</body></html>
+{{end}}

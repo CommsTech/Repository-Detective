@@ -1,0 +1,73 @@
+package learning
+
+import (
+	"fmt"
+	"strings"
+)
+
+// ValidateCalibrationAccept checks whether a calibration recommendation may be accepted.
+// Severity is not used here: high/critical protection is enforced again at scan persist time.
+// Category protection blocks secrets/security classes from becoming suppressions via accept.
+// Global-scope recommendations are allowed: accept expands them into repo-scoped rules
+// (never a fleet-wide global suppression).
+//
+// source/ruleID may be empty for legacy callers. Only proven informational
+// lint patterns may pass the security category gate; gosec findings require
+// individual reviewed dispositions regardless of the rule's prevalence.
+func ValidateCalibrationAccept(category, scope string) error {
+	return ValidateCalibrationAcceptRule(category, scope, "", "")
+}
+
+// ValidateCalibrationAcceptRule is the rule-aware accept gate used by auto-apply
+// and operator accept paths.
+func ValidateCalibrationAcceptRule(category, scope, source, ruleID string) error {
+	_ = scope // retained for callers / future scope policy
+	if strings.TrimSpace(scope) == "" {
+		return fmt.Errorf("recommendation scope is required")
+	}
+	// Protected scanner sources and rule IDs win over superficial lint-shaped
+	// rule names. An attacker or faulty adapter must not relabel a secret/CVE
+	// as "LINT-SHELL" to sneak past the calibration review gate.
+	if IsProtectedRuleID(source, ruleID) {
+		return fmt.Errorf("recommendation targets protected security rule %s/%s — mark findings false-positive individually; do not fleet-quiet secrets/CVEs", strings.TrimSpace(source), strings.TrimSpace(ruleID))
+	}
+	if IsInformationalToolingRule(source, ruleID) {
+		return nil
+	}
+	if IsProtectedFromAutoDowngrade("", category) {
+		return fmt.Errorf("recommendation affects protected security category — mark findings false-positive individually or use an explicit operator override")
+	}
+	return nil
+}
+
+// IsInformationalToolingRule reports rules that scanners often tag as "security"
+// but that are safe for report_only calibration when FP rates are high.
+func IsInformationalToolingRule(source, ruleID string) bool {
+	src := strings.ToLower(strings.TrimSpace(source))
+	rule := strings.ToUpper(strings.TrimSpace(ruleID))
+	rule = strings.Trim(rule, "`\"' ")
+
+	// Do not downgrade gosec rule families. G204/G304 in particular are
+	// security boundaries in a scanner and require site-specific evidence.
+	if strings.Contains(src, "gosec") {
+		return false
+	}
+	if strings.EqualFold(rule, "LINT-GO-TYPECHECK") || strings.HasPrefix(rule, "LINT-GO-TYPECHECK") {
+		return true
+	}
+	if strings.HasPrefix(rule, "LINT-SHELL-") || strings.HasPrefix(rule, "LINT-RUFF-") {
+		return true
+	}
+	// OPT-HTTP-CLIENT-PER-CALL is only informational when the client is shared/long-lived;
+	// keep it calibratable for product tooling, but U1000 unused-code is never "informational".
+	if rule == "U1000" || strings.HasPrefix(rule, "U1") {
+		return false
+	}
+	if strings.HasPrefix(rule, "GRAPH-") || strings.HasPrefix(rule, "OPT-") || strings.HasPrefix(rule, "QUAL-") {
+		return true
+	}
+	if strings.HasPrefix(rule, "HEALTH-") && !strings.Contains(rule, "SECRET") {
+		return true
+	}
+	return false
+}

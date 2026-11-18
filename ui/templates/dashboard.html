@@ -1,0 +1,188 @@
+{{define "dashboard.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>{{template "head" .}}</head>
+<body class="rd-app rd-page-dashboard rd-dashboard-v2">
+{{template "nav" .}}
+
+{{with .Data.Summary}}
+<section class="rd-dash-intro" aria-labelledby="rd-dash-heading">
+  <div class="rd-dash-intro-copy">
+    <p class="rd-dash-eyebrow">Workspace overview</p>
+    <h2 id="rd-dash-heading">Know what needs attention.</h2>
+    <p>{{.TotalRepositories}} repositories monitored. Review priority findings, confirm scan coverage, and track verified fixes—without losing the underlying evidence.</p>
+  </div>
+  <div class="rd-dash-intro-actions">
+    <a class="rd-btn rd-btn-primary" href="{{$.BasePath}}/findings?focus=1&amp;status=open{{if $.APIKey}}&amp;api_key={{$.APIKey}}{{end}}">Review priority findings <span aria-hidden="true">↗</span></a>
+    <a class="rd-btn rd-btn-secondary" href="{{$.BasePath}}/scans{{apiKeyQS $.APIKey}}">View scans</a>
+  </div>
+</section>
+
+<section class="rd-dash-kpis" aria-label="Portfolio snapshot">
+  <a class="rd-dash-kpi rd-dash-kpi-urgent" href="{{$.BasePath}}/findings?focus=1&amp;status=open{{if $.APIKey}}&amp;api_key={{$.APIKey}}{{end}}">
+    <span class="rd-dash-kpi-label">Critical + high <span aria-hidden="true">↗</span></span>
+    <strong>{{add .Backlog.CriticalOpen .Backlog.HighOpen}}</strong>
+    <span class="rd-dash-kpi-foot">Open priority findings</span>
+  </a>
+  <a class="rd-dash-kpi" href="{{$.BasePath}}/findings?status=open{{if $.APIKey}}&amp;api_key={{$.APIKey}}{{end}}">
+    <span class="rd-dash-kpi-label">Unique backlog <span aria-hidden="true">↗</span></span>
+    <strong>{{.Backlog.OpenUnique}}</strong>
+    <span class="rd-dash-kpi-foot">Deduplicated open findings</span>
+  </a>
+  <a class="rd-dash-kpi" href="{{$.BasePath}}/health{{apiKeyQS $.APIKey}}">
+    <span class="rd-dash-kpi-label">Unhealthy repositories <span aria-hidden="true">↗</span></span>
+    <strong>{{.UnhealthyReposCount}}</strong>
+    <span class="rd-dash-kpi-foot">Needs coverage review</span>
+  </a>
+  <a class="rd-dash-kpi" href="{{$.BasePath}}/scans{{apiKeyQS $.APIKey}}">
+    <span class="rd-dash-kpi-label">Active scans <span aria-hidden="true">↗</span></span>
+    <strong>{{$.Data.ActiveScans}}</strong>
+    <span class="rd-dash-kpi-foot">In progress right now</span>
+  </a>
+  <a class="rd-dash-kpi rd-dash-kpi-verified" href="{{$.BasePath}}/findings?status=resolved_verified{{if $.APIKey}}&amp;api_key={{$.APIKey}}{{end}}">
+    <span class="rd-dash-kpi-label">Verified resolved <span aria-hidden="true">↗</span></span>
+    <strong>{{.Backlog.ResolvedVerified}}</strong>
+    <span class="rd-dash-kpi-foot">Evidence-backed closures</span>
+  </a>
+</section>
+
+{{if eq .TotalRepositories 0}}
+<section class="rd-card rd-dash-empty" aria-labelledby="rd-dash-start-title">
+  <p class="rd-dash-eyebrow">Start here</p>
+  <h2 id="rd-dash-start-title">Set up your first trustworthy scan</h2>
+  <ol class="rd-dash-onboarding">
+    <li><a href="{{$.BasePath}}/repos{{apiKeyQS $.APIKey}}"><strong>Connect a repository</strong><span>Register a Gitea, Forgejo, or GitHub project.</span></a></li>
+    <li><a href="{{$.BasePath}}/doctor{{apiKeyQS $.APIKey}}"><strong>Check scanner availability</strong><span>Review supported and missing tools.</span></a></li>
+    <li><a href="{{$.BasePath}}/scans{{apiKeyQS $.APIKey}}"><strong>Run and inspect a scan</strong><span>Keep issue filing and AI changes under review first.</span></a></li>
+  </ol>
+</section>
+{{else}}
+<nav class="rd-dash-workflow" aria-label="Daily investigation workflow">
+  <span class="rd-dash-eyebrow">Your workflow</span>
+  <a href="{{$.BasePath}}/doctor{{apiKeyQS $.APIKey}}"><span>01</span> Confirm coverage</a>
+  <a href="{{$.BasePath}}/findings?focus=1{{if $.APIKey}}&amp;api_key={{$.APIKey}}{{end}}"><span>02</span> Triage findings</a>
+  <a href="{{$.BasePath}}/scans{{apiKeyQS $.APIKey}}"><span>03</span> Verify fixes</a>
+</nav>
+{{end}}
+{{end}}
+
+{{if .Notice}}<div class="rd-alert info" role="status">{{.Notice}}</div>{{end}}
+
+<section class="rd-dash-visuals" aria-label="Portfolio trends and exposure">
+  <div class="rd-chart-card rd-dash-trend-card">
+    <div class="rd-card-head"><div><p class="rd-dash-eyebrow">Activity</p><h2>Scan and remediation trend</h2></div><span class="rd-dash-meta">Last 14 days</span></div>
+    <p class="rd-dash-chart-caption">Completed scans, proposed plans and auto-remediation PR activity. These represent different stages, not verified fixes.</p>
+    <div class="rd-chart-canvas-wrap rd-chart-trend"><canvas id="rd-chart-trend" role="img" aria-label="Completed scans, remediation plans, and auto-remediation PR activity over 14 days"></canvas></div>
+  </div>
+  <div class="rd-chart-card rd-dash-severity-card">
+    <div class="rd-card-head"><div><p class="rd-dash-eyebrow">Exposure</p><h2>Open findings by severity</h2></div></div>
+    <div class="rd-dash-severity-visual">
+      <div class="rd-chart-canvas-wrap rd-chart-donut"><canvas id="rd-chart-severity" role="img" aria-label="Distribution of open findings by severity"></canvas></div>
+      {{with .Data.Summary}}
+      <dl class="rd-dash-severity-key">
+        <div class="rd-dash-sev-critical"><dt>Critical</dt><dd>{{.Backlog.CriticalOpen}}</dd></div>
+        <div class="rd-dash-sev-high"><dt>High</dt><dd>{{.Backlog.HighOpen}}</dd></div>
+        <div class="rd-dash-sev-medium"><dt>Medium</dt><dd>{{.Backlog.MediumOpen}}</dd></div>
+        <div class="rd-dash-sev-low"><dt>Low</dt><dd>{{.Backlog.LowOpen}}</dd></div>
+      </dl>
+      {{end}}
+    </div>
+    <a class="rd-dash-card-link" href="{{.BasePath}}/findings?status=open{{if .APIKey}}&amp;api_key={{.APIKey}}{{end}}">Explore all findings <span aria-hidden="true">↗</span></a>
+  </div>
+</section>
+
+{{if .Data.Actions}}
+<section class="rd-card rd-dash-actions" aria-labelledby="rd-dash-actions-title">
+  <div class="rd-card-head"><div><p class="rd-dash-eyebrow">Recommended next steps</p><h2 id="rd-dash-actions-title">Take action</h2></div><a class="rd-link" href="{{.BasePath}}/doctor{{apiKeyQS .APIKey}}">System readiness ↗</a></div>
+  <ol class="rd-dash-action-list">
+    {{range $i, $action := .Data.Actions}}{{if lt $i 3}}
+    <li>
+      <span class="rd-dash-action-index">{{add $i 1}}</span>
+      <div><strong>{{$action.Title}}</strong><p>{{$action.Detail}}</p>{{if $action.Command}}<code>{{$action.Command}}</code>{{end}}</div>
+      {{if $action.LinkPath}}<a class="rd-btn rd-btn-sm rd-btn-secondary" href="{{$.BasePath}}{{$action.LinkPath}}{{apiKeySuffix $action.LinkPath $.APIKey}}">Open <span aria-hidden="true">↗</span></a>{{end}}
+    </li>
+    {{end}}{{end}}
+  </ol>
+</section>
+{{end}}
+
+{{if .Data.RecentSevereFindings}}
+<section class="rd-card rd-dash-priority" aria-labelledby="rd-dash-priority-title">
+  <div class="rd-card-head"><div><p class="rd-dash-eyebrow">Investigation queue</p><h2 id="rd-dash-priority-title">Priority findings</h2></div><a class="rd-link" href="{{.BasePath}}/findings?focus=1&amp;status=open{{if .APIKey}}&amp;api_key={{.APIKey}}{{end}}">View complete queue ↗</a></div>
+  <div class="rd-dash-table-scroll" role="region" aria-label="Priority findings table" tabindex="0">
+    <table class="rd-table rd-table-compact rd-dash-table">
+      <thead><tr><th scope="col">Severity</th><th scope="col">Finding</th><th scope="col">Repository</th><th scope="col">Scanner</th><th scope="col">Confidence</th><th scope="col">Action</th></tr></thead>
+      <tbody>{{range .Data.RecentSevereFindings}}<tr>
+        <td><span class="rd-badge {{severityBadge .Severity}}">{{.Severity}}</span></td>
+        <td class="rd-dash-finding-cell"><a href="{{$.BasePath}}/findings/{{.ID}}{{apiKeyQS $.APIKey}}">{{.Title}}</a>{{if .FilePath}}<small>{{displayPath .FilePath}}</small>{{end}}</td>
+        <td class="rd-dash-repo-cell">{{.RepoFullName}}</td><td>{{.Source}}</td><td>{{printf "%.0f%%" (mul .Confidence 100)}}</td>
+        <td><a class="rd-btn rd-btn-sm rd-btn-secondary" href="{{$.BasePath}}/findings/{{.ID}}{{apiKeyQS $.APIKey}}">Inspect</a></td>
+      </tr>{{end}}</tbody>
+    </table>
+  </div>
+</section>
+{{end}}
+
+<section class="rd-dash-secondary" aria-label="Additional intelligence">
+  <div class="rd-chart-card rd-dash-category-card">
+    <div class="rd-card-head"><div><p class="rd-dash-eyebrow">Distribution</p><h2>Finding categories</h2></div></div>
+    <div class="rd-chart-canvas-wrap rd-chart-bar"><canvas id="rd-chart-category" role="img" aria-label="Open findings ranked by category"></canvas></div>
+  </div>
+  {{with .Data.Summary}}
+  <div class="rd-card rd-dash-health-card">
+    <div class="rd-card-head"><div><p class="rd-dash-eyebrow">Operations</p><h2>Scan health</h2></div><a class="rd-link" href="{{$.BasePath}}/health{{apiKeyQS $.APIKey}}">Details ↗</a></div>
+    <div class="rd-dash-health-grid"><div><strong>{{.ScanHealth.CompletedScans}}</strong><span>Completed</span></div><div><strong>{{.ScanHealth.ActionableFailedScans}}</strong><span>Failed ({{.ScanHealth.FailureWindowDays}}d)</span></div><div><strong>{{$.Data.ActiveScans}}</strong><span>Active now</span></div></div>
+    {{if .Platform.DegradedCoverage}}<p class="rd-dash-health-note rd-dash-health-warning"><strong>Coverage incomplete:</strong> {{.Platform.ConfiguredMissingRuntime}} configured tools missing at runtime. <a href="{{$.BasePath}}/doctor{{apiKeyQS $.APIKey}}">Check tools ↗</a></p>{{else}}<p class="rd-dash-health-note">Execution counts do not establish completeness. Confirm scanner evidence before release decisions.</p>{{end}}
+    {{if gt .ScannerParseFailedCount 0}}<p class="rd-dash-health-note rd-dash-health-warning">{{.ScannerParseFailedCount}} scanner parse failures recorded in the last {{.ScanHealth.FailureWindowDays}} days. <a href="{{$.BasePath}}/health{{apiKeyQS $.APIKey}}#scanner-failures">Inspect ↗</a></p>{{end}}
+    <a class="rd-dash-card-link" href="{{$.BasePath}}/reports{{apiKeyQS $.APIKey}}">Executive report <span aria-hidden="true">↗</span></a>
+  </div>
+  {{end}}
+</section>
+
+<details class="rd-dash-disclosure" id="rd-dash-advanced">
+  <summary><span><strong>Repository risk, recent scans &amp; verification evidence</strong><small>Expand for advanced analysis and the complete operating picture</small></span><span class="rd-dash-chevron" aria-hidden="true">⌄</span></summary>
+  <div class="rd-dash-disclosure-body">
+    <div class="rd-chart-card">
+      <div class="rd-card-head"><h2>Repository risk comparison</h2><a class="rd-link" href="{{.BasePath}}/repos{{apiKeyQS .APIKey}}">Repositories ↗</a></div>
+      <div class="rd-chart-canvas-wrap rd-chart-repos"><canvas id="rd-chart-repos" role="img" aria-label="Open findings by repository and category"></canvas></div>
+    </div>
+    {{with .Data.Summary}}
+    <div class="rd-card">
+      <div class="rd-card-head"><h2>Scanner readiness</h2><a class="rd-link" href="{{$.BasePath}}/doctor{{apiKeyQS $.APIKey}}">Run Doctor ↗</a></div>
+      <p class="rd-muted">Configured and installed are not the same as executed. Inspect each scan for proven coverage.</p>
+      <div class="rd-dash-table-scroll" role="region" tabindex="0" aria-label="Scanner readiness table"><table class="rd-table rd-table-compact"><thead><tr><th>Scanner</th><th>Configured</th><th>Installed</th><th>Status</th></tr></thead><tbody>
+      {{range .Platform.Rollups}}<tr><td>{{.Name}}</td><td>{{if .Configured}}Yes{{else}}No{{end}}</td><td>{{if .Available}}Yes{{else}}No{{end}}</td><td>{{if .StatusLabel}}{{.StatusLabel}}{{else}}{{.StatusState}}{{end}}</td></tr>{{end}}
+      </tbody></table></div>
+    </div>
+    {{end}}
+    <div class="rd-card">
+      <div class="rd-card-head"><h2>Recent scans</h2><a class="rd-link" href="{{.BasePath}}/scans{{apiKeyQS .APIKey}}">Scan history ↗</a></div>
+      <div class="rd-dash-table-scroll" role="region" tabindex="0" aria-label="Recent scan history table"><table class="rd-table rd-table-compact"><thead><tr><th>Scan</th><th>Repository</th><th>Status</th><th>Findings</th><th>Started (UTC)</th></tr></thead><tbody>
+        {{range .Data.Summary.RecentScans}}<tr><td><a href="{{$.BasePath}}/scans/{{.ID}}{{apiKeyQS $.APIKey}}">{{shortID .ID 8}}</a></td><td>{{.RepoFullName}}</td><td><span class="rd-badge {{scanBadge .Status}}">{{.Status}}</span></td><td>{{issuesFromScan .SummaryJSON}}</td><td>{{.StartedAt.Format "2006-01-02 15:04"}}</td></tr>{{else}}<tr><td colspan="5">No scans yet.</td></tr>{{end}}
+      </tbody></table></div>
+    </div>
+  </div>
+</details>
+
+<details class="rd-dash-disclosure" id="rd-dash-calibration">
+  <summary><span><strong>Calibration, noise reduction &amp; learning</strong><small>Review how findings are grouped, tuned, and approved</small></span><span class="rd-dash-chevron" aria-hidden="true">⌄</span></summary>
+  <div class="rd-dash-disclosure-body rd-dash-calibration-grid">
+    {{with .Data.NoiseReduction}}
+    <div class="rd-card"><h2>Noise reduction · last {{.WindowDays}} days</h2><div class="rd-dash-health-grid"><div><strong>{{.RawFindings}}</strong><span>Raw findings</span></div><div><strong>{{.CalibratedNoise}}</strong><span>Calibrated</span></div><div><strong>{{.ActionablePresented}}</strong><span>Actionable</span></div></div><p class="rd-muted">{{.Headline}}</p></div>
+    {{end}}
+    {{with .Data.LearningHealth}}
+    <div class="rd-card"><h2>Learning state</h2><div class="rd-dash-health-grid"><div><strong>{{.EventsTotal}}</strong><span>Events</span></div><div><strong>{{.PendingRecommendations}}</strong><span>Pending review</span></div><div><strong>{{.ActiveRepoRules}}</strong><span>Active repo rules</span></div></div><p class="rd-muted">Learning recommendations need review and independently verified detection tests.</p></div>
+    {{end}}
+    <p><a class="rd-btn rd-btn-secondary" href="{{.BasePath}}/learning{{apiKeyQS .APIKey}}">Open calibration workbench ↗</a></p>
+  </div>
+</details>
+
+<div class="rd-dash-report-link"><div><strong>Need an evidence-backed audit?</strong><span>Export a detailed report with scanner outcomes, limitations, and remediation status.</span></div><a class="rd-btn rd-btn-secondary" href="{{.BasePath}}/reports{{apiKeyQS .APIKey}}">Executive report ↗</a></div>
+
+<script type="application/json" id="rd-dashboard-data">{{jsonScript .Data.ChartJSON}}</script>
+<script src="{{.BasePath}}/static/chart.umd.min.js" defer></script>
+<script src="{{.BasePath}}/static/dashboard-charts.js" defer></script>
+{{template "foot" .}}
+</body>
+</html>
+{{end}}
