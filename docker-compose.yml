@@ -48,6 +48,13 @@ services:
       REPOSITORY_DETECTIVE_API_KEY: ${REPOSITORY_DETECTIVE_API_KEY}
       # Homelab OpenClaw with private CA / self-signed gateway:
       REPOSITORY_DETECTIVE_AI_INSECURE_SKIP_TLS_VERIFY: ${REPOSITORY_DETECTIVE_AI_INSECURE_SKIP_TLS_VERIFY:-false}
+      # Commit-pinned CI self-scans run repeatedly; the default 30m cooldown
+      # would turn every CI audit into a 409 and a false evidence failure.
+      REPOSITORY_DETECTIVE_SCAN_COOLDOWN_SECONDS: ${REPOSITORY_DETECTIVE_SCAN_COOLDOWN_SECONDS:-60}
+      # This network cannot reach the Trivy vulnerability DB registry (egress
+      # policy returns a block page), so Trivy is explicitly disabled rather
+      # than left to fail and poison release evidence. Grype covers dependency scans.
+      REPOSITORY_DETECTIVE_ENABLE_TRIVY: ${REPOSITORY_DETECTIVE_ENABLE_TRIVY:-false}
     volumes:
       - ./config:/app/config:ro
       - ./data:/app/data

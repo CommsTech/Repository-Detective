@@ -8,6 +8,7 @@ RD instance with the project repository connected and scanner tools installed.
 import argparse
 import datetime as dt
 import hashlib
+import ipaddress
 import json
 import os
 import pathlib
@@ -153,6 +154,24 @@ def write_report(out_dir, report):
         encoding='utf-8')
 
 
+def _private_host(host):
+    """True for loopback or RFC1918 literals reachable only on the local network.
+
+    In-LAN CI runners reach the scan service over the host's private bridge, so
+    plain HTTP there never leaves local infrastructure. Public addresses and
+    hostnames still require HTTPS.
+    """
+    if not host:
+        return False
+    if host in ('localhost', '::1'):
+        return True
+    try:
+        addr = ipaddress.ip_address(host)
+    except ValueError:
+        return False
+    return addr.is_loopback or addr.is_private
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--output', default='dist/selfscan')
@@ -177,8 +196,10 @@ def main():
     if not re.fullmatch(r'[A-Za-z0-9_.-]+', args.owner) or not re.fullmatch(r'[A-Za-z0-9_.-]+', args.repo):
         configuration_errors.append('Repository owner and name are not valid')
     u = urllib.parse.urlsplit(base)
-    if u.scheme != 'https' and not (u.scheme == 'http' and u.hostname in ('localhost', '127.0.0.1', '::1')):
-        configuration_errors.append('Self-scan URL must use HTTPS (except localhost)')
+    if u.scheme != 'https' and not (u.scheme == 'http' and _private_host(u.hostname)):
+        configuration_errors.append(
+            'Self-scan URL must use HTTPS (plain HTTP is accepted only for loopback '
+            'or RFC1918 addresses inside the trusted local network)')
     if u.username or u.password or u.query or u.fragment or not u.hostname:
         configuration_errors.append('Self-scan API URL has unsupported components')
     if configuration_errors:

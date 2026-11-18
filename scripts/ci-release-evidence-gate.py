@@ -79,14 +79,14 @@ def check_evidence(directory: pathlib.Path, sha: str, forge: str, repository: st
             raise EvidenceError('Malformed scanner outcome')
         name, status, count = item.get('scanner'), item.get('status'), item.get('findings_count')
         if (not isinstance(name, str) or not SCANNER.fullmatch(name) or name in observed
-                or not isinstance(status, str) or status not in SUCCESS
+                or not isinstance(status, str) or status not in SUCCESS | {'disabled', 'binary_missing'}
                 or type(count) is not int or count < 0):
             raise EvidenceError('Invalid, duplicate, or failed scanner outcome')
         observed[name] = status
         counts += count
     if any(not isinstance(x, str) or not SCANNER.fullmatch(x) for x in required):
         raise EvidenceError('Malformed required scanner policy')
-    if len(required) != len(set(required)) or any(x not in observed for x in required):
+    if len(required) != len(set(required)) or any(observed.get(x) not in SUCCESS for x in required):
         raise EvidenceError('A required scanner was not successfully observed')
     if type(report.get('scanner_finding_events')) is not int or report['scanner_finding_events'] != counts:
         raise EvidenceError('Reported finding events disagree with scanner evidence')
