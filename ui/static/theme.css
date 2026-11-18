@@ -3396,3 +3396,14 @@ html { scroll-behavior: smooth; }
 .rd-counts-explainer p { font-size:.78rem; line-height:1.45; margin:.35rem 0 0; overflow-wrap:anywhere; }
 .rd-sponsor-link { display:inline-block; margin-bottom:.5rem; font-weight:600; text-decoration:none; color:inherit; }
 .rd-sponsor-link:hover, .rd-sponsor-link:focus-visible { text-decoration:underline; }
+
+/* Beta issue composer: local review first, no hidden remote submission. */
+.rd-feedback-layout { display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,0.9fr); gap:20px; align-items:start; }
+.rd-feedback-layout > * {min-width:0;}
+.rd-feedback-form label,.rd-feedback-preview label {display:block;margin:15px 0 6px;font-weight:600;}
+.rd-feedback-form input[type="text"],.rd-feedback-form select,.rd-feedback-form textarea,.rd-feedback-preview textarea {display:block;width:100%;box-sizing:border-box;max-width:100%;min-width:0;padding:10px 12px;border:1px solid var(--rd-border);border-radius:8px;color:var(--rd-text);background:var(--rd-surface);font:inherit;}
+.rd-feedback-preview textarea {font:0.83rem/1.5 ui-monospace,monospace;white-space:pre;overflow:auto;}
+.rd-feedback-logs {margin-top:18px;} .rd-feedback-logs summary {cursor:pointer;font-weight:600;}
+.rd-feedback-logs .rd-feedback-consent {display:flex;gap:10px;align-items:start;font-weight:normal;}
+.rd-feedback-actions {display:flex;gap:10px;flex-wrap:wrap;margin-top:20px;}
+@media(max-width:850px){.rd-feedback-layout {grid-template-columns:minmax(0,1fr);}}

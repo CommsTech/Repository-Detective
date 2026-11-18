@@ -15,6 +15,7 @@
   <a href="docs/QUICKSTART.md">Get started</a> ·
   <a href="docs/DEMO.md">See the workflow</a> ·
   <a href="docs/README.md">Documentation</a> ·
+  <a href="docs/CI_SELF_SCAN_AND_BETA_FEEDBACK.md">Self-scan evidence &amp; feedback</a> ·
   <a href="CHANGELOG.md">Changelog</a> ·
   <a href="SECURITY.md">Report a vulnerability</a> ·
   <a href="https://github.com/sponsors/CommsTech">Sponsor development</a>

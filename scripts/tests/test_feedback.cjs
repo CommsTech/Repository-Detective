@@ -1,0 +1,14 @@
+'use strict';
+const assert = require('node:assert/strict');
+const { draft, redact, issueLink } = require('../../ui/static/feedback.js');
+const source = {category:'bug', title:'Broken export', steps:'Click Export', actual:'No download', expected:'Download'};
+const d = draft(source);
+assert.match(d.body, /Reproduction steps/);
+assert.match(issueLink('https://git.example.org/team/rd',d.title,d.body),/issues\/new\?/);
+assert.throws(()=>draft({title:'',steps:'hello'}),/title/);
+assert.throws(()=>draft({title:'hey',steps:'click',logs:'abc',logConsent:false}),/consent/);
+assert.match(redact('Authorization: Bearer abcdefg123456'),/\[REDACTED\]/);
+assert.match(redact('password=abcdefghijk'),/\[REDACTED\]/);
+assert.doesNotMatch(draft({...source,title:'password=abcdefghijk'}).title,/abcdefghijk/);
+assert.ok(!issueLink('https://git.example.org/team/rd','t','a'.repeat(2000)).includes('body='));
+console.log('feedback client contract: PASS');

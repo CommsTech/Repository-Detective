@@ -60,6 +60,12 @@ jobs:
           node --check ui/static/app.js
           node scripts/test-ui-rule-builder.cjs
 
+      - name: Executive self-scan and feedback offline contract tests
+        run: |
+          python3 -m unittest discover scripts/tests -v
+          node --check ui/static/feedback.js
+          node scripts/tests/test_feedback.cjs
+
       - name: Custom rule and worker regression tests
         run: |
           go test -count=1 ./customrules ./runner ./store
@@ -160,3 +166,33 @@ jobs:
           done
           docker logs "$NAME" 2>&1 | tail -80
           exit 1
+
+  executive_selfscan:
+    name: Commit-pinned Repository Detective self-audit
+    # A real self-scan, separate from unit tests, so even a failed CI build has
+    # an independent (possibly incomplete) evidence report for the pushed SHA.
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout pushed source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Scan exact pushed commit using Repository Detective
+        env:
+          RD_SELFSCAN_URL: ${{ secrets.RD_SELFSCAN_URL }}
+          RD_SELFSCAN_API_KEY: ${{ secrets.RD_SELFSCAN_API_KEY }}
+          RD_SELFSCAN_OWNER: ${{ vars.RD_SELFSCAN_OWNER || github.repository_owner }}
+          RD_SELFSCAN_REPO: ${{ vars.RD_SELFSCAN_REPO || 'Repository-Detective' }}
+          RD_SELFSCAN_REQUIRED: ${{ vars.RD_SELFSCAN_REQUIRED || 'gitleaks,govulncheck,staticcheck' }}
+        run: |
+          python3 scripts/ci-selfscan-executive.py --sha "${GITHUB_SHA}" \
+            --owner "${RD_SELFSCAN_OWNER}" --repo "${RD_SELFSCAN_REPO}" \
+            --required "${RD_SELFSCAN_REQUIRED}" --output dist/selfscan
+      - name: Publish executive report and SHA-256 evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2; Gitea compatibility must be verified
+        with:
+          name: repository-detective-executive-${{ github.sha }}
+          path: dist/selfscan/
+          if-no-files-found: warn
+          retention-days: 90

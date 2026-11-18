@@ -296,6 +296,7 @@ func (h *Handler) RegisterRoutes(g *gin.RouterGroup) {
 	g.GET("/reports", h.Reports)
 	g.GET("/health", h.SystemHealth)
 	g.GET("/doctor", h.Doctor)
+	g.GET("/feedback", h.Feedback)
 	g.GET("/doctor/report", h.DoctorReport)
 	g.GET("/doctor/bundle", h.DoctorBundle)
 	g.GET("/scans/:scan_id", h.ScanDetail)

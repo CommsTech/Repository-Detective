@@ -1,3 +1,9 @@
+## Unreleased — commit-specific CI evidence and community feedback
+
+- On source pushes, Gitea and GitHub CI now request a fresh scan of the pushed repository commit, record per-scanner evidence, and upload an executive Markdown/JSON report plus checksum. Missing or mismatched evidence fails the self-scan job; neither a clean scan nor a passing test is described as a safety certification.
+- Added a review-first in-app **Report a problem** composer: reproducible steps, optional diagnostics, credential masking, Gitea issue draft, and explicit human submission. No public issue-posting credential or hidden log upload.
+- Added independent staging acceptance and fault-injection checklist for a better-equipped test agent. Product README remains task-focused.
+
 # Changelog
 
 ## [Unreleased — finding ownership queues, 2026-11-18]

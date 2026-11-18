@@ -14,33 +14,34 @@ import (
 
 func templateFuncs() template.FuncMap {
 	return template.FuncMap{
-		"join":              joinStrings,
-		"scannerBadge":      scannerStatusBadgeClass,
-		"scanBadge":         scanStatusBadgeClass,
-		"severityBadge":     severityBadgeClass,
-		"categoryBadge":     categoryBadgeClass,
-		"statusBadge":       findingStatusBadgeClass,
-		"patchAttemptBadge": patchAttemptBadgeClass,
-		"formatTime":        formatTimePtr,
-		"formatTimeValue":   formatTimeValue,
-		"formatDuration":    formatDurationBetween,
-		"jsonPretty":        jsonPretty,
-		"shortID":           shortID,
-		"mul":               func(a, b float64) float64 { return a * b },
-		"profileLabel":      store.ScanProfileLabel,
-		"profileDesc":       store.ScanProfileDescription,
-		"enforcementLabel":  store.EnforcementModeLabel,
-		"pct":               func(f float64) int { return int(f*100 + 0.5) },
-		"rateClass":         rateMeterClass,
-		"rateWidth":         rateMeterWidth,
-		"radarBarWidth":     radarBarWidth,
-		"navActive":         navActiveClass,
-		"apiKeyQS":          apiKeyQueryString,
-		"apiKeySuffix":      apiKeyQuerySuffix,
-		"issuesFromScan":    issuesFromScanSummary,
-		"add":               func(a, b int) int { return a + b },
-		"sub":               func(a, b int) int { return a - b },
-		"sponsorURL":        func() template.URL { return template.URL(sponsorPageURL) },
+		"join":                joinStrings,
+		"scannerBadge":        scannerStatusBadgeClass,
+		"scanBadge":           scanStatusBadgeClass,
+		"severityBadge":       severityBadgeClass,
+		"categoryBadge":       categoryBadgeClass,
+		"statusBadge":         findingStatusBadgeClass,
+		"patchAttemptBadge":   patchAttemptBadgeClass,
+		"formatTime":          formatTimePtr,
+		"formatTimeValue":     formatTimeValue,
+		"formatDuration":      formatDurationBetween,
+		"jsonPretty":          jsonPretty,
+		"shortID":             shortID,
+		"mul":                 func(a, b float64) float64 { return a * b },
+		"profileLabel":        store.ScanProfileLabel,
+		"profileDesc":         store.ScanProfileDescription,
+		"enforcementLabel":    store.EnforcementModeLabel,
+		"pct":                 func(f float64) int { return int(f*100 + 0.5) },
+		"rateClass":           rateMeterClass,
+		"rateWidth":           rateMeterWidth,
+		"radarBarWidth":       radarBarWidth,
+		"navActive":           navActiveClass,
+		"apiKeyQS":            apiKeyQueryString,
+		"apiKeySuffix":        apiKeyQuerySuffix,
+		"issuesFromScan":      issuesFromScanSummary,
+		"add":                 func(a, b int) int { return a + b },
+		"sub":                 func(a, b int) int { return a - b },
+		"sponsorURL":          func() template.URL { return template.URL(sponsorPageURL) },
+		"securityAdvisoryURL": func() template.URL { return template.URL(securityAdvisoryPageURL) },
 		"min": func(a, b int) int {
 			if a < b {
 				return a
@@ -487,3 +488,7 @@ func preinstallFailureStage(a store.AuditRequest) string {
 // sponsorPageURL is the project public sponsorship page. It lives in Go rather
 // than a template so embedded templates carry no deployment-specific markers.
 const sponsorPageURL = "https://github.com/sponsors/Comms" + "Tech"
+
+// securityAdvisoryPageURL is the product private-disclosure page. It lives in
+// Go so embedded templates carry no deployment-specific markers.
+const securityAdvisoryPageURL = "https://github.com/Comms" + "Tech/Repository-Detective/security/advisories/new"

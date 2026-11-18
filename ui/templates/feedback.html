@@ -1,0 +1,55 @@
+{{define "feedback.html"}}
+<!DOCTYPE html><html lang="en"><head>{{template "head" .}}</head>
+<body class="rd-app">{{template "nav" .}}
+<div class="rd-card rd-feedback-intro">
+  <div class="rd-card-head"><h2>Help improve Repository Detective</h2><span class="rd-chip">Community beta</span></div>
+  <p>Report a reproducible bug, missing detection, confusing workflow, or feature request. Your draft stays in this browser until <strong>you review and submit it in Gitea</strong>.</p>
+  <p class="rd-muted">Do not share passwords, API keys, private repository source, customer data, or unredacted logs. Security vulnerabilities in Repository Detective itself should be reported privately through <a href="{{securityAdvisoryURL}}" rel="noopener noreferrer" target="_blank">a private security advisory</a>, not a public issue.</p>
+</div>
+<div class="rd-feedback-layout" id="rd-feedback-form" data-forge-url="{{.Data.ProjectIssueBase}}">
+  <section class="rd-card rd-feedback-form">
+    <div class="rd-card-head"><h2>1 · Describe the issue</h2></div>
+    <label for="rd-fb-category">Type of feedback</label>
+    <select id="rd-fb-category" class="rd-input"><option value="bug">Bug / unexpected behavior</option><option value="scan">Scanner result / false positive</option><option value="ux">User experience</option><option value="docs">Documentation</option><option value="feature">Feature request</option></select>
+    <label for="rd-fb-title">Short title <span aria-hidden="true">*</span></label>
+    <input id="rd-fb-title" type="text" maxlength="140" required placeholder="e.g. Scan results disappear after refresh" autocomplete="off">
+    <label for="rd-fb-steps">Steps to reproduce <span aria-hidden="true">*</span></label>
+    <textarea id="rd-fb-steps" rows="4" maxlength="3000" required placeholder="1. Open Repositories&#10;2. Select a scan&#10;3. ..."></textarea>
+    <label for="rd-fb-expected">Expected behavior</label>
+    <textarea id="rd-fb-expected" rows="2" maxlength="1500"></textarea>
+    <label for="rd-fb-actual">Actual behavior</label>
+    <textarea id="rd-fb-actual" rows="2" maxlength="1500"></textarea>
+    <label for="rd-fb-version">Application version / commit (optional)</label>
+    <input id="rd-fb-version" type="text" maxlength="140" placeholder="v0.1.0-beta.x or commit SHA">
+    <label for="rd-fb-scan">Scan ID (optional)</label>
+    <input id="rd-fb-scan" type="text" maxlength="128" placeholder="Paste scan ID; not a secret">
+    <details class="rd-feedback-logs"><summary>Optional log excerpt (review and redact before sharing)</summary>
+      <p class="rd-muted">Paste at most 6,000 characters. Common token patterns are masked locally, but automatic redaction cannot guarantee privacy. Do not paste raw support bundles.</p>
+      <label for="rd-fb-logs">Relevant logs (optional)</label>
+      <textarea id="rd-fb-logs" rows="6" maxlength="6000" spellcheck="false"></textarea>
+      <label class="rd-feedback-consent"><input id="rd-fb-log-consent" type="checkbox"> I reviewed the excerpt and authorize including it in a public issue draft.</label>
+    </details>
+    <div class="rd-feedback-actions">
+      <button id="rd-fb-preview" type="button" class="rd-btn">Generate preview</button>
+      <button id="rd-fb-copy" type="button" class="rd-btn rd-btn-secondary">Copy Markdown</button>
+    </div>
+    <p id="rd-fb-status" role="status" aria-live="polite" class="rd-muted"></p>
+  </section>
+  <section class="rd-card rd-feedback-preview">
+    <div class="rd-card-head"><h2>2 · Review and submit</h2><span class="rd-chip">Not submitted</span></div>
+    <p class="rd-muted">Check the preview for personal data before copying. Opening Gitea prepares a draft; you must submit it there.</p>
+    <label for="rd-fb-markdown">Generated report</label>
+    <textarea id="rd-fb-markdown" rows="19" readonly spellcheck="false" aria-label="Generated issue Markdown"></textarea>
+    {{if .Data.ProjectIssueBase}}
+    <a id="rd-fb-open" class="rd-btn rd-btn-secondary" href="{{.Data.ProjectIssueBase}}/issues/new" target="_blank" rel="noopener noreferrer">Open issue draft in Gitea</a>
+    <p class="rd-muted">The draft includes a short prefill when it fits in a URL. For longer reports use Copy Markdown and paste into Gitea.</p>
+    {{else}}
+    <p class="rd-alert info"><strong>Issue tracker not configured.</strong> Set <code>REPOSITORY_DETECTIVE_PROJECT_URL</code> to the HTTPS URL of the product's Gitea project, restart, then return here. You can still copy the report now.</p>
+    {{end}}
+    <a href="{{.BasePath}}/doctor{{apiKeyQS .APIKey}}" class="rd-link">Open Doctor diagnostics</a>
+    <p class="rd-muted">Doctor bundles are for local inspection first. Never attach a raw bundle without reviewing its contents.</p>
+  </section>
+</div>
+<script src="{{.BasePath}}/static/feedback.js" defer></script>
+{{template "foot" .}}</body></html>
+{{end}}
