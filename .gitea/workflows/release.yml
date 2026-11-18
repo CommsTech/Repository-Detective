@@ -31,8 +31,14 @@ jobs:
           go-version: "1.26.11"
           cache: true
 
-      - name: Run tests
-        run: go test ./...
+      - name: Validate source and tests before publishing
+        run: |
+          go mod tidy
+          git diff --exit-code -- go.mod go.sum
+          node --check ui/static/app.js
+          pkgs=$(go list ./... | grep -v '/e2e/results/')
+          go vet $pkgs
+          go test -race -count=1 $pkgs
 
       - name: Verify tag matches module version pattern
         run: |

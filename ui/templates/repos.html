@@ -72,7 +72,11 @@
       <div class="rd-fleet-cell rd-fleet-repo">
         <a class="rd-link rd-fleet-repo-name" href="{{$.BasePath}}/repos/{{.ID}}{{apiKeyQS $.APIKey}}">{{.FullName}}</a>
         <span class="rd-fleet-repo-meta">ID {{.ID}} · {{.ForgeType}}</span>
-        {{if .CountsDiffer}}<span class="rd-badge monitor rd-badge-xs" title="Finding vs issue counts may differ — expected in report-only mode">sync note</span>{{end}}
+        {{if .CountsDiffer}}<details class="rd-counts-explainer">
+          <summary title="Explain the difference between findings and forge issues">Why counts differ</summary>
+          <p>Scanner findings and forge issues are different totals. Issue filing may be disabled, report-only, limited by policy, or still awaiting synchronization. One issue may also track multiple findings. This is not automatically a synchronization error.</p>
+          <p>Compare the latest scan, filing policy, and unmapped counts before troubleshooting.</p>
+        </details>{{end}}
       </div>
 
       <div class="rd-fleet-cell rd-fleet-state">

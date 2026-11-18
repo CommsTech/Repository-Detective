@@ -16,7 +16,8 @@
   <a href="docs/DEMO.md">See the workflow</a> ·
   <a href="docs/README.md">Documentation</a> ·
   <a href="CHANGELOG.md">Changelog</a> ·
-  <a href="SECURITY.md">Report a vulnerability</a>
+  <a href="SECURITY.md">Report a vulnerability</a> ·
+  <a href="https://github.com/sponsors/CommsTech">Sponsor development</a>
 </p>
 
 ---

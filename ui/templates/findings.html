@@ -101,8 +101,8 @@
       <p class="rd-muted" role="status" aria-live="polite">{{if .Data.TotalFindings}}Showing {{.Data.FirstResult}}–{{.Data.LastResult}} of {{.Data.TotalFindings}} matches, ordered by severity{{else}}No matching findings{{end}}{{if .Data.Filter.Search}} · search: “{{.Data.Filter.Search}}”{{end}}</p>
     </div>
     <div class="rd-queue-exports" aria-label="Export matching findings" data-findings-export>
-      <a class="rd-btn rd-btn-ghost rd-btn-sm" data-finding-export-format="csv" href="{{.BasePath}}/findings/export?format=csv{{if .Data.ExportQuery}}&amp;{{.Data.ExportQuery}}{{else}}{{if .APIKey}}&amp;api_key={{.APIKey}}{{end}}{{end}}">Export CSV</a>
-      <a class="rd-btn rd-btn-ghost rd-btn-sm" data-finding-export-format="json" href="{{.BasePath}}/findings/export?format=json{{if .Data.ExportQuery}}&amp;{{.Data.ExportQuery}}{{else}}{{if .APIKey}}&amp;api_key={{.APIKey}}{{end}}{{end}}">Export JSON</a>
+      <a class="rd-btn rd-btn-ghost rd-btn-sm" data-finding-export-format="csv" href="{{.Data.ExportCSVURL}}">Export CSV</a>
+      <a class="rd-btn rd-btn-ghost rd-btn-sm" data-finding-export-format="json" href="{{.Data.ExportJSONURL}}">Export JSON</a>
       <span class="rd-export-status" role="status" aria-live="polite" data-finding-export-status></span>
     </div>
   </div>

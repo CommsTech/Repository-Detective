@@ -94,7 +94,7 @@ func (h *Handler) webhookSetupStatus() WebhookSetupStatus {
 	status := WebhookSetupStatus{
 		Ready:      true,
 		OnboardURL: strings.TrimSuffix(h.basePath, "/ui") + "/onboard",
-		DocsURL:    "https://git.example.com/redacted-org/Repository-Detective/src/branch/main/docs/SETUP.md",
+		DocsURL:    "https://github.com/CommsTech/Repository-Detective/blob/main/docs/SETUP.md",
 	}
 	if strings.TrimSpace(h.platform.PublicURL) == "" {
 		status.Ready = false

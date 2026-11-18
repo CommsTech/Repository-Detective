@@ -154,3 +154,9 @@ staticcheck ./...
 ```
 
 Optional: `gosec ./...` when installed locally.
+
+## Beta operator verification
+
+- [Filtered findings export contract](EXPORT_FILTER_CONTRACT.md)
+- [Authentication, roles and external sign-in design](ACCESS_AND_SSO_DESIGN.md)
+- [Public tester acceptance checklist](BETA_RELEASE_ACCEPTANCE_2026-11-18.md)

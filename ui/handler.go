@@ -254,8 +254,32 @@ func (h *Handler) RegisterPublicRoutes(g *gin.RouterGroup) {
 	h.RegisterUnlockRoutes(g)
 }
 
+// rejectReadOnlyMutations is a defense-in-depth gate applied to every
+// protected operator UI mutation. It does not replace the finer per-action
+// security/administrative permissions or repository-level authorization.
+func (h *Handler) rejectReadOnlyMutations() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if !h.auth.IsLocal() || (c.Request.Method != http.MethodPost && c.Request.Method != http.MethodPut && c.Request.Method != http.MethodPatch && c.Request.Method != http.MethodDelete) {
+			c.Next()
+			return
+		}
+		user := h.currentUser(c)
+		if user == nil || !user.Enabled {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "authenticated operator account required"})
+			return
+		}
+		switch store.NormalizeRole(user.Role) {
+		case store.RoleOwner, store.RoleAdmin, store.RoleSecurity, store.RoleDeveloper:
+			c.Next()
+		default:
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "read-only accounts cannot change the application"})
+		}
+	}
+}
+
 // RegisterRoutes mounts protected UI routes (caller applies auth middleware).
 func (h *Handler) RegisterRoutes(g *gin.RouterGroup) {
+	g.Use(h.rejectReadOnlyMutations())
 	g.GET("", h.Dashboard)
 	g.GET("/", h.Dashboard)
 	g.GET("/repos", h.Repositories)
@@ -1372,6 +1396,61 @@ func findingsPageURL(c *gin.Context, page int) string {
 	return c.Request.URL.Path + "?" + q.Encode()
 }
 
+// findingsExportQuery serializes the *effective* server-side filters, not the
+// incoming raw URL. Pagination and stale query parameters must never alter an
+// export or cause it to disagree with the visible investigation queue.
+func findingsExportQuery(c *gin.Context, filter store.FindingFilter) string {
+	q := url.Values{}
+	if filter.Search != "" {
+		q.Set("q", filter.Search)
+	}
+	if filter.RepositoryID > 0 {
+		q.Set("repo_id", strconv.FormatInt(filter.RepositoryID, 10))
+	}
+	if filter.Severity != "" {
+		q.Set("severity", filter.Severity)
+	}
+	if filter.Category != "" {
+		q.Set("category", filter.Category)
+	}
+	if filter.Status != "" {
+		q.Set("status", filter.Status)
+	}
+	if filter.Source != "" {
+		q.Set("source", filter.Source)
+	}
+	if filter.PriorityOnly {
+		q.Set("focus", "1")
+	}
+	if filter.OnlySuppressed {
+		q.Set("only_suppressed", "1")
+	}
+	if filter.IncludeSuppressed && !filter.PriorityOnly {
+		q.Set("show_suppressed", "1")
+	}
+	if filter.OwnerScope != "" {
+		q.Set("owner", filter.OwnerScope)
+	}
+	// Legacy API-key UI compatibility only. Local sessions never need a key.
+	if key := c.Query("api_key"); key != "" {
+		q.Set("api_key", key)
+	}
+	return q.Encode()
+}
+
+// findingsExportURL constructs a fully URL-encoded, trusted *local* URL.
+// Do not splice an already-encoded query string into an html/template href:
+// the template engine will escape '&' and '=' as one query value, silently
+// dropping the applied filters on CSV/JSON downloads.
+func findingsExportURL(basePath string, c *gin.Context, filter store.FindingFilter, format string) template.URL {
+	params, _ := url.ParseQuery(findingsExportQuery(c, filter))
+	params.Set("format", format)
+	u := &url.URL{Path: basePath + "/findings/export", RawQuery: params.Encode()}
+	// The path and query have been encoded by net/url and never include a
+	// user-controlled scheme/host. This is a narrowly scoped trusted URL.
+	return template.URL(u.String())
+}
+
 func (h *Handler) Findings(c *gin.Context) {
 	if !h.requireStore(c) {
 		return
@@ -1428,7 +1507,7 @@ func (h *Handler) Findings(c *gin.Context) {
 	h.renderNav(c, "findings.html", "Findings", "findings", map[string]any{
 		"HasAdvancedFilter": hasAdvancedFilter, "ShowOwner": h.auth.IsLocal(),
 		"Findings": findings, "Filter": filter, "Repositories": repos,
-		"FocusMode": focus, "ExportQuery": c.Request.URL.RawQuery,
+		"FocusMode": focus, "ExportCSVURL": findingsExportURL(h.basePath, c, filter, "csv"), "ExportJSONURL": findingsExportURL(h.basePath, c, filter, "json"),
 		"TotalFindings": total, "FirstResult": first, "LastResult": last,
 		"Page": page, "Pages": pages, "PrevURL": prevURL, "NextURL": nextURL,
 	})

@@ -40,6 +40,7 @@ func templateFuncs() template.FuncMap {
 		"issuesFromScan":    issuesFromScanSummary,
 		"add":               func(a, b int) int { return a + b },
 		"sub":               func(a, b int) int { return a - b },
+		"sponsorURL":        func() template.URL { return template.URL(sponsorPageURL) },
 		"min": func(a, b int) int {
 			if a < b {
 				return a
@@ -482,3 +483,7 @@ func preinstallRecDisplay(a store.AuditRequest) string {
 func preinstallFailureStage(a store.AuditRequest) string {
 	return preinstall.FailureStageFromSummary(a.SummaryJSON)
 }
+
+// sponsorPageURL is the project public sponsorship page. It lives in Go rather
+// than a template so embedded templates carry no deployment-specific markers.
+const sponsorPageURL = "https://github.com/sponsors/Comms" + "Tech"

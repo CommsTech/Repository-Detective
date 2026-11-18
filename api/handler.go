@@ -269,21 +269,58 @@ func (h *Handler) ListFindings(c *gin.Context) {
 	h.respondFindings(c, findingFilterFromQuery(c))
 }
 
+// ExportFindings follows the same filter semantics as the operator queue. It
+// exports the complete matching set (bounded for safety), not a default page.
 func (h *Handler) ExportFindings(c *gin.Context) {
 	if !h.requireStore(c) {
 		return
 	}
-	filter := findingFilterFromQuery(c)
-	if filter.Limit <= 0 || filter.Limit > 5000 {
-		filter.Limit = 5000
-	}
-	findings, err := h.store.ListFindings(c.Request.Context(), filter)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list findings"})
+	if c.Query("owner") != "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "owner filters require a signed-in operator UI session"})
 		return
 	}
 	format := strings.ToLower(strings.TrimSpace(c.Query("format")))
+	if format == "" {
+		format = "json"
+	}
+	if format != "json" && format != "csv" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "unsupported export format; use csv or json"})
+		return
+	}
+	filter := findingFilterFromQuery(c)
+	filter.Prioritize = true // Match the operator export ordering without changing API list ordering.
+	const maxExportRows = 20000
+	total, err := h.store.CountFindings(c.Request.Context(), filter)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to count matching findings"})
+		return
+	}
+	if total > maxExportRows {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "export exceeds 20000 rows; narrow the filters"})
+		return
+	}
+	findings := make([]store.FindingListItem, 0, total)
+	filter.Limit = 200
+	for offset := 0; offset < total; offset += filter.Limit {
+		filter.Offset = offset
+		batch, batchErr := h.store.ListFindings(c.Request.Context(), filter)
+		if batchErr != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve export findings"})
+			return
+		}
+		if len(batch) == 0 {
+			c.JSON(http.StatusConflict, gin.H{"error": "findings changed during export; retry"})
+			return
+		}
+		findings = append(findings, batch...)
+	}
+	if len(findings) != total {
+		c.JSON(http.StatusConflict, gin.H{"error": "findings changed during export; retry"})
+		return
+	}
 	stamp := time.Now().UTC().Format("20060102T150405Z")
+	c.Header("Cache-Control", "no-store")
+	c.Header("X-Content-Type-Options", "nosniff")
 	if format == "csv" {
 		c.Header("Content-Type", "text/csv; charset=utf-8")
 		c.Header("Content-Disposition", `attachment; filename="findings-`+stamp+`.csv"`)
@@ -293,22 +330,10 @@ func (h *Handler) ExportFindings(c *gin.Context) {
 			b.WriteString(strconv.FormatInt(f.ID, 10))
 			b.WriteByte(',')
 			b.WriteString(strconv.FormatInt(f.RepositoryID, 10))
-			b.WriteByte(',')
-			b.WriteString(csvCell(f.Severity))
-			b.WriteByte(',')
-			b.WriteString(csvCell(f.Category))
-			b.WriteByte(',')
-			b.WriteString(csvCell(f.Status))
-			b.WriteByte(',')
-			b.WriteString(csvCell(f.Source))
-			b.WriteByte(',')
-			b.WriteString(csvCell(f.RuleID))
-			b.WriteByte(',')
-			b.WriteString(csvCell(f.Fingerprint))
-			b.WriteByte(',')
-			b.WriteString(csvCell(f.Title))
-			b.WriteByte(',')
-			b.WriteString(csvCell(f.FilePath))
+			for _, value := range []string{f.Severity, f.Category, f.Status, f.Source, f.RuleID, f.Fingerprint, f.Title, f.FilePath} {
+				b.WriteByte(',')
+				b.WriteString(csvCell(value))
+			}
 			b.WriteByte(',')
 			b.WriteString(strconv.Itoa(f.Line))
 			b.WriteByte('\n')
@@ -323,12 +348,16 @@ func (h *Handler) ExportFindings(c *gin.Context) {
 	c.Header("Content-Disposition", `attachment; filename="findings-`+stamp+`.json"`)
 	c.JSON(http.StatusOK, gin.H{
 		"generated_at": time.Now().UTC().Format(time.RFC3339),
-		"count":        len(out),
-		"findings":     out,
+		"count":        len(out), "findings": out,
 	})
 }
 
 func csvCell(v string) string {
+	// Neutralize formula injection in exported scanner-controlled fields.
+	trimmed := strings.TrimLeft(v, " \t\r\n")
+	if trimmed != "" && strings.ContainsRune("=+-@", rune(trimmed[0])) {
+		v = "'" + v
+	}
 	v = strings.ReplaceAll(v, `"`, `""`)
 	if strings.ContainsAny(v, ",\"\n\r") {
 		return `"` + v + `"`
@@ -339,17 +368,30 @@ func csvCell(v string) string {
 func findingFilterFromQuery(c *gin.Context) store.FindingFilter {
 	opts := listOptions(c)
 	repoID, _ := strconv.ParseInt(c.Query("repo_id"), 10, 64)
-	return store.FindingFilter{
-		RepositoryID:      repoID,
-		Severity:          c.Query("severity"),
-		Category:          c.Query("category"),
-		Status:            c.Query("status"),
-		Source:            c.Query("source"),
+	focus := c.Query("focus") == "1" || c.Query("focus") == "true"
+	filter := store.FindingFilter{
+		Search:       strings.TrimSpace(c.Query("q")),
+		RepositoryID: repoID,
+		Severity:     c.Query("severity"), Category: c.Query("category"),
+		Status: c.Query("status"), Source: c.Query("source"),
 		IncludeSuppressed: c.Query("show_suppressed") == "1" || c.Query("include_suppressed") == "true",
 		OnlySuppressed:    c.Query("only_suppressed") == "1",
-		Limit:             opts.Limit,
-		Offset:            opts.Offset,
+		PriorityOnly:      focus, Prioritize: focus,
+		Limit: opts.Limit, Offset: opts.Offset,
 	}
+	if focus {
+		filter.Status = "open"
+		filter.IncludeSuppressed = false
+		filter.OnlySuppressed = false
+	} else {
+		if filter.OnlySuppressed && filter.Status != "suppressed" && filter.Status != "false_positive" {
+			filter.Status = ""
+		}
+		if filter.Status == "suppressed" || filter.Status == "false_positive" {
+			filter.IncludeSuppressed = true
+		}
+	}
+	return filter
 }
 
 func (h *Handler) respondFindings(c *gin.Context, filter store.FindingFilter) {

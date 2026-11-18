@@ -3389,3 +3389,10 @@ html { scroll-behavior: smooth; }
 .rd-table-triage .rd-owner-name { display: inline-flex; padding: .2rem .55rem; border-radius: 999px; background: var(--rd-surface-raised, rgba(130,145,175,.12)); border: 1px solid var(--rd-border, rgba(130,145,175,.28)); font-size: .85em; line-height: 1.4; max-width: 10rem; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; vertical-align: middle; }
 .rd-queue-tabs { overflow-x: auto; scrollbar-width: thin; }
 .rd-queue-tabs > a { min-width: max-content; }
+
+/* Repository count explanations: keyboard accessible and never overlap the grid. */
+.rd-counts-explainer { margin-top:.35rem; font-size:.78rem; max-width:32rem; min-width:0; }
+.rd-counts-explainer summary { cursor:pointer; color:var(--rd-link, #5794d6); text-decoration:underline; text-underline-offset:2px; overflow-wrap:anywhere; }
+.rd-counts-explainer p { font-size:.78rem; line-height:1.45; margin:.35rem 0 0; overflow-wrap:anywhere; }
+.rd-sponsor-link { display:inline-block; margin-bottom:.5rem; font-weight:600; text-decoration:none; color:inherit; }
+.rd-sponsor-link:hover, .rd-sponsor-link:focus-visible { text-decoration:underline; }

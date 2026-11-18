@@ -10,7 +10,6 @@ Get a useful finding on screen after a clean install. Full path: [TEN_MINUTE_AHA
 
 ```bash
 git clone https://github.com/CommsTech/Repository-Detective.git
-# Canonical Gitea: https://git.commsnet.org/commstech/Repository-Detective.git
 cd Repository-Detective
 ```
 
