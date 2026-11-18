@@ -295,3 +295,7 @@ e2e/results/
 state/
 repository-detective.upgrade
 docs/assets/screenshots/_quarantine_private/
+
+# Python test/compiler artifacts (never distribute)
+__pycache__/
+*.py[cod]

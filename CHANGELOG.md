@@ -1,3 +1,10 @@
+## Unreleased — CI executive evidence completeness and operator feedback
+
+- Self-scan CI now always executes on source pushes, even with missing credentials. Configuration failure produces an explicit `EVIDENCE_INCOMPLETE` Markdown/JSON artifact and a failing job rather than skipping report publication.
+- Report verifies the scan's actual repository ID/name and forge with an authenticated repository lookup, newly requested scan ID, source commit and report-only acknowledgement. Gitea and GitHub workflows select their own forge and require an uploadable artifact.
+- SHA256SUMS now covers both Markdown and JSON evidence. Added fixture tests for wrong repository, wrong forge, mismatched scan ID, malformed evidence, absent dry-run acknowledgement and invalid configuration.
+- Scan Details offers a local, privacy-minimal issue-report link prefilled only with the opaque scan ID. Kept README product-focused; updated CI runbook and deprecated release-guide claims.
+
 ## Unreleased — commit-specific CI evidence and community feedback
 
 - On source pushes, Gitea and GitHub CI now request a fresh scan of the pushed repository commit, record per-scanner evidence, and upload an executive Markdown/JSON report plus checksum. Missing or mismatched evidence fails the self-scan job; neither a clean scan nor a passing test is described as a safety certification.

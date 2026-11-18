@@ -1,10 +1,10 @@
 # Known limitations
 
-Honest constraints as of the closeout sprint. Update when shipping fixes.
+Operational constraints. Check the current release acceptance evidence before enabling features for public testers.
 
 ## Product
 
-- Single-tenant operator model — no built-in multi-user RBAC in UI
+- Local username/password and role checks exist; per-repository user isolation and Authentik/Gitea OIDC are not proven end to end. Do not expose unrelated private repositories to a shared beta tenant.
 - SQLite default — not HA clustered DB
 - Issue dedup is fingerprint-based (monitor SQLite mappings + forge issues)
 - Remediation PRs off by default
@@ -32,7 +32,7 @@ Honest constraints as of the closeout sprint. Update when shipping fixes.
 
 - No VPAT; manual testing checklist only
 - Charts require supplementary text tables (provided on dashboard)
-- No keyboard shortcut layer
+- Ctrl/⌘+K quick navigation is available on supported pages; complete keyboard and screen-reader acceptance is not yet proven.
 
 ## Documentation / wiki
 
@@ -43,7 +43,7 @@ Honest constraints as of the closeout sprint. Update when shipping fixes.
 
 ## Scanner / image (homelab)
 
-- All-in-one image must ship a Go toolchain matching `go.mod` (currently **1.26.10**). Older container Go (e.g. 1.23) causes `cyclonedx-gomod` / staticcheck / golangci friction; Syft is the SBOM fallback.
+- All-in-one image must ship a Go toolchain matching `go.mod` (currently **1.26.11**). Older container Go (e.g. 1.23) causes `cyclonedx-gomod` / staticcheck / golangci friction; Syft is the SBOM fallback.
 - Grype vulnerability DB can become malformed on long-lived volumes — rebuild with the **same** `XDG_CACHE_HOME` the container uses (live default `/app/data/cache`): `docker exec -u root … rm -rf /app/data/cache/grype && chown …` then `XDG_CACHE_HOME=/app/data/cache grype db update`. Updating only `$HOME/.cache/grype` will not fix scanner runs.
 
 ## Beta validation
@@ -54,7 +54,7 @@ Honest constraints as of the closeout sprint. Update when shipping fixes.
 
 ## Integrations
 
-- Gitea-specific; GitHub/GitLab not first-class
+- Gitea-first; GitHub/Forgejo integrations are not proven equivalent on every supported workflow.
 - Runner delegation requires separate runner deployment
 
 ## Tracking

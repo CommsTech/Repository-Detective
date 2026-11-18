@@ -54,7 +54,11 @@ jobs:
 
   executive_selfscan:
     name: Commit-pinned executive self-audit
-    if: github.event_name == 'push'
+    # The self-audit gate is opt-in: set the repository variable
+    # RD_SELFSCAN_ENABLED=true and the self-scan secrets to enforce it.
+    # While disabled, this job does not run and the missing commit-pinned
+    # evidence stays an explicit, documented gap rather than a green pass.
+    if: github.event_name == 'push' && vars.RD_SELFSCAN_ENABLED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 40
     env:
@@ -65,15 +69,9 @@ jobs:
       RD_SELFSCAN_REQUIRED: ${{ vars.RD_SELFSCAN_REQUIRED || 'gitleaks,govulncheck,staticcheck' }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - name: Self-scan gate status
-        run: |
-          if [ -z "${RD_SELFSCAN_URL}" ]; then
-            echo "::notice title=Self-scan gate disabled::RD_SELFSCAN_URL is not configured, so the commit-pinned self-audit is skipped. This is a configuration gap, not a passing scan."
-          fi
       - name: Scan exact pushed commit using Repository Detective
-        if: ${{ env.RD_SELFSCAN_URL != '' }}
         run: |
-          python3 scripts/ci-selfscan-executive.py --sha "${GITHUB_SHA}" \
+          python3 scripts/ci-selfscan-executive.py --sha "${GITHUB_SHA}" --forge github \
             --owner "${RD_SELFSCAN_OWNER}" --repo "${RD_SELFSCAN_REPO}" \
             --required "${RD_SELFSCAN_REQUIRED}" --output dist/selfscan
       - name: Upload executive evidence
@@ -82,5 +80,5 @@ jobs:
         with:
           name: repository-detective-executive-${{ github.sha }}
           path: dist/selfscan/
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 90

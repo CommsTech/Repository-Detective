@@ -1,6 +1,8 @@
 # Verify a Repository Detective release
 
-Latest tagged beta: **`v0.1.0-beta.5`** ([release notes](release/GITHUB_RELEASE_v0.1.0-beta.5.md)) — CAH trust-boundary hardening, issue-create race fix, SQLite test-mode, SBOM UX, learning/AI assist.
+> **Historical verification example only (beta.5).** This is not the latest release or a claim about the current container. For every new release, use the CI artifact and immutable image digest for that exact commit, and independently confirm both before publishing.
+
+Example tagged beta: **`v0.1.0-beta.5`** ([release notes](release/GITHUB_RELEASE_v0.1.0-beta.5.md)) — CAH trust-boundary hardening, issue-create race fix, SQLite test-mode, SBOM UX, learning/AI assist.
 
 Signing status: **CHECKSUM_ONLY** (OCI digest + SBOM checksums when published).  
 Cryptographic image/SBOM signing is **not** implemented yet — see decision notes below.
@@ -87,10 +89,10 @@ Read [ACCEPTANCE_v0.1.0-beta.3.md](release/ACCEPTANCE_v0.1.0-beta.3.md) for the 
 
 ## 8. Quick checklist
 
-1. Correct tag `v0.1.0-beta.5`  
+1. Correct source commit and release tag (beta.5 is only a historical example)
 2. Immutable digest matches the table above  
 3. Gitea registry digest == GHCR digest  
 4. SBOM `sha256sum -c SHA256SUMS` passes  
 5. Signature step: N/A (`CHECKSUM_ONLY`)  
 6. Provenance step: N/A (not claimed)  
-7. Issue filing on by default (`auto_create_issues: true`); severity/confidence gates still apply; per-scan dry-run available  
+7. Verify issue-filing policy from the running deployment. For a first-time installation, keep automatic issue creation **off** and test report-only dry runs before enabling writes.

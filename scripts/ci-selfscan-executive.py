@@ -34,13 +34,23 @@ def api(base, key, method, path, payload=None):
         headers={'X-Repository-Detective-API-Key': key, 'Content-Type': 'application/json', 'Accept': 'application/json'})
     try:
         with urllib.request.build_opener(NoRedirect()).open(req, timeout=45) as r:
-            return json.load(r)
+            result = json.load(r)
+            if not isinstance(result, dict):
+                raise RuntimeError('API response is not a JSON object')
+            return result
     except urllib.error.HTTPError as e:
         # Never write response bodies that might contain secrets to CI logs.
         raise RuntimeError(f'API {method} {path.split("?")[0]} returned HTTP {e.code}') from None
 
 
-def summarize(expected, owner, repo, scan, outcomes, engine, required):
+def summarize(expected, owner, repo, scan, outcomes, engine, required,
+              identity=None, expected_forge='gitea', expected_scan_id=''):
+    """Fail closed unless the *scan*, repository record and forge identify one revision.
+
+    A caller-supplied repository name is not proof that the scan result belongs
+    to that repository: the scan's persisted repository_id must match a second,
+    authenticated repository lookup.
+    """
     problems = []
     commit = str(scan.get('commit_sha') or '').lower()
     if commit != expected.lower():
@@ -49,11 +59,29 @@ def summarize(expected, owner, repo, scan, outcomes, engine, required):
         problems.append('Scan ref is not commit-specific and commit_pinned is not true')
     if scan.get('status') != 'completed':
         problems.append('Scan was not completed successfully')
+    if expected_scan_id and str(scan.get('id') or '') != expected_scan_id:
+        problems.append('Scan ID differs from the newly requested scan')
+    identity = identity if isinstance(identity, dict) else {}
+    reported_repo = str(identity.get('full_name') or '')
+    reported_forge = str(identity.get('forge_type') or '').lower()
+    repo_id = scan.get('repository_id')
+    if not isinstance(repo_id, int) or repo_id <= 0 or identity.get('id') != repo_id:
+        problems.append('Scan repository ID cannot be authenticated against repository record')
+    if reported_repo.casefold() != (owner + '/' + repo).casefold():
+        problems.append('Scan repository differs from requested repository or is missing')
+    if reported_forge != expected_forge.lower():
+        problems.append('Scan forge differs from requested forge or is missing')
     if not outcomes:
         problems.append('No per-scanner evidence was returned')
     details = []
     seen = set()
+    if not isinstance(outcomes, list):
+        problems.append('Scanner results response is malformed')
+        outcomes = []
     for item in outcomes:
+        if not isinstance(item, dict):
+            problems.append('Scanner result is not an object')
+            continue
         name = str(item.get('scanner_name') or '').lower().strip()
         status = str(item.get('status') or '').lower().strip()
         count = item.get('findings_count', 0)
@@ -73,6 +101,7 @@ def summarize(expected, owner, repo, scan, outcomes, engine, required):
     return {'schema_version': 1, 'report_type': 'repository-detective-executive-self-scan',
         'generated_utc': dt.datetime.now(dt.timezone.utc).isoformat(), 'repository': owner + '/' + repo,
         'expected_commit': expected.lower(), 'reported_commit': commit,
+        'reported_repository': reported_repo, 'reported_forge': reported_forge,
         'scan_id': str(scan.get('id') or ''), 'scan_status': str(scan.get('status') or ''),
         'workspace_mode': str(scan.get('workspace_mode_used') or ''),
         'engine_version': str(engine.get('version') or 'unknown'), 'engine_commit': str(engine.get('commit') or 'unknown'),
@@ -91,6 +120,8 @@ def markdown(report):
         '| Repository | `' + report['repository'] + '` |',
         '| Expected pushed commit | `' + report['expected_commit'] + '` |',
         '| Scan commit | `' + report['reported_commit'] + '` |',
+        '| Verified repository record | `' + report['reported_repository'] + '` |',
+        '| Verified forge | `' + report['reported_forge'] + '` |',
         '| Scan ID | `' + report['scan_id'] + '` |',
         '| Scan status | ' + report['scan_status'] + ' |',
         '| Scanner engine | `' + report['engine_version'] + '` (`' + report['engine_commit'] + '`) |',
@@ -114,7 +145,10 @@ def write_report(out_dir, report):
     (out_dir / 'executive-selfscan.json').write_text(raw, encoding='utf-8')
     (out_dir / 'executive-selfscan.md').write_text(markdown(report), encoding='utf-8')
     digest = hashlib.sha256(raw.encode()).hexdigest()
-    (out_dir / 'SHA256SUMS').write_text(digest + '  executive-selfscan.json\n', encoding='utf-8')
+    md_digest = hashlib.sha256((out_dir / 'executive-selfscan.md').read_bytes()).hexdigest()
+    (out_dir / 'SHA256SUMS').write_text(
+        digest + '  executive-selfscan.json\n' + md_digest + '  executive-selfscan.md\n',
+        encoding='utf-8')
 
 
 def main():
@@ -130,21 +164,25 @@ def main():
     sha, base, key = args.sha.strip().lower(), os.getenv('RD_SELFSCAN_URL', '').rstrip('/'), os.getenv('RD_SELFSCAN_API_KEY', '')
     if not SHA.fullmatch(sha):
         p.error('require the full 40-character pushed commit SHA')
+    configuration_errors = []
     if not base or not key or not args.owner:
-        report = summarize(sha, args.owner or '(not configured)', args.repo, {}, [], {}, [])
-        report['release_blockers'].append('Self-scan URL, API key, and repository owner must be configured for CI')
-        write_report(pathlib.Path(args.output), report)
-        print('EVIDENCE_INCOMPLETE: self-scan configuration missing; failure artifact written', file=sys.stderr)
-        return 1
+        configuration_errors.append('Self-scan URL, API key, and repository owner must be configured for CI')
     if not re.fullmatch(r'[A-Za-z0-9_.-]+', args.owner) or not re.fullmatch(r'[A-Za-z0-9_.-]+', args.repo):
-        p.error('require explicit owner and repository (alphanumerics, dot, dash, underscore)')
+        configuration_errors.append('Repository owner and name are not valid')
     u = urllib.parse.urlsplit(base)
     if u.scheme != 'https' and not (u.scheme == 'http' and u.hostname in ('localhost', '127.0.0.1', '::1')):
-        p.error('self-scan API must use HTTPS (except localhost)')
+        configuration_errors.append('Self-scan URL must use HTTPS (except localhost)')
     if u.username or u.password or u.query or u.fragment or not u.hostname:
-        p.error('self-scan API URL contains unsupported components')
+        configuration_errors.append('Self-scan API URL has unsupported components')
+    if configuration_errors:
+        report = summarize(sha, args.owner or '(not configured)', args.repo, {}, [], {}, [],
+                           expected_forge=args.forge)
+        report['release_blockers'] = sorted(set(report['release_blockers'] + configuration_errors))
+        write_report(pathlib.Path(args.output), report)
+        print('EVIDENCE_INCOMPLETE: self-scan configuration invalid; report artifact written', file=sys.stderr)
+        return 1
     required = sorted(set(s.strip().lower() for s in args.required.split(',') if s.strip()))
-    scan, evidence, engine = {}, [], {}
+    scan, evidence, engine, identity = {}, [], {}, {}
     failure = ''
     try:
         engine = api(base, key, 'GET', '/api/v1/about')
@@ -152,6 +190,8 @@ def main():
             {'forge_type': args.forge, 'owner': args.owner, 'repository': args.repo,
              'ref': sha, 'report_only_dry_run': True, 'scan_profile': 'standard_deterministic'})
         scan_id = str(started.get('scan_id') or '')
+        if started.get('report_only_dry_run') is not True:
+            raise RuntimeError('Analyze API did not acknowledge report-only dry-run; refusing to trust this run')
         if not re.fullmatch(r'[A-Za-z0-9_-]{8,128}', scan_id):
             raise RuntimeError('analyze endpoint did not return a valid scan ID')
         deadline = time.monotonic() + args.timeout
@@ -162,10 +202,15 @@ def main():
             time.sleep(10)
         else:
             raise RuntimeError('scan exceeded timeout')
+        repository_id = scan.get('repository_id')
+        if isinstance(repository_id, int) and repository_id > 0:
+            identity = api(base, key, 'GET', '/api/v1/repos/' + str(repository_id))
         evidence = api(base, key, 'GET', '/api/v1/scans/' + scan_id + '/scanner-results').get('scanner_results', [])
     except Exception as exc:
         failure = str(exc)
-    report = summarize(sha, args.owner, args.repo, scan, evidence, engine, required)
+    report = summarize(sha, args.owner, args.repo, scan, evidence, engine, required,
+                       identity=identity, expected_forge=args.forge,
+                       expected_scan_id=locals().get('scan_id', ''))
     if failure:
         report['decision'] = 'EVIDENCE_INCOMPLETE'
         report['release_blockers'].append('Self-scan request or evidence collection failed: ' + failure)

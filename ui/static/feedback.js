@@ -36,6 +36,14 @@
   function init() {
     var form = document.getElementById('rd-feedback-form');
     if (!form) return;
+    // Populate only an opaque scan identifier; never infer/upload repository
+    // source, logs, or credentials from the URL.
+    try {
+      var scanID = new URLSearchParams(root.location.search).get('scan_id');
+      if (scanID && /^[A-Za-z0-9_-]{8,128}$/.test(scanID)) {
+        document.getElementById('rd-fb-scan').value = scanID;
+      }
+    } catch (_) { /* Invalid query string: leave the optional field blank. */ }
     function val(id) { var el = document.getElementById('rd-fb-' + id); return el ? el.value : ''; }
     var output = document.getElementById('rd-fb-markdown');
     var status = document.getElementById('rd-fb-status');

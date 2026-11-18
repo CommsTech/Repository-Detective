@@ -56,7 +56,13 @@ func runCommandStreams(ctx context.Context, timeout time.Duration, dir string, n
 	cmd.Stderr = stderrBuf
 
 	// Kill the entire group on timeout; a parent-only kill leaves tool children
-	// running and the scan appears to hang past its budget.
+	// running and the scan appears to hang past its budget. Start explicitly so
+	// cmd.Process exists before the watcher reads it: calling cmd.Run while a
+	// goroutine touches cmd.Process is a data race.
+	if startErr := cmd.Start(); startErr != nil {
+		merged := append(append([]byte{}, stdoutBuf.Bytes()...), stderrBuf.Bytes()...)
+		return stdoutBuf.Bytes(), stderrBuf.Bytes(), &commandExitError{err: startErr, timedOut: false, output: merged}
+	}
 	finished := make(chan struct{})
 	go func() {
 		select {
@@ -65,7 +71,7 @@ func runCommandStreams(ctx context.Context, timeout time.Duration, dir string, n
 		case <-finished:
 		}
 	}()
-	runErr := cmd.Run()
+	runErr := cmd.Wait()
 	close(finished)
 	stdoutOut = stdoutBuf.Bytes()
 	stderrOut = stderrBuf.Bytes()
