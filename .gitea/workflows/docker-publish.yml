@@ -36,7 +36,7 @@ jobs:
   verify:
     name: Validate release source before registry publication
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 100
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
@@ -52,6 +52,33 @@ jobs:
           go vet $pkgs
           go test -race -count=1 $pkgs
           CGO_ENABLED=0 go build -o /tmp/repository-detective .
+      - name: Generate commit-pinned release self-scan
+        id: release_scan
+        if: always()
+        continue-on-error: true
+        env:
+          RD_SELFSCAN_URL: ${{ secrets.RD_SELFSCAN_URL }}
+          RD_SELFSCAN_API_KEY: ${{ secrets.RD_SELFSCAN_API_KEY }}
+          RD_SELFSCAN_OWNER: ${{ vars.RD_SELFSCAN_OWNER || github.repository_owner }}
+          RD_SELFSCAN_REPO: ${{ vars.RD_SELFSCAN_REPO || 'Repository-Detective' }}
+          RD_SELFSCAN_REQUIRED: ${{ vars.RD_SELFSCAN_REQUIRED || 'gitleaks,govulncheck,staticcheck' }}
+        run: |
+          python3 scripts/ci-selfscan-executive.py --sha "${GITHUB_SHA}" --forge gitea \
+            --owner "${RD_SELFSCAN_OWNER}" --repo "${RD_SELFSCAN_REPO}" \
+            --required "${RD_SELFSCAN_REQUIRED}" --output dist/selfscan
+      - name: Upload release executive evidence (including incomplete reports)
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2; verify Gitea runner compatibility
+        with:
+          name: repository-detective-release-evidence-${{ github.sha }}
+          path: dist/selfscan/
+          if-no-files-found: error
+          retention-days: 90
+      - name: Enforce release evidence gate before publishing
+        if: always()
+        run: |
+          python3 scripts/ci-release-evidence-gate.py --dir dist/selfscan \
+            --sha "${GITHUB_SHA}" --forge gitea --repository "${GITHUB_REPOSITORY}"
   publish:
     needs: verify
     name: Build and push (Gitea primary)

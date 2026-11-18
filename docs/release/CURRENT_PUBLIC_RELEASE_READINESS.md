@@ -1,6 +1,6 @@
 # Public beta readiness — verification status
 
-**Source baseline reviewed:** `repository-detective-main(20261118-175151).zip` (2026-11-18).
+**Source baseline reviewed:** `repository-detective-main(20261118-193222).zip` (2026-11-18).
 
 **Current release verdict:** **NOT CERTIFIED FOR UNRESTRICTED PUBLIC BETA**. This is a source review, not evidence of a deployed release. The latest live image/tag, runner state, and production behavior were not independently verified in this pass.
 
@@ -10,7 +10,7 @@ Repository Detective can be useful for controlled testing today, but the presenc
 
 - Self-hosted application with a product-focused README, local login, finding investigation, custom declarative rules, scanner integrations, and evidence-backed reports.
 - Operator-initiated report-only scans, optional AI advice, reviewable remediation plans, and Gitea-oriented forge integration.
-- Commit-pinned CI self-scan report generation for **every source push** to the configured Gitea/GitHub CI branches. When unconfigured, the job must generate `EVIDENCE_INCOMPLETE` rather than disappearing. This is not yet a release-publishing gate.
+- Commit-pinned CI self-scan report generation for **every source push** to the configured Gitea/GitHub CI branches. When unconfigured, the job must generate `EVIDENCE_INCOMPLETE` rather than disappearing. The latest working-tree patch adds a release-time evidence gate; real runner/publication behavior has not been verified.
 - In-app, review-first feedback drafting, without automatic public-log uploads or anonymous server-side issue filing.
 
 ## Required acceptance gates before wide distribution
@@ -18,7 +18,7 @@ Repository Detective can be useful for controlled testing today, but the presenc
 | Priority | Area | Pass evidence required |
 |---|---|---|
 | P0 | Source, tests and release reproducibility | Full Go 1.26.11 suite (`go test -race ./...`), vet, format, reproducible image builds, dependency/SBOM scans, source SHA to image digest provenance |
-| P0 | Self-scan integrity | Both CI platforms run on push, produce a matching commit-specific report and passing `SHA256SUMS`, correctly mark missing scanner evidence `EVIDENCE_INCOMPLETE`, and upload artifacts even on scan failure |
+| P0 | Self-scan and release integrity | Both CI platforms generate commit-specific reports; tag-triggered image/release workflows must fail closed on incomplete evidence, attach checksummed reports, and never publish on upload/gate failures. See [release evidence gate](RELEASE_EVIDENCE_GATE_2026-11-18.md). |
 | P0 | Runner isolation | Real worker dispatch, capability matching, clean ephemeral workspaces, denied secrets/network access, evidence persistence and interrupted-job recovery verified in a disposable environment |
 | P0 | Authentication and authorization | Local user/role authorization matrix including attempts to cross repository/user boundaries; external Authentik/Gitea login remains unverified, not production-enabled by assumption |
 | P0 | Remediation correctness | AI plan → isolated patch → validation → rescan → reviewable PR; verify failure handling and no false closure or hidden execution on the main host |

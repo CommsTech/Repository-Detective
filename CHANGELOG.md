@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — release-bound executive evidence gate (2026-11-18)
+
+- Added a fail-closed release evidence validator with strict commit/repository/forge identity, scanner coverage, decision consistency and SHA-256 manifest checks. A report containing findings still requires human review and is not a security certification.
+- Gitea Docker publish, Gitea binary release, and GitHub GHCR mirror now execute a fresh self-scan and enforce the evidence gate **before** publishing. The Gitea release includes Markdown/JSON executive audit assets and checksum manifest; asset upload now fails visibly on HTTP errors.
+- Added offline gate and workflow regression tests and an independent deployment acceptance plan. Full Go 1.26.11, real Actions uploads, registry publication and live API verification remain untested locally.
+
 ## Unreleased — always-on self-scan evidence policy (2026-11-18)
 
 - Made commit-specific self-scan jobs unconditional on source pushes in Gitea and GitHub CI. An unconfigured instance now produces a failing `EVIDENCE_INCOMPLETE` artifact rather than a skipped job; source-test success alone does not attest to self-scan completeness.

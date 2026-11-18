@@ -16,13 +16,41 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 150
 
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
+
+      - name: Generate commit-pinned release self-scan
+        id: release_scan
+        if: always()
+        continue-on-error: true
+        env:
+          RD_SELFSCAN_URL: ${{ secrets.RD_SELFSCAN_URL }}
+          RD_SELFSCAN_API_KEY: ${{ secrets.RD_SELFSCAN_API_KEY }}
+          RD_SELFSCAN_OWNER: ${{ vars.RD_SELFSCAN_OWNER || github.repository_owner }}
+          RD_SELFSCAN_REPO: ${{ vars.RD_SELFSCAN_REPO || 'Repository-Detective' }}
+          RD_SELFSCAN_REQUIRED: ${{ vars.RD_SELFSCAN_REQUIRED || 'gitleaks,govulncheck,staticcheck' }}
+        run: |
+          python3 scripts/ci-selfscan-executive.py --sha "${GITHUB_SHA}" --forge gitea \
+            --owner "${RD_SELFSCAN_OWNER}" --repo "${RD_SELFSCAN_REPO}" \
+            --required "${RD_SELFSCAN_REQUIRED}" --output dist/selfscan
+      - name: Upload release executive evidence (including incomplete reports)
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2; verify Gitea runner compatibility
+        with:
+          name: repository-detective-release-evidence-${{ github.sha }}
+          path: dist/selfscan/
+          if-no-files-found: error
+          retention-days: 90
+      - name: Enforce release evidence gate before publishing
+        if: always()
+        run: |
+          python3 scripts/ci-release-evidence-gate.py --dir dist/selfscan \
+            --sha "${GITHUB_SHA}" --forge gitea --repository "${GITHUB_REPOSITORY}"
 
       - name: Set up Go
         uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
@@ -55,7 +83,11 @@ jobs:
           GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X main.version=${VERSION}" -o dist/repository-detective-windows-amd64.exe .
           GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-s -w -X main.version=${VERSION}" -o dist/repository-detective-darwin-amd64 .
           GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -ldflags "-s -w -X main.version=${VERSION}" -o dist/repository-detective-darwin-arm64 .
-          (cd dist && sha256sum * > SHA256SUMS)
+          # Include commit-specific self-audit as downloadable release evidence.
+          cp dist/selfscan/executive-selfscan.json dist/executive-selfscan.json
+          cp dist/selfscan/executive-selfscan.md dist/executive-selfscan.md
+          cp dist/selfscan/SHA256SUMS dist/executive-selfscan.SHA256SUMS
+          (cd dist && sha256sum repository-detective-* executive-selfscan.json executive-selfscan.md > SHA256SUMS)
 
       - name: Build Docker image
         run: |
@@ -120,6 +152,18 @@ jobs:
               git log --pretty=format:'- %s (%h)'
             fi
           } > dist/RELEASE_NOTES.md
+          python3 - <<'PYNOTE' >> dist/RELEASE_NOTES.md
+          import json
+          from pathlib import Path
+          report = json.loads(Path('dist/executive-selfscan.json').read_text())
+          print('\n## Commit-specific Repository Detective self-audit\n')
+          print('- Decision: **' + report['decision'] + '**')
+          print('- Pushed commit: `' + report['expected_commit'] + '`')
+          print('- Scan ID: `' + report['scan_id'] + '`')
+          print('- Scanner finding events (not unique findings): ' + str(report['scanner_finding_events']))
+          print('- Download: `executive-selfscan.md`, `executive-selfscan.json`, and `executive-selfscan.SHA256SUMS`.')
+          print('- Automated coverage evidence is not a declaration that this release is safe.')
+          PYNOTE
 
       - name: Create Gitea release
         env:
@@ -132,10 +176,8 @@ jobs:
           API="${GITEA_API_URL:-${GITEA_SERVER_URL}/api/v1}"
 
           if [ -z "$GITEA_TOKEN" ]; then
-            echo "GITEA_TOKEN secret not set — skipping remote release upload"
-            echo "Release assets built in dist/ on this runner."
-            ls -la dist/
-            exit 0
+            echo "Release credential missing — cannot publish a verifiable release."
+            exit 1
           fi
 
           case "$VERSION" in
@@ -149,7 +191,7 @@ jobs:
             --rawfile body dist/RELEASE_NOTES.md \
             '{tag_name:$tag,name:$name,body:$body,draft:false,prerelease:$prerelease}' > release-body.json
 
-          curl -sS -X POST "${API}/repos/${OWNER}/${REPO}/releases" \
+          curl -fsS -X POST "${API}/repos/${OWNER}/${REPO}/releases" \
             -H "Authorization: token ${GITEA_TOKEN}" \
             -H "Content-Type: application/json" \
             -d @release-body.json > release.json
@@ -157,13 +199,13 @@ jobs:
           RELEASE_ID=$(python3 -c 'import json; print(json.load(open("release.json")).get("id",""))')
           if [ -z "$RELEASE_ID" ]; then
             echo "Failed to create release:"
-            cat release.json
+            echo "Unexpected Gitea release response; see sanitized HTTP diagnostics."
             exit 1
           fi
 
-          for file in dist/repository-detective-* dist/SHA256SUMS dist/RELEASE_NOTES.md; do
-            [ -f "$file" ] || continue
-            curl -sS -X POST "${API}/repos/${OWNER}/${REPO}/releases/${RELEASE_ID}/assets?name=$(basename "$file")" \
+          for file in dist/repository-detective-* dist/SHA256SUMS dist/RELEASE_NOTES.md dist/executive-selfscan.json dist/executive-selfscan.md dist/executive-selfscan.SHA256SUMS; do
+            test -f "$file" || { echo "Missing release artifact: $(basename "$file")"; exit 1; }
+            curl -fsS -o /dev/null -X POST "${API}/repos/${OWNER}/${REPO}/releases/${RELEASE_ID}/assets?name=$(basename "$file")" \
               -H "Authorization: token ${GITEA_TOKEN}" \
               -H "Content-Type: application/octet-stream" \
               --data-binary @"$file"
