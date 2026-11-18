@@ -102,7 +102,7 @@ func scannerStatusBadgeClass(status string) string {
 	switch status {
 	case "found", "success", "completed", "ok", "passed", "clean":
 		return "found"
-	case "running", "started":
+	case "running", "started", store.RunnerJobStatusIngesting:
 		return "running"
 	case "timed_out", "failed", "parse_failed", "error":
 		return "timed_out"
@@ -119,9 +119,9 @@ func scanStatusBadgeClass(status string) string {
 		return "running"
 	case "persistence_incomplete":
 		return "failed"
-	case "running", "started":
+	case "running", "started", store.RunnerJobStatusIngesting:
 		return "running"
-	case "failed":
+	case "failed", store.RunnerJobStatusIngestFailed, store.RunnerJobStatusExpired, store.RunnerJobStatusCancelled:
 		return "failed"
 	default:
 		return "started"

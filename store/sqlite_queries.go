@@ -238,6 +238,21 @@ func (s *SQLiteStore) ListFindings(ctx context.Context, filter FindingFilter) ([
 	if filter.PriorityOnly {
 		query += ` AND LOWER(f.severity) IN ('critical', 'high')`
 	}
+	switch filter.OwnerScope {
+	case "":
+	case "mine":
+		if filter.AssigneeUserID <= 0 {
+			query += ` AND 1=0` // Never expose all work when identity is unavailable.
+		} else {
+			query += ` AND EXISTS (SELECT 1 FROM finding_assignments fa WHERE fa.finding_id = f.id AND fa.assignee_user_id = ?)`
+			args = append(args, filter.AssigneeUserID)
+		}
+	case "unassigned":
+		query += ` AND NOT EXISTS (SELECT 1 FROM finding_assignments fa WHERE fa.finding_id = f.id AND fa.assignee_user_id IS NOT NULL)`
+	default:
+		query += ` AND 1=0` // Unknown scopes must not become unrestricted exports.
+	}
+
 	if filter.Prioritize {
 		query += ` ORDER BY CASE LOWER(f.severity)
 			WHEN 'critical' THEN 0 WHEN 'high' THEN 1
@@ -266,7 +281,16 @@ func (s *SQLiteStore) ListFindings(ctx context.Context, filter FindingFilter) ([
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
-	return s.annotateFindingSuppression(ctx, out), nil
+	// Release the query cursor before the batched metadata lookups. Otherwise
+	// it can hold an extra SQLite connection during concurrent scan ingestion.
+	if err := rows.Close(); err != nil {
+		return nil, fmt.Errorf("close findings cursor: %w", err)
+	}
+	out = s.annotateFindingSuppression(ctx, out)
+	if filter.IncludeOwner {
+		return s.annotateFindingOwners(ctx, out)
+	}
+	return out, nil
 }
 
 func (s *SQLiteStore) CountFindings(ctx context.Context, filter FindingFilter) (int, error) {
@@ -308,6 +332,20 @@ func (s *SQLiteStore) CountFindings(ctx context.Context, filter FindingFilter) (
 	}
 	if filter.PriorityOnly {
 		query += ` AND LOWER(f.severity) IN ('critical', 'high')`
+	}
+	switch filter.OwnerScope {
+	case "":
+	case "mine":
+		if filter.AssigneeUserID <= 0 {
+			query += ` AND 1=0` // Never expose all work when identity is unavailable.
+		} else {
+			query += ` AND EXISTS (SELECT 1 FROM finding_assignments fa WHERE fa.finding_id = f.id AND fa.assignee_user_id = ?)`
+			args = append(args, filter.AssigneeUserID)
+		}
+	case "unassigned":
+		query += ` AND NOT EXISTS (SELECT 1 FROM finding_assignments fa WHERE fa.finding_id = f.id AND fa.assignee_user_id IS NOT NULL)`
+	default:
+		query += ` AND 1=0` // Unknown scopes must not become unrestricted exports.
 	}
 
 	var n int

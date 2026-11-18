@@ -2312,9 +2312,9 @@ func recordTipUnchangedSkip(ctx context.Context, forgeType string, repo store.Sc
 	}
 }
 
-func finishPersistedScan(ctx context.Context, scanCtx *store.ScanContext, repositoryID int64, result *analyzers.AnalysisResult, analysisErr error) {
+func finishPersistedScan(ctx context.Context, scanCtx *store.ScanContext, repositoryID int64, result *analyzers.AnalysisResult, analysisErr error) error {
 	if scanRecorder == nil || !scanRecorder.Enabled() || scanCtx == nil || scanCtx.ScanID == "" {
-		return
+		return fmt.Errorf("scan recorder unavailable for runner result")
 	}
 	scanID := scanCtx.ScanID
 	var data *store.ScanCompletion
@@ -2379,6 +2379,7 @@ func finishPersistedScan(ctx context.Context, scanCtx *store.ScanContext, reposi
 	}
 	if err := scanRecorder.FinishScan(ctx, scanID, data, analysisErr); err != nil {
 		logger.Warnf("Failed to finish scan persistence: %v", err)
+		return fmt.Errorf("finish scan persistence: %w", err)
 	}
 	maybeRecordFirstScanEvidence(ctx, scanCtx, repositoryID, result, analysisErr)
 	persistScanSBOM(ctx, scanID, repositoryID, result)
@@ -2399,6 +2400,7 @@ func finishPersistedScan(ctx context.Context, scanCtx *store.ScanContext, reposi
 	}
 	notifyScanFinish(ctx, scanCtx, repositoryID, result, analysisErr)
 	maybeEnqueueOpenClawReview(ctx, scanCtx, repositoryID, result, analysisErr)
+	return nil
 }
 
 func postAnalysisContext(parent context.Context) (context.Context, context.CancelFunc) {
@@ -2418,9 +2420,9 @@ func repoClientForForge(forgeType string) forge.RepoClient {
 	return nil
 }
 
-func createIssuesFromResult(ctx context.Context, forgeType, owner, repo string, result *analyzers.AnalysisResult, contextLabel, commit string, prNumber int, repositoryID int64, effective store.EffectiveSettings) {
+func createIssuesFromResult(ctx context.Context, forgeType, owner, repo string, result *analyzers.AnalysisResult, contextLabel, commit string, prNumber int, repositoryID int64, effective store.EffectiveSettings) error {
 	if result == nil {
-		return
+		return nil
 	}
 
 	postCtx, cancel := postAnalysisContext(ctx)
@@ -2457,11 +2459,11 @@ func createIssuesFromResult(ctx context.Context, forgeType, owner, repo string, 
 		if err != nil {
 			logger.Errorf("Failed to persist findings for scan %s: %v — skipping issue filing", result.ScanID, err)
 			scanRecorder.MarkPersistenceFailed(postCtx, result.ScanID, len(result.Issues), 0, err)
-			return
+			return fmt.Errorf("record findings: %w", err)
 		}
 		if !scanRecorder.IsPersistenceComplete(postCtx, result.ScanID) {
 			logger.Warnf("Scan %s persistence incomplete — skipping issue filing", result.ScanID)
-			return
+			return fmt.Errorf("scan %s finding persistence incomplete", result.ScanID)
 		}
 	}
 
@@ -2510,6 +2512,7 @@ func createIssuesFromResult(ctx context.Context, forgeType, owner, repo string, 
 			issueResult, err := issueManager.CreateIssuesFromAnalysis(postCtx, issueReq)
 			if err != nil {
 				logger.Errorf("Failed to create issues: %v", err)
+				return fmt.Errorf("forge issue sync: %w", err)
 			} else {
 				if issueResult.BacklogControlActive {
 					logger.Infof("%s blocked %d new issues", issues.BacklogControlNote, issueResult.BacklogControlBlocked)
@@ -2531,6 +2534,7 @@ func createIssuesFromResult(ctx context.Context, forgeType, owner, repo string, 
 		if len(processed) > 0 {
 			if err := scanRecorder.RecordExternalIssues(postCtx, result.ScanID, forgeType, processed, findingIDs); err != nil {
 				logger.Warnf("Failed to link external issues: %v", err)
+				return fmt.Errorf("persist external issue links: %w", err)
 			}
 		} else if issueFilingEnabled {
 			// Filing phase ran but nothing new to link (backlog control, all skipped, or no forge candidates).
@@ -2541,6 +2545,7 @@ func createIssuesFromResult(ctx context.Context, forgeType, owner, repo string, 
 		}
 	}
 	maybeProcessEvidenceClosure(postCtx, owner, repo, repositoryID, result)
+	return nil
 }
 
 func mainRunnerConfig() runner.Config {
@@ -2631,7 +2636,9 @@ func ingestRunnerResult(ctx context.Context, job store.RunnerJob, result runner.
 			Owner: repo.Owner, Repo: repo.Name, ScanID: job.ScanID,
 			TriggerType: store.TriggerScheduled, Ref: job.Ref, CommitSHA: job.CommitSHA, PRNumber: job.PRNumber,
 		}
-		finishPersistedScan(ctx, runnerScanCtx, repo.ID, nil, fmt.Errorf("%s", errMsg))
+		if err := finishPersistedScan(ctx, runnerScanCtx, repo.ID, nil, fmt.Errorf("%s", errMsg)); err != nil {
+			return err
+		}
 		notifyRunnerJobFailed(ctx, repo.ID, repo.FullName, job.ScanID, errMsg)
 		return nil
 	}
@@ -2647,14 +2654,20 @@ func ingestRunnerResult(ctx context.Context, job store.RunnerJob, result runner.
 		Owner: repo.Owner, Repo: repo.Name, ScanID: job.ScanID,
 		TriggerType: store.TriggerScheduled, Ref: job.Ref, CommitSHA: job.CommitSHA, PRNumber: job.PRNumber,
 	}
-	finishPersistedScan(ctx, runnerScanCtx, repo.ID, analysisResult, nil)
+	if err := finishPersistedScan(ctx, runnerScanCtx, repo.ID, analysisResult, nil); err != nil {
+		return err
+	}
 	ingestContainerScanResult(ctx, job, result, repo)
 	if config.ContainerScan.Normalized().CreateIssues && job.JobType == store.RunnerJobTypeContainerImageScan {
-		createIssuesFromResult(ctx, forgeType, repo.Owner, repo.Name, analysisResult,
-			fmt.Sprintf("Container image scan (%s)", job.JobType), job.Ref, job.PRNumber, repo.ID, effective)
+		if err := createIssuesFromResult(ctx, forgeType, repo.Owner, repo.Name, analysisResult,
+			fmt.Sprintf("Container image scan (%s)", job.JobType), job.Ref, job.PRNumber, repo.ID, effective); err != nil {
+			return err
+		}
 	} else if job.JobType != store.RunnerJobTypeContainerImageScan {
-		createIssuesFromResult(ctx, forgeType, repo.Owner, repo.Name, analysisResult,
-			fmt.Sprintf("Runner scan (%s)", job.JobType), job.Ref, job.PRNumber, repo.ID, effective)
+		if err := createIssuesFromResult(ctx, forgeType, repo.Owner, repo.Name, analysisResult,
+			fmt.Sprintf("Runner scan (%s)", job.JobType), job.Ref, job.PRNumber, repo.ID, effective); err != nil {
+			return err
+		}
 	}
 	return nil
 }

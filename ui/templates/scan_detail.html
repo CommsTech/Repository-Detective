@@ -109,6 +109,16 @@
 
   {{with $.Data.RunnerJob}}{{if .JobID}}
   <p><strong>Runner job:</strong> {{.JobID}} · <span class="rd-badge {{scanBadge .Status}}">{{.Status}}</span> · {{.RunnerMode}}</p>
+  {{if eq .Status "ingestion_failed"}}
+  <div class="rd-alert rd-alert-danger" role="alert">
+    <strong>Runner result ingestion failed.</strong> Do not use this scan as release or remediation verification evidence. The worker result may have been received, but persistence or follow-up processing did not finish. Review the job and reconcile any partial findings or forge issues before retrying.
+    {{if .Error}}<p class="rd-muted">Recorded failure: {{.Error}}</p>{{end}}
+  </div>
+  {{else if eq .Status "ingesting"}}
+  <div class="rd-alert info" role="status"><strong>Runner result being ingested.</strong> Scanner and finding evidence is not finalized. Do not treat this job as a completed scan.</div>
+  {{else if eq .Status "expired"}}
+  <div class="rd-alert rd-alert-danger" role="alert"><strong>Runner job expired.</strong> The job did not complete safely. Inspect partial scan evidence before starting a new scan.</div>
+  {{end}}
   {{end}}{{end}}
 
   <div class="rd-actions">

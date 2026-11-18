@@ -37,7 +37,10 @@ func TestClientSubmitLargeResultHMAC(t *testing.T) {
 	_, _ = s.ClaimNextRunnerJob(ctx, time.Now().UTC())
 
 	cfg := runner.Config{SharedSecret: secret}
-	recv := runner.NewReceiver(s, cfg, nil, nil)
+	recv := runner.NewReceiver(s, cfg, nil,
+		func(context.Context, store.RunnerJob, runner.JobResult, store.Repository, store.EffectiveSettings) error {
+			return nil
+		})
 	h := api.NewRunnerHandler(s, cfg, recv, nil, runner.NewRegistry(), nil)
 	r := gin.New()
 	g := r.Group("/api/v1/runner")

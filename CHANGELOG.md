@@ -1,5 +1,29 @@
 # Changelog
 
+## [Unreleased — finding ownership queues, 2026-11-18]
+
+- Added local-user **Assigned to me** and **Unassigned** investigation queues, with owners visible alongside findings and explicit account-bound filters. Scope validation rejects unauthorized/unknown owner views rather than broadening the query.
+- Owner filtering now executes in SQLite before ordering and pagination, with an assignee index (migration 31) and a single bounded owner-enrichment query for a page. CSV/JSON downloads preserve the selected scope.
+- Added assignment-queue regression tests for access controls, counts, empty/invalid scopes, owner metadata, exports, and pagination.
+- Removed duplicate external scanaislop badge from the product README. Forge ownership remains local-only pending identity mapping and permission reviews.
+
+
+## [Unreleased — finding ownership and export clarity, 2026-11-18]
+
+- Improved Findings CSV/JSON downloads with progress, download errors, and explicit no-cache attachment headers; preserved non-JavaScript link fallback.
+- Added local finding-owner assignment, database migration 30, role checks, disabled-user protection, idempotent updates, and assignment history. Does not change external forge issue owners.
+- Added the independent scanaislop score badge to README, clearly identified as external code-quality information rather than a security attestation.
+- Documented an evidence-first evaluation process for new quality scanners and AI-slop detection candidates; no unvalidated scoring engine is enabled by default.
+- Added export/assignment regression tests and a staged acceptance guide; full Go 1.26.11 and browser tests remain release gates.
+
+
+## [Unreleased — runner callback ingestion consistency, 2026-11-18]
+
+- Require a claimed native/Actions runner job for results. Atomic SQLite state transitions prevent simultaneous callbacks from ingesting one job twice.
+- Preserve the signed result JSON artifact and SHA-256 digest **before** marking the job complete. Failed persistence and ingestion are now explicit `ingestion_failed` states rather than false success.
+- Exact callback retries after a finalized result are idempotent; conflicting retries fail. Partial ingestion is intentionally not automatically replayed because forge issue and finding side effects are not globally transactional.
+- Delegated scan completion now propagates scan recorder, finding-batch and forge-issue-link persistence errors, keeping an incomplete result visible. Added acceptance tests and a release-gate runbook. Full Go 1.26.11 tests and live runner integration remain pending.
+
 ## [Unreleased — remediation trust and operator evidence, 2026-11-17]
 
 - Review actions now bind remediation plans to the requested finding; cross-finding submissions are refused. SQLite accepts only one atomic `proposed → approved/rejected` transition, preventing stale tabs from reviving terminal plans.

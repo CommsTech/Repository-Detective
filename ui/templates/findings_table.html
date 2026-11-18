@@ -9,6 +9,7 @@
       <th scope="col">Source</th>
       <th scope="col">Confidence</th>
       <th scope="col">Status</th>
+      {{if $.ShowOwner}}<th scope="col">Owner</th>{{end}}
       <th scope="col">Last seen (UTC)</th>
       <th scope="col">Forge issue</th>
     </tr>
@@ -28,12 +29,13 @@
     <td><span class="rd-badge skipped">{{.Source}}</span></td>
     <td class="rd-muted">{{printf "%.0f" (mul .Confidence 100)}}%</td>
     <td><span class="rd-badge {{statusBadge .Status}}">{{.Status}}</span></td>
+    {{if $.ShowOwner}}<td class="rd-owner-cell">{{if .AssigneeUserID}}<span class="rd-owner-name" title="Assigned to {{.AssigneeName}}">{{.AssigneeName}}</span>{{else}}<span class="rd-muted">Unassigned</span>{{end}}</td>{{end}}
     <td class="rd-muted">{{.LastSeenAt.Format "2006-01-02 15:04"}}</td>
     <td>{{if .ExternalIssueURL}}<a class="rd-link" href="{{.ExternalIssueURL}}" target="_blank" rel="noopener" title="Linked forge issue (may be closed on Gitea)">#{{.ExternalIssueNumber}}</a>{{else}}<span class="rd-muted" title="No forge issue filed — below severity/confidence gate or report-only">none</span>{{end}}</td>
   </tr>
   {{else}}
   <tr>
-    {{if $.ShowRepo}}<td colspan="9">{{else}}<td colspan="8">{{end}}
+    <td colspan="{{if $.ShowRepo}}{{if $.ShowOwner}}10{{else}}9{{end}}{{else}}{{if $.ShowOwner}}9{{else}}8{{end}}{{end}}">
       <div class="rd-empty">
         <h3>{{if $.FocusMode}}No open critical/high findings match this view{{else}}No matching findings{{end}}</h3>
         <p class="rd-muted">Check scan coverage before interpreting an empty queue as a clean system. Try different filters or run a new scan.</p>

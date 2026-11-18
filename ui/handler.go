@@ -282,6 +282,7 @@ func (h *Handler) RegisterRoutes(g *gin.RouterGroup) {
 	g.GET("/findings", h.Findings)
 	g.GET("/findings/export", h.ExportFindings)
 	g.GET("/findings/:id", h.FindingDetail)
+	g.POST("/findings/:id/assign", h.AssignFindingOwner)
 	g.GET("/findings/:id/intelligence", h.FindingIntelligence)
 	g.POST("/findings/:id/remediation/generate", h.GenerateFindingRemediation)
 	g.POST("/findings/:id/remediation/approve", h.ApproveFindingRemediation)
@@ -1329,6 +1330,42 @@ func findingsFilterFromRequest(c *gin.Context) (store.FindingFilter, bool) {
 	return filter, focus
 }
 
+// resolveFindingOwnerScope authorizes an ownership filter against the authenticated
+// local account, never a user-controlled ID. API-key mode cannot query team ownership.
+func (h *Handler) resolveFindingOwnerScope(c *gin.Context, filter *store.FindingFilter) bool {
+	filter.IncludeOwner = h.auth.IsLocal()
+	owner := strings.TrimSpace(c.Query("owner"))
+	if owner == "" {
+		return true
+	}
+	if !h.auth.IsLocal() {
+		c.String(http.StatusForbidden, "ownership views require local sign-in")
+		return false
+	}
+	userValue, ok := c.Get(ctxAuthUser)
+	user, valid := userValue.(store.User)
+	if !ok || !valid || !user.Enabled || user.ID <= 0 {
+		c.String(http.StatusForbidden, "signed-in user required for ownership views")
+		return false
+	}
+	switch owner {
+	case "mine":
+		filter.OwnerScope = "mine"
+		filter.AssigneeUserID = user.ID
+	case "unassigned":
+		filter.OwnerScope = "unassigned"
+	default:
+		c.String(http.StatusBadRequest, "unsupported ownership filter")
+		return false
+	}
+	// Ownership tabs are work queues, not the entire historical inventory.
+	// An explicitly chosen status still takes precedence.
+	if !filter.PriorityOnly && c.Query("status") == "" && !filter.OnlySuppressed {
+		filter.Status = "open"
+	}
+	return true
+}
+
 func findingsPageURL(c *gin.Context, page int) string {
 	q := c.Request.URL.Query()
 	q.Set("page", strconv.Itoa(page))
@@ -1340,6 +1377,9 @@ func (h *Handler) Findings(c *gin.Context) {
 		return
 	}
 	filter, focus := findingsFilterFromRequest(c)
+	if !h.resolveFindingOwnerScope(c, &filter) {
+		return
+	}
 	pageSize := 100
 	if focus {
 		pageSize = 50
@@ -1384,10 +1424,10 @@ func (h *Handler) Findings(c *gin.Context) {
 		nextURL = findingsPageURL(c, page+1)
 	}
 	hasAdvancedFilter := filter.Severity != "" || filter.RepositoryID > 0 || filter.Category != "" ||
-		filter.Source != "" || (!focus && (filter.Status != "" || filter.IncludeSuppressed || filter.OnlySuppressed))
+		filter.Source != "" || (!focus && ((filter.Status != "" && !(filter.OwnerScope != "" && c.Query("status") == "" && filter.Status == "open")) || filter.IncludeSuppressed || filter.OnlySuppressed))
 	h.renderNav(c, "findings.html", "Findings", "findings", map[string]any{
-		"HasAdvancedFilter": hasAdvancedFilter,
-		"Findings":          findings, "Filter": filter, "Repositories": repos,
+		"HasAdvancedFilter": hasAdvancedFilter, "ShowOwner": h.auth.IsLocal(),
+		"Findings": findings, "Filter": filter, "Repositories": repos,
 		"FocusMode": focus, "ExportQuery": c.Request.URL.RawQuery,
 		"TotalFindings": total, "FirstResult": first, "LastResult": last,
 		"Page": page, "Pages": pages, "PrevURL": prevURL, "NextURL": nextURL,
@@ -1430,6 +1470,9 @@ func (h *Handler) ExportFindings(c *gin.Context) {
 		return
 	}
 	filter, _ := findingsFilterFromRequest(c)
+	if !h.resolveFindingOwnerScope(c, &filter) {
+		return
+	}
 	findings, err := h.listExportFindings(c.Request.Context(), filter)
 	if err != nil {
 		// Never return a success-shaped truncated export.
@@ -1443,21 +1486,34 @@ func (h *Handler) ExportFindings(c *gin.Context) {
 	stamp := time.Now().UTC().Format("20060102T150405Z")
 	switch format {
 	case "json":
+		c.Header("Cache-Control", "no-store")
+		c.Header("X-Content-Type-Options", "nosniff")
 		c.Header("Content-Disposition", fmt.Sprintf(`attachment; filename="findings-%s.json"`, stamp))
+		c.Header("Content-Type", "application/json; charset=utf-8")
 		c.JSON(http.StatusOK, gin.H{"generated_at": time.Now().UTC().Format(time.RFC3339), "count": len(findings), "findings": findings})
 	case "csv":
+		c.Header("Cache-Control", "no-store")
+		c.Header("X-Content-Type-Options", "nosniff")
 		c.Header("Content-Type", "text/csv; charset=utf-8")
 		c.Header("Content-Disposition", fmt.Sprintf(`attachment; filename="findings-%s.csv"`, stamp))
 		var b strings.Builder
-		b.WriteString("id,repository_id,repo,severity,category,status,source,rule_id,fingerprint,title,file_path,line\n")
+		columns := "id,repository_id,repo,severity,category,status,source,rule_id,fingerprint,title,file_path,line"
+		if filter.IncludeOwner {
+			columns += ",assignee"
+		}
+		b.WriteString(columns + "\n")
 		for _, f := range findings {
-			b.WriteString(fmt.Sprintf("%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%d\n",
+			line := fmt.Sprintf("%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%d",
 				f.ID, f.RepositoryID,
 				csvEscape(f.RepoFullName),
 				csvEscape(f.Severity), csvEscape(f.Category), csvEscape(f.Status),
 				csvEscape(f.Source), csvEscape(f.RuleID), csvEscape(f.Fingerprint),
 				csvEscape(f.Title), csvEscape(f.FilePath), f.Line,
-			))
+			)
+			if filter.IncludeOwner {
+				line += "," + csvEscape(f.AssigneeName)
+			}
+			b.WriteString(line + "\n")
 		}
 		c.String(http.StatusOK, b.String())
 	default:
@@ -1512,6 +1568,37 @@ func (h *Handler) FindingDetail(c *gin.Context) {
 		Limit:        50,
 	})
 	view := buildActionableFindingView(detail)
+	assignment, err := h.store.GetFindingAssignment(c.Request.Context(), id)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "could not load finding assignment")
+		return
+	}
+	assignmentEvents, err := h.store.ListFindingAssignmentEvents(c.Request.Context(), id, 10)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "could not load finding assignment history")
+		return
+	}
+	var assignableUsers []store.User
+	canAssign := false
+	if h.auth.IsLocal() {
+		assignableUsers, err = h.store.ListUsers(c.Request.Context(), 200)
+		if err != nil {
+			c.String(http.StatusInternalServerError, "could not load team members")
+			return
+		}
+		if sessionUser, ok := c.Get(ctxAuthUser); ok {
+			if u, valid := sessionUser.(store.User); valid {
+				canAssign = store.RoleCanWriteSecurity(u.Role)
+			}
+		}
+		activeUsers := make([]store.User, 0, len(assignableUsers))
+		for _, u := range assignableUsers {
+			if u.Enabled {
+				activeUsers = append(activeUsers, u)
+			}
+		}
+		assignableUsers = activeUsers
+	}
 	view.CapabilityRows = []FindingCapability{
 		{Label: "Generate a remediation plan", Allowed: h.remediationEnabled && h.remediation != nil, Note: "Deterministic guidance; optional AI remains advisory"},
 		{Label: "AI-assisted plan", Allowed: plan.ID != "" && plan.Advisory, Note: "Only when configured and a model successfully enriches the plan"},
@@ -1520,6 +1607,8 @@ func (h *Handler) FindingDetail(c *gin.Context) {
 	}
 	h.renderNav(c, "finding_detail.html", detail.Title, "findings", map[string]any{
 		"Finding": detail, "RemediationPlan": plan, "PlannerEnabled": h.remediationEnabled,
+		"Assignment": assignment, "AssignmentEvents": assignmentEvents,
+		"AssignableUsers": assignableUsers, "CanAssign": canAssign,
 		"PREnabled": h.remediationPREnabled, "PREligibility": prEligibility, "PatchAttempts": patchAttempts,
 		"ClosureEnabled": h.closureEnabled, "ClosureEvidence": h.closureEvidenceForUI(c.Request.Context(), id),
 		"LifecycleLabel":     lifecycleStageLabel(plan, patchAttempts, h.closureEvidenceForUI(c.Request.Context(), id)),
@@ -1530,6 +1619,48 @@ func (h *Handler) FindingDetail(c *gin.Context) {
 		"CVEIntelligenceEnabled": cveIntelligenceEnabled(),
 		"IssueTemplateLinks":     BuildFindingIssueTemplateLinks(detail, h.basePath),
 	})
+}
+
+// AssignFindingOwner updates local work ownership and a durable assignment audit log.
+// External forge issue assignment is intentionally not modified here.
+func (h *Handler) AssignFindingOwner(c *gin.Context) {
+	if !h.requireStore(c) || !h.auth.IsLocal() {
+		c.String(http.StatusForbidden, "local account sign-in required")
+		return
+	}
+	if !h.requireCSRF(c) {
+		return
+	}
+	userValue, ok := c.Get(ctxAuthUser)
+	if !ok {
+		c.String(http.StatusForbidden, "sign-in required")
+		return
+	}
+	user, ok := userValue.(store.User)
+	if !ok || !user.Enabled || !store.RoleCanWriteSecurity(user.Role) {
+		c.String(http.StatusForbidden, "assignment requires owner, admin or security role")
+		return
+	}
+	findingID, ok := parseID(c, "id")
+	if !ok {
+		return
+	}
+	assigneeID := int64(0)
+	raw := strings.TrimSpace(c.PostForm("assignee_user_id"))
+	if raw != "" {
+		var err error
+		assigneeID, err = strconv.ParseInt(raw, 10, 64)
+		if err != nil || assigneeID < 0 {
+			c.String(http.StatusBadRequest, "invalid assignee")
+			return
+		}
+	}
+	if err := h.store.SetFindingAssignee(c.Request.Context(), findingID, assigneeID, user.ID); err != nil {
+		h.logger.Warnf("set finding owner %d: %v", findingID, err)
+		c.String(http.StatusUnprocessableEntity, "could not assign finding; check that the member is active and the finding exists")
+		return
+	}
+	c.Redirect(http.StatusSeeOther, fmt.Sprintf("%s/findings/%d?owner_updated=1", h.basePath, findingID))
 }
 
 func graphMapURL(basePath string, repoID int64, filePath, source, apiKey string) string {

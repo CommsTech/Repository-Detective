@@ -7,6 +7,11 @@
 <p align="center">A self-hosted repository health and security workbench built primarily for Gitea maintainers.</p>
 
 <p align="center">
+  <a href="https://scanaislop.com/CommsTech/Repository-Detective" title="Third-party code-quality report (not a security certification)"><img src="https://badges.scanaislop.com/score/CommsTech/Repository-Detective.svg" alt="Independent scanaislop code quality score"></a>
+</p>
+<p align="center"><small>External code-quality signal · score methodology belongs to scanaislop · not a security attestation.</small></p>
+
+<p align="center">
   <a href="docs/QUICKSTART.md">Get started</a> ·
   <a href="docs/DEMO.md">See the workflow</a> ·
   <a href="docs/README.md">Documentation</a> ·
@@ -102,7 +107,7 @@ For the precise boundaries, see [Security model](docs/SECURITY_MODEL.md), [runne
 | I want to… | Start here |
 |---|---|
 | Install and scan a repository | [Quickstart](docs/QUICKSTART.md) · [Setup](docs/SETUP.md) |
-| Understand a finding and prioritize work | [Operator triage workflow](docs/OPERATOR_TRIAGE_WORKFLOW.md) |
+| Understand a finding and prioritize work | [Operator triage workflow](docs/OPERATOR_TRIAGE_WORKFLOW.md) · [Finding ownership](docs/ISSUE_OWNERSHIP_AND_QUALITY_SIGNALS.md) |
 | Review reports and supporting evidence | [Reports and navigation](docs/OPERATOR_REPORTS_AND_NAVIGATION.md) |
 | Write repository-specific checks | [Custom rules](docs/CUSTOM_RULES.md) |
 | Configure AI providers and budgets | [AI providers](docs/AI_PROVIDERS.md) |

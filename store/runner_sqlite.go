@@ -203,6 +203,31 @@ func (s *SQLiteStore) UpdateRunnerJob(ctx context.Context, job RunnerJob) error 
 	return nil
 }
 
+// TransitionRunnerJobStatus uses a compare-and-swap update to ensure exactly
+// one callback can enter result ingestion. No caller may turn an already
+// finalized or cancelled job into a success via a stale in-memory status.
+func (s *SQLiteStore) TransitionRunnerJobStatus(ctx context.Context, job RunnerJob, expectedStatus string) (bool, error) {
+	if job.JobID == "" || expectedStatus == "" {
+		return false, fmt.Errorf("runner transition requires job ID and expected status")
+	}
+	now := time.Now().UTC()
+	res, err := s.db.ExecContext(ctx, `
+		UPDATE runner_jobs SET status = ?, result_summary_json = ?, error = ?,
+			updated_at = ?, started_at = ?, finished_at = ?
+		WHERE job_id = ? AND status = ?`,
+		job.Status, stringOrEmpty(job.ResultSummaryJSON), job.Error,
+		formatTime(now), nullTimePtr(job.StartedAt), nullTimePtr(job.FinishedAt),
+		job.JobID, expectedStatus)
+	if err != nil {
+		return false, fmt.Errorf("transition runner job: %w", err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return false, err
+	}
+	return n == 1, nil
+}
+
 func (s *SQLiteStore) CancelRunnerJob(ctx context.Context, jobID string) error {
 	now := time.Now().UTC()
 	res, err := s.db.ExecContext(ctx, `
@@ -253,17 +278,17 @@ func (s *SQLiteStore) ListRunnerJobsByRepository(ctx context.Context, repository
 func (s *SQLiteStore) CountRunningRunnerJobs(ctx context.Context) (int, error) {
 	var count int
 	err := s.db.QueryRowContext(ctx, `
-		SELECT COUNT(1) FROM runner_jobs WHERE status IN (?, ?, ?)
-	`, RunnerJobStatusQueued, RunnerJobStatusDispatched, RunnerJobStatusRunning).Scan(&count)
+		SELECT COUNT(1) FROM runner_jobs WHERE status IN (?, ?, ?, ?)
+	`, RunnerJobStatusQueued, RunnerJobStatusDispatched, RunnerJobStatusRunning, RunnerJobStatusIngesting).Scan(&count)
 	return count, err
 }
 
 func (s *SQLiteStore) ExpireStaleRunnerJobs(ctx context.Context, now time.Time) (int64, error) {
 	res, err := s.db.ExecContext(ctx, `
 		UPDATE runner_jobs SET status = ?, error = ?, updated_at = ?, finished_at = ?
-		WHERE status IN (?, ?, ?) AND expires_at IS NOT NULL AND expires_at <= ?
-	`, RunnerJobStatusExpired, "job expired", formatTime(now), formatTime(now),
-		RunnerJobStatusQueued, RunnerJobStatusDispatched, RunnerJobStatusRunning, formatTime(now))
+		WHERE status IN (?, ?, ?, ?) AND expires_at IS NOT NULL AND expires_at <= ?
+	`, RunnerJobStatusExpired, "job expired or result ingestion interrupted", formatTime(now), formatTime(now),
+		RunnerJobStatusQueued, RunnerJobStatusDispatched, RunnerJobStatusRunning, RunnerJobStatusIngesting, formatTime(now))
 	if err != nil {
 		return 0, err
 	}

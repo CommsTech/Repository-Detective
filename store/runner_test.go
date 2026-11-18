@@ -127,3 +127,44 @@ func TestRunnerDoesNotClaimUnsupportedActionsJob(t *testing.T) {
 		t.Fatal("native worker claimed an unsupported Gitea Actions job")
 	}
 }
+
+func TestRunnerAtomicTransitionsRejectStaleCompletion(t *testing.T) {
+	s := openTestStore(t)
+	ctx := context.Background()
+	repo, err := s.UpsertRepository(ctx, store.Repository{Owner: "o", Name: "r", FullName: "o/r"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	job, err := s.CreateRunnerJob(ctx, store.RunnerJob{
+		JobID: "runner-cas", RepositoryID: repo.ID, JobType: store.RunnerJobTypeScanFullRepo,
+		Status: store.RunnerJobStatusRunning, RunnerMode: "native",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	job.Status = store.RunnerJobStatusIngesting
+	transitions, ok := s.(interface {
+		TransitionRunnerJobStatus(context.Context, store.RunnerJob, string) (bool, error)
+	})
+	if !ok {
+		t.Fatal("store lacks atomic transitions")
+	}
+	changed, err := transitions.TransitionRunnerJobStatus(ctx, job, store.RunnerJobStatusRunning)
+	if err != nil || !changed {
+		t.Fatalf("initial transition: ok=%v err=%v", changed, err)
+	}
+	changed, err = transitions.TransitionRunnerJobStatus(ctx, job, store.RunnerJobStatusRunning)
+	if err != nil || changed {
+		t.Fatalf("stale transition succeeded: ok=%v err=%v", changed, err)
+	}
+	job.Status = store.RunnerJobStatusCompleted
+	changed, err = transitions.TransitionRunnerJobStatus(ctx, job, store.RunnerJobStatusIngesting)
+	if err != nil || !changed {
+		t.Fatalf("completion transition: ok=%v err=%v", changed, err)
+	}
+	job.Status = store.RunnerJobStatusFailed
+	changed, err = transitions.TransitionRunnerJobStatus(ctx, job, store.RunnerJobStatusIngesting)
+	if err != nil || changed {
+		t.Fatalf("completed job was overwritten: ok=%v err=%v", changed, err)
+	}
+}

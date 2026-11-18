@@ -131,6 +131,31 @@
   {{end}}
 </section>{{end}}
 
+<section class="rd-card rd-finding-ownership" aria-labelledby="rd-ownership-title">
+  <div class="rd-case-section-head"><div><p class="rd-queue-eyebrow">Accountability</p><h2 id="rd-ownership-title">Finding owner</h2><p class="rd-muted">Local assignment for investigation and follow-up. Does not change the assigned user on an external Gitea/GitHub/Forgejo issue.</p></div>
+    {{if $.Data.Assignment.AssigneeName}}<span class="rd-chip">Assigned to {{$.Data.Assignment.AssigneeName}}</span>{{else}}<span class="rd-chip">Unassigned</span>{{end}}
+  </div>
+  {{if $.Data.CanAssign}}
+    <form class="rd-ownership-form" method="post" action="{{$.BasePath}}/findings/{{$.Data.Finding.ID}}/assign">
+      <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+      <label for="rd-owner-user">Assign to team member
+        <select id="rd-owner-user" name="assignee_user_id">
+          <option value="">Unassigned</option>
+          {{range $.Data.AssignableUsers}}<option value="{{.ID}}" {{if eq .ID $.Data.Assignment.AssigneeUserID}}selected{{end}}>{{.DisplayName}}</option>{{end}}
+        </select>
+      </label>
+      <button class="rd-btn rd-btn-secondary" type="submit">Save owner</button>
+    </form>
+  {{else}}
+    <p class="rd-muted">{{if $.AuthLocal}}Only an owner, admin, or security operator can assign findings.{{else}}Enable local accounts to assign findings to team members.{{end}}</p>
+  {{end}}
+  {{if $.Data.AssignmentEvents}}
+    <details class="rd-ownership-history"><summary>Assignment history ({{len $.Data.AssignmentEvents}})</summary>
+      <ol>{{range $.Data.AssignmentEvents}}<li><strong>{{.ActorName}}</strong> changed owner from {{.PreviousName}} to {{.NewName}} <time datetime="{{.CreatedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{.CreatedAt.Format "2006-01-02 15:04 UTC"}}</time></li>{{end}}</ol>
+    </details>
+  {{end}}
+</section>
+
 <section class="rd-card rd-workflow-section" id="rd-remediation" aria-labelledby="rd-remediation-title">
 <div class="rd-case-section-head"><div><p class="rd-workflow-step">02 / Plan and review</p><h2 id="rd-remediation-title">Remediation workbench</h2><p class="rd-muted">Create or review a proposal before changing source code.</p></div><a href="#rd-evidence" class="rd-btn rd-btn-ghost rd-btn-sm">Inspect original evidence</a></div>
 <div class="rd-remediation-progress" aria-labelledby="rd-remediation-progress-title">

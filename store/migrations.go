@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-const currentSchemaVersion = 29
+const currentSchemaVersion = 31
 
 var migrationStatements = map[int][]string{
 	1: {
@@ -805,6 +805,31 @@ var migrationStatements = map[int][]string{
 		`CREATE INDEX IF NOT EXISTS idx_scans_started_at ON scans(started_at)`,
 		`CREATE INDEX IF NOT EXISTS idx_patch_attempts_status_updated ON patch_attempts(status)`,
 		`CREATE INDEX IF NOT EXISTS idx_closure_evidence_status ON closure_evidence(status)`,
+	},
+	30: {
+		`CREATE TABLE IF NOT EXISTS finding_assignments (
+			finding_id INTEGER PRIMARY KEY REFERENCES findings(id) ON DELETE CASCADE,
+			assignee_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+			assigned_by_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+			updated_at TEXT NOT NULL
+		)`,
+		`CREATE TABLE IF NOT EXISTS finding_assignment_events (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			finding_id INTEGER NOT NULL REFERENCES findings(id) ON DELETE CASCADE,
+			actor_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+			actor_name TEXT NOT NULL DEFAULT '',
+			previous_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+			previous_name TEXT NOT NULL DEFAULT 'Unassigned',
+			new_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+			new_name TEXT NOT NULL DEFAULT 'Unassigned',
+			created_at TEXT NOT NULL
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_finding_assignment_events_finding_time
+		 ON finding_assignment_events(finding_id, created_at DESC)`,
+	},
+	31: {
+		`CREATE INDEX IF NOT EXISTS idx_finding_assignments_assignee
+		 ON finding_assignments(assignee_user_id, finding_id)`,
 	},
 }
 

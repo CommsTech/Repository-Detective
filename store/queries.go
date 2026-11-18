@@ -32,6 +32,12 @@ type FindingFilter struct {
 	Source            string
 	IncludeSuppressed bool
 	OnlySuppressed    bool
+	// OwnerScope is "mine", "unassigned", or empty. Mine requires AssigneeUserID > 0.
+	// A malformed scope must never cause the query to broaden silently.
+	OwnerScope     string
+	AssigneeUserID int64
+	// IncludeOwner loads local assignment metadata for the work queue in one batch.
+	IncludeOwner bool
 	// PriorityOnly restricts to critical/high findings, before pagination.
 	PriorityOnly bool
 	// Prioritize orders severity before recency; normal callers retain newest-first.
@@ -48,6 +54,8 @@ type FindingListItem struct {
 	ExternalIssueURL    string
 	Suppressed          bool
 	SuppressionReason   string
+	AssigneeUserID      int64  `json:"assignee_user_id,omitempty"`
+	AssigneeName        string `json:"assignee_name,omitempty"`
 }
 
 // FindingDetail is a full finding with related records.
@@ -134,6 +142,9 @@ type QueryStore interface {
 	OpenFindingsByCategoryForRepositories(ctx context.Context, repositoryIDs []int64) (map[int64]map[string]int, error)
 	OpenFindingsConfidenceBandsForRepository(ctx context.Context, repositoryID int64, confidenceGate float64) (map[string]int, error)
 	GetFindingDetail(ctx context.Context, id int64) (FindingDetail, error)
+	GetFindingAssignment(ctx context.Context, findingID int64) (FindingAssignment, error)
+	ListFindingAssignmentEvents(ctx context.Context, findingID int64, limit int) ([]FindingAssignmentEvent, error)
+	SetFindingAssignee(ctx context.Context, findingID int64, assigneeUserID int64, actorUserID int64) error
 	ListFindingsByIDs(ctx context.Context, ids []int64) (map[int64]Finding, error)
 	ListLifecycleEventsByFinding(ctx context.Context, findingID int64) ([]LifecycleEvent, error)
 

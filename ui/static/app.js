@@ -803,10 +803,63 @@
     });
   }
 
+
+  // Keep native anchors as a no-JS fallback. When JS is present, report long
+  // exports and surface server errors rather than giving the user a dead click.
+  function initFindingsExport() {
+    var group = document.querySelector('[data-findings-export]');
+    if (!group || !window.fetch || !window.URL || !window.Blob) return;
+    var status = group.querySelector('[data-finding-export-status]');
+    var links = Array.prototype.slice.call(group.querySelectorAll('a[data-finding-export-format]'));
+    links.forEach(function (link) {
+      link.addEventListener('click', async function (event) {
+        if (link.getAttribute('aria-disabled') === 'true' || event.defaultPrevented || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
+        event.preventDefault();
+        links.forEach(function (l) { l.setAttribute('aria-disabled', 'true'); });
+        if (status) status.textContent = 'Preparing ' + link.dataset.findingExportFormat.toUpperCase() + ' export…';
+        try {
+          var response = await fetch(link.href, {
+            credentials: 'same-origin',
+            headers: { 'Accept': link.dataset.findingExportFormat === 'json' ? 'application/json' : 'text/csv' }
+          });
+          if (!response.ok) {
+            var reason = (await response.text()).trim().slice(0, 240);
+            throw new Error(reason || 'Server responded with HTTP ' + response.status);
+          }
+          var format = link.dataset.findingExportFormat;
+          var mime = format === 'json' ? 'application/json' : 'text/csv';
+          var actualType = (response.headers.get('Content-Type') || '').toLowerCase();
+          if (actualType.indexOf(mime) === -1) throw new Error('Unexpected response; your sign-in may have expired');
+          var payload = await response.blob();
+          if (payload.size === 0) throw new Error('Server returned an empty export');
+          // The browser saves the response with a trusted, locally generated name.
+          // Do not trust a Content-Disposition filename from an arbitrary server.
+          var stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\..*$/, 'Z');
+          var objectURL = URL.createObjectURL(payload);
+          var download = document.createElement('a');
+          download.href = objectURL;
+          download.download = 'repository-detective-findings-' + stamp + '.' + format;
+          download.style.display = 'none';
+          document.body.appendChild(download);
+          download.click();
+          download.remove();
+          // Revoke after browser has started consuming the download.
+          setTimeout(function () { URL.revokeObjectURL(objectURL); }, 30000);
+          if (status) status.textContent = format.toUpperCase() + ' export ready (' + payload.size.toLocaleString() + ' bytes).';
+        } catch (error) {
+          if (status) status.textContent = 'Export failed: ' + (error && error.message ? error.message : 'Unknown error') + '. Narrow the filters or retry.';
+        } finally {
+          links.forEach(function (l) { l.removeAttribute('aria-disabled'); });
+        }
+      });
+    });
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     initMobileNav();
     initQuickNavigation();
     initTableSearch();
+    initFindingsExport();
     initConfirmForms();
     initRiskWarnings();
     initActionMenus();

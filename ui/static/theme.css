@@ -3361,3 +3361,31 @@ html { scroll-behavior: smooth; }
 .rd-patch-attempt-item .rd-pre { overflow: auto; max-height: 15rem; white-space: pre-wrap; overflow-wrap: anywhere; }
 .rd-patch-attempt-error { border-left: 3px solid #d17762; padding: .45rem .65rem; background: rgba(209,119,98,.09); overflow-wrap: anywhere; }
 @media (max-width: 520px) { .rd-patch-attempt-heading > a { margin-left: 0; } .rd-patch-attempt-item { padding: .7rem; } }
+
+/* Findings export: visible progress/errors, without layout jumping. */
+.rd-export-status { flex-basis: 100%; font-size: .82rem; color: var(--rd-muted, #66758a); max-width: 25rem; overflow-wrap: anywhere; min-height: 1.2em; }
+.rd-queue-exports [aria-disabled="true"] { opacity: .55; pointer-events: none; }
+
+/* Finding ownership: compact responsible-person control, no sidebar overlays. */
+.rd-finding-ownership .rd-case-section-head { align-items: flex-start; gap: 1rem; }
+.rd-ownership-form { display:flex; flex-wrap: wrap; align-items: end; gap: .7rem; margin-top: .8rem; }
+.rd-ownership-form label { flex: 1 1 14rem; max-width: 25rem; min-width: 0; }
+.rd-ownership-form select { width: 100%; margin-top: .3rem; max-width: 100%; }
+.rd-ownership-form button { flex: 0 0 auto; }
+.rd-ownership-history { margin-top: .8rem; }
+.rd-ownership-history li { padding: .35rem 0; overflow-wrap: anywhere; }
+.rd-ownership-history time { color: var(--rd-muted, #66758a); margin-left: .3rem; }
+@media(max-width:600px) { .rd-ownership-form button { width:100%; } }
+.rd-finding-ownership .rd-chip { white-space: normal; max-width: 100%; overflow-wrap: anywhere; }
+.rd-finding-ownership .rd-ownership-history > summary {
+  cursor: pointer; color: var(--rd-text); background: var(--rd-overlay);
+  border: 1px solid var(--rd-border); border-radius: var(--rd-radius-sm);
+  padding: .65rem .9rem; font-weight: 600;
+}
+.rd-finding-ownership .rd-ownership-history[open] > summary { margin-bottom: .6rem; }
+
+/* Finding ownership: readable labels without expanding the triage table. */
+.rd-table-triage .rd-owner-cell { max-width: 11rem; min-width: 7rem; overflow-wrap: anywhere; }
+.rd-table-triage .rd-owner-name { display: inline-flex; padding: .2rem .55rem; border-radius: 999px; background: var(--rd-surface-raised, rgba(130,145,175,.12)); border: 1px solid var(--rd-border, rgba(130,145,175,.28)); font-size: .85em; line-height: 1.4; max-width: 10rem; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; vertical-align: middle; }
+.rd-queue-tabs { overflow-x: auto; scrollbar-width: thin; }
+.rd-queue-tabs > a { min-width: max-content; }

@@ -57,7 +57,10 @@ func seedRunnerJob(t *testing.T, s store.QueryStore, jobID, scanID string, expir
 func newReceiver(t *testing.T, s store.QueryStore) *runner.Receiver {
 	t.Helper()
 	cfg := runner.Config{ResultMaxSizeMB: 1}
-	return runner.NewReceiver(s, cfg, nil, nil)
+	return runner.NewReceiver(s, cfg, nil,
+		func(context.Context, store.RunnerJob, runner.JobResult, store.Repository, store.EffectiveSettings) error {
+			return nil
+		})
 }
 
 func completedResult(jobID, scanID string) runner.JobResult {
@@ -65,6 +68,19 @@ func completedResult(jobID, scanID string) runner.JobResult {
 		Version: runner.ContractVersion,
 		JobID:   jobID, ScanID: scanID, Status: runner.JobStatusCompleted,
 		StartedAt: time.Now().UTC(), FinishedAt: time.Now().UTC(),
+	}
+}
+
+// Results are accepted only for work that a runner actually claimed.
+func activateRunnerJob(t *testing.T, s store.QueryStore, jobID string) {
+	t.Helper()
+	job, err := s.GetRunnerJob(context.Background(), jobID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	job.Status = store.RunnerJobStatusRunning
+	if err := s.UpdateRunnerJob(context.Background(), job); err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -185,6 +201,7 @@ func TestReceiverSubmitResultAcceptsValidJob(t *testing.T) {
 	scanID := "scan-valid01"
 	expires := time.Now().UTC().Add(time.Hour)
 	seedRunnerJob(t, s, jobID, scanID, expires)
+	activateRunnerJob(t, s, jobID)
 	r := newReceiver(t, s)
 	if err := r.SubmitResult(context.Background(), jobID, completedResult(jobID, scanID)); err != nil {
 		t.Fatalf("submit valid result: %v", err)
@@ -220,6 +237,7 @@ func TestReceiverCompletedStatusWithErrorsFailsClosed(t *testing.T) {
 	s := openReceiverStore(t)
 	jobID, scanID := "rj-errorstatus", "scan-errorstatus"
 	seedRunnerJob(t, s, jobID, scanID, time.Now().UTC().Add(time.Hour))
+	activateRunnerJob(t, s, jobID)
 	r := newReceiver(t, s)
 	result := completedResult(jobID, scanID)
 	result.Errors = []string{"scanner timed out"}
@@ -242,5 +260,110 @@ func TestReceiverCompletedStatusWithErrorsFailsClosed(t *testing.T) {
 	}
 	if summary["status"] != runner.JobStatusFailed {
 		t.Fatalf("summary falsely reports success: %v", summary)
+	}
+}
+
+func TestReceiverSubmissionFailsClosedForUnclaimedJob(t *testing.T) {
+	s := openReceiverStore(t)
+	seedRunnerJob(t, s, "rj-unclaimed", "scan-unclaimed", time.Now().UTC().Add(time.Hour))
+	r := newReceiver(t, s)
+	if err := r.SubmitResult(context.Background(), "rj-unclaimed", completedResult("rj-unclaimed", "scan-unclaimed")); err == nil {
+		t.Fatal("unclaimed job accepted a worker result")
+	}
+	job, err := s.GetRunnerJob(context.Background(), "rj-unclaimed")
+	if err != nil || job.Status != store.RunnerJobStatusQueued {
+		t.Fatalf("unclaimed job mutated: status=%q err=%v", job.Status, err)
+	}
+}
+
+func TestReceiverCallbackIdempotencyAndConflict(t *testing.T) {
+	s := openReceiverStore(t)
+	const jobID, scanID = "rj-idempotent", "scan-idempotent"
+	seedRunnerJob(t, s, jobID, scanID, time.Now().UTC().Add(time.Hour))
+	activateRunnerJob(t, s, jobID)
+	calls := 0
+	r := runner.NewReceiver(s, runner.Config{ResultMaxSizeMB: 1}, nil,
+		func(ctx context.Context, job store.RunnerJob, res runner.JobResult, repo store.Repository, eff store.EffectiveSettings) error {
+			calls++
+			return nil
+		})
+	result := completedResult(jobID, scanID)
+	if err := r.SubmitResult(context.Background(), jobID, result); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.SubmitResult(context.Background(), jobID, result); err != nil {
+		t.Fatalf("same callback must be idempotent: %v", err)
+	}
+	if calls != 1 {
+		t.Fatalf("duplicate callback was ingested %d times", calls)
+	}
+	result.FilesAnalyzed = 12
+	if err := r.SubmitResult(context.Background(), jobID, result); err == nil {
+		t.Fatal("conflicting callback was accepted")
+	}
+}
+
+func TestReceiverIngestionErrorDoesNotCompleteJob(t *testing.T) {
+	s := openReceiverStore(t)
+	const jobID, scanID = "rj-ingestion-fail", "scan-ingestion-fail"
+	seedRunnerJob(t, s, jobID, scanID, time.Now().UTC().Add(time.Hour))
+	activateRunnerJob(t, s, jobID)
+	r := runner.NewReceiver(s, runner.Config{ResultMaxSizeMB: 1}, nil,
+		func(context.Context, store.RunnerJob, runner.JobResult, store.Repository, store.EffectiveSettings) error {
+			return errors.New("simulated scan persistence failure")
+		})
+	result := completedResult(jobID, scanID)
+	if err := r.SubmitResult(context.Background(), jobID, result); err == nil {
+		t.Fatal("ingestion failure falsely returned success")
+	}
+	job, err := s.GetRunnerJob(context.Background(), jobID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if job.Status != store.RunnerJobStatusIngestFailed || job.Error == "" {
+		t.Fatalf("ingestion failure was hidden: status=%q err=%q", job.Status, job.Error)
+	}
+	if err := r.SubmitResult(context.Background(), jobID, result); err == nil {
+		t.Fatal("partial ingestion replay accepted without reconciliation")
+	}
+}
+
+func TestReceiverDuplicateDuringActiveIngestionCannotRunTwice(t *testing.T) {
+	s := openReceiverStore(t)
+	const jobID, scanID = "rj-concurrent", "scan-concurrent"
+	seedRunnerJob(t, s, jobID, scanID, time.Now().UTC().Add(time.Hour))
+	activateRunnerJob(t, s, jobID)
+	entered, release := make(chan struct{}), make(chan struct{})
+	r := runner.NewReceiver(s, runner.Config{ResultMaxSizeMB: 1}, nil,
+		func(context.Context, store.RunnerJob, runner.JobResult, store.Repository, store.EffectiveSettings) error {
+			close(entered)
+			<-release
+			return nil
+		})
+	result := completedResult(jobID, scanID)
+	done := make(chan error, 1)
+	go func() { done <- r.SubmitResult(context.Background(), jobID, result) }()
+	<-entered
+	if err := r.SubmitResult(context.Background(), jobID, result); err == nil {
+		t.Error("second callback accepted while ingestion still in progress")
+	}
+	close(release)
+	if err := <-done; err != nil {
+		t.Fatalf("original ingestion did not finish: %v", err)
+	}
+}
+
+func TestReceiverRequiresIngestionHandler(t *testing.T) {
+	s := openReceiverStore(t)
+	const jobID, scanID = "rj-no-handler", "scan-no-handler"
+	seedRunnerJob(t, s, jobID, scanID, time.Now().UTC().Add(time.Hour))
+	activateRunnerJob(t, s, jobID)
+	r := runner.NewReceiver(s, runner.Config{ResultMaxSizeMB: 1}, nil, nil)
+	if err := r.SubmitResult(context.Background(), jobID, completedResult(jobID, scanID)); err == nil {
+		t.Fatal("accepted a result without an ingestion handler")
+	}
+	job, err := s.GetRunnerJob(context.Background(), jobID)
+	if err != nil || job.Status != store.RunnerJobStatusRunning {
+		t.Fatalf("job falsely finalized without handler: %+v err=%v", job, err)
 	}
 }
