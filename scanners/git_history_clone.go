@@ -51,11 +51,12 @@ func PrepareGitHistoryWorkspace(ctx context.Context, cloneURL, token, ref string
 		defer cancel()
 	}
 
-	cloneArgs := []string{"clone", "--single-branch", "--no-tags", "--"}
+	cloneArgs := []string{"clone", "--single-branch", "--no-tags"}
 	if maxCommits > 0 {
 		cloneArgs = append(cloneArgs, fmt.Sprintf("--depth=%d", maxCommits))
 	}
-	cloneArgs = append(cloneArgs, authURL, dest)
+	// Options must come before "--"; anything after it is a path argument.
+	cloneArgs = append(cloneArgs, "--", authURL, dest)
 
 	if out, err := runGitHistory(cloneCtx, cloneArgs); err != nil {
 		cleanup()

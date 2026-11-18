@@ -277,6 +277,28 @@ func (h *Handler) rejectReadOnlyMutations() gin.HandlerFunc {
 	}
 }
 
+// requirePlatformAdmin restricts platform-wide settings, user administration and
+// the audit trail to owner/admin accounts. Repository-scoped work (triage,
+// ownership, remediation review) stays available to developers and security
+// operators; this closes the privilege escalation where any signed-in user could
+// rewrite global configuration.
+func (h *Handler) requirePlatformAdmin() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if !h.auth.IsLocal() {
+			// api_key_only installs predate local roles; the API key holder is
+			// the operator and existing behaviour is preserved.
+			c.Next()
+			return
+		}
+		user := h.currentUser(c)
+		if user == nil || !user.Enabled || !store.RoleCanMutatePlatform(user.Role) {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "platform administration requires an owner or admin account"})
+			return
+		}
+		c.Next()
+	}
+}
+
 // RegisterRoutes mounts protected UI routes (caller applies auth middleware).
 func (h *Handler) RegisterRoutes(g *gin.RouterGroup) {
 	g.Use(h.rejectReadOnlyMutations())
@@ -297,6 +319,13 @@ func (h *Handler) RegisterRoutes(g *gin.RouterGroup) {
 	g.GET("/health", h.SystemHealth)
 	g.GET("/doctor", h.Doctor)
 	g.GET("/feedback", h.Feedback)
+	admin := g.Group("")
+	admin.Use(h.requirePlatformAdmin())
+	admin.POST("/configure", h.SaveConfigure)
+	admin.GET("/users", h.UsersPage)
+	admin.POST("/users", h.CreateUserSubmit)
+	admin.GET("/audit", h.AuditTrailPage)
+
 	g.GET("/doctor/report", h.DoctorReport)
 	g.GET("/doctor/bundle", h.DoctorBundle)
 	g.GET("/scans/:scan_id", h.ScanDetail)
@@ -320,7 +349,6 @@ func (h *Handler) RegisterRoutes(g *gin.RouterGroup) {
 	g.POST("/findings/:id/mark-intentional", h.MarkIntentionalStandalone)
 	g.POST("/findings/:id/mark-false-positive", h.MarkFindingFalsePositive)
 	g.GET("/configure", h.Configure)
-	g.POST("/configure", h.SaveConfigure)
 	g.GET("/preinstall", h.Preinstall)
 	g.POST("/preinstall", h.StartPreinstallAudit)
 	g.GET("/preinstall/audits/:audit_id", h.PreinstallAuditDetail)
@@ -331,9 +359,6 @@ func (h *Handler) RegisterRoutes(g *gin.RouterGroup) {
 	g.POST("/learning/recommendations/:id/accept", h.AcceptCalibrationRecommendation)
 	g.POST("/learning/recommendations/:id/reject", h.RejectCalibrationRecommendation)
 	g.POST("/learning/recompute", h.RecomputeCalibration)
-	g.GET("/users", h.UsersPage)
-	g.POST("/users", h.CreateUserSubmit)
-	g.GET("/audit", h.AuditTrailPage)
 	h.registerScanRoutes(g)
 	h.registerRepoControlRoutes(g)
 }

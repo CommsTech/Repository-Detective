@@ -48,13 +48,25 @@ func runCommandStreams(ctx context.Context, timeout time.Duration, dir string, n
 	cmd := exec.CommandContext(cmdCtx, name, args...)
 	cmd.Dir = dir
 	cmd.Env = security.MinimalSubprocessEnv()
+	setProcessGroup(cmd)
 
 	stdoutBuf := &cappedBuffer{limit: maxCommandOutputBytes}
 	stderrBuf := &cappedBuffer{limit: maxCommandOutputBytes}
 	cmd.Stdout = stdoutBuf
 	cmd.Stderr = stderrBuf
 
+	// Kill the entire group on timeout; a parent-only kill leaves tool children
+	// running and the scan appears to hang past its budget.
+	finished := make(chan struct{})
+	go func() {
+		select {
+		case <-cmdCtx.Done():
+			killProcessGroup(cmd)
+		case <-finished:
+		}
+	}()
 	runErr := cmd.Run()
+	close(finished)
 	stdoutOut = stdoutBuf.Bytes()
 	stderrOut = stderrBuf.Bytes()
 	merged := append(append([]byte{}, stdoutOut...), stderrOut...)

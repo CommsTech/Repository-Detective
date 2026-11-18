@@ -57,15 +57,21 @@ jobs:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 40
+    env:
+      RD_SELFSCAN_URL: ${{ secrets.RD_SELFSCAN_URL }}
+      RD_SELFSCAN_API_KEY: ${{ secrets.RD_SELFSCAN_API_KEY }}
+      RD_SELFSCAN_OWNER: ${{ vars.RD_SELFSCAN_OWNER || github.repository_owner }}
+      RD_SELFSCAN_REPO: ${{ vars.RD_SELFSCAN_REPO || 'Repository-Detective' }}
+      RD_SELFSCAN_REQUIRED: ${{ vars.RD_SELFSCAN_REQUIRED || 'gitleaks,govulncheck,staticcheck' }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Self-scan gate status
+        run: |
+          if [ -z "${RD_SELFSCAN_URL}" ]; then
+            echo "::notice title=Self-scan gate disabled::RD_SELFSCAN_URL is not configured, so the commit-pinned self-audit is skipped. This is a configuration gap, not a passing scan."
+          fi
       - name: Scan exact pushed commit using Repository Detective
-        env:
-          RD_SELFSCAN_URL: ${{ secrets.RD_SELFSCAN_URL }}
-          RD_SELFSCAN_API_KEY: ${{ secrets.RD_SELFSCAN_API_KEY }}
-          RD_SELFSCAN_OWNER: ${{ vars.RD_SELFSCAN_OWNER || github.repository_owner }}
-          RD_SELFSCAN_REPO: ${{ vars.RD_SELFSCAN_REPO || 'Repository-Detective' }}
-          RD_SELFSCAN_REQUIRED: ${{ vars.RD_SELFSCAN_REQUIRED || 'gitleaks,govulncheck,staticcheck' }}
+        if: ${{ env.RD_SELFSCAN_URL != '' }}
         run: |
           python3 scripts/ci-selfscan-executive.py --sha "${GITHUB_SHA}" \
             --owner "${RD_SELFSCAN_OWNER}" --repo "${RD_SELFSCAN_REPO}" \
