@@ -53,6 +53,32 @@ class ProtocolTests(unittest.TestCase):
             self.assertNotEqual(0,completed.returncode)
             self.assertEqual('EVIDENCE_INCOMPLETE',json.loads((Path(d)/'executive-selfscan.json').read_text())['decision'])
 
+    def test_empty_required_policy_writes_explicit_failure_artifact(self):
+        with tempfile.TemporaryDirectory() as d:
+            env = {**os.environ, 'RD_SELFSCAN_URL': '', 'RD_SELFSCAN_API_KEY': ''}
+            result = subprocess.run(['python3', str(SCRIPT), '--sha', SHA, '--owner', 'team',
+                                     '--required', '  ,  ', '--output', d], env=env,
+                                    capture_output=True, text=True, timeout=15)
+            self.assertNotEqual(0, result.returncode)
+            report = json.loads((Path(d) / 'executive-selfscan.json').read_text())
+            self.assertEqual('EVIDENCE_INCOMPLETE', report['decision'])
+            self.assertIn('At least one required scanner must be configured', report['release_blockers'])
+            self.assertEqual([], report['required_scanners'])
+            self.assertTrue((Path(d) / 'SHA256SUMS').exists())
+
+    def test_source_pushes_always_schedule_evidence_workflow(self):
+        root = Path(__file__).resolve().parents[2]
+        for forge in ('.gitea', '.github'):
+            with self.subTest(forge=forge):
+                workflow = (root / forge / 'workflows' / 'ci.yml').read_text()
+                job = workflow.split('  executive_selfscan:', 1)[1]
+                self.assertIn("if: github.event_name == 'push'", job)
+                self.assertNotIn('vars.RD_SELFSCAN_ENABLED', job)
+                self.assertIn('if: always()', job)
+                self.assertIn('scripts/ci-selfscan-executive.py', job)
+                self.assertIn('dist/selfscan/', job)
+                self.assertIn('sha256sum -c SHA256SUMS', job)
+
     def test_wrong_forge_and_missing_dry_run_ack_fail(self):
         for forge, ack in [('github', True), ('gitea', False)]:
             with self.subTest(forge=forge, ack=ack):

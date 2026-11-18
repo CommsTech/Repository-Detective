@@ -171,11 +171,10 @@ jobs:
     name: Commit-pinned Repository Detective self-audit
     # A real self-scan, separate from unit tests, so even a failed CI build has
     # an independent (possibly incomplete) evidence report for the pushed SHA.
-    # The self-audit gate is opt-in: set the repository variable
-    # RD_SELFSCAN_ENABLED=true and the self-scan secrets to enforce it.
-    # While disabled, this job does not run and the missing commit-pinned
-    # evidence stays an explicit, documented gap rather than a green pass.
-    if: github.event_name == 'push' && vars.RD_SELFSCAN_ENABLED == 'true'
+    # Every source push must emit evidence, even when the scan service is
+    # unavailable. An unconfigured service produces EVIDENCE_INCOMPLETE,
+    # NOT a silently skipped audit or an implied security pass.
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 40
     env:
@@ -192,6 +191,12 @@ jobs:
           python3 scripts/ci-selfscan-executive.py --sha "${GITHUB_SHA}" --forge gitea \
             --owner "${RD_SELFSCAN_OWNER}" --repo "${RD_SELFSCAN_REPO}" \
             --required "${RD_SELFSCAN_REQUIRED}" --output dist/selfscan
+      - name: Verify executive evidence integrity
+        if: always()
+        run: |
+          test -f dist/selfscan/executive-selfscan.json
+          test -f dist/selfscan/executive-selfscan.md
+          (cd dist/selfscan && sha256sum -c SHA256SUMS)
       - name: Publish executive report and SHA-256 evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2; Gitea compatibility must be verified

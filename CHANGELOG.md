@@ -1,3 +1,11 @@
+# Changelog
+
+## Unreleased — always-on self-scan evidence policy (2026-11-18)
+
+- Made commit-specific self-scan jobs unconditional on source pushes in Gitea and GitHub CI. An unconfigured instance now produces a failing `EVIDENCE_INCOMPLETE` artifact rather than a skipped job; source-test success alone does not attest to self-scan completeness.
+- Added manifest verification before report upload, including on failed scan jobs. Empty or malformed required-scanner lists now fail closed, with explicit coverage-policy blockers and artifact evidence.
+- Added offline workflow and policy regression checks. CI artifact compatibility on real Gitea runners and release-publish gating remain unverified.
+
 ## Unreleased — CI executive evidence completeness and operator feedback
 
 - Self-scan CI now always executes on source pushes, even with missing credentials. Configuration failure produces an explicit `EVIDENCE_INCOMPLETE` Markdown/JSON artifact and a failing job rather than skipping report publication.
@@ -10,8 +18,6 @@
 - On source pushes, Gitea and GitHub CI now request a fresh scan of the pushed repository commit, record per-scanner evidence, and upload an executive Markdown/JSON report plus checksum. Missing or mismatched evidence fails the self-scan job; neither a clean scan nor a passing test is described as a safety certification.
 - Added a review-first in-app **Report a problem** composer: reproducible steps, optional diagnostics, credential masking, Gitea issue draft, and explicit human submission. No public issue-posting credential or hidden log upload.
 - Added independent staging acceptance and fault-injection checklist for a better-equipped test agent. Product README remains task-focused.
-
-# Changelog
 
 ## [Unreleased — finding ownership queues, 2026-11-18]
 

@@ -1,37 +1,38 @@
-> **Published image (2026-11-17):** `ghcr.io/commstech/repository-detective:cve-20261116`, digest `sha256:0a508f9fcecb9d9889d493c6e72a12402a32115eee2b67a8a2e0656f45c1c067`. The GHCR package defaults to private visibility; anonymous pull requires the maintainer to set it public.
+# Public beta readiness — verification status
 
-> **Unreleased working-tree note (2026-11-16):** CVE triage/AI-remediation changes are **not** included in the `v0.1.0-beta.6` tag described below. Isolated package tests passed, but full Go 1.26.10 tests, image build and disposable-Gitea E2E are pending. See [CVE remediation runbook](../CVE_TRIAGE_AND_AI_REMEDIATION.md). Do not label the working-tree enhancement production-ready without those receipts.
+**Source baseline reviewed:** `repository-detective-main(20261118-175151).zip` (2026-11-18).
 
-# Current Public Release Readiness
+**Current release verdict:** **NOT CERTIFIED FOR UNRESTRICTED PUBLIC BETA**. This is a source review, not evidence of a deployed release. The latest live image/tag, runner state, and production behavior were not independently verified in this pass.
 
-**Status:** `v0.1.0-beta.6` is the current public prerelease.
-**Checked:** 2026-10-21
-**Source:** merge of pull request #482 onto main (CI format gate, webhook duplicate claims, AI TLS preflight).
+Repository Detective can be useful for controlled testing today, but the presence of a configuration switch, a CI workflow, or a successful static check is not proof that its complete security workflow operates as intended.
 
-## Ready
+## What the source currently supports
 
-- Public shipped defaults no longer select the operator's Gitea host, organization, repository, network, filesystem paths, or credentials.
-- Existing environment-driven configuration remains available for arbitrary Gitea installations.
-- Docker Compose supports a neutral local source-build path; published images can be selected with `RD_IMAGE`.
-- `gofmt`, `go vet`, and staticcheck `v0.8.2` pass on tracked packages. Package tests for the webhook, store, AI, scanner, and preflight changes pass. A full clean-room `go test ./...` on the tag remains the CI job.
-- AI is optional and deterministic scanning remains the default.
+- Self-hosted application with a product-focused README, local login, finding investigation, custom declarative rules, scanner integrations, and evidence-backed reports.
+- Operator-initiated report-only scans, optional AI advice, reviewable remediation plans, and Gitea-oriented forge integration.
+- Commit-pinned CI self-scan report generation for **every source push** to the configured Gitea/GitHub CI branches. When unconfigured, the job must generate `EVIDENCE_INCOMPLETE` rather than disappearing. This is not yet a release-publishing gate.
+- In-app, review-first feedback drafting, without automatic public-log uploads or anonymous server-side issue filing.
 
-## Still open after this prerelease
+## Required acceptance gates before wide distribution
 
-1. Record the immutable digest of the `all-in-one` image built from the tagged commit.
-2. Run a clean-install test using the published image and a disposable Gitea instance.
-3. Run a report-only scan against a disposable repository and verify scanner evidence, issue deduplication, webhook behavior, and the API auth matrix.
-4. Re-run the shipped-surface portability and secret scan after publication artifacts are generated.
+| Priority | Area | Pass evidence required |
+|---|---|---|
+| P0 | Source, tests and release reproducibility | Full Go 1.26.11 suite (`go test -race ./...`), vet, format, reproducible image builds, dependency/SBOM scans, source SHA to image digest provenance |
+| P0 | Self-scan integrity | Both CI platforms run on push, produce a matching commit-specific report and passing `SHA256SUMS`, correctly mark missing scanner evidence `EVIDENCE_INCOMPLETE`, and upload artifacts even on scan failure |
+| P0 | Runner isolation | Real worker dispatch, capability matching, clean ephemeral workspaces, denied secrets/network access, evidence persistence and interrupted-job recovery verified in a disposable environment |
+| P0 | Authentication and authorization | Local user/role authorization matrix including attempts to cross repository/user boundaries; external Authentik/Gitea login remains unverified, not production-enabled by assumption |
+| P0 | Remediation correctness | AI plan → isolated patch → validation → rescan → reviewable PR; verify failure handling and no false closure or hidden execution on the main host |
+| P0 | Scanner precision and completeness | Known-positive/known-negative fixtures, missing scanner behavior, baseline versus candidate comparison, calibration regression tests including false negatives |
+| P1 | User experience | Authenticated desktop/mobile, light/dark, keyboard, forms, filters, both exports, diagnostics, and issue-draft privacy tests with screenshots/traces |
+| P1 | Performance | p50/p95 page and scan duration, CPU/RAM/disk benchmarks, and high-volume finding queries on representative repositories |
+| P1 | Public onboarding and support | Fresh install with placeholder-only config, successful first scan, support issue draft review, README links and clean release notes |
 
-Shipped examples stay placeholders. Operator forge URLs, tokens, organizations, and databases stay outside the git tree.
+## Important distinctions
 
-## Known scope limits
+A `REVIEW_FINDINGS` or `REVIEW_COVERAGE` self-scan decision is **not** a security certification. The report records a point-in-time observation from configured scanners. Likewise, a passed unit suite does not verify untrusted-code containment, live forge side effects, or end-to-end AI remediation.
 
-- Gitea 1.22.3 is the proven forge baseline; Forgejo remains unproven.
-- Multi-user/RBAC is not production-ready.
-- Remediation PR execution remains disabled by default and its sandbox is NOT_PROVEN.
-- Full scanner throughput and upgrade E2E remain NOT_PROVEN for this candidate.
+For detailed execution instructions, use [External-agent full acceptance](EXTERNAL_AGENT_FULL_ACCEPTANCE_2026-11-18.md) and [CI self-scan acceptance](CI_SELFSCAN_IDENTITY_ACCEPTANCE_2026-11-18.md). For the user-facing installation path, return to the [README](../../README.md).
 
-## Deployment separation
+## Historical note
 
-The ClusterManager dogfood deployment may keep its private `.env`, image override, internal Gitea URL, organization, and AI endpoint outside this repository. Those values must never be copied into public examples, release assets, or the public GitHub/Gitea snapshots.
+A previous version of this document was a **2026-10-21 snapshot** describing `v0.1.0-beta.6` and an October GHCR digest. That snapshot should not be treated as the current release or used to recommend an image tag. Verify current release assets and image digests against the actual forge and registry before publication.

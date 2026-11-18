@@ -16,6 +16,8 @@ The offline checks below were executed in the artifact workspace; they do **not*
 For every item collect: **PASS/FAIL/BLOCKED**, exact full SHA, timestamp, command or UI action, sanitized evidence/log, issue ID if failed. Run on disposable repos and short-lived tokens.
 
 - [ ] Go 1.26.11 build/vet/tests/race and frontend checks pass in Gitea CI and GitHub CI. Run `go mod verify`, `go vet ./...`, `go test -race -count=1 ./...`, and build release image; don't reuse evidence from an older commit.
+- [ ] **Every push schedules self-scan**, regardless of whether `RD_SELFSCAN_ENABLED` exists, and the job checks both SHA-256 entries before upload. Verify the job is not skipped in Actions.
+- [ ] **Empty required-scanner list**: pass `RD_SELFSCAN_REQUIRED` as only whitespace/commas in a disposable CI run. Require a failing self-scan, an `EVIDENCE_INCOMPLETE` artifact, and a required-scanner configuration blocker.
 - [ ] **Gitea push with no self-scan credentials**: self-scan job fails but uploads `executive-selfscan.md`, `executive-selfscan.json`, and `SHA256SUMS`. JSON `decision` is `EVIDENCE_INCOMPLETE`, not a missing artifact or a green pass.
 - [ ] **GitHub push with no self-scan credentials**: same evidence and failure. Verify GitHub Actions v4 artifact upload; Gitea Actions v4 compatibility needs separate proof.
 - [ ] **Successful Gitea self-scan**: configured service starts a NEW scan for the pushed full SHA with `forge_type=gitea` and `report_only_dry_run=true`; response acknowledges dry-run; separate repository lookup returns the same repository ID, `owner/name`, and `gitea` forge; `scan_id` matches the new job. Scan and scanner statuses are from that job, not a cached result.

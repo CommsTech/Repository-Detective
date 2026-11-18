@@ -73,6 +73,8 @@ def summarize(expected, owner, repo, scan, outcomes, engine, required,
         problems.append('Scan forge differs from requested forge or is missing')
     if not outcomes:
         problems.append('No per-scanner evidence was returned')
+    if not required:
+        problems.append('Required scanner policy is empty; cannot assert scan coverage')
     details = []
     seen = set()
     if not isinstance(outcomes, list):
@@ -164,7 +166,12 @@ def main():
     sha, base, key = args.sha.strip().lower(), os.getenv('RD_SELFSCAN_URL', '').rstrip('/'), os.getenv('RD_SELFSCAN_API_KEY', '')
     if not SHA.fullmatch(sha):
         p.error('require the full 40-character pushed commit SHA')
+    required = sorted(set(s.strip().lower() for s in args.required.split(',') if s.strip()))
     configuration_errors = []
+    if not required:
+        configuration_errors.append('At least one required scanner must be configured')
+    if len(required) > 32 or any(not re.fullmatch(r'[a-z][a-z0-9_.+\-]{0,63}', name) for name in required):
+        configuration_errors.append('Required scanner names must be short, valid identifiers (maximum 32)')
     if not base or not key or not args.owner:
         configuration_errors.append('Self-scan URL, API key, and repository owner must be configured for CI')
     if not re.fullmatch(r'[A-Za-z0-9_.-]+', args.owner) or not re.fullmatch(r'[A-Za-z0-9_.-]+', args.repo):
@@ -175,13 +182,12 @@ def main():
     if u.username or u.password or u.query or u.fragment or not u.hostname:
         configuration_errors.append('Self-scan API URL has unsupported components')
     if configuration_errors:
-        report = summarize(sha, args.owner or '(not configured)', args.repo, {}, [], {}, [],
+        report = summarize(sha, args.owner or '(not configured)', args.repo, {}, [], {}, required,
                            expected_forge=args.forge)
         report['release_blockers'] = sorted(set(report['release_blockers'] + configuration_errors))
         write_report(pathlib.Path(args.output), report)
         print('EVIDENCE_INCOMPLETE: self-scan configuration invalid; report artifact written', file=sys.stderr)
         return 1
-    required = sorted(set(s.strip().lower() for s in args.required.split(',') if s.strip()))
     scan, evidence, engine, identity = {}, [], {}, {}
     failure = ''
     try:

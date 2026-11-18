@@ -48,6 +48,13 @@ class SelfscanReportTests(unittest.TestCase):
         report = audit.summarize(SHA,'team','repo',scan(),[],{},[],identity=identity('team/repo'))
         self.assertEqual('EVIDENCE_INCOMPLETE',report['decision'])
 
+    def test_empty_required_scanner_policy_never_passes(self):
+        report = audit.summarize(SHA, 'team', 'Repository-Detective', scan(),
+                                 [{'scanner_name': 'gitleaks', 'status': 'clean', 'findings_count': 0}],
+                                 {}, [], identity=identity())
+        self.assertEqual('EVIDENCE_INCOMPLETE', report['decision'])
+        self.assertTrue(any('policy is empty' in issue for issue in report['release_blockers']))
+
     def test_report_artifacts_and_hash(self):
         report = audit.summarize(SHA,'team','repo',scan(),
                                  [{'scanner_name':'gitleaks','status':'clean','findings_count':0}],{},['gitleaks'], identity=identity('team/repo'))

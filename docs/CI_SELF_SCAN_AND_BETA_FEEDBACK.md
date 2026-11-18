@@ -4,6 +4,8 @@
 
 Every source push to `main` or `develop` triggers a separate CI job that requests a **new Repository Detective scan of the pushed SHA**, retrieves the scan and scanner outcomes, and publishes a Markdown + JSON executive evidence package with SHA-256 manifest. **If configuration is missing or malformed, it still publishes an explicit incomplete report and fails the job**; a skipped job without an artifact is not acceptable evidence. It is not generated from the previous deployed report, nor is it a replacement for release scanning of the final container image.
 
+The job is **not opt-in**. There is no `RD_SELFSCAN_ENABLED` switch. On a push with no self-scan credentials, the scanner script writes an `EVIDENCE_INCOMPLETE` report and exits with failure; the checksum verification and artifact-upload steps still run. CI should preserve the incomplete artifact for reviewers. The separate source-test job may still pass; self-scan success is **not yet an enforced release-publishing gate**. A skipped job, missing artifact, or incomplete decision cannot be described as a successful self-scan.
+
 **Outputs** (Actions artifacts, not source-tree commits):
 
 - `executive-selfscan.md` — readable decision, commit, scan ID, scanner coverage/outcomes, blockers and limitations
@@ -17,11 +19,11 @@ Configure secrets on both forges used for CI:
 - `RD_SELFSCAN_URL`: HTTPS base of an accessible, isolated Repository Detective instance (no trailing `/api/...`).
 - `RD_SELFSCAN_API_KEY`: dedicated least-privilege API key with permission to scan and read evidence. Never print or embed it in reports.
 
-Configure Actions variables:
+Configure Actions variables (the job runs even when the values are absent):
 
 - `RD_SELFSCAN_OWNER`: project repository owner on the Gitea instance reachable by the scan service.
 - `RD_SELFSCAN_REPO`: repository name (defaults to `Repository-Detective`).
-- `RD_SELFSCAN_REQUIRED`: scanner list. Default `gitleaks,govulncheck,staticcheck`. Confirm these tools are installed **inside the executing scanner runtime**, and tailor the requirement to the repository languages and policy.
+- `RD_SELFSCAN_REQUIRED`: nonempty scanner list. Default `gitleaks,govulncheck,staticcheck`. An empty list fails with `EVIDENCE_INCOMPLETE`. Confirm these tools are installed **inside the executing scanner runtime**, and tailor the requirement to the repository languages and policy.
 
 Gitea CI selects forge `gitea`; GitHub CI selects forge `github`. The corresponding forge repository must be connected and reachable by the scan service for its own source push. Both workflows call the existing API with the pushed SHA (`GITHUB_SHA`) and `report_only_dry_run=true` (acknowledgement required), so no forge issues are intentionally filed by this scan.
 
@@ -57,4 +59,4 @@ The final acceptance run is defined in [release/EXTERNAL_AGENT_FULL_ACCEPTANCE_2
 
 Live CI artifact upload on Gitea Actions, release gating, and multi-forge identity mapping still require verification on the actual runners.
 
-For the commit-specific expanded acceptance matrix, see [CI self-scan identity acceptance](release/CI_SELFSCAN_IDENTITY_ACCEPTANCE_2026-11-18.md).
+For the commit-specific expanded acceptance matrix, see [CI self-scan identity acceptance](release/CI_SELFSCAN_IDENTITY_ACCEPTANCE_2026-11-18.md). For this patch, see [always-on self-scan acceptance](release/SELF_SCAN_ALWAYS_ON_ACCEPTANCE_2026-11-18.md).
